@@ -1,6 +1,6 @@
 // apps/mobile/app/bookshelf.tsx
 
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   StyleSheet,
@@ -22,13 +22,11 @@ import {
 import { PdfModal } from "@/components/ui/pdf/PdfModal";
 import { useBooksStore } from "@/store/useBooksStore";
 import { useReadingStatsStore } from "@/store/useReadingStatsStore";
-import {
-  useReadingPlanStore,
-  type ActiveReadingPlan,
-} from "@/store/useReadingPlanStore";
-import { ReadingPlanModal } from "@/components/ui/modals/ReadingModal";
+import { useReadingPlanStore } from "@/store/useReadingPlanStore";
+import { ReadingPlanModal } from "@/components/ui/modals/CreaPlanModal";
 import { CurrentPlanCard } from "@/features/books/CurrentPlanCard";
 import { BookCard } from "@/components/ui/Books/BookCard";
+import { useCurrentPlanInfo } from "@/hooks/useCurrentPlanInfo";
 
 export default function BookshelfScreen() {
   const router = useRouter();
@@ -39,7 +37,6 @@ export default function BookshelfScreen() {
   const progressMap = useBooksStore((s) => s.items);
   const readingStats = useReadingStatsStore((s) => s.stats);
 
-  const activePlan = useReadingPlanStore((s) => s.activePlan);
   const clearActivePlan = useReadingPlanStore((s) => s.clearActivePlan);
   const ensureTodayPlan = useReadingPlanStore((s) => s.ensureTodayPlan);
 
@@ -54,24 +51,29 @@ export default function BookshelfScreen() {
     loadPdfs();
   }, [loadPdfs]);
 
-  // planı günlük modda tut: gün değiştiğinde progress reset
+  // Daily plan reset/ensure
   useEffect(() => {
     ensureTodayPlan(today);
   }, [ensureTodayPlan, today]);
+
+  // Plan summary + item details (for now we only use summary)
+  const { summary: currentPlanInfo, items } = useCurrentPlanInfo(pdfs);
 
   const handleOpenModal = () => setModalVisible(true);
   const handleCloseModal = () => setModalVisible(false);
 
   const handleOpenPlanModal = () => setPlanModalVisible(true);
   const handleClosePlanModal = () => setPlanModalVisible(false);
-  //open book
+
+  // book open
   const handleOpenPdf = (item: LocalPdfFile) => {
     router.push({
       pathname: "/pdf/viewer",
       params: { uri: item.uri, name: item.name },
     });
   };
-  //delete book
+
+  // book delete
   const handleDeletePdf = (item: LocalPdfFile) => {
     Alert.alert(
       "Delete PDF",
@@ -89,7 +91,8 @@ export default function BookshelfScreen() {
       ]
     );
   };
-  //delete plan
+
+  // plan delete
   const handleDeletePlan = () => {
     Alert.alert(
       "Delete plan",
@@ -107,45 +110,7 @@ export default function BookshelfScreen() {
     );
   };
 
-  const currentPlanInfo = useMemo(() => {
-    if (!activePlan || activePlan.items.length === 0) return null;
-
-    const plan: ActiveReadingPlan = activePlan;
-
-    const totalPagesInPlan = plan.items.reduce(
-      (sum, it) => sum + it.pagesPerDay,
-      0
-    );
-
-    const pagesCompletedBeforeCurrent = plan.items
-      .slice(0, plan.currentIndex)
-      .reduce((sum, it) => sum + it.pagesPerDay, 0);
-
-    const totalCompleted = pagesCompletedBeforeCurrent + plan.currentPageInItem;
-
-    const currentItem =
-      plan.currentIndex < plan.items.length
-        ? plan.items[plan.currentIndex]
-        : plan.items[plan.items.length - 1];
-
-    const remainingInItem = currentItem.pagesPerDay - plan.currentPageInItem;
-
-    const currentBookName = currentItem.bookName || currentItem.bookUri;
-
-    // find book obje (from URI)
-    const currentBook = pdfs.find((b) => b.uri === currentItem.bookUri);
-
-    return {
-      name: plan.name,
-      totalCompleted,
-      totalPagesInPlan,
-      currentBookName: currentBook?.name ?? currentBookName,
-      currentBookUri: currentItem.bookUri,
-      remainingInItem,
-      isCompleted: plan.isCompletedForToday,
-    };
-  }, [activePlan, pdfs]);
-  //open plan from card
+  // plan card -> open related book
   const handlePressPlanCard = () => {
     if (!currentPlanInfo) return;
     if (currentPlanInfo.isCompleted) return;
@@ -155,7 +120,7 @@ export default function BookshelfScreen() {
     if (!book) return;
 
     router.push({
-      pathname: "/pdf/viewer",
+      pathname: "/plan/plan-viewer",
       params: {
         uri: book.uri,
         name: book.name,

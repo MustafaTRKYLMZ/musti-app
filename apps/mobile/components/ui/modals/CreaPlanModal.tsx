@@ -85,7 +85,7 @@ export function ReadingPlanModal({
         return {
           bookUri: b.uri,
           bookName: b.name,
-          pagesPerDay: pages,
+          pagesPerDay: pages, // daily target
         };
       })
       .filter(Boolean) as {
@@ -103,6 +103,7 @@ export function ReadingPlanModal({
     }
 
     const finalName = planName.trim() || "Reading plan";
+
     setActivePlan({
       name: finalName,
       items,

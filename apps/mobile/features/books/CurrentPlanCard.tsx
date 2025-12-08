@@ -1,19 +1,22 @@
+// apps/mobile/features/books/CurrentPlanCard.tsx
 import React, { FC } from "react";
 import { TouchableOpacity, View, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { iconSizes, colors, MText, spacing, radii } from "@budget/ui-native";
+import { MText, colors, spacing, radii, iconSizes } from "@budget/ui-native";
 
-type CurrentPlanInfo = {
+export type CurrentPlanInfo = {
   name: string;
   isCompleted: boolean;
-  currentBookName: string;
-  remainingInItem: number;
   totalCompleted: number;
   totalPagesInPlan: number;
-} | null;
+  currentBookName?: string;
+  currentBookUri?: string;
+  remainingInItem?: number;
+  suggestedBookName?: string;
+};
 
 type CurrentPlanCardProps = {
-  currentPlanInfo: CurrentPlanInfo;
+  currentPlanInfo: CurrentPlanInfo | null;
   onPress: () => void;
   onDeletePlan: () => void;
 };
@@ -25,42 +28,55 @@ export const CurrentPlanCard: FC<CurrentPlanCardProps> = ({
 }) => {
   if (!currentPlanInfo) return null;
 
-  console.log("current Plan info", currentPlanInfo);
+  const {
+    name,
+    isCompleted,
+    totalCompleted,
+    totalPagesInPlan,
+    currentBookName,
+    remainingInItem,
+    suggestedBookName,
+  } = currentPlanInfo;
+
+  const progressText = `${totalCompleted} / ${totalPagesInPlan} pages`;
+
+  const subtitle = isCompleted
+    ? suggestedBookName
+      ? `Today's plan is done. To keep reading, continue with "${suggestedBookName}".`
+      : "Today's plan is done."
+    : currentBookName
+    ? `Now: ${currentBookName}${
+        typeof remainingInItem === "number"
+          ? ` (${remainingInItem} pages left in this step)`
+          : ""
+      }`
+    : "Plan is in progress.";
 
   return (
     <TouchableOpacity
       style={styles.planSummary}
       activeOpacity={0.85}
-      onPress={onPress}
+      onPress={isCompleted ? undefined : onPress}
     >
       <View style={styles.planSummaryLeft}>
         <Ionicons
-          name={
-            currentPlanInfo.isCompleted
-              ? "checkmark-done-outline"
-              : "time-outline"
-          }
+          name={isCompleted ? "checkmark-done-outline" : "time-outline"}
           size={iconSizes.lg}
-          color={
-            currentPlanInfo.isCompleted ? colors.success : colors.textPrimary
-          }
+          color={isCompleted ? colors.success : colors.textPrimary}
         />
         <View style={styles.planSummaryText}>
           <MText variant="body" color="textPrimary" numberOfLines={1}>
-            Current plan: {currentPlanInfo.name}
+            Current plan: {name}
           </MText>
           <MText variant="body" color="textSecondary" numberOfLines={2}>
-            {currentPlanInfo.isCompleted
-              ? "Plan completed"
-              : `Now: ${currentPlanInfo.currentBookName} (${currentPlanInfo.remainingInItem} pages left in this step)`}
+            {subtitle}
           </MText>
         </View>
       </View>
 
       <View style={styles.planSummaryRight}>
         <MText variant="body" color="textSecondary">
-          {currentPlanInfo.totalCompleted} / {currentPlanInfo.totalPagesInPlan}{" "}
-          pages
+          {progressText}
         </MText>
 
         <TouchableOpacity
