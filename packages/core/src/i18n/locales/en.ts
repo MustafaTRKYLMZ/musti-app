@@ -65,6 +65,22 @@ export const en = {
     // Date picker
     "end_of_month": "End of Month",
     "select_date": "Select Date",
+    //data management
+    "export_data": "Export Data",
+    "export_success": "Data exported successfully.",
+    "export_failed": "Export failed.",
+    "import_data": "Import Data",
+    "import_success": "Data imported successfully.",
+    "import_failed": "Import failed.",
+    "invalid_backup_file": "Invalid backup file.",
+    "unsupported_backup_version": "Unsupported backup version.",
+    "import_warning": "This will REPLACE your current data.",
+   
+    // Alerts and messages
+    "alert.delete_transaction": "Are you sure you want to delete this transaction?",
+    "alert.delete_fixed_transaction": "Are you sure you want to delete this fixed transaction? This will delete all its occurrences.",
+    "alert.update_fixed_transaction": "Do you want to update only this occurrence or all future occurrences?",
+
     //Left side bar
     "analytics": "Analytics",
     "data": "Data",

@@ -30,13 +30,25 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack screenOptions={{ headerShown: false }}>
+        {/* Ana tab grubu */}
+        <Stack.Screen name="(tabs)" />
+
+        {/* Bookshelf ekranı (root-level) */}
+        <Stack.Screen name="bookshelf" />
+
+        {/* PDF grubu: app/pdf/_layout.tsx + viewer.tsx */}
+        <Stack.Screen name="pdf" />
+
+        {/* Eğer gerçekten (modals) grubun varsa: */}
+        {/* 
         <Stack.Screen
-          name="modal"
-          options={{ presentation: "modal", title: "Modal" }}
+          name="(modals)"
+          options={{ presentation: "modal" }}
         />
+        */}
       </Stack>
+
       <StatusBar style="auto" />
     </ThemeProvider>
   );

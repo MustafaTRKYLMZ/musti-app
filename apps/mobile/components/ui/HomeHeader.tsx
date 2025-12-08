@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "@budget/core";
 import LanguageSelector from "../LanguageSelector";
 import { MText, colors, spacing, radii, iconSizes } from "@budget/ui-native";
+import { Link } from "expo-router";
 
 interface Props {
   onOpenMenu: () => void;
@@ -19,40 +20,53 @@ export function HomeHeader({
   const { t } = useTranslation();
 
   return (
-    <View style={localStyles.headerRow}>
-      {/* LEFT SIDE: hamburger + title / subtitle */}
-      <View style={localStyles.leftContainer}>
+    <View style={styles.headerRow}>
+      {/* LEFT SIDE: menu + title */}
+      <View style={styles.leftContainer}>
         <TouchableOpacity
           onPress={onOpenMenu}
-          style={localStyles.menuButton}
+          style={styles.menuButton}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <Ionicons name="menu" size={22} color={colors.textInverse} />
         </TouchableOpacity>
 
-        <View style={localStyles.headerTextBlock}>
+        <View style={styles.headerTextBlock}>
           <MText
             variant="heading1"
             color="textPrimary"
-            style={localStyles.screenTitle}
+            style={styles.screenTitle}
           >
             {t("budget")}
           </MText>
           <MText
             variant="body"
             color="textSecondary"
-            style={localStyles.screenSubtitle}
+            style={styles.screenSubtitle}
           >
             {t("budget.desc")}
           </MText>
         </View>
       </View>
 
-      {/* RIGHT SIDE: simulation + language */}
-      <View style={localStyles.rightContainer}>
+      {/* RIGHT SIDE: bookshelf + simulation + language */}
+      <View style={styles.rightContainer}>
+        <Link href="/bookshelf" asChild>
+          <TouchableOpacity
+            style={styles.bookshelfButton}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons
+              name="library-outline"
+              size={iconSizes.lg}
+              color={colors.textPrimary}
+            />
+          </TouchableOpacity>
+        </Link>
+
         <TouchableOpacity
           onPress={onOpenSimulation}
-          style={localStyles.simButton}
+          style={styles.simButton}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <Ionicons
@@ -68,7 +82,7 @@ export function HomeHeader({
   );
 }
 
-const localStyles = StyleSheet.create({
+const styles = StyleSheet.create({
   headerRow: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -98,6 +112,11 @@ const localStyles = StyleSheet.create({
   screenTitle: {},
   screenSubtitle: {
     marginTop: spacing.xs,
+  },
+  bookshelfButton: {
+    padding: spacing.xs,
+    borderRadius: radii.full,
+    marginRight: spacing.xs,
   },
   simButton: {
     padding: spacing.xs,

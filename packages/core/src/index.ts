@@ -24,3 +24,13 @@ export * from "./types/cashflowLike";
 export * from "./types/fixedPlan";
 export * from "./types/store";
 export * from "./types/cashflowLike";
+export * from "./types/book";
+export * from "./types/bookProgress";
+export * from "./types/reading";
+
+//books
+export * from "./books/readingPlanUtils";
+export * from "./books/plan";
+
+//backup
+export * from "./types/backup";

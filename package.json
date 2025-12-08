@@ -30,6 +30,9 @@
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.2.0",
+    "expo-document-picker": "~14.0.8",
+    "expo-file-system": "~19.0.20",
+    "expo-sharing": "~14.0.8",
     "nanoid": "^5.1.6"
   }
 }

@@ -32,6 +32,7 @@ import { syncTransactions } from "../../../services/syncTransactions";
 import { CustomAlert } from "@/components/CustomAlert";
 
 import { FAB, Screen, colors, spacing } from "@budget/ui-native";
+import { PdfModal } from "@/components/ui/pdf/PdfModal";
 
 const getCurrentMonth = () => dayjs().format("YYYY-MM");
 
@@ -52,7 +53,10 @@ export function TransactionsHomeScreen() {
   );
   const [scrollToDateKey, setScrollToDateKey] = useState<string | undefined>();
   const [scrollToDateTrigger, setScrollToDateTrigger] = useState(0);
+  const [pdfModalVisible, setPdfModalVisible] = useState(false);
 
+  const handleOpenPdf = () => setPdfModalVisible(true);
+  const handleClosePdf = () => setPdfModalVisible(false);
   const { t, language } = useTranslation();
 
   const [selectedDate, setSelectedDate] = useState(
@@ -221,6 +225,7 @@ export function TransactionsHomeScreen() {
           onOpenSimulation={handleOpenSimulation}
           onLanguageChange={setAlertMessage}
         />
+
         {/* swipe area */}
         <Animated.View
           style={[styles.swipeArea, animatedSwipeStyle]}

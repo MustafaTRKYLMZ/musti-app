@@ -19,7 +19,15 @@ import { useTransactionsStore } from "../../store/useTransactionsStore";
 import { syncTransactions } from "../../services/syncTransactions";
 import { useTranslation } from "@budget/core";
 import { LocalizedDatePicker } from "@/components/ui/LocalizedDatePicker";
-import { MText, colors, typography, spacing, radii, iconSizes } from "@budget/ui-native";
+import {
+  MText,
+  colors,
+  typography,
+  spacing,
+  radii,
+  iconSizes,
+} from "@budget/ui-native";
+import { BackupSection } from "@/components/BackupSection";
 
 export default function SettingsScreen() {
   const handleClose = () => router.back();
@@ -121,7 +129,6 @@ export default function SettingsScreen() {
             label={t("starting_from_date")}
           />
         </View>
-
         {/* Save Button */}
         <TouchableOpacity
           style={[styles.saveButton, isLoading && styles.disabled]}
@@ -130,12 +137,10 @@ export default function SettingsScreen() {
         >
           <MText style={styles.saveButtonText}>{t("save")}</MText>
         </TouchableOpacity>
-
         {/* SECTION: Sync */}
         <MText style={[styles.sectionTitle, styles.sectionTitleSpacing]}>
           {t("sysnc")}
         </MText>
-
         <View style={styles.syncInfoBox}>
           <View>
             <MText style={styles.syncLabel}>{t("last_sync")}</MText>
@@ -160,6 +165,8 @@ export default function SettingsScreen() {
             </MText>
           </TouchableOpacity>
         </View>
+        {/* SECTION: Backup */}
+        <BackupSection />
       </ScrollView>
     </SafeAreaView>
   );
