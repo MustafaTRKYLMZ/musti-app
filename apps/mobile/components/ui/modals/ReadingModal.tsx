@@ -73,8 +73,6 @@ export function ReadingPlanModal({
   };
 
   const handleSave = () => {
-    // Store'un beklediği shape:
-    // items: { bookUri: string; bookName: string; pagesPerDay: number }[]
     const items = books
       .map((b) => {
         const isSelected = selected[b.uri];
@@ -105,9 +103,6 @@ export function ReadingPlanModal({
     }
 
     const finalName = planName.trim() || "Reading plan";
-
-    // Sadece name + items gönderiyoruz.
-    // ID, currentIndex, lastRunDate, isCompletedForToday vb. store içinde set ediliyor.
     setActivePlan({
       name: finalName,
       items,

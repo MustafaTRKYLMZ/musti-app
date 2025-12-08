@@ -18,24 +18,37 @@ export default function PdfViewerScreen() {
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [initialPage, setInitialPage] = useState(1);
-  const [lastPageInSession, setLastPageInSession] = useState(1);
 
   const progressMap = useBooksStore((s) => s.items);
   const setProgress = useBooksStore((s) => s.setProgress);
   const currentProgress = uri ? progressMap[uri] : undefined;
 
   const addPages = useReadingStatsStore((s) => s.addPages);
-
   const today = dayjs().format("YYYY-MM-DD");
 
-  // Başlangıç sayfasını sadece kitap progresine göre ayarla
+  // Oturumun başlarken hangi sayfadan başladığını snapshot al
+  const [sessionStartPage] = useState<number>(
+    currentProgress?.lastPage && currentProgress.lastPage > 0
+      ? currentProgress.lastPage
+      : 1
+  );
+
+  // Oturum boyunca geldiğin son sayfa
+  const [sessionLastPage, setSessionLastPage] = useState<number>(
+    currentProgress?.lastPage && currentProgress.lastPage > 0
+      ? currentProgress.lastPage
+      : 1
+  );
+
+  // PDF total page sayısı
+  const [total, setTotal] = useState<number>(currentProgress?.totalPages ?? 0);
+
+  // Başlangıç sayfasını kitap progresine göre ayarla
   useEffect(() => {
     if (currentProgress?.lastPage && currentProgress.lastPage > 0) {
       setInitialPage(currentProgress.lastPage);
-      setLastPageInSession(currentProgress.lastPage);
     } else {
       setInitialPage(1);
-      setLastPageInSession(1);
     }
   }, [currentProgress]);
 
@@ -52,43 +65,43 @@ export default function PdfViewerScreen() {
   const source = { uri, cache: true };
 
   const handleLoadComplete = (pages: number) => {
-    console.log("PDF loaded, total pages:", pages);
-
-    // totalPages bilgisini güncelle, lastPage'i bozma
-    setProgress({
-      uri,
-      name,
-      lastPage: currentProgress?.lastPage ?? 1,
-      totalPages: pages,
-    });
+    // Sadece local state'e yaz
+    setTotal(pages);
   };
 
-  const handlePageChanged = (page: number, total: number) => {
-    console.log(`Page: ${page} / ${total}`);
-
-    const delta = Math.max(0, page - lastPageInSession);
-    if (delta <= 0) {
-      // geri gitme / aynı sayfada kalma → istatistik yok
-      setLastPageInSession(page);
+  const handlePageChanged = (page: number, totalPages: number) => {
+    // Sadece local state güncelle
+    if (sessionLastPage === page && total === totalPages) {
       return;
     }
 
-    // Kitap progresini güncelle
+    setSessionLastPage(page);
+    setTotal(totalPages);
+
+    console.log("Page changed:", page, "of", totalPages);
+  };
+
+  const handleClose = () => {
+    // 1) Kitap progresini kaydet
     setProgress({
       uri,
       name,
-      lastPage: page,
-      totalPages: total,
+      lastPage: sessionLastPage,
+      totalPages: total || currentProgress?.totalPages || undefined,
     });
 
-    // Günlük istatistik (kitap bazlı)
-    addPages({
-      bookUri: uri,
-      date: today,
-      pages: delta,
-    });
+    // 2) Bugünkü okunan sayfa sayısını hesapla
+    const delta = Math.max(0, sessionLastPage - sessionStartPage);
 
-    setLastPageInSession(page);
+    if (delta > 0) {
+      addPages({
+        bookUri: uri,
+        date: today,
+        pages: delta,
+      });
+    }
+
+    router.back();
   };
 
   return (
@@ -119,10 +132,7 @@ export default function PdfViewerScreen() {
               />
             </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={() => router.back()}
-              style={styles.iconButton}
-            >
+            <TouchableOpacity onPress={handleClose} style={styles.iconButton}>
               <Ionicons
                 name="close-outline"
                 size={iconSizes.lg}

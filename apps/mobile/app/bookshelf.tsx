@@ -64,14 +64,14 @@ export default function BookshelfScreen() {
 
   const handleOpenPlanModal = () => setPlanModalVisible(true);
   const handleClosePlanModal = () => setPlanModalVisible(false);
-
+  //open book
   const handleOpenPdf = (item: LocalPdfFile) => {
     router.push({
       pathname: "/pdf/viewer",
       params: { uri: item.uri, name: item.name },
     });
   };
-
+  //delete book
   const handleDeletePdf = (item: LocalPdfFile) => {
     Alert.alert(
       "Delete PDF",
@@ -89,7 +89,7 @@ export default function BookshelfScreen() {
       ]
     );
   };
-
+  //delete plan
   const handleDeletePlan = () => {
     Alert.alert(
       "Delete plan",
@@ -132,7 +132,7 @@ export default function BookshelfScreen() {
 
     const currentBookName = currentItem.bookName || currentItem.bookUri;
 
-    // Kitap nesnesini bul (URI'den)
+    // find book obje (from URI)
     const currentBook = pdfs.find((b) => b.uri === currentItem.bookUri);
 
     return {
@@ -145,7 +145,7 @@ export default function BookshelfScreen() {
       isCompleted: plan.isCompletedForToday,
     };
   }, [activePlan, pdfs]);
-
+  //open plan from card
   const handlePressPlanCard = () => {
     if (!currentPlanInfo) return;
     if (currentPlanInfo.isCompleted) return;
@@ -164,7 +164,7 @@ export default function BookshelfScreen() {
     });
   };
 
-  // kitap rename
+  // book rename
   async function renameBook(file: LocalPdfFile, newName: string) {
     try {
       const parts = file.name.split(".");
