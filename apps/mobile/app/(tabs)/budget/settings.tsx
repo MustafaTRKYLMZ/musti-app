@@ -14,9 +14,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import dayjs from "dayjs";
 
-import { useSettingsStore } from "../../store/useSettingsStore";
-import { useTransactionsStore } from "../../store/useTransactionsStore";
-import { syncTransactions } from "../../services/syncTransactions";
+import { useSettingsStore } from "../../../store/useSettingsStore";
+import { useTransactionsStore } from "../../../store/useTransactionsStore";
+import { syncTransactions } from "../../../services/syncTransactions";
 import { useTranslation } from "@budget/core";
 import { LocalizedDatePicker } from "@/components/ui/LocalizedDatePicker";
 import {
@@ -139,7 +139,7 @@ export default function SettingsScreen() {
         </TouchableOpacity>
         {/* SECTION: Sync */}
         <MText style={[styles.sectionTitle, styles.sectionTitleSpacing]}>
-          {t("sync")}
+          {t("sysnc")}
         </MText>
         <View style={styles.syncInfoBox}>
           <View>

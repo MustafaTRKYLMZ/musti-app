@@ -12,7 +12,7 @@ interface Props {
   onLanguageChange?: (msg: string) => void;
 }
 
-export function HomeHeader({
+export function BudgetHeader({
   onOpenMenu,
   onOpenSimulation,
   onLanguageChange,
@@ -30,23 +30,6 @@ export function HomeHeader({
         >
           <Ionicons name="menu" size={22} color={colors.textInverse} />
         </TouchableOpacity>
-
-        <View style={styles.headerTextBlock}>
-          <MText
-            variant="heading1"
-            color="textPrimary"
-            style={styles.screenTitle}
-          >
-            {t("budget")}
-          </MText>
-          <MText
-            variant="body"
-            color="textSecondary"
-            style={styles.screenSubtitle}
-          >
-            {t("budget.desc")}
-          </MText>
-        </View>
       </View>
 
       {/* RIGHT SIDE: bookshelf + simulation + language */}
@@ -75,7 +58,6 @@ export function HomeHeader({
             color={colors.textPrimary}
           />
         </TouchableOpacity>
-
         <LanguageSelector onLanguageChange={onLanguageChange} />
       </View>
     </View>
@@ -87,32 +69,27 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     justifyContent: "space-between",
-    marginBottom: spacing.md,
+    width: "100%",
   },
   leftContainer: {
     flexDirection: "column",
     alignItems: "flex-start",
     flexShrink: 1,
-    marginLeft: spacing.sm,
     gap: spacing.sm,
+    padding: spacing.sm,
   },
   rightContainer: {
     flexDirection: "row",
     alignItems: "flex-start",
     height: "100%",
+    padding: spacing.sm,
   },
   menuButton: {
     borderRadius: radii.full,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
   },
-  headerTextBlock: {
-    flexShrink: 1,
-  },
-  screenTitle: {},
-  screenSubtitle: {
-    marginTop: spacing.xs,
-  },
+
   bookshelfButton: {
     padding: spacing.xs,
     borderRadius: radii.full,

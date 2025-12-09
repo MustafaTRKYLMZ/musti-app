@@ -27,6 +27,8 @@ import { ReadingPlanModal } from "@/components/ui/modals/CreaPlanModal";
 import { CurrentPlanCard } from "@/features/books/CurrentPlanCard";
 import { BookCard } from "@/components/ui/Books/BookCard";
 import { useCurrentPlanInfo } from "@/hooks/useCurrentPlanInfo";
+import { AppScreen } from "@/components/AppScreen";
+import { BookshelfHeader } from "@/components/BookshelfHeader";
 
 export default function BookshelfScreen() {
   const router = useRouter();
@@ -165,111 +167,75 @@ export default function BookshelfScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      {/* Header with back + title + add + plan */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.backButton}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Ionicons
-              name="arrow-back-outline"
-              size={iconSizes.lg}
-              color={colors.textPrimary}
-            />
-          </TouchableOpacity>
+    <AppScreen
+      headerCenter={
+        <BookshelfHeader
+          handleOpenModal={handleOpenModal}
+          handleOpenPlanModal={handleOpenPlanModal}
+        />
+      }
+    >
+      <View style={styles.container}>
+        {/* Header with back + title + add + plan */}
 
-          <MText variant="heading1" style={styles.headerTitle}>
-            Bookshelf
-          </MText>
-        </View>
+        {/* Current plan summary */}
+        <CurrentPlanCard
+          currentPlanInfo={currentPlanInfo}
+          onPress={handlePressPlanCard}
+          onDeletePlan={handleDeletePlan}
+        />
 
-        <View style={styles.headerRight}>
-          <TouchableOpacity
-            onPress={handleOpenPlanModal}
-            style={styles.planButton}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Ionicons
-              name="list-outline"
-              size={iconSizes.lg}
-              color={colors.textPrimary}
-            />
-          </TouchableOpacity>
+        {/* Books list */}
+        {pdfs.length === 0 ? (
+          <View style={styles.emptyState}>
+            <MText color="textSecondary">
+              No books yet. Use the plus button to add one.
+            </MText>
+          </View>
+        ) : (
+          <FlatList
+            data={pdfs}
+            keyExtractor={(item) => item.uri}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.listContent}
+            renderItem={({ item }) => {
+              const progress = progressMap[item.uri];
+              const statKey = `${item.uri}:${today}`;
+              const todayStat = readingStats[statKey];
 
-          <TouchableOpacity
-            onPress={handleOpenModal}
-            style={styles.addButton}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Ionicons
-              name="add-circle-outline"
-              size={iconSizes.xl}
-              color={colors.success}
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
+              return (
+                <BookCard
+                  file={item}
+                  onOpen={() => handleOpenPdf(item)}
+                  onDelete={() => handleDeletePdf(item)}
+                  lastPage={progress?.lastPage}
+                  totalPages={progress?.totalPages}
+                  todayPages={todayStat?.pagesRead}
+                  todayTargetPages={todayStat?.targetPages}
+                  onRename={(newName) => renameBook(item, newName)}
+                />
+              );
+            }}
+          />
+        )}
 
-      {/* Current plan summary */}
-      <CurrentPlanCard
-        currentPlanInfo={currentPlanInfo}
-        onPress={handlePressPlanCard}
-        onDeletePlan={handleDeletePlan}
-      />
-
-      {/* Books list */}
-      {pdfs.length === 0 ? (
-        <View style={styles.emptyState}>
-          <MText color="textSecondary">
-            No books yet. Use the plus button to add one.
-          </MText>
-        </View>
-      ) : (
-        <FlatList
-          data={pdfs}
-          keyExtractor={(item) => item.uri}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.listContent}
-          renderItem={({ item }) => {
-            const progress = progressMap[item.uri];
-            const statKey = `${item.uri}:${today}`;
-            const todayStat = readingStats[statKey];
-
-            return (
-              <BookCard
-                file={item}
-                onOpen={() => handleOpenPdf(item)}
-                onDelete={() => handleDeletePdf(item)}
-                lastPage={progress?.lastPage}
-                totalPages={progress?.totalPages}
-                todayPages={todayStat?.pagesRead}
-                todayTargetPages={todayStat?.targetPages}
-                onRename={(newName) => renameBook(item, newName)}
-              />
-            );
+        <PdfModal
+          visible={modalVisible}
+          onClose={handleCloseModal}
+          onPdfImported={() => {
+            handleCloseModal();
+            loadPdfs();
           }}
         />
-      )}
 
-      <PdfModal
-        visible={modalVisible}
-        onClose={handleCloseModal}
-        onPdfImported={() => {
-          handleCloseModal();
-          loadPdfs();
-        }}
-      />
-
-      <ReadingPlanModal
-        visible={planModalVisible}
-        onClose={handleClosePlanModal}
-        books={pdfs}
-      />
-    </View>
+        <ReadingPlanModal
+          visible={planModalVisible}
+          onClose={handleClosePlanModal}
+          books={pdfs}
+        />
+      </View>
+    </AppScreen>
   );
 }
 
@@ -279,38 +245,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     paddingTop: spacing.lg,
     marginTop: spacing["3xl"],
-  },
-  header: {
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.sm,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexShrink: 1,
-  },
-  headerRight: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  backButton: {
-    paddingRight: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  headerTitle: {
-    flexShrink: 1,
-  },
-  planButton: {
-    paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.xs,
-    marginRight: spacing.xs,
-  },
-  addButton: {
-    paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.xs,
   },
   emptyState: {
     flex: 1,
