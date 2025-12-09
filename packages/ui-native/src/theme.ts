@@ -53,6 +53,9 @@ export const iconSizes = {
     lg: 16,
     xl: 24,
     full: 999,
+    '2xl': 32,
+    '3xl': 40,
+    '4xl': 48,
   };
   
   export const typography = {

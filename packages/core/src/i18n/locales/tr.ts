@@ -28,7 +28,6 @@ export const tr = {
   "now": "Şimdi",
   "fixed": "Sabit",
   "food": "Yiyecek",
-
   "end": "Son",
   "insurance": "Sigorta",
   "item": "Öğe",
@@ -65,6 +64,25 @@ export const tr = {
   // Date picker
   "end_of_month": "Ay Sonu",
   "select_date": "Tarih Seç",
+  // Data management
+  "export_data": "Veri Dışa Aktar",
+  "export_success": "Veri başarıyla dışa aktarıldı.",
+  "export_failed": "Dışa aktarma başarısız oldu.",
+  "device_export_permission_denied": "Cihaz depolama erişim izni reddedildi.",
+  "device_export_android_only": "Cihaz depolamasına doğrudan kaydetme yalnızca Android'de desteklenir. Lütfen normal Dışa Aktarma seçeneğini kullanın.",
+  "export_success_device": "Yedekleme seçilen klasöre kaydedildi.",
+  "export_to_device": "Cihaza Dışa Aktar",
+  "import_data": "Veri İçe Aktar",
+  "import_success": "Veri başarıyla içe aktarıldı.",
+  "import_failed": "İçe aktarma başarısız oldu.",
+  "invalid_backup_file": "Geçersiz yedekleme dosyası.",
+  "unsupported_backup_version": "Yedekleme dosyası desteklenmeyen bir sürümden.",
+  "import_warning": "Bu, mevcut verilerinizi DEĞİŞTİRECEKTİR.",
+  // Alerts and messages
+  "alert.delete_transaction": "Bu işlemi silmek istediğinizden emin misiniz?",
+  "alert.delete_fixed_transaction": "Bu sabit işlemi silmek istediğinizden emin misiniz? Bu, tüm oluşumları silecektir.",
+  "alert.update_fixed_transaction": "Yalnızca bu oluşumu mu yoksa tüm gelecekteki oluşumları mı güncellemek istiyorsunuz?",
+
   // left side bar
   "analytics": "Analizler",
   "data": "Veri",

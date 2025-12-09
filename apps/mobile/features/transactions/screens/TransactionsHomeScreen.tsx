@@ -1,12 +1,5 @@
-// apps/mobile/features/transactions/screens/TransactionsHomeScreen.tsx
-
 import React, { useEffect, useState, useMemo, useRef } from "react";
-import {
-  View,
-  StyleSheet,
-  PanResponder,
-  Animated, // 🔹 animasyon için
-} from "react-native";
+import { View, StyleSheet, PanResponder, Animated } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import dayjs from "dayjs";
@@ -221,6 +214,7 @@ export function TransactionsHomeScreen() {
           onOpenSimulation={handleOpenSimulation}
           onLanguageChange={setAlertMessage}
         />
+
         {/* swipe area */}
         <Animated.View
           style={[styles.swipeArea, animatedSwipeStyle]}
