@@ -154,7 +154,7 @@ export const useReadingPlanStore = create<ReadingPlanState>()(
           let newCurrentPage = prev.currentPageInBook + usePages;
 
           if (effectiveTotalPages && effectiveTotalPages > 0) {
-            // wrap using modulo for 1-based index
+            // Wrap around using 1-based page numbers: convert to 0-based, mod by total, convert back to 1-based
             const zeroBased = (newCurrentPage - 1) % effectiveTotalPages;
             newCurrentPage = zeroBased + 1;
           }

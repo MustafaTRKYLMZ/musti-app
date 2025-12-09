@@ -11,7 +11,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import * as FileSystem from "expo-file-system/legacy";
 import { useRouter } from "expo-router";
-import { MText, colors, spacing, radii, iconSizes } from "@budget/ui-native";
+import { MText, colors, spacing, iconSizes } from "@budget/ui-native";
 import dayjs from "dayjs";
 
 import {
@@ -57,7 +57,7 @@ export default function BookshelfScreen() {
   }, [ensureTodayPlan, today]);
 
   // Plan summary + item details (for now we only use summary)
-  const { summary: currentPlanInfo, items } = useCurrentPlanInfo(pdfs);
+  const { summary: currentPlanInfo } = useCurrentPlanInfo(pdfs);
 
   const handleOpenModal = () => setModalVisible(true);
   const handleCloseModal = () => setModalVisible(false);

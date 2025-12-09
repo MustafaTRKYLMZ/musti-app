@@ -1,5 +1,3 @@
-// apps/mobile/components/BackupSection.tsx
-
 import React from "react";
 import {
   View,
@@ -173,30 +171,16 @@ export const BackupSection = () => {
             text: t("import_data"),
             style: "destructive",
             onPress: () => {
-              // replace transactions
-              useTransactionsStore.setState((state) => ({
-                ...state,
-                transactions,
-              }));
+              useTransactionsStore.setState({ transactions });
 
-              // replace simulation scenarios + persist
-              useSimulationStore.setState((state) => {
-                const next = {
-                  ...state,
-                  scenarios,
-                  activeScenarioId: null,
-                };
-
-                void persistSimulationState({
-                  scenarios: next.scenarios,
-                  activeScenarioId: next.activeScenarioId,
-                });
-
-                return next;
+              useSimulationStore.setState({
+                scenarios,
+                activeScenarioId: null,
               });
 
-              // update settings.initialBalance if present
+              // Update initialBalance in settings
               if (settings.initialBalance) {
+                // No need to wait even if async
                 useSettingsStore
                   .getState()
                   .saveInitialBalance(settings.initialBalance);
@@ -261,7 +245,7 @@ const styles = StyleSheet.create({
   },
   dataButton: {
     flex: 1,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primary, 
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
     borderRadius: radii.md,

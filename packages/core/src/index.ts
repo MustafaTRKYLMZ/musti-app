@@ -27,10 +27,11 @@ export * from "./types/cashflowLike";
 export * from "./types/book";
 export * from "./types/bookProgress";
 export * from "./types/reading";
+export * from "./types/readingPlan";
 
-//books
+// books
 export * from "./books/readingPlanUtils";
 export * from "./books/plan";
 
-//backup
+// backup
 export * from "./types/backup";

@@ -34,6 +34,7 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="bookshelf" />
         <Stack.Screen name="pdf" />
+        <Stack.Screen name="plan" />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>

@@ -64,7 +64,7 @@ export const tr = {
   // Date picker
   "end_of_month": "Ay Sonu",
   "select_date": "Tarih Seç",
-  //data management
+  // Data management
   "export_data": "Veri Dışa Aktar",
   "export_success": "Veri başarıyla dışa aktarıldı.",
   "export_failed": "Dışa aktarma başarısız oldu.",

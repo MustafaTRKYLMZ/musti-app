@@ -65,7 +65,7 @@ export const en = {
     // Date picker
     "end_of_month": "End of Month",
     "select_date": "Select Date",
-    //data management
+    // Data management
     "export_data": "Export Data",
     "export_success": "Data exported successfully.",
     "export_failed": "Export failed.",
