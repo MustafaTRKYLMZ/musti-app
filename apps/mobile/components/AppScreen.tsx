@@ -2,7 +2,7 @@
 import React, { ReactNode } from "react";
 import { View, StyleSheet, StyleProp, ViewStyle } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MText, colors, spacing } from "@budget/ui-native";
+import { MText, colors, spacing, radii } from "@budget/ui-native";
 import { AppSwitcherButton } from "@/components/AppSwitcherButton";
 
 type AppScreenProps = {
@@ -62,13 +62,15 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.background,
+    padding: spacing.sm,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.borderSubtle,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceStrong,
+    borderRadius: radii.sm,
   },
 
   center: {

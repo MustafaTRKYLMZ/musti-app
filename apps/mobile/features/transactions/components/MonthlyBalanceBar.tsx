@@ -64,15 +64,12 @@ export const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-
     backgroundColor: colors.surfaceStrong,
-    borderRadius: radii.lg,
+    borderRadius: radii.sm,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
-
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-
     marginTop: spacing.md,
   },
 

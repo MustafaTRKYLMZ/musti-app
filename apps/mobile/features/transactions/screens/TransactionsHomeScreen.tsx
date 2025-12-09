@@ -299,7 +299,6 @@ export function TransactionsHomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { gap: spacing.lg, backgroundColor: colors.background },
   content: {
     flex: 1,
   },

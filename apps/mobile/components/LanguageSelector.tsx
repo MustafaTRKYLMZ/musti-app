@@ -1,8 +1,8 @@
 // apps/mobile/components/LanguageSelector.tsx
 import React, { useState, useRef, useEffect } from "react";
-import { View, TouchableOpacity, StyleSheet, Animated } from "react-native";
+import { View, StyleSheet, Animated } from "react-native";
 import { useTranslation } from "@budget/core";
-import { colors, spacing, radii } from "@budget/ui-native";
+import { spacing, radii } from "@budget/ui-native";
 import { FlagIcon, type LangCode } from "@/components/ui/FlagIcon";
 
 type Props = {
@@ -52,30 +52,30 @@ export default function LanguageSelector({ onLanguageChange }: Props) {
 
   return (
     <View style={styles.wrapper}>
-      {/* MAIN BUTTON */}
-      <TouchableOpacity style={styles.flagButton} onPress={toggleDropdown}>
-        <FlagIcon code={currentLang} size={34} />
-      </TouchableOpacity>
+      {/* MAIN BUTTON - direkt FlagIcon kullan */}
+      <FlagIcon code={currentLang} size={34} onPress={toggleDropdown} />
 
       {/* DROPDOWN */}
       {open && (
         <Animated.View style={[styles.dropdown, dropdownStyle]}>
           {currentLang !== "en" && (
-            <TouchableOpacity
-              style={styles.dropdownItem}
-              onPress={() => changeLanguage("en")}
-            >
-              <FlagIcon code="en" size={30} />
-            </TouchableOpacity>
+            <View style={styles.dropdownItem}>
+              <FlagIcon
+                code="en"
+                size={30}
+                onPress={() => changeLanguage("en")}
+              />
+            </View>
           )}
 
           {currentLang !== "tr" && (
-            <TouchableOpacity
-              style={styles.dropdownItem}
-              onPress={() => changeLanguage("tr")}
-            >
-              <FlagIcon code="tr" size={30} />
-            </TouchableOpacity>
+            <View style={styles.dropdownItem}>
+              <FlagIcon
+                code="tr"
+                size={30}
+                onPress={() => changeLanguage("tr")}
+              />
+            </View>
           )}
         </Animated.View>
       )}
@@ -88,18 +88,10 @@ const styles = StyleSheet.create({
     marginLeft: spacing.sm,
     position: "relative",
   },
-  flagButton: {
-    width: 40,
-    height: 40,
-    borderRadius: radii.full,
-    justifyContent: "center",
-    alignItems: "center",
-  },
   dropdown: {
     position: "absolute",
     top: 46,
     right: 0,
-
     paddingVertical: 0,
     paddingHorizontal: 0,
     backgroundColor: "transparent",

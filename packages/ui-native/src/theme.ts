@@ -7,6 +7,7 @@ export const colors = {
     // background
     background: "#0A1A4F",    
     backgroundSecondary: "#031634",
+    backgroundHover: "#112E5C",
     surface: "#0f172a",       
     surfaceElevated: "#FFFFFF",
   

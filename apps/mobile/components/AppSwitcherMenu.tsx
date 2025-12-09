@@ -1,15 +1,9 @@
 // components/AppSwitcherMenu.tsx
 import React from "react";
-import {
-  Modal,
-  View,
-  TouchableOpacity,
-  StyleSheet,
-  Pressable,
-} from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { colors, spacing, radii, iconSizes, MText } from "@budget/ui-native";
+import { Modal, View, StyleSheet, Pressable } from "react-native";
+import { colors, spacing, radii, MText } from "@budget/ui-native";
 import { router } from "expo-router";
+import { IconTile } from "@/components/ui/AppIcon";
 
 type Props = {
   visible: boolean;
@@ -29,35 +23,27 @@ export function AppSwitcherMenu({ visible, onClose }: Props) {
 
   return (
     <Modal visible={visible} transparent animationType="fade">
-      {/* arka plan */}
       <Pressable style={styles.backdrop} onPress={onClose} />
 
-      {/* açılır submenu panel */}
       <View style={styles.menuContainer}>
-        <View style={styles.grid}>
-          {/* Budget */}
-          <TouchableOpacity style={styles.item} onPress={goBudget}>
-            <View style={styles.iconWrapper}>
-              <Ionicons
-                name="wallet-outline"
-                size={iconSizes.xl}
-                color={colors.success}
-              />
-            </View>
-            <MText style={styles.label}>Budget</MText>
-          </TouchableOpacity>
+        <MText variant="heading3" style={styles.menuTitle}>
+          Apps
+        </MText>
 
-          {/* Bookshelf */}
-          <TouchableOpacity style={styles.item} onPress={goBookshelf}>
-            <View style={styles.iconWrapper}>
-              <Ionicons
-                name="book-outline"
-                size={iconSizes.xl}
-                color={colors.success}
-              />
-            </View>
-            <MText style={styles.label}>Bookshelf</MText>
-          </TouchableOpacity>
+        <View style={styles.grid}>
+          <IconTile
+            name="wallet-outline"
+            label="Budget"
+            color={colors.success}
+            onPress={goBudget}
+          />
+
+          <IconTile
+            name="book-outline"
+            label="Bookshelf"
+            color={colors.success}
+            onPress={goBookshelf}
+          />
         </View>
       </View>
     </Modal>
@@ -90,22 +76,5 @@ const styles = StyleSheet.create({
   grid: {
     flexDirection: "row",
     justifyContent: "space-between",
-  },
-  item: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: spacing.sm,
-    width: 90,
-  },
-  iconWrapper: {
-    backgroundColor: colors.backgroundSecondary,
-    padding: spacing.md,
-    borderRadius: radii.lg,
-    marginBottom: spacing.xs,
-  },
-  label: {
-    textAlign: "center",
-    fontSize: 13,
-    color: colors.textPrimary,
   },
 });

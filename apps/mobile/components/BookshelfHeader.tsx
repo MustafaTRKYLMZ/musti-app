@@ -1,7 +1,7 @@
-import { MText, iconSizes, colors, spacing } from "@budget/ui-native";
-import { Ionicons } from "@expo/vector-icons";
-import { FC } from "react";
-import { View, TouchableOpacity, StyleSheet } from "react-native";
+import React, { FC } from "react";
+import { View, StyleSheet } from "react-native";
+import { MText, colors, spacing, radii, iconSizes } from "@budget/ui-native";
+import { IconButton } from "@/components/ui/AppIcon";
 
 type BookshelfHeaderProps = {
   handleOpenModal: () => void;
@@ -21,29 +21,24 @@ export const BookshelfHeader: FC<BookshelfHeaderProps> = ({
       </View>
 
       <View style={styles.headerRight}>
-        <TouchableOpacity
+        <IconButton
+          family="ion"
+          name="list-outline"
+          size={iconSizes.lg}
+          padding={spacing.xs}
+          style={styles.iconButton}
           onPress={handleOpenPlanModal}
-          style={styles.planButton}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons
-            name="list-outline"
-            size={iconSizes.lg}
-            color={colors.textPrimary}
-          />
-        </TouchableOpacity>
+        />
 
-        <TouchableOpacity
+        <IconButton
+          family="ion"
+          name="add-circle-outline"
+          size={iconSizes.xl}
+          color={colors.success}
+          padding={spacing.xs}
+          style={styles.iconButton}
           onPress={handleOpenModal}
-          style={styles.addButton}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons
-            name="add-circle-outline"
-            size={iconSizes.xl}
-            color={colors.success}
-          />
-        </TouchableOpacity>
+        />
       </View>
     </View>
   );
@@ -66,21 +61,13 @@ const styles = StyleSheet.create({
   headerRight: {
     flexDirection: "row",
     alignItems: "center",
-  },
-  backButton: {
     paddingRight: spacing.sm,
-    paddingVertical: spacing.xs,
   },
   headerTitle: {
     flexShrink: 1,
   },
-  planButton: {
-    paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.xs,
-    marginRight: spacing.xs,
-  },
-  addButton: {
-    paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.xs,
+  iconButton: {
+    borderRadius: radii.full,
+    marginLeft: spacing.xs,
   },
 });

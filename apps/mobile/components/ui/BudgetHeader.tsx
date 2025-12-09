@@ -1,10 +1,11 @@
+// components/ui/BudgetHeader.tsx
 import React from "react";
-import { View, TouchableOpacity, StyleSheet } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { View, StyleSheet } from "react-native";
 import { useTranslation } from "@budget/core";
 import LanguageSelector from "../LanguageSelector";
-import { MText, colors, spacing, radii, iconSizes } from "@budget/ui-native";
+import { MText, colors, spacing, radii } from "@budget/ui-native";
 import { Link } from "expo-router";
+import { IconButton } from "./AppIcon";
 
 interface Props {
   onOpenMenu: () => void;
@@ -21,43 +22,27 @@ export function BudgetHeader({
 
   return (
     <View style={styles.headerRow}>
-      {/* LEFT SIDE: menu + title */}
+      {/* LEFT: menu + title */}
       <View style={styles.leftContainer}>
-        <TouchableOpacity
+        <IconButton
+          family="ion"
+          name="menu"
           onPress={onOpenMenu}
+          backgroundColor="transparent"
+          padding={spacing.xs}
           style={styles.menuButton}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="menu" size={22} color={colors.textInverse} />
-        </TouchableOpacity>
+        />
       </View>
 
-      {/* RIGHT SIDE: bookshelf + simulation + language */}
+      {/* RIGHT: bookshelf + simulation + language */}
       <View style={styles.rightContainer}>
-        <Link href="/bookshelf" asChild>
-          <TouchableOpacity
-            style={styles.bookshelfButton}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Ionicons
-              name="library-outline"
-              size={iconSizes.lg}
-              color={colors.textPrimary}
-            />
-          </TouchableOpacity>
-        </Link>
-
-        <TouchableOpacity
+        <IconButton
+          family="ion"
+          name="flask-outline"
+          padding={spacing.xs}
+          style={styles.iconRight}
           onPress={onOpenSimulation}
-          style={styles.simButton}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons
-            name="flask-outline"
-            size={iconSizes.lg}
-            color={colors.textPrimary}
-          />
-        </TouchableOpacity>
+        />
         <LanguageSelector onLanguageChange={onLanguageChange} />
       </View>
     </View>
@@ -67,37 +52,32 @@ export function BudgetHeader({
 const styles = StyleSheet.create({
   headerRow: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     justifyContent: "space-between",
     width: "100%",
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
   },
   leftContainer: {
-    flexDirection: "column",
-    alignItems: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
     flexShrink: 1,
     gap: spacing.sm,
-    padding: spacing.sm,
   },
   rightContainer: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    height: "100%",
-    padding: spacing.sm,
+    alignItems: "center",
+    gap: spacing.xs,
   },
   menuButton: {
     borderRadius: radii.full,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
   },
-
-  bookshelfButton: {
-    padding: spacing.xs,
-    borderRadius: radii.full,
-    marginRight: spacing.xs,
+  titleBlock: {
+    flexShrink: 1,
   },
-  simButton: {
-    padding: spacing.xs,
+  iconRight: {
     borderRadius: radii.full,
-    marginRight: spacing.xs,
   },
 });
