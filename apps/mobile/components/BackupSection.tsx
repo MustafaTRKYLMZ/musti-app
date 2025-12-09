@@ -1,46 +1,53 @@
-// e.g., apps/mobile/components/settings/BackupSection.tsx
-
 import React from "react";
-import { View, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import {
+  View,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  Platform,
+} from "react-native";
 import { useTranslation } from "@budget/core";
 import { MText, spacing, colors, radii, typography } from "@budget/ui-native";
 
-// Expo helpers
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import * as DocumentPicker from "expo-document-picker";
+
 import { useSettingsStore } from "@/store/useSettingsStore";
 import { useSimulationStore } from "@/store/useSimulationStore";
 import { useTransactionsStore } from "@/store/useTransactionsStore";
+import { persistSimulationState } from "@/store/simulation/persistState";
 
 export const BackupSection = () => {
   const { t } = useTranslation();
 
+  const buildBackupPayload = () => {
+    const transactions = useTransactionsStore.getState().transactions;
+    const { scenarios } = useSimulationStore.getState();
+    const { initialBalance } = useSettingsStore.getState();
+
+    return {
+      version: 1 as const,
+      app: "musti-app" as const,
+      exportedAt: new Date().toISOString(),
+      data: {
+        transactions,
+        scenarios,
+        settings: {
+          initialBalance,
+        },
+      },
+    };
+  };
+
   const handleExportData = async () => {
     try {
-      const transactions = useTransactionsStore.getState().transactions;
-      const { scenarios } = useSimulationStore.getState();
-      const { initialBalance } = useSettingsStore.getState();
-
-      const backup = {
-        version: 1,
-        app: "musti-app",
-        exportedAt: new Date().toISOString(),
-        data: {
-          transactions,
-          scenarios,
-          settings: {
-            initialBalance,
-          },
-        },
-      };
-
+      const backup = buildBackupPayload();
       const json = JSON.stringify(backup, null, 2);
 
       const fileName = `musti-backup-${Date.now()}.json`;
       const fileUri = FileSystem.documentDirectory + fileName;
 
-      // Write the file
       await FileSystem.writeAsStringAsync(fileUri, json, {
         encoding: FileSystem.EncodingType.UTF8,
       });
@@ -60,6 +67,57 @@ export const BackupSection = () => {
     }
   };
 
+  const handleExportToDevice = async () => {
+    try {
+      if (
+        Platform.OS !== "android" ||
+        !("StorageAccessFramework" in FileSystem)
+      ) {
+        Alert.alert(
+          t("export_data"),
+          t("device_export_android_only") ||
+            "Saving directly to device storage is only supported on Android. Please use the normal Export option."
+        );
+        return;
+      }
+
+      const backup = buildBackupPayload();
+      const json = JSON.stringify(backup, null, 2);
+
+      const saf = FileSystem.StorageAccessFramework;
+
+      const permissions = await saf.requestDirectoryPermissionsAsync();
+      if (!permissions.granted) {
+        Alert.alert(
+          t("export_data"),
+          t("device_export_permission_denied") ||
+            "You need to select a folder to save the backup."
+        );
+        return;
+      }
+
+      const fileName = `musti-backup-${Date.now()}.json`;
+
+      const uri = await saf.createFileAsync(
+        permissions.directoryUri,
+        fileName,
+        "application/json"
+      );
+
+      await FileSystem.writeAsStringAsync(uri, json, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+
+      Alert.alert(
+        t("export_data"),
+        t("export_success_device") || "Backup saved to the selected folder."
+      );
+    } catch (e) {
+      console.log("device export error", e);
+      Alert.alert(t("export_data"), t("export_failed") || "Export failed.");
+    }
+  };
+
   const handleImportData = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
@@ -72,6 +130,7 @@ export const BackupSection = () => {
       }
 
       const file = result.assets[0];
+
       const content = await FileSystem.readAsStringAsync(file.uri, {
         encoding: FileSystem.EncodingType.UTF8,
       });
@@ -149,20 +208,26 @@ export const BackupSection = () => {
 
       <View style={styles.dataButtonsRow}>
         <TouchableOpacity style={styles.dataButton} onPress={handleExportData}>
-          <MText variant="bodyStrong" color="textInverse">
-            {t("export_data")}
-          </MText>
+          <MText color="textInverse">{t("export_data")}</MText>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.dataButtonSecondary}
           onPress={handleImportData}
         >
-          <MText variant="bodyStrong" color="textPrimary">
-            {t("import_data")}
-          </MText>
+          <MText color="textPrimary">{t("import_data")}</MText>
         </TouchableOpacity>
       </View>
+
+      {/* Export directly to device storage (Android SAF) */}
+      <TouchableOpacity
+        style={styles.deviceExportButton}
+        onPress={handleExportToDevice}
+      >
+        <MText color="textInverse">
+          {t("export_to_device") || "Export to device storage"}
+        </MText>
+      </TouchableOpacity>
     </>
   );
 };
@@ -180,7 +245,7 @@ const styles = StyleSheet.create({
   },
   dataButton: {
     flex: 1,
-    backgroundColor: colors.primary, // could use primaryLight instead
+    backgroundColor: colors.primary, 
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
     borderRadius: radii.md,
@@ -197,5 +262,13 @@ const styles = StyleSheet.create({
     marginLeft: spacing.sm,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
+  },
+  deviceExportButton: {
+    marginTop: spacing.sm,
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.md,
+    alignItems: "center",
   },
 });
