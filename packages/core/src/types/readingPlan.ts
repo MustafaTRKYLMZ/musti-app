@@ -8,7 +8,7 @@ export interface ReadingSegment {
   bookId: BookId;
   startPage: number;
   endPage: number;
-  order: number; 
+  order: number;
   completed: boolean;
 }
 

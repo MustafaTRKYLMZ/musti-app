@@ -1,4 +1,4 @@
-// örn: apps/mobile/components/settings/BackupSection.tsx
+// e.g., apps/mobile/components/settings/BackupSection.tsx
 
 import React from "react";
 import { View, TouchableOpacity, StyleSheet, Alert } from "react-native";
@@ -40,7 +40,7 @@ export const BackupSection = () => {
       const fileName = `musti-backup-${Date.now()}.json`;
       const fileUri = FileSystem.documentDirectory + fileName;
 
-      // Dosyayı yaz
+      // Write the file
       await FileSystem.writeAsStringAsync(fileUri, json, {
         encoding: FileSystem.EncodingType.UTF8,
       });
@@ -112,22 +112,16 @@ export const BackupSection = () => {
             text: t("import_data"),
             style: "destructive",
             onPress: () => {
-              // Transactions'ı replace et
-              useTransactionsStore.setState((state) => ({
-                ...state,
-                transactions,
-              }));
+              useTransactionsStore.setState({ transactions });
 
-              // Simulation scenarios'u replace et
-              useSimulationStore.setState((state) => ({
-                ...state,
+              useSimulationStore.setState({
                 scenarios,
                 activeScenarioId: null,
-              }));
+              });
 
-              // Settings içindeki initialBalance'ı güncelle
+              // Update initialBalance in settings
               if (settings.initialBalance) {
-                // async olsa bile beklemek zorunda değiliz
+                // No need to wait even if async
                 useSettingsStore
                   .getState()
                   .saveInitialBalance(settings.initialBalance);
@@ -186,7 +180,7 @@ const styles = StyleSheet.create({
   },
   dataButton: {
     flex: 1,
-    backgroundColor: colors.primary, // istersen primaryLight yaparsın
+    backgroundColor: colors.primary, // could use primaryLight instead
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
     borderRadius: radii.md,

@@ -4,14 +4,14 @@ import { LocalTransaction } from "./transaction";
 export type BackupV1 = {
     version: 1;
     app: "musti-app";
-    exportedAt: string; 
+    exportedAt: string;
     data: {
       transactions: LocalTransaction[];
-      simulationScenarios: SimulationScenario[];
+      scenarios: SimulationScenario[];
       settings: {
         initialBalance: {
           amount: number;
-          date: string; 
+          date: string;
         } | null;
       };
     };

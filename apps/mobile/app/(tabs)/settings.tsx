@@ -139,7 +139,7 @@ export default function SettingsScreen() {
         </TouchableOpacity>
         {/* SECTION: Sync */}
         <MText style={[styles.sectionTitle, styles.sectionTitleSpacing]}>
-          {t("sysnc")}
+          {t("sync")}
         </MText>
         <View style={styles.syncInfoBox}>
           <View>
