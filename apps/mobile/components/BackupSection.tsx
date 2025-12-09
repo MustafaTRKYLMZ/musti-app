@@ -171,16 +171,30 @@ export const BackupSection = () => {
             text: t("import_data"),
             style: "destructive",
             onPress: () => {
-              useTransactionsStore.setState({ transactions });
+              // transactions: state'in geri kalanını koru
+              useTransactionsStore.setState((state) => ({
+                ...state,
+                transactions,
+              }));
 
-              useSimulationStore.setState({
-                scenarios,
-                activeScenarioId: null,
+              // simulation: state'i koru + persist et
+              useSimulationStore.setState((state) => {
+                const next = {
+                  ...state,
+                  scenarios,
+                  activeScenarioId: null,
+                };
+
+                void persistSimulationState({
+                  scenarios: next.scenarios,
+                  activeScenarioId: next.activeScenarioId,
+                });
+
+                return next;
               });
 
-              // Update initialBalance in settings
+              // settings.initialBalance güncelle
               if (settings.initialBalance) {
-                // No need to wait even if async
                 useSettingsStore
                   .getState()
                   .saveInitialBalance(settings.initialBalance);
@@ -245,7 +259,7 @@ const styles = StyleSheet.create({
   },
   dataButton: {
     flex: 1,
-    backgroundColor: colors.primary, 
+    backgroundColor: colors.primary,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
     borderRadius: radii.md,
