@@ -36,7 +36,7 @@ export const BookshelfHeader: FC<BookshelfHeaderProps> = ({
         <IconButton
           family="ion"
           name="add-circle-outline"
-          color={colors.success}
+          color={colors.textPrimary}
           padding={spacing.xs}
           style={[styles.iconButton, { borderRadius: radii.full }]}
           onPress={handleOpenModal}
