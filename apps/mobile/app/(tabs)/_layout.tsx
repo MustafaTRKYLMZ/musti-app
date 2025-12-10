@@ -1,9 +1,11 @@
+// app/(tabs)/_layout.tsx
 import React from "react";
 import { Tabs } from "expo-router";
 import { useTranslation } from "@budget/core";
 
 export default function TabLayout() {
   const { t } = useTranslation();
+
   return (
     <Tabs
       screenOptions={{
@@ -14,31 +16,28 @@ export default function TabLayout() {
         },
       }}
     >
+      {/* BUDGET */}
       <Tabs.Screen
-        name="index"
+        name="budget"
         options={{
-          title: t("nav.home"),
+          title: "budget",
         }}
       />
 
-      {/* Settings screen is part of the tabs tree, but tab bar is hidden globally */}
+      {/* BOOKSHELF */}
       <Tabs.Screen
-        name="settings"
+        name="bookshelf"
         options={{
-          title: t("nav.settings"),
+          title: "bookshelf",
         }}
       />
 
+      {/* ABOUT */}
       <Tabs.Screen
         name="about"
         options={{
           title: t("about"),
-        }}
-      />
-      <Tabs.Screen
-        name="simulation"
-        options={{
-          title: t("nav.simulation"),
+          href: null,
         }}
       />
     </Tabs>

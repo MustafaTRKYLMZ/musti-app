@@ -14,7 +14,7 @@ import TransactionList from "../components/TransactionList";
 import { useTransactionsStore } from "../../../store/useTransactionsStore";
 import { useSettingsStore } from "../../../store/useSettingsStore";
 
-import { HomeHeader } from "../../../components/ui/HomeHeader";
+import { BudgetHeader } from "../../../components/ui/BudgetHeader";
 import { DailyBalanceSection } from "../components/DailyBalanceSection";
 import { ViewTabs, type ViewTab } from "../../../components/ui/ViewTabs";
 import { MonthNavigator } from "../components/MonthNavigator";
@@ -24,7 +24,8 @@ import { DeleteTransactionSheet } from "../components/DeleteTransactionSheet";
 import { syncTransactions } from "../../../services/syncTransactions";
 import { CustomAlert } from "@/components/CustomAlert";
 
-import { FAB, Screen, colors, spacing } from "@budget/ui-native";
+import { FAB, MText, colors, spacing } from "@budget/ui-native";
+import { AppScreen } from "@/components/AppScreen";
 
 const getCurrentMonth = () => dayjs().format("YYYY-MM");
 
@@ -160,7 +161,7 @@ export function TransactionsHomeScreen() {
   const goNextMonth = () => shiftMonth(1);
 
   const handleOpenSimulation = () => {
-    router.push("/simulation");
+    router.push("/budget/simulation");
   };
 
   const handleRefresh = () => {
@@ -206,82 +207,98 @@ export function TransactionsHomeScreen() {
       outputRange: [0.4, 1, 0.4],
     }),
   };
+
   return (
-    <Screen style={styles.screen}>
-      <View style={styles.content}>
-        <HomeHeader
-          onOpenMenu={() => setSidebarOpen(true)}
+    <AppScreen
+      onPressMenu={() => setSidebarOpen(true)}
+      headerCenter={
+        <BudgetHeader
           onOpenSimulation={handleOpenSimulation}
           onLanguageChange={setAlertMessage}
         />
-
-        {/* swipe area */}
-        <Animated.View
-          style={[styles.swipeArea, animatedSwipeStyle]}
-          {...panResponder.panHandlers}
-        >
-          <DailyBalanceSection
-            title={t("balance_as")}
-            selectedDate={selectedDate}
-            currentMonth={month}
-            balance={dailySummary.balance}
-            onChangeDate={handleChangeDate}
-          />
-
-          <ViewTabs active={viewTab} onChange={setViewTab} />
-
-          <MonthNavigator
-            monthName={monthName}
-            year={year}
-            onPrev={goPrevMonth}
-            onNext={goNextMonth}
-          />
-
-          <View style={styles.listWrapper}>
-            <TransactionList
-              transactions={filtered}
-              onDelete={handleDelete}
-              onEdit={handleEdit}
-              onPressRefresh={handleRefresh}
-              scrollToDateKey={scrollToDateKey}
-              scrollToDateTrigger={scrollToDateTrigger}
+      }
+    >
+      <View style={styles.content}>
+        <View style={styles.headerTextBlock}>
+          <MText variant="heading1" color="textPrimary">
+            {t("budget")}
+          </MText>
+          <MText
+            variant="body"
+            color="textSecondary"
+            style={styles.screenSubtitle}
+          >
+            {t("budget.desc")}
+          </MText>
+        </View>
+        <View style={styles.content}>
+          {/* swipe area */}
+          <Animated.View
+            style={[styles.swipeArea, animatedSwipeStyle]}
+            {...panResponder.panHandlers}
+          >
+            <DailyBalanceSection
+              title={t("balance_as")}
+              selectedDate={selectedDate}
+              currentMonth={month}
+              balance={dailySummary.balance}
+              onChangeDate={handleChangeDate}
             />
-          </View>
 
-          <MonthlyBalanceBar income={income} expense={expense} net={monthNet} />
-        </Animated.View>
+            <ViewTabs active={viewTab} onChange={setViewTab} />
+
+            <MonthNavigator
+              monthName={monthName}
+              year={year}
+              onPrev={goPrevMonth}
+              onNext={goNextMonth}
+            />
+
+            <View style={styles.listWrapper}>
+              <TransactionList
+                transactions={filtered}
+                onDelete={handleDelete}
+                onEdit={handleEdit}
+                onPressRefresh={handleRefresh}
+                scrollToDateKey={scrollToDateKey}
+                scrollToDateTrigger={scrollToDateTrigger}
+              />
+            </View>
+
+            <MonthlyBalanceBar
+              income={income}
+              expense={expense}
+              net={monthNet}
+            />
+          </Animated.View>
+        </View>
+        {/* FAB  */}
+        <FAB
+          onPress={() =>
+            router.push({
+              pathname: "/(modals)/transaction",
+              params: { mode: "create" },
+            })
+          }
+          icon={<Ionicons name="add" size={30} color={colors.textInverse} />}
+        />
+        <SidebarMenu open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <DeleteTransactionSheet
+          target={deleteTarget}
+          onConfirm={confirmDelete}
+          onClose={closeDeleteSheet}
+        />
+        <CustomAlert
+          visible={!!alertMessage}
+          message={alertMessage}
+          onHide={() => setAlertMessage("")}
+        />
       </View>
-
-      {/* FLOATING + BUTTON */}
-      <FAB
-        onPress={() =>
-          router.push({
-            pathname: "/(modals)/transaction",
-            params: { mode: "create" },
-          })
-        }
-        icon={<Ionicons name="add" size={30} color={colors.textInverse} />}
-      />
-
-      <SidebarMenu open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
-      <DeleteTransactionSheet
-        target={deleteTarget}
-        onConfirm={confirmDelete}
-        onClose={closeDeleteSheet}
-      />
-
-      <CustomAlert
-        visible={!!alertMessage}
-        message={alertMessage}
-        onHide={() => setAlertMessage("")}
-      />
-    </Screen>
+    </AppScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { gap: spacing.lg, backgroundColor: colors.background },
   content: {
     flex: 1,
   },
@@ -292,5 +309,12 @@ const styles = StyleSheet.create({
   listWrapper: {
     flex: 1,
     marginBottom: spacing.md,
+  },
+  headerTextBlock: {
+    flexShrink: 1,
+    padding: spacing.sm,
+  },
+  screenSubtitle: {
+    marginTop: spacing.xs,
   },
 });

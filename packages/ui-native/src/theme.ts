@@ -6,6 +6,8 @@ export const colors = {
   
     // background
     background: "#0A1A4F",    
+    backgroundSecondary: "#031634",
+    backgroundHover: "#112E5C",
     surface: "#0f172a",       
     surfaceElevated: "#FFFFFF",
   
@@ -45,6 +47,8 @@ export const iconSizes = {
     "2xl": 32,
     "3xl": 40,
     "4xl": 48,
+    "5xl": 64,
+    "6xl": 80,
   };
   
   export const radii = {

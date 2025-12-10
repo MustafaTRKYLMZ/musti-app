@@ -1,95 +1,52 @@
 import React from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import { StyleSheet, ScrollView } from "react-native";
+import { AppScreen } from "@/components/AppScreen";
+import { IconButton } from "@/components/ui/AppIcon";
+import { MText, colors, spacing } from "@budget/ui-native";
 import { router } from "expo-router";
 import { useTranslation } from "@budget/core";
 
 export default function AboutScreen() {
   const { t } = useTranslation();
+
   const handleClose = () => {
     router.back();
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.headerRow}>
-        <TouchableOpacity
+    <AppScreen
+      headerLeft={
+        <IconButton
+          family="ion"
+          name="close"
+          size={22}
+          color={colors.textPrimary}
           onPress={handleClose}
-          style={styles.closeButton}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Ionicons name="close" size={22} color="#e5e7eb" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t("about")}</Text>
-        <View style={{ width: 32 }} />
-      </View>
-
+        />
+      }
+      headerCenter={
+        <MText variant="heading2" color="textPrimary">
+          {t("about")}
+        </MText>
+      }
+    >
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.itemValue}>
+        <MText style={styles.description}>
           Budget app · personal finance tracker.
-        </Text>
+        </MText>
       </ScrollView>
-    </SafeAreaView>
+    </AppScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#020617",
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 8,
-  },
-  closeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#1f2937",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: {
-    flex: 1,
-    textAlign: "center",
-    color: "#f9fafb",
-    fontSize: 20,
-    fontWeight: "700",
-  },
   content: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 24,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    gap: spacing.md,
   },
-  sectionTitle: {
-    color: "#e5e7eb",
-    fontSize: 16,
-    fontWeight: "700",
-    marginBottom: 8,
-    marginTop: 12,
-  },
-  itemLabel: {
-    color: "#9ca3af",
-    fontSize: 14,
-    marginBottom: 2,
-  },
-  itemValue: {
-    color: "#e5e7eb",
-    fontSize: 14,
-  },
-  sectionSpacer: {
-    height: 16,
+  description: {
+    fontSize: 15,
+    color: colors.textPrimary,
   },
 });

@@ -32,9 +32,7 @@ export default function RootLayout() {
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="bookshelf" />
-        <Stack.Screen name="pdf" />
-        <Stack.Screen name="plan" />
+        <Stack.Screen name="launcher" />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
