@@ -55,7 +55,7 @@ export const CashflowRow: React.FC<CashflowRowProps> = ({
           )}
 
           {statusIconName && (
-            <BaseIcon name={statusIconName} size={13} color={statusIconColor} />
+            <BaseIcon name={statusIconName} size={13} color={statusIconColor} style={{ marginRight: 4 }} />
           )}
 
           {category && (
@@ -70,7 +70,7 @@ export const CashflowRow: React.FC<CashflowRowProps> = ({
       <View style={styles.rightCol}>
         <View style={styles.amountRow}>
           {/* Arrow icon → BaseIcon */}
-          <BaseIcon name={arrowIconName} size={16} color={amountColor} />
+          <BaseIcon name={arrowIconName} size={16} color={amountColor} style={{ marginRight: 4, marginTop: 1 }} />
 
           <MText
             variant="bodyStrong"

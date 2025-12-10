@@ -10,7 +10,6 @@ export default function AboutScreen() {
   const { t } = useTranslation();
 
   const handleClose = () => {
-    console.log("Closing about screen");
     if (router.canGoBack()) {
       router.back();
     } else {

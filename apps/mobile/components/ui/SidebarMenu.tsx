@@ -256,11 +256,10 @@ export function SidebarMenu({ open, onClose }: Props) {
       </View>
 
       {/* Backdrop */}
-      <IconButton
-        onPress={onClose}
-        name="close"
-        color={colors.textInverse}
+      <TouchableOpacity
         style={styles.sidebarBackdrop}
+        activeOpacity={1}
+        onPress={onClose}
       />
     </View>
   );

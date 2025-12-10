@@ -118,14 +118,13 @@ export const BookCard: FC<BookCardProps> = ({
             </MText>
           </View>
 
-          <View ref={menuIconRef} collapsable={false}>
-            <IconButton
-              name="ellipsis-vertical"
-              size={iconSizes.md}
-              color={colors.textPrimary}
-              onPress={openMenu}
-            />
-          </View>
+          <IconButton
+            ref={menuIconRef}
+            name="ellipsis-vertical"
+            size={iconSizes.md}
+            color={colors.textPrimary}
+            onPress={openMenu}
+          />
         </View>
 
         {/* Progress (lastPage / totalPages) */}
