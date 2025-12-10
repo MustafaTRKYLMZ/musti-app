@@ -6,11 +6,11 @@ import {
   Modal,
   Platform,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import dayjs from "dayjs";
 import { getLocalizedDateParts, useTranslation } from "@budget/core";
 import { MText, colors, spacing, radii } from "@budget/ui-native";
+import { BaseIcon } from "@/components/ui/AppIcon";
 
 interface Props {
   value: string; // "YYYY-MM-DD"
@@ -36,12 +36,13 @@ export function LocalizedDatePicker({ value, label, onChange }: Props) {
 
       {/* MAIN BUTTON */}
       <TouchableOpacity style={styles.button} onPress={() => setOpen(true)}>
-        <Ionicons
-          name="calendar-outline"
-          size={18}
-          color={colors.textMuted}
-          style={{ marginRight: 6 }}
-        />
+        <View style={styles.iconWrapper}>
+          <BaseIcon
+            name="calendar-outline"
+            size={18}
+            color={colors.textMuted}
+          />
+        </View>
         <MText variant="bodyStrong" color="textPrimary">
           {day} {monthShort} {year}
         </MText>
@@ -90,9 +91,12 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     backgroundColor: colors.surface,
   },
+  iconWrapper: {
+    marginRight: 6,
+  },
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(2,6,23,0.7)",
+    backgroundColor: colors.backdropStrong,
   },
   sheet: {
     position: "absolute",

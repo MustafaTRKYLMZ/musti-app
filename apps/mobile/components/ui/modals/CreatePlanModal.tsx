@@ -12,11 +12,11 @@ import {
   Platform,
   Alert,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { MText, colors, spacing, radii, iconSizes } from "@budget/ui-native";
 
 import type { LocalPdfFile } from "@/utils/getPdfsDirectory";
 import { useReadingPlanStore } from "@/store/useReadingPlanStore";
+import { BaseIcon, IconButton } from "@/components/ui/AppIcon";
 
 interface ReadingPlanModalProps {
   visible: boolean;
@@ -85,7 +85,7 @@ export function ReadingPlanModal({
         return {
           bookUri: b.uri,
           bookName: b.name,
-          pagesPerDay: pages, // daily target
+          pagesPerDay: pages,
         };
       })
       .filter(Boolean) as {
@@ -135,13 +135,14 @@ export function ReadingPlanModal({
             <MText variant="heading1" color="textPrimary">
               Reading plan
             </MText>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Ionicons
-                name="close-outline"
-                size={iconSizes.lg}
-                color={colors.textPrimary}
-              />
-            </TouchableOpacity>
+
+            <IconButton
+              name="close-outline"
+              size={iconSizes.lg}
+              color={colors.textPrimary}
+              onPress={onClose}
+              style={styles.closeButton}
+            />
           </View>
 
           {/* Plan name */}
@@ -192,7 +193,7 @@ export function ReadingPlanModal({
                     onPress={() => handleToggleBook(book.uri)}
                   >
                     <View style={styles.bookInfo}>
-                      <Ionicons
+                      <BaseIcon
                         name={
                           isSelected ? "checkbox-outline" : "square-outline"
                         }

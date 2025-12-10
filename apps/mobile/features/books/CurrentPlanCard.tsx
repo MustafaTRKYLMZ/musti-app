@@ -1,8 +1,8 @@
 // apps/mobile/features/books/CurrentPlanCard.tsx
 import React, { FC } from "react";
 import { TouchableOpacity, View, StyleSheet } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { MText, colors, spacing, radii, iconSizes } from "@budget/ui-native";
+import { BaseIcon, IconButton } from "@/components/ui/AppIcon";
 
 export type CurrentPlanInfo = {
   name: string;
@@ -59,15 +59,17 @@ export const CurrentPlanCard: FC<CurrentPlanCardProps> = ({
       onPress={isCompleted ? undefined : onPress}
     >
       <View style={styles.planSummaryLeft}>
-        <Ionicons
+        <BaseIcon
           name={isCompleted ? "checkmark-done-outline" : "time-outline"}
           size={iconSizes.lg}
           color={isCompleted ? colors.success : colors.textPrimary}
         />
+
         <View style={styles.planSummaryText}>
           <MText variant="body" color="textPrimary" numberOfLines={1}>
             Current plan: {name}
           </MText>
+
           <MText variant="body" color="textSecondary" numberOfLines={2}>
             {subtitle}
           </MText>
@@ -79,17 +81,14 @@ export const CurrentPlanCard: FC<CurrentPlanCardProps> = ({
           {progressText}
         </MText>
 
-        <TouchableOpacity
+        <IconButton
+          name="trash-outline"
+          size={iconSizes.md}
+          color={colors.danger}
           onPress={onDeletePlan}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           style={styles.planDeleteButton}
-        >
-          <Ionicons
-            name="trash-outline"
-            size={iconSizes.md}
-            color={colors.danger}
-          />
-        </TouchableOpacity>
+          hitSlop={8}
+        />
       </View>
     </TouchableOpacity>
   );

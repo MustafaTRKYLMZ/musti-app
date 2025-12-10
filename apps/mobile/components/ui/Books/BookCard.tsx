@@ -11,8 +11,8 @@ import {
   UIManager,
   findNodeHandle,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { MText, colors, spacing, radii, iconSizes } from "@budget/ui-native";
+import { BaseIcon, IconButton } from "@/components/ui/AppIcon";
 import type { LocalPdfFile } from "@/utils/getPdfsDirectory";
 
 type BookCardProps = {
@@ -108,7 +108,7 @@ export const BookCard: FC<BookCardProps> = ({
         {/* Header: icon + title + 3-dot */}
         <View style={styles.cardHeader}>
           <View style={styles.cardIconTitle}>
-            <Ionicons
+            <BaseIcon
               name="document-text-outline"
               size={iconSizes.lg}
               color={colors.textPrimary}
@@ -118,17 +118,14 @@ export const BookCard: FC<BookCardProps> = ({
             </MText>
           </View>
 
-          <TouchableOpacity
-            ref={menuIconRef}
-            onPress={openMenu}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Ionicons
+          <View ref={menuIconRef} collapsable={false}>
+            <IconButton
               name="ellipsis-vertical"
               size={iconSizes.md}
               color={colors.textPrimary}
+              onPress={openMenu}
             />
-          </TouchableOpacity>
+          </View>
         </View>
 
         {/* Progress (lastPage / totalPages) */}
@@ -298,7 +295,6 @@ const styles = StyleSheet.create({
     marginLeft: spacing.sm,
     flexShrink: 1,
   },
-
   cardHint: {
     marginTop: spacing.xs,
   },
@@ -351,7 +347,7 @@ const styles = StyleSheet.create({
   // Rename modal
   renameOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
+    backgroundColor: colors.backdropStrong,
     justifyContent: "center",
     alignItems: "center",
   },

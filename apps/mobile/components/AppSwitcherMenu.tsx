@@ -53,7 +53,7 @@ export function AppSwitcherMenu({ visible, onClose }: Props) {
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.25)",
+    backgroundColor: colors.backdropStrong,
   },
   menuContainer: {
     position: "absolute",

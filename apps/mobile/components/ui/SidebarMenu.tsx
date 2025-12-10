@@ -1,9 +1,9 @@
 import React from "react";
 import { View, TouchableOpacity, StyleSheet } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useTranslation } from "@budget/core";
 import { MText, colors, spacing, radii } from "@budget/ui-native";
+import { BaseIcon, IconButton } from "./AppIcon";
 
 interface Props {
   open: boolean;
@@ -29,13 +29,13 @@ export function SidebarMenu({ open, onClose }: Props) {
             Menu
           </MText>
 
-          <TouchableOpacity
+          <IconButton
+            name="close"
+            color={colors.textSecondary}
+            size={22}
             onPress={onClose}
             style={styles.sidebarCloseButton}
-            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-          >
-            <Ionicons name="close" size={22} color={colors.textSecondary} />
-          </TouchableOpacity>
+          />
         </View>
 
         {/* MONEY */}
@@ -47,8 +47,11 @@ export function SidebarMenu({ open, onClose }: Props) {
           {t("money")}
         </MText>
 
-        <TouchableOpacity style={styles.sidebarItem} onPress={() => go("/")}>
-          <Ionicons
+        <TouchableOpacity
+          style={styles.sidebarItem}
+          onPress={() => go("/(tabs)/budget")}
+        >
+          <BaseIcon
             name="wallet-outline"
             size={22}
             color={colors.textPrimary}
@@ -63,7 +66,7 @@ export function SidebarMenu({ open, onClose }: Props) {
           style={styles.sidebarItem}
           onPress={() => go("/coming-soon")}
         >
-          <Ionicons
+          <BaseIcon
             name="repeat-outline"
             size={22}
             color={colors.textPrimary}
@@ -76,9 +79,9 @@ export function SidebarMenu({ open, onClose }: Props) {
 
         <TouchableOpacity
           style={styles.sidebarItem}
-          onPress={() => go("/simulation")}
+          onPress={() => go("/(tabs)/budget/simulation")}
         >
-          <Ionicons
+          <BaseIcon
             name="flask-outline"
             size={22}
             color={colors.textPrimary}
@@ -102,7 +105,7 @@ export function SidebarMenu({ open, onClose }: Props) {
           style={styles.sidebarItem}
           onPress={() => go("/coming-soon")}
         >
-          <Ionicons
+          <BaseIcon
             name="storefront-outline"
             size={22}
             color={colors.textPrimary}
@@ -117,7 +120,7 @@ export function SidebarMenu({ open, onClose }: Props) {
           style={styles.sidebarItem}
           onPress={() => go("/coming-soon")}
         >
-          <Ionicons
+          <BaseIcon
             name="cube-outline"
             size={22}
             color={colors.textPrimary}
@@ -132,7 +135,7 @@ export function SidebarMenu({ open, onClose }: Props) {
           style={styles.sidebarItem}
           onPress={() => go("/coming-soon")}
         >
-          <Ionicons
+          <BaseIcon
             name="list-outline"
             size={22}
             color={colors.textPrimary}
@@ -156,7 +159,7 @@ export function SidebarMenu({ open, onClose }: Props) {
           style={styles.sidebarItem}
           onPress={() => go("/coming-soon")}
         >
-          <Ionicons
+          <BaseIcon
             name="analytics-outline"
             size={22}
             color={colors.textPrimary}
@@ -171,7 +174,7 @@ export function SidebarMenu({ open, onClose }: Props) {
           style={styles.sidebarItem}
           onPress={() => go("/coming-soon")}
         >
-          <Ionicons
+          <BaseIcon
             name="pricetags-outline"
             size={22}
             color={colors.textPrimary}
@@ -195,14 +198,14 @@ export function SidebarMenu({ open, onClose }: Props) {
           style={styles.sidebarItem}
           onPress={() => go("/coming-soon")}
         >
-          <Ionicons
+          <BaseIcon
             name="cloudy-outline"
             size={22}
             color={colors.textPrimary}
             style={styles.sidebarItemIcon}
           />
           <MText variant="body" color="textPrimary">
-            {t("sysnc")}
+            {t("sync")}
           </MText>
         </TouchableOpacity>
 
@@ -210,7 +213,7 @@ export function SidebarMenu({ open, onClose }: Props) {
           style={styles.sidebarItem}
           onPress={() => go("/coming-soon")}
         >
-          <Ionicons
+          <BaseIcon
             name="download-outline"
             size={22}
             color={colors.textPrimary}
@@ -223,9 +226,9 @@ export function SidebarMenu({ open, onClose }: Props) {
 
         <TouchableOpacity
           style={styles.sidebarItem}
-          onPress={() => go("/settings")}
+          onPress={() => go("/(tabs)/budget/settings")}
         >
-          <Ionicons
+          <BaseIcon
             name="settings-outline"
             size={22}
             color={colors.textPrimary}
@@ -240,7 +243,7 @@ export function SidebarMenu({ open, onClose }: Props) {
           style={styles.sidebarItem}
           onPress={() => go("/about")}
         >
-          <Ionicons
+          <BaseIcon
             name="information-circle-outline"
             size={22}
             color={colors.textPrimary}
@@ -253,10 +256,11 @@ export function SidebarMenu({ open, onClose }: Props) {
       </View>
 
       {/* Backdrop */}
-      <TouchableOpacity
-        style={styles.sidebarBackdrop}
-        activeOpacity={1}
+      <IconButton
         onPress={onClose}
+        name="close"
+        color={colors.textInverse}
+        style={styles.sidebarBackdrop}
       />
     </View>
   );
@@ -279,7 +283,7 @@ const styles = StyleSheet.create({
   },
   sidebarBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(2,6,23,0.65)",
+    backgroundColor: colors.backdropStrong,
   },
   sidebarHeaderRow: {
     flexDirection: "row",

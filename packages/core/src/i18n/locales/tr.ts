@@ -96,7 +96,7 @@ export const tr = {
   "shopping_list": "Alışveriş Listesi",
   "reports": "Raporlar",
   "system": "Sistem",
-  "sysnc": "Senkronizasyon",
+  "sync": "Senkronizasyon",
   "products": "Ürünler",
   "price_history": "Fiyat Geçmişi",
 

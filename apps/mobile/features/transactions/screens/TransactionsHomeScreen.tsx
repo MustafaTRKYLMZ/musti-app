@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useMemo, useRef } from "react";
 import { View, StyleSheet, PanResponder, Animated } from "react-native";
 import { router } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import dayjs from "dayjs";
 import {
   getLocalizedDateParts,
@@ -26,6 +25,7 @@ import { CustomAlert } from "@/components/CustomAlert";
 
 import { FAB, MText, colors, spacing } from "@budget/ui-native";
 import { AppScreen } from "@/components/AppScreen";
+import { BaseIcon } from "@/components/ui/AppIcon";
 
 const getCurrentMonth = () => dayjs().format("YYYY-MM");
 
@@ -53,7 +53,7 @@ export function TransactionsHomeScreen() {
     dayjs().format("YYYY-MM-DD")
   );
 
-  // 🔹 value of the animation (-1, 0, 1)
+  // value of the animation (-1, 0, 1)
   const monthAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -118,7 +118,7 @@ export function TransactionsHomeScreen() {
   const monthNet = income - expense;
   const dailySummary = getBalanceOnDate(selectedDate);
 
-  // 🔹when date change, update day and month
+  // when date change, update day and month
   const handleChangeDate = (newDate: string) => {
     setSelectedDate(newDate);
 
@@ -128,7 +128,7 @@ export function TransactionsHomeScreen() {
     setScrollToDateTrigger((x) => x + 1);
   };
 
-  // 🔹 when month changed animation
+  // when month changed animation
   const animateMonthChange = (direction: 1 | -1) => {
     monthAnim.setValue(0);
     Animated.sequence([
@@ -280,7 +280,7 @@ export function TransactionsHomeScreen() {
               params: { mode: "create" },
             })
           }
-          icon={<Ionicons name="add" size={30} color={colors.textInverse} />}
+          icon={<BaseIcon name="add" size={30} color={colors.textInverse} />}
         />
         <SidebarMenu open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         <DeleteTransactionSheet

@@ -8,8 +8,8 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { MText, colors, spacing, radii, iconSizes } from "@budget/ui-native";
+import { IconButton } from "@/components/ui/AppIcon";
 
 type BottomSheetModalProps = {
   visible: boolean;
@@ -58,18 +58,16 @@ export function BottomSheetModal({
               >
                 {title}
               </MText>
-              <TouchableOpacity
+
+              <IconButton
+                name="close"
+                size={iconSizes.lg}
+                color={colors.danger}
                 onPress={onClose}
                 style={styles.closeButton}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Ionicons
-                  name="close"
-                  size={iconSizes.lg}
-                  color={colors.danger}
-                />
-              </TouchableOpacity>
+              />
             </View>
+
             {children}
           </View>
         </View>

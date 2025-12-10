@@ -24,6 +24,7 @@ export type BaseIconProps = {
   name: string;
   size?: number;
   color?: string;
+  style?: StyleProp<ViewStyle>;
 };
 
 export function BaseIcon({
@@ -31,9 +32,10 @@ export function BaseIcon({
   name,
   size = iconSizes.lg,
   color = colors.textPrimary,
+  style,
 }: BaseIconProps) {
   const IconSet = ICON_SETS[family];
-  return <IconSet name={name as any} size={size} color={color} />;
+  return <IconSet name={name as any} size={size} color={color} style={style} />;
 }
 
 // ---------- IconButton ----------

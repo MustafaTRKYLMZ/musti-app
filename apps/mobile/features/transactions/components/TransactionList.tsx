@@ -12,7 +12,6 @@ import {
   TouchableOpacity,
   ViewToken,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import dayjs from "dayjs";
 import { LocalizedDateText, type LocalTransaction } from "@budget/core";
 import { MText, colors, spacing, radii } from "@budget/ui-native";
@@ -21,6 +20,7 @@ import { useTransactionsStore } from "../../../store/useTransactionsStore";
 import { CashflowRow } from "@/components/ui/CashflowRow";
 import { findSectionIndexForDate } from "@/utils/findSectionIndexForDate";
 import { AnimatedFutureRow } from "../../../components/ui/AnimatedFutureRow";
+import { BaseIcon } from "@/components/ui/AppIcon";
 
 interface TransactionListProps {
   transactions: LocalTransaction[];
@@ -209,14 +209,16 @@ export default function TransactionList({
   if (!transactions.length) {
     return (
       <View style={styles.emptyState}>
-        <Ionicons
+        <BaseIcon
           name="wallet-outline"
           size={40}
           color={colors.textSecondary}
         />
+
         <MText variant="bodyStrong" color="textPrimary">
           No transactions yet
         </MText>
+
         <MText
           variant="body"
           color="textSecondary"
@@ -230,7 +232,7 @@ export default function TransactionList({
             style={styles.emptyRefreshButton}
             onPress={() => void handleRefresh()}
           >
-            <Ionicons
+            <BaseIcon
               name="refresh-outline"
               size={16}
               color={colors.textMuted}
@@ -244,6 +246,7 @@ export default function TransactionList({
       </View>
     );
   }
+
   return (
     <SectionList
       ref={listRef}
