@@ -1,10 +1,18 @@
 // components/AppScreen.tsx
 import React, { ReactNode } from "react";
-import { View, StyleSheet, StyleProp, ViewStyle } from "react-native";
+import {
+  View,
+  StyleSheet,
+  StyleProp,
+  ViewStyle,
+  TextStyle,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MText, colors, spacing, radii } from "@budget/ui-native";
 import { AppSwitcherButton } from "@/components/AppSwitcherButton";
 import { HeaderMenuButton } from "@/components/ui/HeaderMenuButton";
+
+type AppScreenVariant = "default" | "bookshelf" | "budget";
 
 type AppScreenProps = {
   title?: string;
@@ -16,6 +24,13 @@ type AppScreenProps = {
   onPressMenu?: () => void;
   showMenu?: boolean;
   showSwitcher?: boolean;
+  variant?: AppScreenVariant;
+
+  // style overrides from parent
+  safeAreaStyle?: StyleProp<ViewStyle>;
+  headerContainerStyle?: StyleProp<ViewStyle>;
+  headerTitleStyle?: StyleProp<TextStyle>;
+  headerTitleColor?: string; // direct color value (e.g. bookshelfTheme.colors.textPrimary)
 };
 
 export function AppScreen({
@@ -28,13 +43,24 @@ export function AppScreen({
   onPressMenu,
   showMenu = true,
   showSwitcher = true,
+  variant = "default",
+  safeAreaStyle,
+  headerContainerStyle,
+  headerTitleStyle,
+  headerTitleColor,
 }: AppScreenProps) {
   const renderCenter = () => {
     if (headerCenter) return headerCenter;
 
     if (title) {
+      const mergedTitleStyle = StyleSheet.flatten<TextStyle>([
+        styles.title,
+        headerTitleStyle,
+        headerTitleColor ? { color: headerTitleColor } : null,
+      ]);
+
       return (
-        <MText variant="heading2" numberOfLines={1} style={styles.title}>
+        <MText variant="heading2" numberOfLines={1} style={mergedTitleStyle}>
           {title}
         </MText>
       );
@@ -62,10 +88,10 @@ export function AppScreen({
 
   return (
     <SafeAreaView
-      style={styles.safe}
+      style={[styles.safe, safeAreaStyle]}
       edges={["top", "left", "right", "bottom"]}
     >
-      <View style={styles.header}>
+      <View style={[styles.header, headerContainerStyle]}>
         <View style={styles.left}>{renderLeft()}</View>
         <View style={styles.center}>{renderCenter()}</View>
         <View style={styles.right}>{renderRight()}</View>
@@ -79,7 +105,6 @@ export function AppScreen({
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: colors.background,
     padding: spacing.sm,
   },
   header: {
@@ -87,7 +112,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.borderSubtle,
-    backgroundColor: colors.surfaceStrong,
     borderRadius: radii.sm,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,

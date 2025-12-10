@@ -23,7 +23,7 @@ import { DeleteTransactionSheet } from "../components/DeleteTransactionSheet";
 import { syncTransactions } from "../../../services/syncTransactions";
 import { CustomAlert } from "@/components/CustomAlert";
 
-import { FAB, MText, colors, spacing } from "@budget/ui-native";
+import { FAB, MText, colors, spacing, radii } from "@budget/ui-native";
 import { AppScreen } from "@/components/AppScreen";
 import { BaseIcon } from "@/components/ui/AppIcon";
 
@@ -210,6 +210,7 @@ export function TransactionsHomeScreen() {
 
   return (
     <AppScreen
+      variant="budget"
       onPressMenu={() => setSidebarOpen(true)}
       headerCenter={
         <BudgetHeader
@@ -217,6 +218,9 @@ export function TransactionsHomeScreen() {
           onLanguageChange={setAlertMessage}
         />
       }
+      safeAreaStyle={styles.safeArea}
+      headerContainerStyle={styles.headerContainer}
+      headerTitleColor={colors.textPrimary}
     >
       <View style={styles.content}>
         <View style={styles.headerTextBlock}>
@@ -299,6 +303,18 @@ export function TransactionsHomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.background,
+  },
+  headerContainer: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.borderSubtle,
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
   content: {
     flex: 1,
   },

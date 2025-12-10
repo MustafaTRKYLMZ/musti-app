@@ -9,21 +9,23 @@ import {
 } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system/legacy";
-import { MText, colors, spacing, radii } from "@budget/ui-native";
+import { MText, spacing, radii, useTheme } from "@budget/ui-native";
 import { getPdfsDirectory } from "@/utils/getPdfsDirectory";
 
-interface PdfModalProps {
+interface AddPdfModalProps {
   visible: boolean;
   onClose: () => void;
   onPdfImported?: (doc: { uri: string; name: string }) => void;
 }
 
-export const PdfModal: React.FC<PdfModalProps> = ({
+export const AddPdfModal: React.FC<AddPdfModalProps> = ({
   visible,
   onClose,
   onPdfImported,
 }) => {
   const [isLoading, setIsLoading] = useState(false);
+  const theme = useTheme();
+  const { colors } = theme;
 
   const handlePickPdf = async () => {
     try {
@@ -67,9 +69,25 @@ export const PdfModal: React.FC<PdfModalProps> = ({
       animationType="slide"
       onRequestClose={onClose}
     >
-      <View style={styles.backdrop}>
-        <View style={styles.modalContent}>
-          <MText variant="heading2" style={styles.title}>
+      <View
+        style={[
+          styles.backdrop,
+          {
+            backgroundColor: colors.backdropStrong,
+          },
+        ]}
+      >
+        <View
+          style={[
+            styles.modalContent,
+            {
+              backgroundColor: colors.surface,
+              borderTopColor: colors.borderSubtle,
+              shadowColor: colors.shadowStrong,
+            },
+          ]}
+        >
+          <MText variant="heading2" color="textPrimary" style={styles.title}>
             Add PDF
           </MText>
 
@@ -83,14 +101,14 @@ export const PdfModal: React.FC<PdfModalProps> = ({
 
           <TouchableOpacity
             onPress={handlePickPdf}
-            style={styles.primaryButton}
+            style={[styles.primaryButton, { backgroundColor: colors.primary }]}
             disabled={isLoading}
           >
             {isLoading ? (
-              <ActivityIndicator />
+              <ActivityIndicator color={colors.textInverse} />
             ) : (
               <MText
-                variant="body"
+                variant="bodyStrong"
                 color="textInverse"
                 style={styles.primaryButtonText}
               >
@@ -113,14 +131,16 @@ export const PdfModal: React.FC<PdfModalProps> = ({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: colors.backdropStrong,
     justifyContent: "flex-end",
   },
   modalContent: {
-    backgroundColor: colors.background,
     borderTopLeftRadius: radii.xl,
     borderTopRightRadius: radii.xl,
     padding: spacing.lg,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: -4 },
   },
   title: {
     marginBottom: spacing.sm,
@@ -129,7 +149,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   primaryButton: {
-    backgroundColor: colors.primary,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.lg,
     borderRadius: radii.lg,

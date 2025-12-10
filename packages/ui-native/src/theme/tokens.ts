@@ -1,45 +1,13 @@
-export const colors = {
-    // 
-    primary: "#002F6C",      
-    primaryDark: "#001A3D",
-    primaryLight: "#0049A8",
-  
-    // background
-    background: "#0A1A4F",    
-    backgroundSecondary: "#031634",
-    backgroundBackdrop: "rgba(10,26,79,0.75)",
-    backgroundHover: "#112E5C",
-    surface: "#0f172a",       
-    surfaceElevated: "#FFFFFF",
-  
-    // text
-    textPrimary: "#F1F5F9",   
-    textSecondary: "#CBD5E1",
-    textMuted: "#94A3B8",    
-  
-    success: "#22C55E",
-    danger: "#F97373",
-    warning: "#FACC15",
-  
-    textInverse: "#FFFFFF", 
-    // borders
-    borderSubtle: "rgba(255,255,255,0.12)",
-    surfaceStrong: "#0C163A", 
 
-    backdropStrong: "rgba(15,23,42,0.75)",
-    shadowStrong: "rgba(0,0,0,0.45)",
-  
-};
 export const iconSizes = {
     xs: 14,
     sm: 16,
-    md: 20,   
-    lg: 24,   
-    xl: 28,  
-  };
+    md: 20,
+    lg: 24,
+    xl: 28,
+  } as const;
   
   export const spacing = {
-    
     xs: 4,
     sm: 8,
     md: 12,
@@ -50,30 +18,28 @@ export const iconSizes = {
     "4xl": 48,
     "5xl": 64,
     "6xl": 80,
-  };
+  } as const;
   
   export const radii = {
     sm: 8,
     md: 12,
     lg: 16,
     xl: 24,
+    "2xl": 32,
+    "3xl": 40,
+    "4xl": 48,
     full: 999,
-    '2xl': 32,
-    '3xl': 40,
-    '4xl': 48,
-  };
+  } as const;
   
   export const typography = {
     heading1: { fontSize: 24, lineHeight: 32, fontWeight: "700" as const },
     heading2: { fontSize: 20, lineHeight: 28, fontWeight: "700" as const },
     heading3: { fontSize: 18, lineHeight: 24, fontWeight: "600" as const },
     heading4: { fontSize: 16, lineHeight: 22, fontWeight: "600" as const },
-    
     body: { fontSize: 16, lineHeight: 22, fontWeight: "400" as const },
     bodyStrong: { fontSize: 16, lineHeight: 22, fontWeight: "600" as const },
-  
     caption: { fontSize: 13, lineHeight: 18, fontWeight: "400" as const },
-  };
+  } as const;
   
   export const shadows = {
     card: {
@@ -88,6 +54,17 @@ export const iconSizes = {
       radius: 18,
       offset: { width: 0, height: -6 },
     },
-  };
-
+  } as const;
   
+  export const gradients = {
+    bookshelfBackground: [
+      "#C28C4A", // top — warm light teak highlight
+      "#A8743F", // mid — natural teak tone
+      "#8F6237", // bottom — slightly deeper wood
+    ],
+  
+    shelfBoard: [
+      "#A8743F", // mid-tone teak
+      "#D8AC6B", // lighter golden reflection
+    ],
+  } as const;

@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { View, StyleSheet, FlatList, Alert } from "react-native";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
+import { View, StyleSheet, FlatList, Alert, ScrollView } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
 import { useRouter } from "expo-router";
 import dayjs from "dayjs";
@@ -9,7 +9,7 @@ import {
   deleteLocalPdf,
   type LocalPdfFile,
 } from "@/utils/getPdfsDirectory";
-import { PdfModal } from "@/components/ui/pdf/PdfModal";
+import { AddPdfModal } from "@/components/ui/pdf/AddPdfModal";
 import { useBooksStore } from "@/store/useBooksStore";
 import { useReadingStatsStore } from "@/store/useReadingStatsStore";
 import { useReadingPlanStore } from "@/store/useReadingPlanStore";
@@ -19,38 +19,63 @@ import { BookCard } from "@/components/ui/Books/BookCard";
 import { useCurrentPlanInfo } from "@/hooks/useCurrentPlanInfo";
 import { AppScreen } from "@/components/AppScreen";
 import { BookshelfHeader } from "@/components/BookshelfHeader";
-import { colors, MText, spacing } from "@budget/ui-native";
+import { bookshelfTheme, MText } from "@budget/ui-native";
+
+const { colors, spacing, radii } = bookshelfTheme;
+
+const bColors = bookshelfTheme.colors;
+const bSpacing = bookshelfTheme.spacing;
+const bRadii = bookshelfTheme.radii;
+
+const bookshelfHeaderStyles = StyleSheet.create({
+  safe: {
+    paddingHorizontal: bSpacing.md,
+    paddingVertical: bSpacing.sm,
+  },
+  header: {
+    borderBottomWidth: 0,
+    backgroundColor: bColors.surface,
+    borderRadius: bRadii.md,
+    borderWidth: 1,
+    borderColor: bColors.borderSubtle,
+    shadowColor: bColors.shadowStrong,
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  title: {
+    fontWeight: "600",
+  },
+});
 
 export default function BookshelfHomeScreen() {
   const router = useRouter();
-  const [pdfs, setPdfs] = useState<LocalPdfFile[]>([]);
+  const [books, setBooks] = useState<LocalPdfFile[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [planModalVisible, setPlanModalVisible] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
   const progressMap = useBooksStore((s) => s.items);
   const readingStats = useReadingStatsStore((s) => s.stats);
-
   const clearActivePlan = useReadingPlanStore((s) => s.clearActivePlan);
   const ensureTodayPlan = useReadingPlanStore((s) => s.ensureTodayPlan);
 
   const today = dayjs().format("YYYY-MM-DD");
 
-  const loadPdfs = useCallback(async () => {
+  const loadBooks = useCallback(async () => {
     const all = await listLocalPdfs();
-    setPdfs(all);
+    setBooks(all);
   }, []);
 
   useEffect(() => {
-    loadPdfs();
-  }, [loadPdfs]);
+    loadBooks();
+  }, [loadBooks]);
 
-  // Daily plan reset/ensure
   useEffect(() => {
     ensureTodayPlan(today);
   }, [ensureTodayPlan, today]);
 
-  // Plan summary + item details (for now we only use summary)
-  const { summary: currentPlanInfo } = useCurrentPlanInfo(pdfs);
+  const { summary: currentPlanInfo } = useCurrentPlanInfo(books);
 
   const handleOpenModal = () => setModalVisible(true);
   const handleCloseModal = () => setModalVisible(false);
@@ -58,7 +83,6 @@ export default function BookshelfHomeScreen() {
   const handleOpenPlanModal = () => setPlanModalVisible(true);
   const handleClosePlanModal = () => setPlanModalVisible(false);
 
-  // book open
   const handleOpenPdf = (item: LocalPdfFile) => {
     router.push({
       pathname: "/(tabs)/bookshelf/pdf/viewer",
@@ -66,7 +90,6 @@ export default function BookshelfHomeScreen() {
     });
   };
 
-  // book delete
   const handleDeletePdf = (item: LocalPdfFile) => {
     Alert.alert(
       "Delete PDF",
@@ -78,14 +101,13 @@ export default function BookshelfHomeScreen() {
           style: "destructive",
           onPress: async () => {
             await deleteLocalPdf(item.uri);
-            loadPdfs();
+            loadBooks();
           },
         },
       ]
     );
   };
 
-  // plan delete
   const handleDeletePlan = () => {
     Alert.alert(
       "Delete plan",
@@ -103,15 +125,14 @@ export default function BookshelfHomeScreen() {
     );
   };
 
-  // plan card -> open related book
   const handlePressPlanCard = () => {
     if (!currentPlanInfo) return;
-
     if (currentPlanInfo.isCompleted) return;
     if (!currentPlanInfo.currentBookUri) return;
-    const book = pdfs.find((b) => b.uri === currentPlanInfo.currentBookUri);
 
+    const book = books.find((b) => b.uri === currentPlanInfo.currentBookUri);
     if (!book) return;
+
     router.push({
       pathname: "/(tabs)/bookshelf/plan/plan-viewer",
       params: {
@@ -122,7 +143,6 @@ export default function BookshelfHomeScreen() {
     });
   };
 
-  // book rename
   async function renameBook(file: LocalPdfFile, newName: string) {
     try {
       const parts = file.name.split(".");
@@ -145,7 +165,7 @@ export default function BookshelfHomeScreen() {
         to: newUri,
       });
 
-      await loadPdfs();
+      await loadBooks();
     } catch (e) {
       console.warn("Rename error", e);
       Alert.alert(
@@ -154,8 +174,50 @@ export default function BookshelfHomeScreen() {
       );
     }
   }
+
+  // ---- LAST READ LOGIC ----
+  // readingStats key'i: `${uri}:${dayKey}` formatında.
+  const lastReadByBook = useMemo(() => {
+    const map: Record<string, string> = {};
+
+    Object.entries(readingStats).forEach(([key, stat]: any) => {
+      if (!stat || typeof stat.pagesRead !== "number" || stat.pagesRead <= 0) {
+        return;
+      }
+      const [uri, dayKey] = key.split(":");
+      if (!uri || !dayKey) return;
+
+      // daha yeni günü seç
+      if (!map[uri] || dayKey > map[uri]) {
+        map[uri] = dayKey;
+      }
+    });
+
+    return map;
+  }, [readingStats]);
+
+  const lastReadBooks = useMemo(() => {
+    return books
+      .filter((b) => lastReadByBook[b.uri])
+      .sort((a, b) => {
+        const aDate = lastReadByBook[a.uri];
+        const bDate = lastReadByBook[b.uri];
+        if (!aDate && !bDate) return 0;
+        if (!aDate) return 1;
+        if (!bDate) return -1;
+        return aDate < bDate ? 1 : -1; // yeni tarih önce
+      })
+      .slice(0, 12); // last read rafı için limit
+  }, [books, lastReadByBook]);
+
+  // grid için tüm kitaplar (isim sırasına göre)
+  const gridBooks = useMemo(() => {
+    return [...books].sort((a, b) => a.name.localeCompare(b.name));
+  }, [books]);
+
   return (
     <AppScreen
+      title="Bookshelf"
       onPressMenu={() => setSidebarOpen(true)}
       headerCenter={
         <BookshelfHeader
@@ -163,63 +225,163 @@ export default function BookshelfHomeScreen() {
           handleOpenPlanModal={handleOpenPlanModal}
         />
       }
+      safeAreaStyle={bookshelfHeaderStyles.safe}
+      headerContainerStyle={bookshelfHeaderStyles.header}
+      headerTitleStyle={bookshelfHeaderStyles.title}
+      headerTitleColor={bColors.textPrimary}
     >
       <View style={styles.container}>
-        {/* Current plan summary */}
-        <CurrentPlanCard
-          currentPlanInfo={currentPlanInfo}
-          onPress={handlePressPlanCard}
-          onDeletePlan={handleDeletePlan}
-        />
-
-        {/* Books list */}
-        {pdfs.length === 0 ? (
-          <View style={styles.emptyState}>
-            <MText color="textSecondary">
-              No books yet. Use the plus button to add one.
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* PLAN SHELF */}
+          <View style={styles.shelfSection}>
+            <MText
+              variant="heading3"
+              color="textPrimary"
+              style={styles.shelfTitle}
+            >
+              Today&apos;s plan
             </MText>
-          </View>
-        ) : (
-          <FlatList
-            data={pdfs}
-            keyExtractor={(item) => item.uri}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.listContent}
-            renderItem={({ item }) => {
-              const progress = progressMap[item.uri];
-              const statKey = `${item.uri}:${today}`;
-              const todayStat = readingStats[statKey];
 
-              return (
-                <BookCard
-                  file={item}
-                  onOpen={() => handleOpenPdf(item)}
-                  onDelete={() => handleDeletePdf(item)}
-                  lastPage={progress?.lastPage}
-                  totalPages={progress?.totalPages}
-                  todayPages={todayStat?.pagesRead}
-                  todayTargetPages={todayStat?.targetPages}
-                  onRename={(newName) => renameBook(item, newName)}
+            <View style={styles.shelfInner}>
+              <View style={styles.shelfRail} />
+
+              {currentPlanInfo ? (
+                <CurrentPlanCard
+                  currentPlanInfo={currentPlanInfo}
+                  onPress={handlePressPlanCard}
+                  onDeletePlan={handleDeletePlan}
                 />
-              );
-            }}
-          />
-        )}
+              ) : (
+                <View style={styles.emptyPlanShelf}>
+                  <MText variant="body" color="textSecondary">
+                    No active plan. Create one to track your daily reading.
+                  </MText>
+                </View>
+              )}
+            </View>
+          </View>
 
-        <PdfModal
+          {/* LAST READ SHELF (yatay, eski Books davranışı) */}
+          <View style={styles.shelfSection}>
+            <MText
+              variant="heading3"
+              color="textPrimary"
+              style={styles.shelfTitle}
+            >
+              Last read
+            </MText>
+
+            <View style={styles.shelfInner}>
+              <View style={styles.shelfRail} />
+
+              {lastReadBooks.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <MText color="textSecondary">
+                    Books you open will appear here.
+                  </MText>
+                </View>
+              ) : (
+                <FlatList
+                  data={lastReadBooks}
+                  keyExtractor={(item) => item.uri}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.listContent}
+                  renderItem={({ item }) => {
+                    const progress = progressMap[item.uri];
+                    const statKey = `${item.uri}:${today}`;
+                    const todayStat = readingStats[statKey];
+
+                    return (
+                      <BookCard
+                        file={item}
+                        onOpen={() => handleOpenPdf(item)}
+                        onDelete={() => handleDeletePdf(item)}
+                        lastPage={progress?.lastPage}
+                        totalPages={progress?.totalPages}
+                        todayPages={todayStat?.pagesRead}
+                        todayTargetPages={todayStat?.targetPages}
+                        onRename={(newName) => renameBook(item, newName)}
+                        // bu raf yatay, mevcut görünüm
+                      />
+                    );
+                  }}
+                />
+              )}
+            </View>
+          </View>
+
+          {/* ALL BOOKS GRID */}
+          <View style={styles.shelfSection}>
+            <MText
+              variant="heading3"
+              color="textPrimary"
+              style={styles.shelfTitle}
+            >
+              Books
+            </MText>
+
+            <View style={styles.shelfInner}>
+              <View style={styles.shelfRail} />
+
+              {gridBooks.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <MText color="textSecondary">
+                    No books yet. Use the plus button to add one.
+                  </MText>
+                </View>
+              ) : (
+                <FlatList
+                  data={gridBooks}
+                  keyExtractor={(item) => item.uri}
+                  numColumns={3}
+                  scrollEnabled={false}
+                  contentContainerStyle={styles.gridContent}
+                  columnWrapperStyle={styles.gridRow}
+                  renderItem={({ item }) => {
+                    const progress = progressMap[item.uri];
+                    const statKey = `${item.uri}:${today}`;
+                    const todayStat = readingStats[statKey];
+
+                    return (
+                      <View style={styles.gridItem}>
+                        <BookCard
+                          file={item}
+                          onOpen={() => handleOpenPdf(item)}
+                          onDelete={() => handleDeletePdf(item)}
+                          lastPage={progress?.lastPage}
+                          totalPages={progress?.totalPages}
+                          todayPages={todayStat?.pagesRead}
+                          todayTargetPages={todayStat?.targetPages}
+                          onRename={(newName) => renameBook(item, newName)}
+                          variant="grid" // aşağıda BookCard için not
+                        />
+                      </View>
+                    );
+                  }}
+                />
+              )}
+            </View>
+          </View>
+        </ScrollView>
+
+        <AddPdfModal
           visible={modalVisible}
           onClose={handleCloseModal}
           onPdfImported={() => {
             handleCloseModal();
-            loadPdfs();
+            loadBooks();
           }}
         />
 
         <ReadingPlanModal
           visible={planModalVisible}
           onClose={handleClosePlanModal}
-          books={pdfs}
+          books={books}
         />
       </View>
     </AppScreen>
@@ -229,18 +391,75 @@ export default function BookshelfHomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
-    paddingTop: spacing.lg,
-    marginTop: spacing["3xl"],
   },
+  scrollContent: {
+    paddingTop: spacing.lg,
+    paddingBottom: spacing["3xl"],
+  },
+
+  // Shared shelf layout
+  shelfSection: {
+    marginBottom: spacing.xl,
+  },
+  shelfTitle: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.xs,
+  },
+  shelfInner: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    position: "relative",
+  },
+  shelfRail: {
+    position: "absolute",
+    left: spacing.lg,
+    right: spacing.lg,
+    bottom: spacing.xs,
+    height: 4,
+    borderRadius: radii.full,
+    backgroundColor: colors.backgroundSecondary,
+    opacity: 0.6,
+  },
+
+  // Plan shelf specifics
+  emptyPlanShelf: {
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.xs,
+  },
+
   emptyState: {
-    flex: 1,
+    minHeight: 120,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: spacing.lg,
+    marginTop: spacing.lg,
+    marginHorizontal: spacing.lg,
+    borderRadius: radii.lg,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
   },
   listContent: {
-    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    paddingRight: spacing.lg,
+  },
+
+  // Grid
+  gridContent: {
+    paddingTop: spacing.lg,
     paddingBottom: spacing.lg,
+    paddingRight: spacing.lg,
+  },
+  gridRow: {
+    gap: spacing.sm,
+  },
+  gridItem: {
+    flex: 1,
+    marginBottom: spacing.md,
   },
 });

@@ -12,7 +12,7 @@ import {
   Platform,
   Alert,
 } from "react-native";
-import { MText, colors, spacing, radii, iconSizes } from "@budget/ui-native";
+import { MText, spacing, radii, iconSizes, useTheme } from "@budget/ui-native";
 
 import type { LocalPdfFile } from "@/utils/getPdfsDirectory";
 import { useReadingPlanStore } from "@/store/useReadingPlanStore";
@@ -42,6 +42,9 @@ export function ReadingPlanModal({
   const [planName, setPlanName] = useState("Reading plan");
   const [entries, setEntries] = useState<PlanEntryState>({});
   const [selected, setSelected] = useState<SelectionState>({});
+
+  const theme = useTheme();
+  const { colors } = theme;
 
   useEffect(() => {
     if (visible) {
@@ -120,7 +123,12 @@ export function ReadingPlanModal({
       onRequestClose={onClose}
     >
       <KeyboardAvoidingView
-        style={styles.backdrop}
+        style={[
+          styles.backdrop,
+          {
+            backgroundColor: colors.backdropStrong,
+          },
+        ]}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <TouchableOpacity
@@ -129,7 +137,16 @@ export function ReadingPlanModal({
           onPress={onClose}
         />
 
-        <View style={styles.modalContent}>
+        <View
+          style={[
+            styles.modalContent,
+            {
+              backgroundColor: colors.surface,
+              borderTopColor: colors.borderSubtle,
+              shadowColor: colors.shadowStrong,
+            },
+          ]}
+        >
           {/* Header */}
           <View style={styles.modalHeader}>
             <MText variant="heading1" color="textPrimary">
@@ -139,7 +156,6 @@ export function ReadingPlanModal({
             <IconButton
               name="close-outline"
               size={iconSizes.lg}
-              color={colors.textPrimary}
               onPress={onClose}
               style={styles.closeButton}
             />
@@ -154,7 +170,14 @@ export function ReadingPlanModal({
               value={planName}
               onChangeText={setPlanName}
               placeholder="Reading plan"
-              style={styles.textInput}
+              style={[
+                styles.textInput,
+                {
+                  borderColor: colors.borderSubtle,
+                  color: colors.textPrimary,
+                  backgroundColor: colors.surface,
+                },
+              ]}
               placeholderTextColor={colors.textSecondary}
             />
           </View>
@@ -187,7 +210,14 @@ export function ReadingPlanModal({
                     key={book.uri}
                     style={[
                       styles.bookRow,
-                      isSelected && styles.bookRowSelected,
+                      isSelected && {
+                        backgroundColor:
+                          (colors as any).surfaceElevated || colors.surface,
+                        borderRadius: radii.md,
+                        paddingHorizontal: spacing.xs,
+                        borderWidth: 1,
+                        borderColor: colors.borderSubtle,
+                      },
                     ]}
                     activeOpacity={0.9}
                     onPress={() => handleToggleBook(book.uri)}
@@ -206,6 +236,7 @@ export function ReadingPlanModal({
                         variant="body"
                         style={styles.bookTitle}
                         numberOfLines={2}
+                        color="textPrimary"
                       >
                         {book.name}
                       </MText>
@@ -221,6 +252,11 @@ export function ReadingPlanModal({
                         placeholder="0"
                         style={[
                           styles.pagesInput,
+                          {
+                            borderColor: colors.borderSubtle,
+                            color: colors.textPrimary,
+                            backgroundColor: colors.surface, // 🔥 her zaman açık zemin
+                          },
                           !isSelected && styles.pagesInputDisabled,
                         ]}
                         placeholderTextColor={colors.textSecondary}
@@ -244,7 +280,11 @@ export function ReadingPlanModal({
           <View style={styles.actions}>
             <TouchableOpacity
               onPress={onClose}
-              style={[styles.button, styles.secondaryButton]}
+              style={[
+                styles.button,
+                styles.secondaryButton,
+                { borderColor: colors.borderSubtle },
+              ]}
             >
               <MText variant="body" color="textPrimary">
                 Cancel
@@ -253,7 +293,11 @@ export function ReadingPlanModal({
 
             <TouchableOpacity
               onPress={handleSave}
-              style={[styles.button, styles.primaryButton]}
+              style={[
+                styles.button,
+                styles.primaryButton,
+                { backgroundColor: colors.primary },
+              ]}
             >
               <MText variant="body" color="textInverse">
                 Save plan
@@ -273,15 +317,17 @@ const styles = StyleSheet.create({
   },
   backdropTouchable: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
   },
   modalContent: {
-    backgroundColor: colors.background,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     paddingBottom: spacing["2xl"],
     borderTopLeftRadius: radii.xl,
     borderTopRightRadius: radii.xl,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: -4 },
   },
   modalHeader: {
     flexDirection: "row",
@@ -298,11 +344,9 @@ const styles = StyleSheet.create({
   textInput: {
     marginTop: spacing.xs,
     borderWidth: 1,
-    borderColor: colors.borderSubtle,
     borderRadius: radii.md,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
-    color: colors.textPrimary,
   },
   sectionLabel: {
     marginBottom: spacing.xs,
@@ -318,11 +362,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingVertical: spacing.xs,
-  },
-  bookRowSelected: {
-    backgroundColor: colors.background,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.xs,
   },
   bookInfo: {
     flexDirection: "row",
@@ -341,12 +380,10 @@ const styles = StyleSheet.create({
   pagesInput: {
     width: 60,
     borderWidth: 1,
-    borderColor: colors.borderSubtle,
     borderRadius: radii.md,
     paddingHorizontal: spacing.xs,
     paddingVertical: spacing.xs / 2,
     textAlign: "center",
-    color: colors.textPrimary,
   },
   pagesInputDisabled: {
     opacity: 0.4,
@@ -367,9 +404,6 @@ const styles = StyleSheet.create({
   },
   secondaryButton: {
     borderWidth: 1,
-    borderColor: colors.borderSubtle,
   },
-  primaryButton: {
-    backgroundColor: colors.primary,
-  },
+  primaryButton: {},
 });
