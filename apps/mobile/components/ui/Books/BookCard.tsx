@@ -36,9 +36,9 @@ type BookCardProps = {
   variant?: "row" | "grid";
 };
 
-// Sıcak kitap sırtı renk paleti (ahşap / deri tonları)
+// Warm spine palette (wood / leather tones)
 const SPINE_PALETTE = [
-  "#8B5A2B", // warm brown
+  "#8B5A2B",
   "#A1623B",
   "#C17F4D",
   "#7B4A2A",
@@ -48,7 +48,7 @@ const SPINE_PALETTE = [
   "#BF8F68",
 ];
 
-// String'den deterministik renk seç
+// Deterministic color from string
 function getSpineColorFromString(id: string): string {
   let hash = 0;
   for (let i = 0; i < id.length; i++) {
@@ -201,8 +201,7 @@ export const BookCard: FC<BookCardProps> = ({
       >
         <Animated.View style={animatedCardStyle}>
           <Card style={[styles.card, variant === "grid" && styles.cardGrid]}>
-            {/* Dekoratif kitap elemanları */}
-            {/* Spine (renkli kitap sırtı) */}
+            {/* Decorative book structure */}
             <View
               style={[
                 styles.bookSpine,
@@ -212,7 +211,6 @@ export const BookCard: FC<BookCardProps> = ({
                 },
               ]}
             />
-            {/* Spine highlight */}
             <View
               style={[
                 styles.bookSpineHighlight,
@@ -221,15 +219,12 @@ export const BookCard: FC<BookCardProps> = ({
                 },
               ]}
             />
-            {/* Üst sayfa kenarı */}
             <View
               style={[
                 styles.bookPageEdgeTop,
                 { backgroundColor: colors.backgroundSecondary },
               ]}
             />
-
-            {/* Sağ sayfa kenarı (SVG çizgili) */}
             <View style={styles.bookPageEdgeRight} pointerEvents="none">
               <Svg width="100%" height="100%">
                 <Rect
@@ -258,31 +253,55 @@ export const BookCard: FC<BookCardProps> = ({
               </Svg>
             </View>
 
-            {/* Header: icon + title + 3-dot */}
-            <View style={styles.cardHeader}>
-              <View style={styles.cardIconTitle}>
-                <BaseIcon
-                  name="document-text-outline"
-                  size={iconSizes.lg}
-                  color={colors.textPrimary}
-                />
+            {/* Header + title */}
+            {variant === "row" ? (
+              <>
+                <View style={styles.cardHeader}>
+                  <View style={styles.cardIconTitle}>
+                    <BaseIcon
+                      name="document-text-outline"
+                      size={iconSizes.lg}
+                      color={colors.textPrimary}
+                    />
+                    <MText
+                      variant="body"
+                      style={styles.itemTitle}
+                      numberOfLines={2}
+                    >
+                      {file.name}
+                    </MText>
+                  </View>
+
+                  <IconButton
+                    ref={menuIconRef}
+                    name="ellipsis-vertical"
+                    size={iconSizes.md}
+                    color={colors.textPrimary}
+                    onPress={openMenu}
+                  />
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={styles.cardHeaderGrid}>
+                  <IconButton
+                    ref={menuIconRef}
+                    name="ellipsis-vertical"
+                    size={iconSizes.md}
+                    color={colors.textPrimary}
+                    onPress={openMenu}
+                  />
+                </View>
                 <MText
                   variant="body"
-                  style={styles.itemTitle}
+                  color="textPrimary"
+                  style={styles.gridTitle}
                   numberOfLines={2}
                 >
                   {file.name}
                 </MText>
-              </View>
-
-              <IconButton
-                ref={menuIconRef}
-                name="ellipsis-vertical"
-                size={iconSizes.md}
-                color={colors.textPrimary}
-                onPress={openMenu}
-              />
-            </View>
+              </>
+            )}
 
             {/* Progress (lastPage / totalPages) */}
             {totalPages && totalPages > 0 ? (
@@ -323,22 +342,6 @@ export const BookCard: FC<BookCardProps> = ({
                 Tap to open
               </MText>
             )}
-
-            {/* Footer: today info */}
-            <View style={styles.cardFooter}>
-              {typeof todayPages === "number" && todayPages > 0 && (
-                <MText
-                  variant="body"
-                  color="textSecondary"
-                  style={styles.cardHint}
-                  numberOfLines={1}
-                >
-                  {todayTargetPages
-                    ? `Today: ${todayPages} / ${todayTargetPages} pages`
-                    : `Today: ${todayPages} pages`}
-                </MText>
-              )}
-            </View>
           </Card>
         </Animated.View>
       </TouchableOpacity>
@@ -520,6 +523,7 @@ const styles = StyleSheet.create({
     width: 26,
   },
 
+  // Row header
   cardHeader: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -534,6 +538,20 @@ const styles = StyleSheet.create({
     marginLeft: spacing.sm,
     flexShrink: 1,
   },
+
+  // Grid header + title
+  cardHeaderGrid: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+  },
+  gridTitle: {
+    //marginTop: spacing.xs,
+    textAlign: "center",
+    fontSize: 14,
+    flexShrink: 1,
+  },
+
   cardHint: {
     marginTop: spacing.xs,
   },

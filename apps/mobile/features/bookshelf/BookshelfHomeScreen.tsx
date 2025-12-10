@@ -176,7 +176,6 @@ export default function BookshelfHomeScreen() {
   }
 
   // ---- LAST READ LOGIC ----
-  // readingStats key'i: `${uri}:${dayKey}` formatında.
   const lastReadByBook = useMemo(() => {
     const map: Record<string, string> = {};
 
@@ -187,7 +186,6 @@ export default function BookshelfHomeScreen() {
       const [uri, dayKey] = key.split(":");
       if (!uri || !dayKey) return;
 
-      // daha yeni günü seç
       if (!map[uri] || dayKey > map[uri]) {
         map[uri] = dayKey;
       }
@@ -205,15 +203,23 @@ export default function BookshelfHomeScreen() {
         if (!aDate && !bDate) return 0;
         if (!aDate) return 1;
         if (!bDate) return -1;
-        return aDate < bDate ? 1 : -1; // yeni tarih önce
+        return aDate < bDate ? 1 : -1;
       })
-      .slice(0, 12); // last read rafı için limit
+      .slice(0, 12);
   }, [books, lastReadByBook]);
 
-  // grid için tüm kitaplar (isim sırasına göre)
   const gridBooks = useMemo(() => {
     return [...books].sort((a, b) => a.name.localeCompare(b.name));
   }, [books]);
+
+  // 3'lü satırlar halinde grid
+  const gridRows = useMemo(() => {
+    const rows: LocalPdfFile[][] = [];
+    for (let i = 0; i < gridBooks.length; i += 3) {
+      rows.push(gridBooks.slice(i, i + 3));
+    }
+    return rows;
+  }, [gridBooks]);
 
   return (
     <AppScreen
@@ -265,7 +271,7 @@ export default function BookshelfHomeScreen() {
             </View>
           </View>
 
-          {/* LAST READ SHELF (yatay, eski Books davranışı) */}
+          {/* LAST READ SHELF */}
           <View style={styles.shelfSection}>
             <MText
               variant="heading3"
@@ -306,7 +312,6 @@ export default function BookshelfHomeScreen() {
                         todayPages={todayStat?.pagesRead}
                         todayTargetPages={todayStat?.targetPages}
                         onRename={(newName) => renameBook(item, newName)}
-                        // bu raf yatay, mevcut görünüm
                       />
                     );
                   }}
@@ -326,44 +331,45 @@ export default function BookshelfHomeScreen() {
             </MText>
 
             <View style={styles.shelfInner}>
-              <View style={styles.shelfRail} />
-
-              {gridBooks.length === 0 ? (
+              {gridRows.length === 0 ? (
                 <View style={styles.emptyState}>
                   <MText color="textSecondary">
                     No books yet. Use the plus button to add one.
                   </MText>
                 </View>
               ) : (
-                <FlatList
-                  data={gridBooks}
-                  keyExtractor={(item) => item.uri}
-                  numColumns={3}
-                  scrollEnabled={false}
-                  contentContainerStyle={styles.gridContent}
-                  columnWrapperStyle={styles.gridRow}
-                  renderItem={({ item }) => {
-                    const progress = progressMap[item.uri];
-                    const statKey = `${item.uri}:${today}`;
-                    const todayStat = readingStats[statKey];
+                <View style={styles.gridContent}>
+                  {gridRows.map((row, rowIndex) => (
+                    <View key={rowIndex} style={styles.gridRowContainer}>
+                      <View style={styles.gridRowRail} />
+                      <View style={styles.gridRow}>
+                        {row.map((item) => {
+                          const progress = progressMap[item.uri];
+                          const statKey = `${item.uri}:${today}`;
+                          const todayStat = readingStats[statKey];
 
-                    return (
-                      <View style={styles.gridItem}>
-                        <BookCard
-                          file={item}
-                          onOpen={() => handleOpenPdf(item)}
-                          onDelete={() => handleDeletePdf(item)}
-                          lastPage={progress?.lastPage}
-                          totalPages={progress?.totalPages}
-                          todayPages={todayStat?.pagesRead}
-                          todayTargetPages={todayStat?.targetPages}
-                          onRename={(newName) => renameBook(item, newName)}
-                          variant="grid" // aşağıda BookCard için not
-                        />
+                          return (
+                            <View key={item.uri} style={styles.gridItem}>
+                              <BookCard
+                                file={item}
+                                onOpen={() => handleOpenPdf(item)}
+                                onDelete={() => handleDeletePdf(item)}
+                                lastPage={progress?.lastPage}
+                                totalPages={progress?.totalPages}
+                                todayPages={todayStat?.pagesRead}
+                                todayTargetPages={todayStat?.targetPages}
+                                onRename={(newName) =>
+                                  renameBook(item, newName)
+                                }
+                                variant="grid"
+                              />
+                            </View>
+                          );
+                        })}
                       </View>
-                    );
-                  }}
-                />
+                    </View>
+                  ))}
+                </View>
               )}
             </View>
           </View>
@@ -455,11 +461,26 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.lg,
     paddingRight: spacing.lg,
   },
+  gridRowContainer: {
+    marginBottom: spacing.md,
+    paddingBottom: spacing.sm,
+    position: "relative",
+  },
+  gridRowRail: {
+    position: "absolute",
+    left: 0,
+    right: spacing.lg,
+    bottom: 0,
+    height: 4,
+    borderRadius: radii.full,
+    backgroundColor: colors.backgroundSecondary,
+    opacity: 0.6,
+  },
   gridRow: {
-    gap: spacing.sm,
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   gridItem: {
-    flex: 1,
-    marginBottom: spacing.md,
+    width: "38%",
   },
 });
