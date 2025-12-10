@@ -260,6 +260,7 @@ export function SidebarMenu({ open, onClose }: Props) {
         style={styles.sidebarBackdrop}
         activeOpacity={1}
         onPress={onClose}
+        accessibilityLabel="Close sidebar"
       />
     </View>
   );
