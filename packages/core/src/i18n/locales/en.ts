@@ -97,7 +97,7 @@ export const en = {
     "shopping_list": "Shopping List",
     "reports": "Reports",
     "system": "System",
-    "sysnc": "Sync",
+    "sync": "Sync",
     "products": "Products",
    "price_history": "Price History",
     //Simulation

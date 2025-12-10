@@ -2,6 +2,7 @@ import React, { useEffect, FC, useRef } from "react";
 import { Animated, Text, StyleSheet, View, Dimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { theme } from "@budget/core";
+import { colors } from "@budget/ui-native";
 
 type Props = {
   message: string;
@@ -75,8 +76,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 14,
 
-    // glass-like modern background
-    backgroundColor: "rgba(15, 23, 42, 0.85)", // koyu lacivert blur tonu
+    backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.15)",
 

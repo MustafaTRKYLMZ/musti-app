@@ -1,7 +1,7 @@
 import React from "react";
-import { View, TouchableOpacity, StyleSheet } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { View, StyleSheet } from "react-native";
 import { MText, colors, spacing, radii, iconSizes } from "@budget/ui-native";
+import { IconButton } from "@/components/ui/AppIcon";
 
 interface Props {
   monthName: string;
@@ -13,17 +13,14 @@ interface Props {
 export function MonthNavigator({ monthName, year, onPrev, onNext }: Props) {
   return (
     <View style={styles.monthHeader}>
-      <TouchableOpacity
+      <IconButton
         onPress={onPrev}
         style={styles.monthNavIcon}
-        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-      >
-        <Ionicons
-          name="chevron-back"
-          size={iconSizes["xl"]}
-          color={colors.textSecondary}
-        />
-      </TouchableOpacity>
+        hitSlop={12}
+        name="chevron-back"
+        size={iconSizes.xl}
+        color={colors.textSecondary}
+      />
 
       <View style={styles.monthTitleBlock}>
         <MText variant="heading3" color="textPrimary">
@@ -38,17 +35,14 @@ export function MonthNavigator({ monthName, year, onPrev, onNext }: Props) {
         </MText>
       </View>
 
-      <TouchableOpacity
+      <IconButton
         onPress={onNext}
         style={styles.monthNavIcon}
-        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-      >
-        <Ionicons
-          name="chevron-forward"
-          size={iconSizes["xl"]}
-          color={colors.textSecondary}
-        />
-      </TouchableOpacity>
+        hitSlop={12}
+        name="chevron-forward"
+        size={iconSizes.xl}
+        color={colors.textSecondary}
+      />
     </View>
   );
 }
@@ -66,7 +60,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   yearSpacing: {
-    marginTop: spacing["xs"],
+    marginTop: spacing.xs,
   },
   monthNavIcon: {
     padding: spacing.xs,

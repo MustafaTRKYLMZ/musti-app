@@ -7,8 +7,9 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+
 import { MText, colors, spacing, radii, iconSizes } from "@budget/ui-native";
+import { IconButton } from "@/components/ui/AppIcon";
 
 type AppModalProps = {
   visible: boolean;
@@ -41,14 +42,13 @@ export function AppModal({ visible, title, onClose, children }: AppModalProps) {
                 </MText>
               )}
             </View>
-
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Ionicons
-                name="close"
-                size={iconSizes.lg}
-                color={colors.danger}
-              />
-            </TouchableOpacity>
+            <IconButton
+              name="close"
+              size={iconSizes.lg}
+              color={colors.danger}
+              onPress={onClose}
+              style={styles.closeButton}
+            />
           </View>
 
           <View style={styles.body}>{children}</View>
@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(2,6,23,0.65)",
+    backgroundColor: colors.backgroundBackdrop,
   },
   centerWrapper: {
     ...StyleSheet.absoluteFillObject,

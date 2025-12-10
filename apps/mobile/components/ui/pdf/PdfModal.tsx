@@ -113,7 +113,7 @@ export const PdfModal: React.FC<PdfModalProps> = ({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
+    backgroundColor: colors.backdropStrong,
     justifyContent: "flex-end",
   },
   modalContent: {

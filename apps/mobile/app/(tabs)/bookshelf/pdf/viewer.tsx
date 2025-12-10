@@ -37,7 +37,6 @@ export default function PdfViewerScreen() {
     currentProgress?.totalPages ?? null
   );
 
-  // Determine initial page based on stored reading progress
   useEffect(() => {
     if (!uri) return;
 
@@ -68,7 +67,6 @@ export default function PdfViewerScreen() {
 
   const handleLoadComplete = (pages: number) => {
     setSessionTotalPages(pages);
-    // Update total pages in the global reading progress
     setProgress({
       uri,
       name,
@@ -80,7 +78,6 @@ export default function PdfViewerScreen() {
   const handlePageChanged = (page: number, total: number) => {
     setSessionTotalPages(total);
     setSessionLastPage(page);
-    // Track the furthest page reached during this session
     setMaxPageVisited((prev) => {
       if (prev == null) return page;
       return Math.max(prev, page);
@@ -89,7 +86,7 @@ export default function PdfViewerScreen() {
 
   const handleClose = () => {
     if (!uri) {
-      router.back();
+      router.replace("/(tabs)/bookshelf");
       return;
     }
 
@@ -116,7 +113,7 @@ export default function PdfViewerScreen() {
       });
     }
 
-    router.back();
+    router.replace("/(tabs)/bookshelf");
   };
 
   return (

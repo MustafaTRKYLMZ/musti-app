@@ -260,13 +260,13 @@ const styles = StyleSheet.create({
   // Income
   segmentActiveIncome: {
     borderColor: colors.success,
-    backgroundColor: "rgba(34,197,94,0.18)",
+    backgroundColor: colors.background,
   },
 
   // Expense
   segmentActiveExpense: {
     borderColor: colors.danger,
-    backgroundColor: "rgba(239,68,68,0.18)",
+    backgroundColor: colors.background,
   },
 
   // Fixed yes/no (neutral)

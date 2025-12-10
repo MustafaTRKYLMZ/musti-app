@@ -10,7 +10,6 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import dayjs from "dayjs";
 
@@ -19,6 +18,7 @@ import { useTransactionsStore } from "../../../store/useTransactionsStore";
 import { syncTransactions } from "../../../services/syncTransactions";
 import { useTranslation } from "@budget/core";
 import { LocalizedDatePicker } from "@/components/ui/LocalizedDatePicker";
+
 import {
   MText,
   colors,
@@ -27,11 +27,13 @@ import {
   radii,
   iconSizes,
 } from "@budget/ui-native";
+
 import { BackupSection } from "@/components/BackupSection";
+import { IconButton, BaseIcon } from "@/components/ui/AppIcon";
 
 export default function SettingsScreen() {
-  const handleClose = () => router.back();
   const { t } = useTranslation();
+  const handleClose = () => router.back();
 
   const { initialBalance, loadInitialBalance, saveInitialBalance, isLoading } =
     useSettingsStore();
@@ -53,20 +55,20 @@ export default function SettingsScreen() {
   }, [initialBalance]);
 
   const handleSave = async () => {
-    const payload = {
-      amount: Number(amount),
-      date,
-    };
+    const value = Number(amount);
 
-    if (Number.isNaN(payload.amount)) {
+    if (Number.isNaN(value)) {
       Alert.alert("Error", "Amount must be a number");
       return;
     }
 
-    const ok = await saveInitialBalance(payload);
+    const success = await saveInitialBalance({
+      amount: value,
+      date,
+    });
 
-    if (!ok) {
-      Alert.alert("Error", "Failed to save initial balance (see console log)");
+    if (!success) {
+      Alert.alert("Error", "Failed to save initial balance");
       return;
     }
 
@@ -78,10 +80,10 @@ export default function SettingsScreen() {
       setIsSyncing(true);
       await syncTransactions();
       setIsSyncing(false);
-      Alert.alert("Sync", "Sync completed successfully.");
-    } catch (e) {
+      Alert.alert("Sync", "Sync completed successfully");
+    } catch {
       setIsSyncing(false);
-      Alert.alert("Sync", "Sync failed. Please try again.");
+      Alert.alert("Sync", "Sync failed. Please try again");
     }
   };
 
@@ -93,13 +95,7 @@ export default function SettingsScreen() {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.headerRow}>
-        <TouchableOpacity
-          onPress={handleClose}
-          style={styles.closeButton}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Ionicons name="close" size={iconSizes.lg} color={colors.danger} />
-        </TouchableOpacity>
+        <IconButton onPress={handleClose} name="close" color={colors.danger} />
 
         <MText style={styles.headerTitle}>{t("settings.title")}</MText>
 
@@ -107,12 +103,12 @@ export default function SettingsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        {/* SECTION: Opening Balance */}
+        {/* Opening balance */}
         <View>
           <MText style={styles.sectionTitle}>{t("starting_balance")}</MText>
 
-          {/* Amount Input */}
           <MText style={styles.itemLabel}>{t("initial_amount")}</MText>
+
           <TextInput
             style={styles.input}
             keyboardType="numeric"
@@ -122,14 +118,14 @@ export default function SettingsScreen() {
             onChangeText={setAmount}
           />
 
-          {/* Date Picker (Localized) */}
           <LocalizedDatePicker
             value={date}
             onChange={setDate}
             label={t("starting_from_date")}
           />
         </View>
-        {/* Save Button */}
+
+        {/* Save */}
         <TouchableOpacity
           style={[styles.saveButton, isLoading && styles.disabled]}
           onPress={handleSave}
@@ -137,15 +133,18 @@ export default function SettingsScreen() {
         >
           <MText style={styles.saveButtonText}>{t("save")}</MText>
         </TouchableOpacity>
-        {/* SECTION: Sync */}
+
+        {/* Sync */}
         <MText style={[styles.sectionTitle, styles.sectionTitleSpacing]}>
-          {t("sysnc")}
+          {t("sync")}
         </MText>
+
         <View style={styles.syncInfoBox}>
           <View>
             <MText style={styles.syncLabel}>{t("last_sync")}</MText>
             <MText style={styles.syncValue}>{lastSyncLabel}</MText>
           </View>
+
           <TouchableOpacity
             style={[
               styles.syncButton,
@@ -154,18 +153,19 @@ export default function SettingsScreen() {
             onPress={handleSyncNow}
             disabled={isSyncing || isLoading}
           >
-            <Ionicons
+            <BaseIcon
               name={isSyncing ? "sync" : "cloud-upload-outline"}
               size={iconSizes.sm}
               color={colors.textInverse}
               style={styles.syncIcon}
             />
+
             <MText style={styles.syncButtonText}>
               {isSyncing ? `${t("syncing")}...` : t("now_sync")}
             </MText>
           </TouchableOpacity>
         </View>
-        {/* SECTION: Backup */}
+
         <BackupSection />
       </ScrollView>
     </SafeAreaView>
@@ -179,23 +179,13 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
   },
 
-  // Header
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.sm,
+    paddingVertical: spacing.sm,
   },
-  closeButton: {
-    width: spacing.xl,
-    height: spacing.xl,
-    borderRadius: radii.full,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+
   headerTitle: {
     flex: 1,
     textAlign: "center",
@@ -203,18 +193,17 @@ const styles = StyleSheet.create({
     fontSize: typography.heading2.fontSize,
     fontWeight: "700",
   },
+
   headerRightPlaceholder: {
     width: spacing.xl,
   },
 
-  // Content
   content: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: spacing.xl,
   },
 
-  // Sections
   sectionTitle: {
     color: colors.textPrimary,
     fontSize: typography.heading3.fontSize,
@@ -222,6 +211,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     marginTop: spacing.md,
   },
+
   sectionTitleSpacing: {
     marginTop: spacing.lg,
   },
@@ -243,7 +233,6 @@ const styles = StyleSheet.create({
     borderColor: colors.borderSubtle,
   },
 
-  // Save button
   saveButton: {
     backgroundColor: colors.primaryLight,
     paddingVertical: spacing.md,
@@ -251,13 +240,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: spacing.sm,
   },
+
   saveButtonText: {
     color: colors.textPrimary,
     fontSize: typography.body.fontSize,
     fontWeight: "600",
   },
 
-  // Sync box
   syncInfoBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -269,11 +258,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
+
   syncLabel: {
     color: colors.textMuted,
     fontSize: typography.body.fontSize,
     marginBottom: spacing.xs,
   },
+
   syncValue: {
     color: colors.textPrimary,
     fontSize: typography.body.fontSize,
@@ -288,16 +279,17 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderRadius: radii.full,
   },
+
   syncIcon: {
     marginRight: spacing.xs,
   },
+
   syncButtonText: {
     color: colors.textPrimary,
     fontSize: typography.body.fontSize,
     fontWeight: "600",
   },
 
-  // Common
   disabled: {
     opacity: 0.5,
   },

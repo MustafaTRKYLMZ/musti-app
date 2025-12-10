@@ -1,17 +1,10 @@
 // apps/mobile/app/bookshelf.tsx
 
 import React, { useEffect, useState, useCallback } from "react";
-import {
-  View,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  Alert,
-} from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { View, StyleSheet, FlatList, Alert } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
 import { useRouter } from "expo-router";
-import { MText, colors, spacing, iconSizes } from "@budget/ui-native";
+import { MText, colors, spacing } from "@budget/ui-native";
 import dayjs from "dayjs";
 
 import {
@@ -23,7 +16,7 @@ import { PdfModal } from "@/components/ui/pdf/PdfModal";
 import { useBooksStore } from "@/store/useBooksStore";
 import { useReadingStatsStore } from "@/store/useReadingStatsStore";
 import { useReadingPlanStore } from "@/store/useReadingPlanStore";
-import { ReadingPlanModal } from "@/components/ui/modals/CreaPlanModal";
+import { ReadingPlanModal } from "@/components/ui/modals/CreatePlanModal";
 import { CurrentPlanCard } from "@/features/books/CurrentPlanCard";
 import { BookCard } from "@/components/ui/Books/BookCard";
 import { useCurrentPlanInfo } from "@/hooks/useCurrentPlanInfo";
@@ -70,7 +63,7 @@ export default function BookshelfScreen() {
   // book open
   const handleOpenPdf = (item: LocalPdfFile) => {
     router.push({
-      pathname: "/pdf/viewer",
+      pathname: "/(tabs)/bookshelf/pdf/viewer",
       params: { uri: item.uri, name: item.name },
     });
   };
@@ -115,14 +108,14 @@ export default function BookshelfScreen() {
   // plan card -> open related book
   const handlePressPlanCard = () => {
     if (!currentPlanInfo) return;
+
     if (currentPlanInfo.isCompleted) return;
     if (!currentPlanInfo.currentBookUri) return;
-
     const book = pdfs.find((b) => b.uri === currentPlanInfo.currentBookUri);
-    if (!book) return;
 
+    if (!book) return;
     router.push({
-      pathname: "/plan/plan-viewer",
+      pathname: "/(tabs)/bookshelf/plan/plan-viewer",
       params: {
         uri: book.uri,
         name: book.name,
@@ -148,8 +141,6 @@ export default function BookshelfScreen() {
       const dirUri = file.uri.slice(0, lastSlashIndex + 1);
       const newUri =
         dirUri + encodeURIComponent(finalName).replace(/%2F/g, "/");
-
-      console.log("Renaming PDF:", { from: file.uri, to: newUri });
 
       await FileSystem.moveAsync({
         from: file.uri,

@@ -24,6 +24,7 @@ export type BaseIconProps = {
   name: string;
   size?: number;
   color?: string;
+  style?: StyleProp<ViewStyle>;
 };
 
 export function BaseIcon({
@@ -31,9 +32,10 @@ export function BaseIcon({
   name,
   size = iconSizes.lg,
   color = colors.textPrimary,
+  style,
 }: BaseIconProps) {
   const IconSet = ICON_SETS[family];
-  return <IconSet name={name as any} size={size} color={color} />;
+  return <IconSet name={name as any} size={size} color={color} style={style} />;
 }
 
 // ---------- IconButton ----------
@@ -49,51 +51,60 @@ export type IconButtonProps = {
   rounded?: boolean;
   iconNode?: React.ReactNode;
   size?: number;
+  accessibilityLabel?: string;
 };
 
-export function IconButton({
-  family,
-  name,
-  size,
-  color = colors.textPrimary,
-  backgroundColor = "transparent",
-  padding = spacing.xs,
-  hitSlop = 8,
-  style,
-  onPress,
-  rounded = true,
-  iconNode,
-}: IconButtonProps) {
-  const [hovered, setHovered] = useState(false);
+export const IconButton = React.forwardRef<View, IconButtonProps>(
+  function IconButton(
+    {
+      family,
+      name,
+      size,
+      color = colors.textPrimary,
+      backgroundColor = "transparent",
+      padding = spacing.xs,
+      hitSlop = 8,
+      style,
+      onPress,
+      rounded = true,
+      iconNode,
+      accessibilityLabel,
+    },
+    ref
+  ) {
+    const [hovered, setHovered] = useState(false);
 
-  const content =
-    iconNode ??
-    (name ? (
-      <BaseIcon family={family} name={name} size={size} color={color} />
-    ) : null);
+    const content =
+      iconNode ??
+      (name ? (
+        <BaseIcon family={family} name={name} size={size} color={color} />
+      ) : null);
 
-  return (
-    <Pressable
-      onPress={onPress}
-      hitSlop={hitSlop}
-      onHoverIn={() => setHovered(true)}
-      onHoverOut={() => setHovered(false)}
-      android_ripple={{ color: colors.borderSubtle, radius: 22 }}
-      style={[
-        styles.button,
-        {
-          padding,
-          borderRadius: rounded ? radii.full : radii.md,
-          backgroundColor: hovered ? colors.background : backgroundColor,
-          transform: [{ scale: hovered ? 1.08 : 1 }],
-        },
-        style,
-      ]}
-    >
-      {content}
-    </Pressable>
-  );
-}
+    return (
+      <Pressable
+        ref={ref}
+        onPress={onPress}
+        hitSlop={hitSlop}
+        onHoverIn={() => setHovered(true)}
+        onHoverOut={() => setHovered(false)}
+        android_ripple={{ color: colors.borderSubtle, radius: 22 }}
+        accessibilityLabel={accessibilityLabel}
+        style={[
+          styles.button,
+          {
+            padding,
+            borderRadius: rounded ? radii.full : radii.md,
+            backgroundColor: hovered ? colors.background : backgroundColor,
+            transform: [{ scale: hovered ? 1.08 : 1 }],
+          },
+          style,
+        ]}
+      >
+        {content}
+      </Pressable>
+    );
+  }
+);
 
 // ---------- IconTile (icon + label, launcher için) ----------
 export type IconTileProps = {

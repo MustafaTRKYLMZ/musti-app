@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { View, StyleSheet, TouchableOpacity } from "react-native";
+import { View, StyleSheet } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { MText, colors, spacing, radii, iconSizes } from "@budget/ui-native";
-import { Ionicons } from "@expo/vector-icons";
 
 import { PdfReader } from "@/components/ui/pdf/PdfReader";
 import { useReadingPlanStore } from "@/store/useReadingPlanStore";
+import { IconButton, BaseIcon } from "@/components/ui/AppIcon";
 
 export default function PlanViewerScreen() {
   const router = useRouter();
@@ -89,13 +89,10 @@ export default function PlanViewerScreen() {
   const source = { uri, cache: true };
 
   const handleLoadComplete = (pages: number) => {
-    console.log("[PLAN VIEW] PDF loaded, total pages:", pages);
     setSessionTotalPages(pages);
-    // Plan viewer: we do NOT touch the global book progress here.
   };
 
   const handlePageChanged = (page: number, total: number) => {
-    console.log(`[PLAN VIEW] Page changed: ${page} / ${total}`);
     setSessionTotalPages(total);
     setSessionLastPage(page);
 
@@ -125,16 +122,9 @@ export default function PlanViewerScreen() {
     const pagesDelta = Math.max(0, maxVisited - start);
 
     if (pagesDelta > 0) {
-      console.log("[PLAN VIEW] flushToPlan", {
-        bookUri,
-        pagesDelta,
-        totalPages: sessionTotalPages,
-      });
-
       addPagesFromSession({
         bookUri,
         pages: pagesDelta,
-        // Used on the plan side to know if we've reached the end of the book
         bookTotalPages: sessionTotalPages ?? undefined,
       });
     }
@@ -143,10 +133,7 @@ export default function PlanViewerScreen() {
   const goToNextBookInPlan = () => {
     if (!activePlan || currentItemIndex === -1) return;
 
-    // First, flush current session progress for this book into the plan
     flushToPlan(uri);
-
-    // Find the next book whose daily target is not yet completed
     const totalItems = items.length;
     let idx = (currentItemIndex + 1) % totalItems;
     let looped = false;
@@ -164,21 +151,18 @@ export default function PlanViewerScreen() {
 
       idx = (idx + 1) % totalItems;
       if (idx === currentItemIndex) {
-        // We have looped through all items and found none with remaining target
         looped = true;
         break;
       }
     }
 
     if (!nextItem || looped) {
-      // Today's plan is fully completed
-      router.back();
+      router.replace("/(tabs)/bookshelf");
       return;
     }
 
-    // Open a new plan viewer for the next book
     router.replace({
-      pathname: "/plan/plan-viewer",
+      pathname: "/(tabs)/bookshelf/plan/plan-viewer",
       params: {
         uri: nextItem.bookUri,
         name: nextItem.bookName,
@@ -187,9 +171,8 @@ export default function PlanViewerScreen() {
   };
 
   const handleClose = () => {
-    // Session ended for this book -> flush and go back
     flushToPlan(uri);
-    router.back();
+    router.replace("/(tabs)/bookshelf");
   };
 
   const clampedToday =
@@ -214,7 +197,8 @@ export default function PlanViewerScreen() {
       {hasReachedTarget && (
         <View style={styles.bannerWrapper} pointerEvents="box-none">
           <View style={styles.banner}>
-            <Ionicons
+            <BaseIcon
+              family="ion"
               name="checkmark-circle"
               size={iconSizes.lg}
               color={colors.success}
@@ -229,15 +213,15 @@ export default function PlanViewerScreen() {
                 </MText>
               )}
             </View>
-
-            <TouchableOpacity
+            <IconButton
+              family="ion"
+              name="arrow-forward"
+              size={22}
+              color={colors.textInverse}
               onPress={goToNextBookInPlan}
               style={styles.bannerButton}
-            >
-              <MText variant="body" color="textInverse">
-                Next book
-              </MText>
-            </TouchableOpacity>
+              accessibilityLabel="Next book"
+            />
           </View>
         </View>
       )}

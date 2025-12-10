@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import { View, StyleSheet, TouchableOpacity, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import dayjs from "dayjs";
 
@@ -25,6 +24,7 @@ import {
   iconSizes,
 } from "@budget/ui-native";
 import { useSimulationStore } from "@/store/useSimulationStore";
+import { BaseIcon, IconButton } from "@/components/ui/AppIcon";
 
 export function SimulationScreen() {
   const {
@@ -76,7 +76,7 @@ export function SimulationScreen() {
   }, [activeScenario?.id, activeScenario?.targetDate, todayStr]);
 
   const handleGoBack = () => {
-    router.back();
+    router.replace("/(tabs)/budget");
   };
 
   const baseBalance = getBalanceOnDate(targetDate);
@@ -137,7 +137,7 @@ export function SimulationScreen() {
           style={styles.backButton}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Ionicons
+          <BaseIcon
             name="chevron-back"
             size={22}
             color={colors.textSecondary}
@@ -177,7 +177,7 @@ export function SimulationScreen() {
             onPress={() => setShowScenarioSidebar(true)}
             activeOpacity={0.85}
           >
-            <Ionicons
+            <BaseIcon
               name="flask-outline"
               size={14}
               color={colors.textMuted}
@@ -191,7 +191,7 @@ export function SimulationScreen() {
             >
               {activeScenarioDisplayName}
             </MText>
-            <Ionicons
+            <BaseIcon
               name="ellipsis-vertical"
               size={16}
               color={colors.textMuted}
@@ -254,11 +254,7 @@ export function SimulationScreen() {
       <FAB
         onPress={() => setShowAddModal(true)}
         icon={
-          <Ionicons
-            name="add"
-            size={iconSizes["xl"]}
-            color={colors.textInverse}
-          />
+          <BaseIcon name="add" size={iconSizes.xl} color={colors.textInverse} />
         }
         offsetBottom={spacing["4xl"] * 2}
       />
@@ -288,13 +284,14 @@ export function SimulationScreen() {
                 {t("scenarios")}
               </MText>
 
-              <TouchableOpacity
+              <IconButton
+                name="close"
+                size={18}
+                color={colors.textSecondary}
                 onPress={() => setShowScenarioSidebar(false)}
                 style={styles.sidebarCloseButton}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Ionicons name="close" size={18} color={colors.textSecondary} />
-              </TouchableOpacity>
+                hitSlop={8}
+              />
             </View>
 
             <ScrollView>
@@ -302,7 +299,7 @@ export function SimulationScreen() {
                 style={styles.sidebarNewScenarioRow}
                 onPress={() => addScenario(`Plan ${scenarios.length + 1}`)}
               >
-                <Ionicons
+                <BaseIcon
                   name="add-circle-outline"
                   size={18}
                   color={colors.success}
@@ -330,7 +327,7 @@ export function SimulationScreen() {
                     delayLongPress={300}
                   >
                     <View style={styles.sidebarScenarioLeft}>
-                      <Ionicons
+                      <BaseIcon
                         name="flask-outline"
                         size={16}
                         color={isActive ? colors.background : colors.textMuted}
@@ -351,16 +348,13 @@ export function SimulationScreen() {
                       </View>
                     </View>
 
-                    <TouchableOpacity
+                    <IconButton
+                      name="trash-outline"
+                      size={16}
+                      color={colors.textMuted}
                       onPress={() => deleteScenario(s.id)}
-                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                    >
-                      <Ionicons
-                        name="trash-outline"
-                        size={16}
-                        color={colors.textMuted}
-                      />
-                    </TouchableOpacity>
+                      hitSlop={6}
+                    />
                   </TouchableOpacity>
                 );
               })}
@@ -377,10 +371,11 @@ export function SimulationScreen() {
         onCancel={() => setRenameTarget(null)}
         onSave={handleConfirmRename}
       />
+
       {/* WITH SIMULATION FOOTER */}
       <View style={styles.withSimFooter}>
         <View style={{ flexDirection: "row", alignItems: "center" }}>
-          <Ionicons
+          <BaseIcon
             name="sparkles-outline"
             size={16}
             color={colors.textMuted}
@@ -435,7 +430,6 @@ const styles = StyleSheet.create({
   descriptionWrapper: {
     marginBottom: spacing.sm,
   },
-
   baseBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -448,7 +442,6 @@ const styles = StyleSheet.create({
     borderColor: colors.borderSubtle,
     marginBottom: spacing.sm,
   },
-
   section: {
     marginTop: spacing.sm,
   },
@@ -467,7 +460,6 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     borderWidth: 1,
   },
-
   activeScenarioButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -478,7 +470,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
     maxWidth: 180,
   },
-
   simListCard: {
     borderRadius: radii.md,
     borderColor: colors.borderSubtle,
@@ -488,7 +479,6 @@ const styles = StyleSheet.create({
   emptySimTextWrapper: {
     marginTop: spacing.xs,
   },
-
   withSimFooter: {
     position: "absolute",
     left: spacing.md,
@@ -509,7 +499,6 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
   },
-
   // Sidebar
   sidebarOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -518,7 +507,7 @@ const styles = StyleSheet.create({
   },
   sidebarBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(15,23,42,0.7)",
+    backgroundColor: colors.backdropStrong,
   },
   sidebarPanel: {
     width: 260,
@@ -550,7 +539,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.borderSubtle,
   },
   sidebarScenarioRowActive: {
-    backgroundColor: "rgba(34,197,94,0.15)",
+    backgroundColor: colors.background,
   },
   sidebarScenarioLeft: {
     flex: 1,

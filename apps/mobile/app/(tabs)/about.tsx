@@ -10,7 +10,11 @@ export default function AboutScreen() {
   const { t } = useTranslation();
 
   const handleClose = () => {
-    router.back();
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(tabs)/budget");
+    }
   };
 
   return (

@@ -1,8 +1,8 @@
+import React, { FC } from "react";
 import { MText, iconSizes, colors, radii, spacing } from "@budget/ui-native";
-import { Ionicons } from "@expo/vector-icons";
-import { FC } from "react";
-import { View, TouchableOpacity, StyleSheet } from "react-native";
+import { View, StyleSheet } from "react-native";
 import Pdf from "react-native-pdf";
+import { IconButton } from "@/components/ui/AppIcon";
 
 type PdfReaderProps = {
   isFullscreen: boolean;
@@ -14,6 +14,7 @@ type PdfReaderProps = {
   handleLoadComplete: (numberOfPages: number, filePath: string) => void;
   handlePageChanged: (page: number, numberOfPages: number) => void;
 };
+
 export const PdfReader: FC<PdfReaderProps> = ({
   isFullscreen,
   name,
@@ -41,24 +42,21 @@ export const PdfReader: FC<PdfReaderProps> = ({
           </MText>
 
           <View style={styles.headerActions}>
-            <TouchableOpacity
+            <IconButton
+              name="expand-outline"
+              size={iconSizes.lg}
+              color={colors.textPrimary}
               onPress={() => setIsFullscreen(true)}
               style={styles.iconButton}
-            >
-              <Ionicons
-                name="expand-outline"
-                size={iconSizes.lg}
-                color={colors.textPrimary}
-              />
-            </TouchableOpacity>
+            />
 
-            <TouchableOpacity onPress={handleClose} style={styles.iconButton}>
-              <Ionicons
-                name="close-outline"
-                size={iconSizes.lg}
-                color={colors.textPrimary}
-              />
-            </TouchableOpacity>
+            <IconButton
+              name="close-outline"
+              size={iconSizes.lg}
+              color={colors.textPrimary}
+              onPress={handleClose}
+              style={styles.iconButton}
+            />
           </View>
         </View>
       )}
@@ -66,16 +64,14 @@ export const PdfReader: FC<PdfReaderProps> = ({
       {/* Fullscreen overlay */}
       {isFullscreen && (
         <View style={styles.fullscreenOverlay}>
-          <TouchableOpacity
+          <IconButton
+            name="contract-outline"
+            size={iconSizes.lg}
+            color={colors.textInverse}
             onPress={() => setIsFullscreen(false)}
-            style={styles.fullscreenButton}
-          >
-            <Ionicons
-              name="contract-outline"
-              size={iconSizes.lg}
-              color={colors.textInverse}
-            />
-          </TouchableOpacity>
+            backgroundColor={colors.backdropStrong}
+            padding={spacing.sm}
+          />
         </View>
       )}
 
@@ -149,10 +145,5 @@ const styles = StyleSheet.create({
     top: spacing.lg,
     right: spacing.lg,
     zIndex: 10,
-  },
-  fullscreenButton: {
-    padding: spacing.sm,
-    borderRadius: radii.full,
-    backgroundColor: "rgba(0,0,0,0.7)",
   },
 });
