@@ -1,7 +1,7 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
 import { MText, colors, spacing, radii, iconSizes } from "@budget/ui-native";
-import { IconButton, BaseIcon } from "@/components/ui/AppIcon";
+import { IconButton } from "@/components/ui/AppIcon";
 
 interface Props {
   monthName: string;

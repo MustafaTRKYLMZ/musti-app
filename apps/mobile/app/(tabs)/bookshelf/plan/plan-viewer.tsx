@@ -5,7 +5,7 @@ import { MText, colors, spacing, radii, iconSizes } from "@budget/ui-native";
 
 import { PdfReader } from "@/components/ui/pdf/PdfReader";
 import { useReadingPlanStore } from "@/store/useReadingPlanStore";
-import { IconButton } from "@/components/ui/AppIcon";
+import { IconButton, BaseIcon } from "@/components/ui/AppIcon";
 
 export default function PlanViewerScreen() {
   const router = useRouter();
@@ -197,7 +197,7 @@ export default function PlanViewerScreen() {
       {hasReachedTarget && (
         <View style={styles.bannerWrapper} pointerEvents="box-none">
           <View style={styles.banner}>
-            <IconButton
+            <BaseIcon
               family="ion"
               name="checkmark-circle"
               size={iconSizes.lg}
@@ -220,6 +220,7 @@ export default function PlanViewerScreen() {
               color={colors.textInverse}
               onPress={goToNextBookInPlan}
               style={styles.bannerButton}
+              accessibilityLabel="Next book"
             />
           </View>
         </View>

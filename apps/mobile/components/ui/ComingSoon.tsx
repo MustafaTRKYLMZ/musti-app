@@ -10,7 +10,7 @@ export function ComingSoon() {
     <View style={styles.container}>
       <BaseIcon
         name="sparkles-outline"
-        size={iconSizes.lg}
+        size={50}
         color={colors.surface}
       />
       <Text style={styles.title}>Coming soon</Text>

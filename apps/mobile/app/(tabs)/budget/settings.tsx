@@ -29,7 +29,7 @@ import {
 } from "@budget/ui-native";
 
 import { BackupSection } from "@/components/BackupSection";
-import { IconButton } from "@/components/ui/AppIcon";
+import { IconButton, BaseIcon } from "@/components/ui/AppIcon";
 
 export default function SettingsScreen() {
   const { t } = useTranslation();
@@ -153,10 +153,10 @@ export default function SettingsScreen() {
             onPress={handleSyncNow}
             disabled={isSyncing || isLoading}
           >
-            <IconButton
+            <BaseIcon
               name={isSyncing ? "sync" : "cloud-upload-outline"}
-              color={colors.textInverse}
               size={iconSizes.sm}
+              color={colors.textInverse}
               style={styles.syncIcon}
             />
 
