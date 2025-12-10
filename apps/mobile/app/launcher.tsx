@@ -10,7 +10,7 @@ import {
   iconSizes,
   shadows,
 } from "@budget/ui-native";
-import { IconButton } from "@/components/ui/AppIcon";
+import { BaseIcon } from "@/components/ui/AppIcon";
 
 export default function LauncherScreen() {
   const router = useRouter();
@@ -42,7 +42,7 @@ export default function LauncherScreen() {
           onPress={handleOpenBudget}
         >
           <View style={styles.iconWrapper}>
-            <IconButton
+            <BaseIcon
               family="ion"
               name="wallet-outline"
               size={iconSizes.xl}
@@ -69,7 +69,7 @@ export default function LauncherScreen() {
           onPress={handleOpenBookshelf}
         >
           <View style={styles.iconWrapper}>
-            <IconButton
+            <BaseIcon
               family="ion"
               name="book-outline"
               size={iconSizes.xl}

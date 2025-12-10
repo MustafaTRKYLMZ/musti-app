@@ -1,5 +1,5 @@
 import React from "react";
-import { View, StyleSheet, ScrollView } from "react-native";
+import { StyleSheet, ScrollView } from "react-native";
 import { AppScreen } from "@/components/AppScreen";
 import { IconButton } from "@/components/ui/AppIcon";
 import { MText, colors, spacing } from "@budget/ui-native";

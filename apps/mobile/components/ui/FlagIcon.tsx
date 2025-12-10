@@ -1,6 +1,6 @@
 // components/ui/FlagIcon.tsx
 import React from "react";
-import { Image, ImageSourcePropType } from "react-native";
+import { Image, ImageSourcePropType, StyleProp, ViewStyle } from "react-native";
 import { colors } from "@budget/ui-native";
 import { IconButton } from "./AppIcon";
 
@@ -15,7 +15,7 @@ interface FlagIconProps {
   code: LangCode;
   size?: number;
   onPress?: () => void;
-  style?: any;
+  style?: StyleProp<ViewStyle>;
 }
 
 export function FlagIcon({ code, size = 28, onPress, style }: FlagIconProps) {

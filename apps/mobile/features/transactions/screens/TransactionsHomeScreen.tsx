@@ -24,7 +24,7 @@ import { DeleteTransactionSheet } from "../components/DeleteTransactionSheet";
 import { syncTransactions } from "../../../services/syncTransactions";
 import { CustomAlert } from "@/components/CustomAlert";
 
-import { FAB, MText, Screen, colors, spacing } from "@budget/ui-native";
+import { FAB, MText, colors, spacing } from "@budget/ui-native";
 import { AppScreen } from "@/components/AppScreen";
 
 const getCurrentMonth = () => dayjs().format("YYYY-MM");
@@ -213,7 +213,6 @@ export function TransactionsHomeScreen() {
       onPressMenu={() => setSidebarOpen(true)}
       headerCenter={
         <BudgetHeader
-          onOpenMenu={() => setSidebarOpen(true)}
           onOpenSimulation={handleOpenSimulation}
           onLanguageChange={setAlertMessage}
         />

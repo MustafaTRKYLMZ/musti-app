@@ -48,7 +48,7 @@ export const iconSizes = {
     "3xl": 40,
     "4xl": 48,
     "5xl": 64,
-    '6xl': 80,
+    "6xl": 80,
   };
   
   export const radii = {
