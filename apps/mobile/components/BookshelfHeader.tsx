@@ -24,7 +24,6 @@ export const BookshelfHeader: FC<BookshelfHeaderProps> = ({
         <IconButton
           family="ion"
           name="list-outline"
-          size={iconSizes.lg}
           padding={spacing.xs}
           style={styles.iconButton}
           onPress={handleOpenPlanModal}
@@ -33,7 +32,6 @@ export const BookshelfHeader: FC<BookshelfHeaderProps> = ({
         <IconButton
           family="ion"
           name="add-circle-outline"
-          size={iconSizes.xl}
           color={colors.success}
           padding={spacing.xs}
           style={styles.iconButton}

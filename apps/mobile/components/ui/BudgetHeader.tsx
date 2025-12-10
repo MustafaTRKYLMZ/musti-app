@@ -22,19 +22,7 @@ export function BudgetHeader({
 
   return (
     <View style={styles.headerRow}>
-      {/* LEFT: menu + title */}
-      <View style={styles.leftContainer}>
-        <IconButton
-          family="ion"
-          name="menu"
-          onPress={onOpenMenu}
-          backgroundColor="transparent"
-          padding={spacing.xs}
-          style={styles.menuButton}
-        />
-      </View>
-
-      {/* RIGHT: bookshelf + simulation + language */}
+      {/* RIGHT: simulation + language */}
       <View style={styles.rightContainer}>
         <IconButton
           family="ion"
@@ -53,7 +41,7 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "flex-end",
     width: "100%",
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,

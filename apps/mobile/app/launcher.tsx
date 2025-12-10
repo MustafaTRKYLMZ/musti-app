@@ -2,7 +2,6 @@
 import React from "react";
 import { View, StyleSheet, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import {
   MText,
   colors,
@@ -11,6 +10,7 @@ import {
   iconSizes,
   shadows,
 } from "@budget/ui-native";
+import { IconButton } from "@/components/ui/AppIcon";
 
 export default function LauncherScreen() {
   const router = useRouter();
@@ -42,12 +42,14 @@ export default function LauncherScreen() {
           onPress={handleOpenBudget}
         >
           <View style={styles.iconWrapper}>
-            <Ionicons
+            <IconButton
+              family="ion"
               name="wallet-outline"
               size={iconSizes.xl}
               color={colors.success}
             />
           </View>
+
           <MText variant="heading3" style={styles.cardTitle}>
             Budget
           </MText>
@@ -67,12 +69,14 @@ export default function LauncherScreen() {
           onPress={handleOpenBookshelf}
         >
           <View style={styles.iconWrapper}>
-            <Ionicons
+            <IconButton
+              family="ion"
               name="book-outline"
               size={iconSizes.xl}
               color={colors.success}
             />
           </View>
+
           <MText variant="heading3" style={styles.cardTitle}>
             Bookshelf
           </MText>
@@ -112,7 +116,7 @@ const styles = StyleSheet.create({
   },
   card: {
     flexBasis: "48%",
-    backgroundColor: colors.surface ?? colors.surface ?? "#fff",
+    backgroundColor: colors.surface ?? "#fff",
     padding: spacing.lg,
     borderRadius: radii.xl,
     shadowColor: shadows.card.shadowColor,

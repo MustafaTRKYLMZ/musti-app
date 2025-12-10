@@ -35,7 +35,7 @@ export default function BookshelfScreen() {
   const [pdfs, setPdfs] = useState<LocalPdfFile[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [planModalVisible, setPlanModalVisible] = useState(false);
-
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const progressMap = useBooksStore((s) => s.items);
   const readingStats = useReadingStatsStore((s) => s.stats);
 
@@ -168,6 +168,7 @@ export default function BookshelfScreen() {
 
   return (
     <AppScreen
+      onPressMenu={() => setSidebarOpen(true)}
       headerCenter={
         <BookshelfHeader
           handleOpenModal={handleOpenModal}
@@ -176,8 +177,6 @@ export default function BookshelfScreen() {
       }
     >
       <View style={styles.container}>
-        {/* Header with back + title + add + plan */}
-
         {/* Current plan summary */}
         <CurrentPlanCard
           currentPlanInfo={currentPlanInfo}

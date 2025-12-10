@@ -210,6 +210,7 @@ export function TransactionsHomeScreen() {
 
   return (
     <AppScreen
+      onPressMenu={() => setSidebarOpen(true)}
       headerCenter={
         <BudgetHeader
           onOpenMenu={() => setSidebarOpen(true)}

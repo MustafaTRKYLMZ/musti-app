@@ -4,15 +4,18 @@ import { View, StyleSheet, StyleProp, ViewStyle } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MText, colors, spacing, radii } from "@budget/ui-native";
 import { AppSwitcherButton } from "@/components/AppSwitcherButton";
+import { HeaderMenuButton } from "@/components/ui/HeaderMenuButton";
 
 type AppScreenProps = {
   title?: string;
-  showBack?: boolean;
   children: ReactNode;
   headerLeft?: ReactNode;
   headerCenter?: ReactNode;
   headerRight?: ReactNode;
   contentStyle?: StyleProp<ViewStyle>;
+  onPressMenu?: () => void;
+  showMenu?: boolean;
+  showSwitcher?: boolean;
 };
 
 export function AppScreen({
@@ -20,7 +23,11 @@ export function AppScreen({
   children,
   headerCenter,
   headerRight,
+  headerLeft,
   contentStyle,
+  onPressMenu,
+  showMenu = true,
+  showSwitcher = true,
 }: AppScreenProps) {
   const renderCenter = () => {
     if (headerCenter) return headerCenter;
@@ -38,9 +45,19 @@ export function AppScreen({
 
   const renderRight = () => {
     if (headerRight) return headerRight;
+    if (!showSwitcher) return null;
 
-    // default: app switcher
     return <AppSwitcherButton />;
+  };
+
+  const renderLeft = () => {
+    if (headerLeft) return headerLeft;
+
+    if (showMenu && onPressMenu) {
+      return <HeaderMenuButton onPress={onPressMenu} />;
+    }
+
+    return null;
   };
 
   return (
@@ -49,6 +66,7 @@ export function AppScreen({
       edges={["top", "left", "right", "bottom"]}
     >
       <View style={styles.header}>
+        <View style={styles.left}>{renderLeft()}</View>
         <View style={styles.center}>{renderCenter()}</View>
         <View style={styles.right}>{renderRight()}</View>
       </View>
@@ -71,12 +89,17 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.borderSubtle,
     backgroundColor: colors.surfaceStrong,
     borderRadius: radii.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
-
+  left: {
+    width: 40,
+    justifyContent: "center",
+    alignItems: "flex-start",
+  },
   center: {
     flex: 1,
-    alignItems: "flex-start",
-    justifyContent: "flex-start",
+    justifyContent: "center",
   },
   right: {
     width: 66,
@@ -84,15 +107,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   title: {
-    textAlign: "center",
+    textAlign: "left",
   },
   content: {
     flex: 1,
-  },
-  floatingSwitcher: {
-    position: "absolute",
-    top: spacing["2xl"],
-    right: spacing.lg,
-    zIndex: 20,
   },
 });
