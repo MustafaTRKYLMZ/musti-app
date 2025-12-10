@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { View, StyleSheet, Animated } from "react-native";
 import { useTranslation } from "@budget/core";
-import { spacing, radii } from "@budget/ui-native";
+import { spacing } from "@budget/ui-native";
 import { FlagIcon, type LangCode } from "@/components/ui/FlagIcon";
 
 type Props = {

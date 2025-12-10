@@ -1,6 +1,6 @@
 import React, { FC } from "react";
 import { View, StyleSheet } from "react-native";
-import { MText, colors, spacing, radii, iconSizes } from "@budget/ui-native";
+import { MText, colors, spacing, radii } from "@budget/ui-native";
 import { IconButton } from "@/components/ui/AppIcon";
 
 type BookshelfHeaderProps = {

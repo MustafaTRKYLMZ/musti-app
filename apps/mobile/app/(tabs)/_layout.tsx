@@ -32,29 +32,11 @@ export default function TabLayout() {
         }}
       />
 
-      {/* SETTINGS */}
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: t("nav.settings"),
-          href: null,
-        }}
-      />
-
       {/* ABOUT */}
       <Tabs.Screen
         name="about"
         options={{
           title: t("about"),
-          href: null,
-        }}
-      />
-
-      {/* SIMULATION  */}
-      <Tabs.Screen
-        name="simulation"
-        options={{
-          title: t("nav.simulation"),
           href: null,
         }}
       />
