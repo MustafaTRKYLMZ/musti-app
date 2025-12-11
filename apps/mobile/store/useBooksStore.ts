@@ -47,6 +47,7 @@ export const useBooksStore = create<BooksState>()(
                 lastPage: nextLastPage,
                 totalPages: nextTotalPages,
                 updatedAt: new Date().toISOString(),
+                lastOpenedAt: new Date().toISOString(),
               },
             },
           };

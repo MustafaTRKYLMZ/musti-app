@@ -1,7 +1,14 @@
 // components/AppSwitcherMenu.tsx
 import React from "react";
 import { Modal, View, StyleSheet, Pressable } from "react-native";
-import { colors, spacing, radii, MText } from "@budget/ui-native";
+import {
+  spacing,
+  radii,
+  MText,
+  useTheme,
+  budgetTheme,
+  bookshelfTheme,
+} from "@budget/ui-native";
 import { router } from "expo-router";
 import { IconTile } from "@/components/ui/AppIcon";
 
@@ -11,6 +18,9 @@ type Props = {
 };
 
 export function AppSwitcherMenu({ visible, onClose }: Props) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
+
   const goBudget = () => {
     onClose();
     router.push("/(tabs)/budget");
@@ -34,14 +44,16 @@ export function AppSwitcherMenu({ visible, onClose }: Props) {
           <IconTile
             name="wallet-outline"
             label="Budget"
-            color={colors.success}
+            color={budgetTheme.colors.success}
+            labelColor={colors.textInverse}
             onPress={goBudget}
           />
 
           <IconTile
             name="book-outline"
             label="Bookshelf"
-            color={colors.success}
+            color={bookshelfTheme.colors.success}
+            labelColor={colors.textInverse}
             onPress={goBookshelf}
           />
         </View>
@@ -50,31 +62,32 @@ export function AppSwitcherMenu({ visible, onClose }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: colors.backdropStrong,
-  },
-  menuContainer: {
-    position: "absolute",
-    top: spacing["5xl"],
-    right: spacing["2xl"],
-    width: 230,
-    backgroundColor: colors.background,
-    borderRadius: radii.xl,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    elevation: 6,
-    shadowColor: "#000",
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-  },
-  menuTitle: {
-    marginBottom: spacing.sm,
-  },
-  grid: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-});
+const makeStyles = (colors: typeof budgetTheme.colors) =>
+  StyleSheet.create({
+    backdrop: {
+      flex: 1,
+      backgroundColor: colors.backdropStrong,
+    },
+    menuContainer: {
+      position: "absolute",
+      top: spacing["5xl"],
+      right: spacing["2xl"],
+      width: 230,
+      backgroundColor: colors.surfaceStrong,
+      borderRadius: radii.xl,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      elevation: 6,
+      shadowColor: "#000",
+      shadowOpacity: 0.18,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 4 },
+    },
+    menuTitle: {
+      marginBottom: spacing.sm,
+    },
+    grid: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+    },
+  });

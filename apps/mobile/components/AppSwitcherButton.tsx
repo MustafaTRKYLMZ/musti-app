@@ -1,12 +1,7 @@
 // components/AppSwitcherButton.tsx
 import React, { useState } from "react";
-import {
-  StyleSheet,
-  StyleProp,
-  ViewStyle,
-  View,
-} from "react-native";
-import { colors, spacing, iconSizes } from "@budget/ui-native";
+import { StyleSheet, StyleProp, ViewStyle, View } from "react-native";
+import { spacing, iconSizes, useTheme } from "@budget/ui-native";
 import { AppSwitcherMenu } from "./AppSwitcherMenu";
 import { IconButton } from "./ui/AppIcon";
 
@@ -16,7 +11,7 @@ type Props = {
 
 export function AppSwitcherButton({ style }: Props) {
   const [open, setOpen] = useState(false);
-
+  const { colors } = useTheme();
   return (
     <View style={styles.switcherButton}>
       <IconButton

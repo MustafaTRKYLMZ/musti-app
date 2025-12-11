@@ -1,4 +1,3 @@
-// components/ui/AppIcon.tsx
 import React, { useState } from "react";
 import {
   StyleSheet,
@@ -8,7 +7,14 @@ import {
   Pressable,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons, Feather } from "@expo/vector-icons";
-import { colors, spacing, radii, iconSizes, MText } from "@budget/ui-native";
+import {
+  colors as defaultColors,
+  spacing,
+  radii,
+  iconSizes,
+  MText,
+  useTheme,
+} from "@budget/ui-native";
 
 export type IconFamily = "ion" | "material-community" | "feather";
 
@@ -31,11 +37,18 @@ export function BaseIcon({
   family = "ion",
   name,
   size = iconSizes.lg,
-  color = colors.textPrimary,
+  color,
   style,
 }: BaseIconProps) {
+  const theme = useTheme?.();
+  const palette = theme?.colors ?? defaultColors;
+
   const IconSet = ICON_SETS[family];
-  return <IconSet name={name as any} size={size} color={color} style={style} />;
+  const finalColor = color ?? palette.textPrimary;
+
+  return (
+    <IconSet name={name as any} size={size} color={finalColor} style={style} />
+  );
 }
 
 // ---------- IconButton ----------
@@ -57,11 +70,11 @@ export type IconButtonProps = {
 export const IconButton = React.forwardRef<View, IconButtonProps>(
   function IconButton(
     {
-      family,
+      family = "ion",
       name,
       size,
-      color = colors.textPrimary,
-      backgroundColor = "transparent",
+      color,
+      backgroundColor,
       padding = spacing.xs,
       hitSlop = 8,
       style,
@@ -72,12 +85,19 @@ export const IconButton = React.forwardRef<View, IconButtonProps>(
     },
     ref
   ) {
+    const theme = useTheme?.();
+    const palette = theme?.colors ?? defaultColors;
     const [hovered, setHovered] = useState(false);
+
+    const finalColor = color ?? palette.textPrimary;
+    const finalBackgroundColor = backgroundColor ?? "transparent";
+    const rippleColor = palette.borderSubtle ?? defaultColors.borderSubtle;
+    const hoverBackground = hovered ? palette.background : finalBackgroundColor;
 
     const content =
       iconNode ??
       (name ? (
-        <BaseIcon family={family} name={name} size={size} color={color} />
+        <BaseIcon family={family} name={name} size={size} color={finalColor} />
       ) : null);
 
     return (
@@ -87,14 +107,14 @@ export const IconButton = React.forwardRef<View, IconButtonProps>(
         hitSlop={hitSlop}
         onHoverIn={() => setHovered(true)}
         onHoverOut={() => setHovered(false)}
-        android_ripple={{ color: colors.borderSubtle, radius: 22 }}
+        android_ripple={{ color: rippleColor, radius: 22 }}
         accessibilityLabel={accessibilityLabel}
         style={[
           styles.button,
           {
             padding,
             borderRadius: rounded ? radii.full : radii.md,
-            backgroundColor: hovered ? colors.background : backgroundColor,
+            backgroundColor: hoverBackground,
             transform: [{ scale: hovered ? 1.08 : 1 }],
           },
           style,
@@ -106,7 +126,7 @@ export const IconButton = React.forwardRef<View, IconButtonProps>(
   }
 );
 
-// ---------- IconTile (icon + label, launcher için) ----------
+// ---------- IconTile (icon + label, launcher ) ----------
 export type IconTileProps = {
   family?: IconFamily;
   name: string;
@@ -117,22 +137,31 @@ export type IconTileProps = {
   style?: StyleProp<ViewStyle>;
   backgroundColor?: string;
   iconBackgroundColor?: string;
+  labelColor?: string;
 };
 
 export function IconTile({
-  family,
+  family = "ion",
   name,
   size = iconSizes.xl,
-  color = colors.primary,
+  color,
   label,
   onPress,
   style,
-  backgroundColor = colors.background,
-  iconBackgroundColor = colors.background,
+  backgroundColor,
+  iconBackgroundColor,
+  labelColor,
 }: IconTileProps) {
+  const theme = useTheme?.();
+  const palette = theme?.colors ?? defaultColors;
   const [hovered, setHovered] = useState(false);
 
   const Wrapper: any = onPress ? Pressable : View;
+
+  const tileBackground = backgroundColor ?? palette.background;
+  const tileIconBackground = iconBackgroundColor ?? palette.background;
+  const finalIconColor = color ?? palette.primary;
+  const finalLabelColor = labelColor ?? palette.textPrimary;
 
   return (
     <Wrapper
@@ -142,7 +171,7 @@ export function IconTile({
       style={[
         styles.tile,
         {
-          backgroundColor,
+          backgroundColor: tileBackground,
           transform: [{ scale: hovered ? 1.04 : 1 }],
           shadowOpacity: hovered ? 0.24 : 0.12,
         },
@@ -154,15 +183,22 @@ export function IconTile({
           styles.tileIconWrapper,
           {
             backgroundColor: hovered
-              ? colors.borderSubtle
-              : iconBackgroundColor,
+              ? palette.borderSubtle
+              : tileIconBackground,
           },
         ]}
       >
-        <BaseIcon family={family} name={name} size={size} color={color} />
+        <BaseIcon
+          family={family}
+          name={name}
+          size={size}
+          color={finalIconColor}
+        />
       </View>
 
-      <MText style={styles.tileLabel}>{label}</MText>
+      <MText style={[styles.tileLabel, { color: finalLabelColor }]}>
+        {label}
+      </MText>
     </Wrapper>
   );
 }
@@ -190,6 +226,5 @@ const styles = StyleSheet.create({
   tileLabel: {
     textAlign: "center",
     fontSize: 13,
-    color: colors.textPrimary,
   },
 });

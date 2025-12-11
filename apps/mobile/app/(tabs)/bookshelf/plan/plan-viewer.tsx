@@ -1,7 +1,8 @@
+// apps/mobile/.../PlanViewerScreen.tsx
 import React, { useEffect, useState } from "react";
-import { View, StyleSheet } from "react-native";
+import { View, StyleSheet, Animated } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { MText, colors, spacing, radii, iconSizes } from "@budget/ui-native";
+import { MText, spacing, radii, iconSizes, useTheme } from "@budget/ui-native";
 
 import { PdfReader } from "@/components/ui/pdf/PdfReader";
 import { useReadingPlanStore } from "@/store/useReadingPlanStore";
@@ -9,6 +10,8 @@ import { IconButton, BaseIcon } from "@/components/ui/AppIcon";
 
 export default function PlanViewerScreen() {
   const router = useRouter();
+  const theme = useTheme();
+  const { colors } = theme;
 
   const params = useLocalSearchParams<{
     uri?: string;
@@ -38,6 +41,9 @@ export default function PlanViewerScreen() {
   const [todayPagesForThisBook, setTodayPagesForThisBook] = useState(0);
   const [hasReachedTarget, setHasReachedTarget] = useState(false);
 
+  // banner animation
+  const bannerAnim = React.useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
     if (!uri || !activePlan) return;
 
@@ -63,9 +69,25 @@ export default function PlanViewerScreen() {
     setHasReachedTarget(alreadyReadToday >= target && target > 0);
   }, [uri, activePlan]);
 
+  useEffect(() => {
+    if (hasReachedTarget) {
+      Animated.spring(bannerAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+        friction: 7,
+      }).start();
+    } else {
+      Animated.timing(bannerAnim, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [hasReachedTarget, bannerAnim]);
+
   if (!uri) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         <MText variant="body" color="textPrimary">
           Invalid PDF path
         </MText>
@@ -75,7 +97,7 @@ export default function PlanViewerScreen() {
 
   if (!activePlan || !activePlan.perBook[uri]) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         <MText variant="body" color="textPrimary">
           This book is not in the current plan.
         </MText>
@@ -180,6 +202,30 @@ export default function PlanViewerScreen() {
       ? Math.min(todayPagesForThisBook, targetForToday)
       : todayPagesForThisBook;
 
+  const bannerStyle = {
+    transform: [
+      {
+        translateY: bannerAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [40, 0],
+        }),
+      },
+      {
+        scale: bannerAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0.96, 1],
+        }),
+      },
+    ],
+    opacity: bannerAnim,
+    backgroundColor: colors.surface,
+    borderColor: colors.success,
+  } as const;
+
+  const bannerButtonStyle = {
+    backgroundColor: colors.primary,
+  } as const;
+
   return (
     <>
       <PdfReader
@@ -196,7 +242,7 @@ export default function PlanViewerScreen() {
       {/* Strong banner when the daily target is completed */}
       {hasReachedTarget && (
         <View style={styles.bannerWrapper} pointerEvents="box-none">
-          <View style={styles.banner}>
+          <Animated.View style={[styles.banner, bannerStyle]}>
             <BaseIcon
               family="ion"
               name="checkmark-circle"
@@ -219,10 +265,10 @@ export default function PlanViewerScreen() {
               size={22}
               color={colors.textInverse}
               onPress={goToNextBookInPlan}
-              style={styles.bannerButton}
+              style={[styles.bannerButton, bannerButtonStyle]}
               accessibilityLabel="Next book"
             />
-          </View>
+          </Animated.View>
         </View>
       )}
     </>
@@ -234,7 +280,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 16,
+    padding: spacing.md,
   },
   bannerWrapper: {
     position: "absolute",
@@ -248,9 +294,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     borderRadius: radii.xl,
-    backgroundColor: colors.background,
     borderWidth: 1,
-    borderColor: colors.success,
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
@@ -266,6 +310,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: radii.lg,
-    backgroundColor: colors.primary,
   },
 });

@@ -1,5 +1,5 @@
 // apps/mobile/components/ui/Books/BookCard.tsx
-import React, { FC, useRef, useState } from "react";
+import React, { FC, useRef, useState, useEffect } from "react";
 import {
   TouchableOpacity,
   View,
@@ -10,9 +10,18 @@ import {
   Platform,
   UIManager,
   findNodeHandle,
+  Animated,
 } from "react-native";
-import { MText, colors, spacing, radii, iconSizes } from "@budget/ui-native";
-import { BaseIcon, IconButton } from "@/components/ui/AppIcon";
+import Svg, { Rect, Line } from "react-native-svg";
+import {
+  MText,
+  spacing,
+  radii,
+  iconSizes,
+  useTheme,
+  Card,
+} from "@budget/ui-native";
+import { IconButton } from "@/components/ui/AppIcon";
 import type { LocalPdfFile } from "@/utils/getPdfsDirectory";
 
 type BookCardProps = {
@@ -24,7 +33,28 @@ type BookCardProps = {
   totalPages?: number;
   todayPages?: number;
   todayTargetPages?: number;
+  variant?: "row" | "grid";
 };
+
+const SPINE_PALETTE = [
+  "#8B5A2B",
+  "#A1623B",
+  "#C17F4D",
+  "#7B4A2A",
+  "#D19A66",
+  "#B86B35",
+  "#9C6644",
+  "#BF8F68",
+];
+
+function getSpineColorFromString(id: string): string {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  }
+  const index = hash % SPINE_PALETTE.length;
+  return SPINE_PALETTE[index];
+}
 
 export const BookCard: FC<BookCardProps> = ({
   file,
@@ -35,8 +65,15 @@ export const BookCard: FC<BookCardProps> = ({
   totalPages,
   todayPages,
   todayTargetPages,
+  variant = "grid",
 }) => {
-  // 3-dot menu state
+  const theme = useTheme();
+  const { colors } = theme;
+
+  const bookId = file.uri ?? file.name;
+  const spineColor = getSpineColorFromString(bookId);
+  const spineEdgeColor = "rgba(0,0,0,0.25)";
+
   const [menuVisible, setMenuVisible] = useState(false);
   const [menuPos, setMenuPos] = useState<{ x: number; y: number }>({
     x: 0,
@@ -44,7 +81,6 @@ export const BookCard: FC<BookCardProps> = ({
   });
   const menuIconRef = useRef<View | null>(null);
 
-  // rename modal state
   const [renameVisible, setRenameVisible] = useState(false);
   const [tempName, setTempName] = useState(file.name);
 
@@ -52,6 +88,57 @@ export const BookCard: FC<BookCardProps> = ({
     totalPages && totalPages > 0 && lastPage && lastPage > 0
       ? Math.min(1, lastPage / totalPages)
       : 0;
+
+  const appearAnim = useRef(new Animated.Value(0)).current;
+  const pressAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(appearAnim, {
+      toValue: 1,
+      duration: 220,
+      useNativeDriver: true,
+    }).start();
+  }, [appearAnim]);
+
+  const handlePressIn = () => {
+    Animated.spring(pressAnim, {
+      toValue: 1,
+      friction: 7,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(pressAnim, {
+      toValue: 0,
+      friction: 7,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const animatedCardStyle = {
+    transform: [
+      {
+        translateY: appearAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [8, 0],
+        }),
+      },
+      {
+        scale: pressAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [1, 0.97],
+        }),
+      },
+      {
+        rotateY: pressAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: ["0deg", "-5deg"],
+        }),
+      },
+    ],
+    opacity: appearAnim,
+  };
 
   const openMenu = () => {
     const handle = findNodeHandle(menuIconRef.current);
@@ -99,81 +186,137 @@ export const BookCard: FC<BookCardProps> = ({
 
   return (
     <>
-      {/* CARD */}
       <TouchableOpacity
         onPress={onOpen}
-        style={styles.card}
-        activeOpacity={0.8}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        style={styles.cardWrapper}
+        activeOpacity={0.85}
       >
-        {/* Header: icon + title + 3-dot */}
-        <View style={styles.cardHeader}>
-          <View style={styles.cardIconTitle}>
-            <BaseIcon
-              name="document-text-outline"
-              size={iconSizes.lg}
-              color={colors.textPrimary}
+        <Animated.View style={animatedCardStyle}>
+          <Card
+            style={[
+              styles.cardBase,
+              variant === "grid" ? styles.cardGrid : styles.cardRow,
+            ]}
+          >
+            {/* Decorative book structure */}
+            <View
+              style={[
+                styles.bookSpine,
+                {
+                  backgroundColor: spineColor,
+                  borderRightColor: spineEdgeColor,
+                },
+              ]}
             />
-            <MText variant="body" style={styles.itemTitle} numberOfLines={2}>
-              {file.name}
-            </MText>
-          </View>
+            <View
+              style={[
+                styles.bookSpineHighlight,
+                { backgroundColor: "rgba(255,255,255,0.16)" },
+              ]}
+            />
+            <View
+              style={[
+                styles.bookPageEdgeTop,
+                { backgroundColor: colors.backgroundSecondary },
+              ]}
+            />
+            <View style={styles.bookPageEdgeRight} pointerEvents="none">
+              <Svg width="100%" height="100%">
+                <Rect
+                  x={0}
+                  y={0}
+                  width="100%"
+                  height="100%"
+                  fill={colors.surface}
+                  opacity={0.94}
+                />
+                {Array.from({ length: 6 }).map((_, idx) => {
+                  const x = 4 + idx * 4;
+                  return (
+                    <Line
+                      key={idx}
+                      x1={x}
+                      y1={2}
+                      x2={x}
+                      y2={"98%"}
+                      stroke={colors.borderSubtle}
+                      strokeWidth={0.6}
+                      opacity={0.55 - idx * 0.06}
+                    />
+                  );
+                })}
+              </Svg>
+            </View>
 
-          <IconButton
-            ref={menuIconRef}
-            name="ellipsis-vertical"
-            size={iconSizes.md}
-            color={colors.textPrimary}
-            onPress={openMenu}
-          />
-        </View>
-
-        {/* Progress (lastPage / totalPages) */}
-        {totalPages && totalPages > 0 ? (
-          <>
-            <View style={styles.progressContainer}>
-              <View
-                style={[styles.progressBar, { width: `${progress * 100}%` }]}
+            {/* Menu icon (same position in both variants) */}
+            <View style={styles.menuIconWrapper} ref={menuIconRef}>
+              <IconButton
+                name="ellipsis-vertical"
+                size={iconSizes.md}
+                color={colors.textPrimary}
+                onPress={openMenu}
+                hitSlop={8}
               />
             </View>
-            <MText
-              variant="body"
-              color="textSecondary"
-              style={styles.progressLabel}
-              numberOfLines={1}
-            >
-              {Math.round(progress * 100)}% · {lastPage ?? 0} / {totalPages}{" "}
-              pages
-            </MText>
-          </>
-        ) : (
-          <MText
-            variant="body"
-            color="textSecondary"
-            style={styles.cardHint}
-            numberOfLines={1}
-          >
-            Tap to open
-          </MText>
-        )}
 
-        {/* Footer: today info */}
-        <View style={styles.cardFooter}>
-          {typeof todayPages === "number" && todayPages > 0 && (
-            <MText
-              variant="body"
-              color="textSecondary"
-              style={styles.cardHint}
-              numberOfLines={1}
-            >
-              {todayTargetPages
-                ? `Today: ${todayPages} / ${todayTargetPages} pages`
-                : `Today: ${todayPages} pages`}
-            </MText>
-          )}
-        </View>
+            {/* Centered title */}
+            <View style={styles.titleWrapper}>
+              <MText
+                variant="body"
+                color="textPrimary"
+                style={styles.title}
+                numberOfLines={2}
+              >
+                {file.name}
+              </MText>
+            </View>
+
+            {/* Progress */}
+            {totalPages && totalPages > 0 ? (
+              <>
+                <View
+                  style={[
+                    styles.progressContainer,
+                    { backgroundColor: colors.borderSubtle },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.progressBar,
+                      {
+                        width: `${progress * 100}%`,
+                        backgroundColor: colors.success,
+                      },
+                    ]}
+                  />
+                </View>
+                <MText
+                  variant="body"
+                  color="textSecondary"
+                  style={styles.progressLabel}
+                  numberOfLines={1}
+                >
+                  {Math.round(progress * 100)}% · {lastPage ?? 0} / {totalPages}{" "}
+                  pages
+                </MText>
+              </>
+            ) : (
+              <MText
+                variant="body"
+                color="textSecondary"
+                style={styles.cardHint}
+                numberOfLines={1}
+              >
+                Tap to open
+              </MText>
+            )}
+          </Card>
+        </Animated.View>
       </TouchableOpacity>
 
-      {/* 3-dot POPOVER MENU */}
+      {/* 3-dot menu */}
       <Modal
         visible={menuVisible}
         transparent
@@ -191,6 +334,8 @@ export const BookCard: FC<BookCardProps> = ({
               {
                 top: menuPos.y,
                 left: menuPos.x,
+                backgroundColor: colors.surface,
+                borderColor: colors.borderSubtle,
               },
             ]}
           >
@@ -214,7 +359,7 @@ export const BookCard: FC<BookCardProps> = ({
         </TouchableOpacity>
       </Modal>
 
-      {/* RENAME MODAL */}
+      {/* Rename modal */}
       <Modal
         visible={renameVisible}
         transparent
@@ -222,10 +367,21 @@ export const BookCard: FC<BookCardProps> = ({
         onRequestClose={cancelRename}
       >
         <KeyboardAvoidingView
-          style={styles.renameOverlay}
+          style={[
+            styles.renameOverlay,
+            { backgroundColor: colors.backdropStrong },
+          ]}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
-          <View style={styles.renameBox}>
+          <View
+            style={[
+              styles.renameBox,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.borderSubtle,
+              },
+            ]}
+          >
             <MText
               variant="body"
               color="textPrimary"
@@ -237,7 +393,13 @@ export const BookCard: FC<BookCardProps> = ({
             <TextInput
               value={tempName}
               onChangeText={setTempName}
-              style={styles.renameInput}
+              style={[
+                styles.renameInput,
+                {
+                  borderColor: colors.borderSubtle,
+                  color: colors.textPrimary,
+                },
+              ]}
               placeholder="Book name"
               placeholderTextColor={colors.textSecondary}
             />
@@ -245,7 +407,11 @@ export const BookCard: FC<BookCardProps> = ({
             <View style={styles.renameActions}>
               <TouchableOpacity
                 onPress={cancelRename}
-                style={[styles.renameButton, styles.renameCancel]}
+                style={[
+                  styles.renameButton,
+                  styles.renameCancel,
+                  { borderColor: colors.borderSubtle },
+                ]}
               >
                 <MText variant="body" color="textSecondary">
                   Cancel
@@ -254,7 +420,11 @@ export const BookCard: FC<BookCardProps> = ({
 
               <TouchableOpacity
                 onPress={confirmRename}
-                style={[styles.renameButton, styles.renameConfirm]}
+                style={[
+                  styles.renameButton,
+                  styles.renameConfirm,
+                  { backgroundColor: colors.primary },
+                ]}
               >
                 <MText variant="body" color="textInverse">
                   Save
@@ -269,70 +439,117 @@ export const BookCard: FC<BookCardProps> = ({
 };
 
 const styles = StyleSheet.create({
-  card: {
-    width: 220,
-    height: 140,
+  cardWrapper: {
     marginRight: spacing.md,
-    padding: spacing.md,
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    backgroundColor: colors.background,
-    justifyContent: "space-between",
   },
-  cardHeader: {
-    flexDirection: "row",
-    alignItems: "flex-start",
+
+  // shared base
+  cardBase: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     justifyContent: "space-between",
+    overflow: "hidden",
   },
-  cardIconTitle: {
-    flexDirection: "row",
-    alignItems: "flex-start",
+
+  // Last read (horizontal)
+  cardRow: {
+    width: 120,
+    height: undefined,
+    aspectRatio: 0.7,
+  },
+
+  // Books grid
+  cardGrid: {
+    width: "100%",
+    height: undefined,
+    aspectRatio: 0.7,
+  },
+
+  // decoration
+  bookSpine: {
+    position: "absolute",
+    left: 0,
+    top: spacing.sm,
+    bottom: spacing.sm,
+    width: 14,
+    borderTopLeftRadius: radii.lg,
+    borderBottomLeftRadius: radii.lg,
+    borderRightWidth: StyleSheet.hairlineWidth,
+  },
+  bookSpineHighlight: {
+    position: "absolute",
+    left: 14,
+    top: spacing.sm,
+    bottom: spacing.sm,
+    width: 4,
+    borderTopLeftRadius: radii.lg,
+    borderBottomLeftRadius: radii.lg,
+  },
+  bookPageEdgeTop: {
+    position: "absolute",
+    top: spacing.sm,
+    left: 22,
+    right: spacing.sm,
+    height: 4,
+    borderRadius: 4,
+    opacity: 0.4,
+  },
+  bookPageEdgeRight: {
+    position: "absolute",
+    top: spacing.sm + 4,
+    bottom: spacing.sm,
+    right: 0,
+    width: 26,
+  },
+
+  // menu icon (common)
+  menuIconWrapper: {
+    position: "absolute",
+    top: spacing.xs,
+    right: spacing.xs,
+    zIndex: 2,
+  },
+
+  // centered title (common)
+  titleWrapper: {
     flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: spacing.sm,
   },
-  itemTitle: {
-    marginLeft: spacing.sm,
-    flexShrink: 1,
+  title: {
+    textAlign: "center",
+    fontSize: 14,
   },
+
   cardHint: {
     marginTop: spacing.xs,
   },
-  cardFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
 
-  // Progress
   progressContainer: {
     height: 6,
     width: "100%",
-    backgroundColor: colors.borderSubtle,
     borderRadius: 4,
     overflow: "hidden",
     marginTop: spacing.sm,
   },
   progressBar: {
     height: "100%",
-    backgroundColor: colors.success,
   },
   progressLabel: {
     marginTop: spacing.xs,
   },
 
-  // Popover menu
   menuOverlay: {
     flex: 1,
     backgroundColor: "transparent",
   },
   popover: {
     position: "absolute",
-    backgroundColor: colors.background,
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.sm,
     borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: colors.borderSubtle,
     width: 140,
     elevation: 6,
     shadowColor: "#000",
@@ -343,29 +560,25 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
 
-  // Rename modal
   renameOverlay: {
     flex: 1,
-    backgroundColor: colors.backdropStrong,
     justifyContent: "center",
     alignItems: "center",
   },
   renameBox: {
     width: "85%",
-    backgroundColor: colors.background,
     borderRadius: radii.lg,
     padding: spacing.lg,
+    borderWidth: 1,
   },
   renameTitle: {
     marginBottom: spacing.sm,
   },
   renameInput: {
     borderWidth: 1,
-    borderColor: colors.borderSubtle,
     borderRadius: radii.md,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
-    color: colors.textPrimary,
     marginTop: spacing.xs,
   },
   renameActions: {
@@ -381,9 +594,6 @@ const styles = StyleSheet.create({
   },
   renameCancel: {
     borderWidth: 1,
-    borderColor: colors.borderSubtle,
   },
-  renameConfirm: {
-    backgroundColor: colors.primary,
-  },
+  renameConfirm: {},
 });

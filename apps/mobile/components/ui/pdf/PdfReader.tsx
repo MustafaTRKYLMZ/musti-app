@@ -1,7 +1,7 @@
 import React, { FC } from "react";
-import { MText, iconSizes, colors, radii, spacing } from "@budget/ui-native";
 import { View, StyleSheet } from "react-native";
 import Pdf from "react-native-pdf";
+import { MText, iconSizes, spacing, useTheme } from "@budget/ui-native";
 import { IconButton } from "@/components/ui/AppIcon";
 
 type PdfReaderProps = {
@@ -25,15 +25,34 @@ export const PdfReader: FC<PdfReaderProps> = ({
   handleLoadComplete,
   handlePageChanged,
 }) => {
+  const theme = useTheme();
+  const { colors } = theme;
+
   return (
     <View
-      style={[styles.container, isFullscreen && styles.containerFullscreen]}
+      style={[
+        styles.container,
+        { backgroundColor: isFullscreen ? "#000" : colors.background },
+      ]}
     >
       {/* Header only when not fullscreen */}
       {!isFullscreen && (
-        <View style={styles.header}>
+        <View
+          style={[
+            styles.header,
+            {
+              backgroundColor: colors.surface,
+              borderBottomWidth: StyleSheet.hairlineWidth,
+              borderBottomColor: colors.borderSubtle,
+              shadowColor: colors.shadowStrong,
+              shadowOpacity: 0.12,
+              shadowRadius: 8,
+              shadowOffset: { width: 0, height: 3 },
+            },
+          ]}
+        >
           <MText
-            variant="heading1"
+            variant="heading2"
             color="textPrimary"
             style={styles.title}
             numberOfLines={1}
@@ -45,15 +64,13 @@ export const PdfReader: FC<PdfReaderProps> = ({
             <IconButton
               name="expand-outline"
               size={iconSizes.lg}
-              color={colors.textPrimary}
               onPress={() => setIsFullscreen(true)}
               style={styles.iconButton}
             />
 
             <IconButton
               name="close-outline"
-              size={iconSizes.lg}
-              color={colors.textPrimary}
+              size={iconSizes["xl"]}
               onPress={handleClose}
               style={styles.iconButton}
             />
@@ -68,18 +85,27 @@ export const PdfReader: FC<PdfReaderProps> = ({
             name="contract-outline"
             size={iconSizes.lg}
             color={colors.textInverse}
-            onPress={() => setIsFullscreen(false)}
-            backgroundColor={colors.backdropStrong}
+            backgroundColor={colors.surfaceStrong}
             padding={spacing.sm}
+            onPress={() => setIsFullscreen(false)}
+            accessibilityLabel="Exit fullscreen"
           />
         </View>
       )}
 
       {/* PDF viewer */}
-      <View style={[styles.viewer, isFullscreen && styles.viewerFullscreen]}>
+      <View
+        style={[
+          styles.viewer,
+          { backgroundColor: isFullscreen ? "#000" : colors.background },
+        ]}
+      >
         <Pdf
           source={source}
-          style={[styles.pdf, isFullscreen && styles.pdfFullscreen]}
+          style={[
+            styles.pdf,
+            { backgroundColor: isFullscreen ? "#000" : colors.background },
+          ]}
           horizontal
           enablePaging
           page={initialPage}
@@ -93,22 +119,18 @@ export const PdfReader: FC<PdfReaderProps> = ({
 };
 
 const styles = StyleSheet.create({
-  // Normal mode
   container: {
     flex: 1,
-    backgroundColor: colors.background,
-  },
-  // Fullscreen mode
-  containerFullscreen: {
-    backgroundColor: "#000",
   },
 
   header: {
     paddingHorizontal: spacing.lg,
+    paddingTop: spacing["xl"],
     paddingVertical: spacing.md,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    zIndex: 2,
   },
   title: {
     flex: 1,
@@ -124,20 +146,12 @@ const styles = StyleSheet.create({
 
   viewer: {
     flex: 1,
-    backgroundColor: colors.background,
-  },
-  viewerFullscreen: {
-    backgroundColor: "#000",
   },
 
   pdf: {
     flex: 1,
     width: "100%",
     height: "100%",
-    backgroundColor: colors.background,
-  },
-  pdfFullscreen: {
-    backgroundColor: "#000",
   },
 
   fullscreenOverlay: {

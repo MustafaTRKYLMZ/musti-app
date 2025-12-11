@@ -6,14 +6,25 @@ import {
   StyleSheet,
   ActivityIndicator,
   GestureResponderEvent,
+  StyleProp,
+  ViewStyle,
+  TextStyle,
 } from "react-native";
-import { colors, spacing, radii, typography } from "../theme";
+
+import { spacing, radii, typography } from "../theme";
+import { useTheme } from "../theme/ThemeContext";
 
 interface ButtonProps {
   title: string;
   onPress?: (e: GestureResponderEvent) => void;
   loading?: boolean;
   disabled?: boolean;
+
+  /** Optional overrides */
+  style?: StyleProp<ViewStyle>;
+  textStyle?: StyleProp<TextStyle>;
+  color?: string;
+  textColor?: string;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -21,20 +32,37 @@ export const Button: React.FC<ButtonProps> = ({
   onPress,
   loading,
   disabled,
+  style,
+  textStyle,
+  color,
+  textColor,
 }) => {
+  const theme = useTheme();
+  const { colors } = theme;
+
   const isDisabled = disabled || loading;
+
+  const backgroundColor = color ?? colors.primary;
+  const labelColor = textColor ?? colors.textInverse;
 
   return (
     <TouchableOpacity
-      style={[styles.button, isDisabled && styles.disabled]}
+      style={[
+        styles.button,
+        { backgroundColor },
+        isDisabled && { opacity: 0.6 },
+        style,
+      ]}
       onPress={onPress}
       disabled={isDisabled}
       activeOpacity={0.8}
     >
       {loading ? (
-        <ActivityIndicator />
+        <ActivityIndicator color={labelColor} />
       ) : (
-        <Text style={styles.text}>{title}</Text>
+        <Text style={[styles.text, { color: labelColor }, textStyle]}>
+          {title}
+        </Text>
       )}
     </TouchableOpacity>
   );
@@ -42,19 +70,14 @@ export const Button: React.FC<ButtonProps> = ({
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.sm + 2, // ~10 px
+    paddingVertical: spacing.sm + 2,
     paddingHorizontal: spacing.lg,
     borderRadius: radii.lg,
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 44, // dokunma alanı standardı
-  },
-  disabled: {
-    opacity: 0.6,
+    minHeight: 44,
   },
   text: {
     ...typography.bodyStrong,
-    color: "#FFFFFF",
   },
 });
