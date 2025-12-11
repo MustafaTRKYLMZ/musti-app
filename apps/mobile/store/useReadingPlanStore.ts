@@ -37,6 +37,7 @@ type ReadingPlanState = {
   clearActivePlan: () => void;
   ensureTodayPlan: (todayKey: string) => void;
   addPagesFromSession: (input: AddPagesFromSessionInput) => void;
+  renameBookInPlan: (oldUri: string, newUri: string, newName?: string) => void;
 };
 
 export const useReadingPlanStore = create<ReadingPlanState>()(
@@ -183,6 +184,42 @@ export const useReadingPlanStore = create<ReadingPlanState>()(
           },
         });
       },
+
+      renameBookInPlan: (oldUri, newUri, newName) =>
+        set((state) => {
+          const plan = state.activePlan;
+          if (!plan) return {}; 
+
+          const items = plan.items.map((item) =>
+            item.bookUri === oldUri
+              ? {
+                  ...item,
+                  bookUri: newUri,
+                  bookName: newName ?? item.bookName,
+                }
+              : item
+          );
+
+          const perBook: Record<string, PlanBookProgress> = {};
+          Object.entries(plan.perBook).forEach(([bookUri, progress]) => {
+            if (bookUri === oldUri) {
+              perBook[newUri] = {
+                ...progress,
+                bookUri: newUri,
+              };
+            } else {
+              perBook[bookUri] = progress;
+            }
+          });
+
+          return {
+            activePlan: {
+              ...plan,
+              items,
+              perBook,
+            },
+          };
+        }),
     }),
     {
       name: "reading-plan-v1",

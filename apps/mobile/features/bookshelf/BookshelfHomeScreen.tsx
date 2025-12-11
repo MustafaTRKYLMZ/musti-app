@@ -60,7 +60,7 @@ export default function BookshelfHomeScreen() {
   const readingStats = useReadingStatsStore((s) => s.stats);
   const clearActivePlan = useReadingPlanStore((s) => s.clearActivePlan);
   const ensureTodayPlan = useReadingPlanStore((s) => s.ensureTodayPlan);
-
+  const renameBookInPlan = useReadingPlanStore((s) => s.renameBookInPlan);
   const today = dayjs().format("YYYY-MM-DD");
 
   const loadBooks = useCallback(async () => {
@@ -156,15 +156,23 @@ export default function BookshelfHomeScreen() {
           : `${baseNewName}.${ext}`
         : baseNewName;
 
+      const oldUri = file.uri; // 🔥 önce eski URI'yi al
+
       const lastSlashIndex = file.uri.lastIndexOf("/");
       const dirUri = file.uri.slice(0, lastSlashIndex + 1);
       const newUri =
         dirUri + encodeURIComponent(finalName).replace(/%2F/g, "/");
 
+      // 🔥 Dosyayı taşı
       await FileSystem.moveAsync({
-        from: file.uri,
+        from: oldUri,
         to: newUri,
       });
+
+      // 🔥 PLAN içindeki tüm referansları güncelle
+      renameBookInPlan(oldUri, newUri, finalName);
+
+      // (İleride: progress ve stats için rename action eklersen buradan çağırırız.)
 
       await loadBooks();
     } catch (e) {
