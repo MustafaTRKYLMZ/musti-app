@@ -15,7 +15,7 @@ import { useReadingStatsStore } from "@/store/useReadingStatsStore";
 import { useReadingPlanStore } from "@/store/useReadingPlanStore";
 import { ReadingPlanModal } from "@/components/ui/modals/CreatePlanModal";
 import { CurrentPlanCard } from "@/features/bookshelf/CurrentPlanCard";
-import { BookCard } from "@/components/ui/Books/BookCard";
+import { BookCard } from "@/components/Books/BookCard";
 import { useCurrentPlanInfo } from "@/hooks/useCurrentPlanInfo";
 import { AppScreen } from "@/components/AppScreen";
 import { BookshelfHeader } from "@/components/BookshelfHeader";

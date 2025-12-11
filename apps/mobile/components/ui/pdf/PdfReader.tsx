@@ -1,9 +1,16 @@
 import React, { FC } from "react";
 import { View, StyleSheet } from "react-native";
-import Pdf from "react-native-pdf";
-import { MText, iconSizes, spacing, useTheme } from "@budget/ui-native";
+import Pdf, { PdfRef } from "react-native-pdf";
+import {
+  MText,
+  bookshelfTheme,
+  iconSizes,
+  spacing,
+  useTheme,
+} from "@budget/ui-native";
 import { IconButton } from "@/components/ui/AppIcon";
 
+const { colors } = bookshelfTheme;
 type PdfReaderProps = {
   isFullscreen: boolean;
   name: string;
@@ -13,6 +20,8 @@ type PdfReaderProps = {
   initialPage: number;
   handleLoadComplete: (numberOfPages: number, filePath: string) => void;
   handlePageChanged: (page: number, numberOfPages: number) => void;
+  pdfRef?: React.RefObject<PdfRef | null>;
+  onPressMenu?: () => void;
 };
 
 export const PdfReader: FC<PdfReaderProps> = ({
@@ -24,6 +33,8 @@ export const PdfReader: FC<PdfReaderProps> = ({
   initialPage,
   handleLoadComplete,
   handlePageChanged,
+  pdfRef,
+  onPressMenu,
 }) => {
   const theme = useTheme();
   const { colors } = theme;
@@ -35,50 +46,54 @@ export const PdfReader: FC<PdfReaderProps> = ({
         { backgroundColor: isFullscreen ? "#000" : colors.background },
       ]}
     >
-      {/* Header only when not fullscreen */}
       {!isFullscreen && (
-        <View
-          style={[
-            styles.header,
-            {
-              backgroundColor: colors.surface,
-              borderBottomWidth: StyleSheet.hairlineWidth,
-              borderBottomColor: colors.borderSubtle,
-              shadowColor: colors.shadowStrong,
-              shadowOpacity: 0.12,
-              shadowRadius: 8,
-              shadowOffset: { width: 0, height: 3 },
-            },
-          ]}
-        >
-          <MText
-            variant="heading2"
-            color="textPrimary"
-            style={styles.title}
-            numberOfLines={1}
+        <View>
+          <View
+            style={[
+              styles.header,
+              {
+                backgroundColor: colors.surface,
+                borderBottomWidth: StyleSheet.hairlineWidth,
+                borderBottomColor: colors.borderSubtle,
+                shadowColor: colors.shadowStrong,
+                shadowOpacity: 0.12,
+                shadowRadius: 8,
+                shadowOffset: { width: 0, height: 3 },
+              },
+            ]}
           >
-            {name}
-          </MText>
-
-          <View style={styles.headerActions}>
-            <IconButton
-              name="expand-outline"
-              size={iconSizes.lg}
-              onPress={() => setIsFullscreen(true)}
-              style={styles.iconButton}
-            />
-
-            <IconButton
-              name="close-outline"
-              size={iconSizes["xl"]}
-              onPress={handleClose}
-              style={styles.iconButton}
-            />
+            <MText
+              variant="heading2"
+              color="textPrimary"
+              style={styles.title}
+              numberOfLines={1}
+            >
+              {name}
+            </MText>
+            <View style={styles.headerActions}>
+              <IconButton
+                name="expand-outline"
+                size={iconSizes.lg}
+                onPress={() => setIsFullscreen(true)}
+                style={styles.iconButton}
+              />
+              <IconButton
+                name="close-outline"
+                size={iconSizes["xl"]}
+                onPress={handleClose}
+                style={styles.iconButton}
+              />
+            </View>
           </View>
+
+          {onPressMenu && (
+            <View style={styles.menuButton}>
+              <IconButton name="menu" onPress={onPressMenu} />
+            </View>
+          )}
         </View>
       )}
 
-      {/* Fullscreen overlay */}
       {isFullscreen && (
         <View style={styles.fullscreenOverlay}>
           <IconButton
@@ -93,7 +108,6 @@ export const PdfReader: FC<PdfReaderProps> = ({
         </View>
       )}
 
-      {/* PDF viewer */}
       <View
         style={[
           styles.viewer,
@@ -101,6 +115,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
         ]}
       >
         <Pdf
+          ref={pdfRef}
           source={source}
           style={[
             styles.pdf,
@@ -119,10 +134,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-
+  container: { flex: 1 },
   header: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing["xl"],
@@ -143,21 +155,25 @@ const styles = StyleSheet.create({
   iconButton: {
     marginLeft: spacing.sm,
   },
-
   viewer: {
     flex: 1,
   },
-
   pdf: {
     flex: 1,
     width: "100%",
     height: "100%",
   },
-
   fullscreenOverlay: {
     position: "absolute",
     top: spacing.lg,
     right: spacing.lg,
     zIndex: 10,
+  },
+  menuButton: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xs,
+    backgroundColor: colors.surface,
   },
 });
