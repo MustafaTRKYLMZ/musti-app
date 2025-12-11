@@ -20,6 +20,8 @@ import { useCurrentPlanInfo } from "@/hooks/useCurrentPlanInfo";
 import { AppScreen } from "@/components/AppScreen";
 import { BookshelfHeader } from "@/components/BookshelfHeader";
 import { bookshelfTheme, MText } from "@budget/ui-native";
+import { IconButton } from "@/components/ui/AppIcon";
+import { ShelfHeader } from "@/components/ShelfHeader";
 
 const { colors, spacing, radii } = bookshelfTheme;
 
@@ -211,12 +213,7 @@ export default function BookshelfHomeScreen() {
     <AppScreen
       title="Bookshelf"
       onPressMenu={() => setSidebarOpen(true)}
-      headerCenter={
-        <BookshelfHeader
-          handleOpenModal={handleOpenModal}
-          handleOpenPlanModal={handleOpenPlanModal}
-        />
-      }
+      headerCenter={<BookshelfHeader />}
       safeAreaStyle={bookshelfHeaderStyles.safe}
       headerContainerStyle={bookshelfHeaderStyles.header}
       headerTitleStyle={bookshelfHeaderStyles.title}
@@ -230,13 +227,10 @@ export default function BookshelfHomeScreen() {
         >
           {/* PLAN SHELF */}
           <View style={styles.shelfSection}>
-            <MText
-              variant="heading3"
-              color="textPrimary"
-              style={styles.shelfTitle}
-            >
-              Today&apos;s plan
-            </MText>
+            <ShelfHeader
+              title={`Today's plan`}
+              handleOpen={handleOpenPlanModal}
+            />
 
             <View style={styles.shelfInner}>
               <View style={styles.shelfRail} />
@@ -309,14 +303,7 @@ export default function BookshelfHomeScreen() {
 
           {/* ALL BOOKS GRID */}
           <View style={styles.shelfSection}>
-            <MText
-              variant="heading3"
-              color="textPrimary"
-              style={styles.shelfTitle}
-            >
-              Books
-            </MText>
-
+            <ShelfHeader title={"Books"} handleOpen={handleOpenModal} />
             <View style={styles.shelfInner}>
               {gridRows.length === 0 ? (
                 <View style={styles.emptyState}>
@@ -389,7 +376,12 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
     paddingBottom: spacing["3xl"],
   },
-
+  //shelf header
+  shelfHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
   // Shared shelf layout
   shelfSection: {
     marginBottom: spacing.xl,
@@ -469,5 +461,8 @@ const styles = StyleSheet.create({
   },
   gridItem: {
     width: "38%",
+  },
+  iconButton: {
+    marginLeft: 4,
   },
 });

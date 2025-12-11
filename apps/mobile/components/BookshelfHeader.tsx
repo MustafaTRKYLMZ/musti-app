@@ -3,17 +3,9 @@ import { View, StyleSheet } from "react-native";
 import { MText, useTheme } from "@budget/ui-native";
 import { IconButton } from "@/components/ui/AppIcon";
 
-type BookshelfHeaderProps = {
-  handleOpenModal: () => void;
-  handleOpenPlanModal: () => void;
-};
-
-export const BookshelfHeader: FC<BookshelfHeaderProps> = ({
-  handleOpenModal,
-  handleOpenPlanModal,
-}) => {
+export const BookshelfHeader = ({}) => {
   const theme = useTheme();
-  const { colors, spacing, radii } = theme;
+  const { spacing } = theme;
 
   return (
     <View style={[styles.header, { paddingHorizontal: spacing.sm }]}>
@@ -21,26 +13,6 @@ export const BookshelfHeader: FC<BookshelfHeaderProps> = ({
         <MText variant="heading1" style={styles.headerTitle}>
           Bookshelf
         </MText>
-      </View>
-
-      <View style={[styles.headerRight, { paddingRight: spacing.sm }]}>
-        <IconButton
-          family="ion"
-          name="list-outline"
-          padding={spacing.xs}
-          color={colors.textPrimary}
-          style={[styles.iconButton, { borderRadius: radii.full }]}
-          onPress={handleOpenPlanModal}
-        />
-
-        <IconButton
-          family="ion"
-          name="add-circle-outline"
-          color={colors.textPrimary}
-          padding={spacing.xs}
-          style={[styles.iconButton, { borderRadius: radii.full }]}
-          onPress={handleOpenModal}
-        />
       </View>
     </View>
   );
@@ -59,14 +31,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexShrink: 1,
   },
-  headerRight: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
   headerTitle: {
     flexShrink: 1,
-  },
-  iconButton: {
-    marginLeft: 4,
   },
 });
