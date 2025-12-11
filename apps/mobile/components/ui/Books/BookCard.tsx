@@ -21,7 +21,7 @@ import {
   useTheme,
   Card,
 } from "@budget/ui-native";
-import { BaseIcon, IconButton } from "@/components/ui/AppIcon";
+import { IconButton } from "@/components/ui/AppIcon";
 import type { LocalPdfFile } from "@/utils/getPdfsDirectory";
 
 type BookCardProps = {
@@ -36,7 +36,6 @@ type BookCardProps = {
   variant?: "row" | "grid";
 };
 
-// Warm spine palette (wood / leather tones)
 const SPINE_PALETTE = [
   "#8B5A2B",
   "#A1623B",
@@ -48,7 +47,6 @@ const SPINE_PALETTE = [
   "#BF8F68",
 ];
 
-// Deterministic color from string
 function getSpineColorFromString(id: string): string {
   let hash = 0;
   for (let i = 0; i < id.length; i++) {
@@ -76,7 +74,6 @@ export const BookCard: FC<BookCardProps> = ({
   const spineColor = getSpineColorFromString(bookId);
   const spineEdgeColor = "rgba(0,0,0,0.25)";
 
-  // 3-dot menu state
   const [menuVisible, setMenuVisible] = useState(false);
   const [menuPos, setMenuPos] = useState<{ x: number; y: number }>({
     x: 0,
@@ -84,7 +81,6 @@ export const BookCard: FC<BookCardProps> = ({
   });
   const menuIconRef = useRef<View | null>(null);
 
-  // rename modal state
   const [renameVisible, setRenameVisible] = useState(false);
   const [tempName, setTempName] = useState(file.name);
 
@@ -93,7 +89,6 @@ export const BookCard: FC<BookCardProps> = ({
       ? Math.min(1, lastPage / totalPages)
       : 0;
 
-  // --- Animations ---
   const appearAnim = useRef(new Animated.Value(0)).current;
   const pressAnim = useRef(new Animated.Value(0)).current;
 
@@ -191,7 +186,6 @@ export const BookCard: FC<BookCardProps> = ({
 
   return (
     <>
-      {/* CARD */}
       <TouchableOpacity
         onPress={onOpen}
         onPressIn={handlePressIn}
@@ -200,7 +194,12 @@ export const BookCard: FC<BookCardProps> = ({
         activeOpacity={0.85}
       >
         <Animated.View style={animatedCardStyle}>
-          <Card style={[styles.card, variant === "grid" && styles.cardGrid]}>
+          <Card
+            style={[
+              styles.cardBase,
+              variant === "grid" ? styles.cardGrid : styles.cardRow,
+            ]}
+          >
             {/* Decorative book structure */}
             <View
               style={[
@@ -214,9 +213,7 @@ export const BookCard: FC<BookCardProps> = ({
             <View
               style={[
                 styles.bookSpineHighlight,
-                {
-                  backgroundColor: "rgba(255,255,255,0.16)",
-                },
+                { backgroundColor: "rgba(255,255,255,0.16)" },
               ]}
             />
             <View
@@ -253,57 +250,30 @@ export const BookCard: FC<BookCardProps> = ({
               </Svg>
             </View>
 
-            {/* Header + title */}
-            {variant === "row" ? (
-              <>
-                <View style={styles.cardHeader}>
-                  <View style={styles.cardIconTitle}>
-                    <BaseIcon
-                      name="document-text-outline"
-                      size={iconSizes.lg}
-                      color={colors.textPrimary}
-                    />
-                    <MText
-                      variant="body"
-                      style={styles.itemTitle}
-                      numberOfLines={2}
-                    >
-                      {file.name}
-                    </MText>
-                  </View>
+            {/* Menu icon (same position in both variants) */}
+            <View style={styles.menuIconWrapper} ref={menuIconRef as any}>
+              <IconButton
+                name="ellipsis-vertical"
+                size={iconSizes.md}
+                color={colors.textPrimary}
+                onPress={openMenu}
+                hitSlop={8}
+              />
+            </View>
 
-                  <IconButton
-                    ref={menuIconRef}
-                    name="ellipsis-vertical"
-                    size={iconSizes.md}
-                    color={colors.textPrimary}
-                    onPress={openMenu}
-                  />
-                </View>
-              </>
-            ) : (
-              <>
-                <View style={styles.cardHeaderGrid}>
-                  <IconButton
-                    ref={menuIconRef}
-                    name="ellipsis-vertical"
-                    size={iconSizes.md}
-                    color={colors.textPrimary}
-                    onPress={openMenu}
-                  />
-                </View>
-                <MText
-                  variant="body"
-                  color="textPrimary"
-                  style={styles.gridTitle}
-                  numberOfLines={2}
-                >
-                  {file.name}
-                </MText>
-              </>
-            )}
+            {/* Centered title */}
+            <View style={styles.titleWrapper}>
+              <MText
+                variant="body"
+                color="textPrimary"
+                style={styles.title}
+                numberOfLines={2}
+              >
+                {file.name}
+              </MText>
+            </View>
 
-            {/* Progress (lastPage / totalPages) */}
+            {/* Progress */}
             {totalPages && totalPages > 0 ? (
               <>
                 <View
@@ -346,7 +316,7 @@ export const BookCard: FC<BookCardProps> = ({
         </Animated.View>
       </TouchableOpacity>
 
-      {/* 3-dot POPOVER MENU */}
+      {/* 3-dot menu */}
       <Modal
         visible={menuVisible}
         transparent
@@ -389,7 +359,7 @@ export const BookCard: FC<BookCardProps> = ({
         </TouchableOpacity>
       </Modal>
 
-      {/* RENAME MODAL */}
+      {/* Rename modal */}
       <Modal
         visible={renameVisible}
         transparent
@@ -472,21 +442,30 @@ const styles = StyleSheet.create({
   cardWrapper: {
     marginRight: spacing.md,
   },
-  card: {
-    width: 220,
-    height: 140,
-    padding: spacing.md,
+
+  // shared base
+  cardBase: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     justifyContent: "space-between",
     overflow: "hidden",
   },
 
+  // Last read (horizontal)
+  cardRow: {
+    width: 120,
+    height: undefined,
+    aspectRatio: 0.7,
+  },
+
+  // Books grid
   cardGrid: {
     width: "100%",
     height: undefined,
     aspectRatio: 0.7,
   },
 
-  // Book decoration
+  // decoration
   bookSpine: {
     position: "absolute",
     left: 0,
@@ -523,45 +502,30 @@ const styles = StyleSheet.create({
     width: 26,
   },
 
-  // Row header
-  cardHeader: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-  },
-  cardIconTitle: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    flex: 1,
-  },
-  itemTitle: {
-    marginLeft: spacing.sm,
-    flexShrink: 1,
+  // menu icon (common)
+  menuIconWrapper: {
+    position: "absolute",
+    top: spacing.xs,
+    right: spacing.xs,
+    zIndex: 2,
   },
 
-  // Grid header + title
-  cardHeaderGrid: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
+  // centered title (common)
+  titleWrapper: {
+    flex: 1,
     alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: spacing.sm,
   },
-  gridTitle: {
-    //marginTop: spacing.xs,
+  title: {
     textAlign: "center",
     fontSize: 14,
-    flexShrink: 1,
   },
 
   cardHint: {
     marginTop: spacing.xs,
   },
-  cardFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
 
-  // Progress
   progressContainer: {
     height: 6,
     width: "100%",
@@ -576,7 +540,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
 
-  // Popover menu
   menuOverlay: {
     flex: 1,
     backgroundColor: "transparent",
@@ -597,7 +560,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
 
-  // Rename modal
   renameOverlay: {
     flex: 1,
     justifyContent: "center",

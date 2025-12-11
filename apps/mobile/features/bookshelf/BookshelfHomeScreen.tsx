@@ -176,43 +176,29 @@ export default function BookshelfHomeScreen() {
   }
 
   // ---- LAST READ LOGIC ----
-  const lastReadByBook = useMemo(() => {
-    const map: Record<string, string> = {};
-
-    Object.entries(readingStats).forEach(([key, stat]: any) => {
-      if (!stat || typeof stat.pagesRead !== "number" || stat.pagesRead <= 0) {
-        return;
-      }
-      const [uri, dayKey] = key.split(":");
-      if (!uri || !dayKey) return;
-
-      if (!map[uri] || dayKey > map[uri]) {
-        map[uri] = dayKey;
-      }
-    });
-
-    return map;
-  }, [readingStats]);
-
+  // ---- LAST READ LOGIC (by updatedAt from useBooksStore) ----
   const lastReadBooks = useMemo(() => {
     return books
-      .filter((b) => lastReadByBook[b.uri])
-      .sort((a, b) => {
-        const aDate = lastReadByBook[a.uri];
-        const bDate = lastReadByBook[b.uri];
-        if (!aDate && !bDate) return 0;
-        if (!aDate) return 1;
-        if (!bDate) return -1;
-        return aDate < bDate ? 1 : -1;
+      .map((b) => {
+        const meta = progressMap[b.uri] as any;
+        const updatedAt: string | undefined = meta?.updatedAt;
+        return { book: b, updatedAt };
       })
+      .filter((x) => x.updatedAt)
+      .sort((a, b) => {
+        if (!a.updatedAt && !b.updatedAt) return 0;
+        if (!a.updatedAt) return 1;
+        if (!b.updatedAt) return -1;
+        return a.updatedAt < b.updatedAt ? 1 : -1; // newest first
+      })
+      .map((x) => x.book)
       .slice(0, 12);
-  }, [books, lastReadByBook]);
+  }, [books, progressMap]);
 
   const gridBooks = useMemo(() => {
     return [...books].sort((a, b) => a.name.localeCompare(b.name));
   }, [books]);
 
-  // 3'lü satırlar halinde grid
   const gridRows = useMemo(() => {
     const rows: LocalPdfFile[][] = [];
     for (let i = 0; i < gridBooks.length; i += 3) {
@@ -312,6 +298,7 @@ export default function BookshelfHomeScreen() {
                         todayPages={todayStat?.pagesRead}
                         todayTargetPages={todayStat?.targetPages}
                         onRename={(newName) => renameBook(item, newName)}
+                        variant="row"
                       />
                     );
                   }}
