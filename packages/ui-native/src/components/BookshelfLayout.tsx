@@ -11,7 +11,7 @@ interface BookshelfLayoutProps {
 export function BookshelfLayout({ children }: BookshelfLayoutProps) {
   return (
     <View style={{ flex: 1 }}>
-      <BookshelfBackground children={undefined} />
+      <BookshelfBackground />
 
       <WoodGrainOverlay />
 

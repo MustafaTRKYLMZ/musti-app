@@ -251,7 +251,7 @@ export const BookCard: FC<BookCardProps> = ({
             </View>
 
             {/* Menu icon (same position in both variants) */}
-            <View style={styles.menuIconWrapper} ref={menuIconRef as any}>
+            <View style={styles.menuIconWrapper} ref={menuIconRef}>
               <IconButton
                 name="ellipsis-vertical"
                 size={iconSizes.md}

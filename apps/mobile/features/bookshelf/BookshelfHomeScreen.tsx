@@ -20,7 +20,6 @@ import { useCurrentPlanInfo } from "@/hooks/useCurrentPlanInfo";
 import { AppScreen } from "@/components/AppScreen";
 import { BookshelfHeader } from "@/components/BookshelfHeader";
 import { bookshelfTheme, MText } from "@budget/ui-native";
-import { IconButton } from "@/components/ui/AppIcon";
 import { ShelfHeader } from "@/components/ShelfHeader";
 
 const { colors, spacing, radii } = bookshelfTheme;
@@ -55,7 +54,6 @@ export default function BookshelfHomeScreen() {
   const [books, setBooks] = useState<LocalPdfFile[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [planModalVisible, setPlanModalVisible] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const progressMap = useBooksStore((s) => s.items);
   const readingStats = useReadingStatsStore((s) => s.stats);

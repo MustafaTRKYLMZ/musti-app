@@ -3,7 +3,7 @@ import { View, StyleSheet } from "react-native";
 import { MText, useTheme } from "@budget/ui-native";
 import { IconButton } from "@/components/ui/AppIcon";
 
-export const BookshelfHeader = ({}) => {
+export const BookshelfHeader = () => {
   const theme = useTheme();
   const { spacing } = theme;
 

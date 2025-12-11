@@ -106,6 +106,7 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
     padding: spacing.sm,
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: "row",
@@ -115,6 +116,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.sm,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
+    backgroundColor: colors.background,
   },
   left: {
     width: 40,

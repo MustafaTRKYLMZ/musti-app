@@ -4,4 +4,5 @@ export type BookProgress = {
     lastPage: number;
     totalPages?: number;
     updatedAt: string;
+    lastOpenedAt?: string;
   };
