@@ -1,4 +1,3 @@
-// components/ui/AppIcon.tsx
 import React, { useState } from "react";
 import {
   StyleSheet,
@@ -127,7 +126,7 @@ export const IconButton = React.forwardRef<View, IconButtonProps>(
   }
 );
 
-// ---------- IconTile (icon + label, launcher için) ----------
+// ---------- IconTile (icon + label, launcher ) ----------
 export type IconTileProps = {
   family?: IconFamily;
   name: string;
@@ -138,6 +137,7 @@ export type IconTileProps = {
   style?: StyleProp<ViewStyle>;
   backgroundColor?: string;
   iconBackgroundColor?: string;
+  labelColor?: string;
 };
 
 export function IconTile({
@@ -150,6 +150,7 @@ export function IconTile({
   style,
   backgroundColor,
   iconBackgroundColor,
+  labelColor,
 }: IconTileProps) {
   const theme = useTheme?.();
   const palette = theme?.colors ?? defaultColors;
@@ -160,6 +161,7 @@ export function IconTile({
   const tileBackground = backgroundColor ?? palette.background;
   const tileIconBackground = iconBackgroundColor ?? palette.background;
   const finalIconColor = color ?? palette.primary;
+  const finalLabelColor = labelColor ?? palette.textPrimary;
 
   return (
     <Wrapper
@@ -193,7 +195,10 @@ export function IconTile({
           color={finalIconColor}
         />
       </View>
-      <MText style={styles.tileLabel}>{label}</MText>
+
+      <MText style={[styles.tileLabel, { color: finalLabelColor }]}>
+        {label}
+      </MText>
     </Wrapper>
   );
 }
