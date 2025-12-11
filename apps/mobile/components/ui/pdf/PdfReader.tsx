@@ -5,6 +5,7 @@ import {
   MText,
   bookshelfTheme,
   iconSizes,
+  radii,
   spacing,
   useTheme,
 } from "@budget/ui-native";
@@ -22,6 +23,8 @@ type PdfReaderProps = {
   handlePageChanged: (page: number, numberOfPages: number) => void;
   pdfRef?: React.RefObject<PdfRef | null>;
   onPressMenu?: () => void;
+  currentPage?: number;
+  totalPages?: number;
 };
 
 export const PdfReader: FC<PdfReaderProps> = ({
@@ -35,6 +38,8 @@ export const PdfReader: FC<PdfReaderProps> = ({
   handlePageChanged,
   pdfRef,
   onPressMenu,
+  currentPage,
+  totalPages,
 }) => {
   const theme = useTheme();
   const { colors } = theme;
@@ -116,10 +121,15 @@ export const PdfReader: FC<PdfReaderProps> = ({
       >
         <Pdf
           ref={pdfRef}
+          fitPolicy={2}
           source={source}
           style={[
             styles.pdf,
-            { backgroundColor: isFullscreen ? "#000" : colors.background },
+            {
+              backgroundColor: isFullscreen ? "#000" : colors.background,
+              width: "100%",
+              height: "100%",
+            },
           ]}
           horizontal
           enablePaging
@@ -129,6 +139,14 @@ export const PdfReader: FC<PdfReaderProps> = ({
           onPageChanged={handlePageChanged}
         />
       </View>
+
+      {typeof currentPage === "number" && typeof totalPages === "number" && (
+        <View style={styles.pageBadge}>
+          <MText variant="caption" color="textInverse">
+            {currentPage} / {totalPages}
+          </MText>
+        </View>
+      )}
     </View>
   );
 };
@@ -175,5 +193,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xs,
     backgroundColor: colors.surface,
+  },
+  pageBadge: {
+    position: "absolute",
+    left: "50%",
+    bottom: spacing.lg,
+    transform: [{ translateX: -25 }],
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.full,
+    backgroundColor: colors.background,
   },
 });

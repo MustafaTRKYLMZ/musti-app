@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { View, StyleSheet } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { MText } from "@budget/ui-native";
+import { MText, spacing } from "@budget/ui-native";
 import dayjs from "dayjs";
 
 import { PdfReader } from "@/components/ui/pdf/PdfReader";
@@ -22,6 +22,9 @@ export default function PdfViewerScreen() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [initialPage, setInitialPage] = useState(1);
   const [sectionsOpen, setSectionsOpen] = useState(false);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState<number | null>(null);
 
   const pdfRef = useRef<PdfRef | null>(null);
 
@@ -68,6 +71,7 @@ export default function PdfViewerScreen() {
   const source = { uri, cache: true };
 
   const handleLoadComplete = (pages: number) => {
+    setTotalPages(pages);
     setSessionTotalPages(pages);
     setProgress({
       uri,
@@ -78,6 +82,7 @@ export default function PdfViewerScreen() {
   };
 
   const handlePageChanged = (page: number, total: number) => {
+    setCurrentPage(page);
     setSessionTotalPages(total);
     setSessionLastPage(page);
     setMaxPageVisited((prev) => {
@@ -138,6 +143,8 @@ export default function PdfViewerScreen() {
         handlePageChanged={handlePageChanged}
         pdfRef={pdfRef}
         onPressMenu={handleOpenSections}
+        currentPage={currentPage}
+        totalPages={totalPages ?? undefined}
       />
 
       <BookSectionsSidebar
@@ -155,6 +162,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 16,
+    padding: spacing.lg,
+    backgroundColor: "red",
   },
 });
