@@ -50,6 +50,7 @@ const bookshelfHeaderStyles = StyleSheet.create({
 });
 
 export default function BookshelfHomeScreen() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const router = useRouter();
   const [books, setBooks] = useState<LocalPdfFile[]>([]);
   const [modalVisible, setModalVisible] = useState(false);

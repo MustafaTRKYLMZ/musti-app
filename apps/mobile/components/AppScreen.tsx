@@ -106,7 +106,6 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
     padding: spacing.sm,
-    backgroundColor: colors.background,
   },
   header: {
     flexDirection: "row",
