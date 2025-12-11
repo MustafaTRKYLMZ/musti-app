@@ -3,7 +3,6 @@ import React from "react";
 import { View, StyleSheet, StyleProp, ViewStyle } from "react-native";
 import { MText } from "./MText";
 import { spacing } from "../theme";
-import { useTheme } from "../theme/ThemeContext";
 
 interface HeaderProps {
   title: string;
@@ -18,9 +17,6 @@ export const Header: React.FC<HeaderProps> = ({
   style,
   titleColor,
 }) => {
-  const theme = useTheme();
-  const { colors } = theme;
-
   return (
     <View style={[styles.container, style]}>
       <MText

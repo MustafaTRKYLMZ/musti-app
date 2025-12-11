@@ -239,8 +239,7 @@ export function ReadingPlanModal({
                 {
                   borderColor: colors.borderSubtle,
                   color: colors.textPrimary,
-                  backgroundColor:
-                    (colors as any).surfaceElevated || colors.surface,
+                  backgroundColor: colors.surfaceElevated ?? colors.surface,
                 },
               ]}
               placeholderTextColor={colors.textSecondary}
@@ -287,8 +286,7 @@ export function ReadingPlanModal({
                   styles.bookSelectField,
                   {
                     borderColor: colors.borderSubtle,
-                    backgroundColor:
-                      (colors as any).surfaceElevated || colors.surface,
+                    backgroundColor: colors.surfaceElevated ?? colors.surface,
                   },
                 ]}
                 activeOpacity={0.8}
@@ -449,8 +447,7 @@ export function ReadingPlanModal({
                               borderColor: colors.borderSubtle,
                               color: colors.textPrimary,
                               backgroundColor:
-                                (colors as any).surfaceElevated ||
-                                colors.surface,
+                                colors.surfaceElevated ?? colors.surface,
                             },
                           ]}
                           placeholderTextColor={colors.textSecondary}

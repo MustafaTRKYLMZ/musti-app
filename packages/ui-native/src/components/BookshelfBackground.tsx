@@ -3,10 +3,9 @@ import React from "react";
 import { StyleSheet, ViewStyle, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { gradients, spacing } from "../theme";
-import { WoodGrainOverlay } from "./WoodGrainOverlay";
 
 type BookshelfBackgroundProps = {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   style?: ViewStyle | ViewStyle[];
 };
 
@@ -22,8 +21,6 @@ export function BookshelfBackground({
       >
         {children}
       </LinearGradient>
-
-      <WoodGrainOverlay />
     </View>
   );
 }

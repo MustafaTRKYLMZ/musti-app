@@ -1,4 +1,4 @@
-import { bookshelfTheme, MText, useTheme } from "@budget/ui-native";
+import { bookshelfTheme, MText } from "@budget/ui-native";
 import { View, StyleSheet } from "react-native";
 import { IconButton } from "./ui/AppIcon";
 import { FC } from "react";

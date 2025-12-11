@@ -251,7 +251,7 @@ export default function PlanViewerScreen() {
             />
             <View style={styles.bannerText}>
               <MText variant="body" color="textPrimary" numberOfLines={1}>
-                Today&apos;s target is done 🎉
+                Today's target is done 🎉
               </MText>
               {targetForToday > 0 && (
                 <MText variant="body" color="textSecondary" numberOfLines={1}>
