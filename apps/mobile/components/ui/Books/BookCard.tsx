@@ -298,8 +298,7 @@ export const BookCard: FC<BookCardProps> = ({
                   style={styles.progressLabel}
                   numberOfLines={1}
                 >
-                  {Math.round(progress * 100)}% · {lastPage ?? 0} / {totalPages}{" "}
-                  pages
+                  {Math.round(progress * 100)}% · {lastPage ?? 0} / {totalPages}
                 </MText>
               </>
             ) : (
@@ -455,14 +454,14 @@ const styles = StyleSheet.create({
   cardRow: {
     width: 120,
     height: undefined,
-    aspectRatio: 0.7,
+    aspectRatio: 0.8,
   },
 
   // Books grid
   cardGrid: {
     width: "100%",
     height: undefined,
-    aspectRatio: 0.7,
+    aspectRatio: 0.8,
   },
 
   // decoration
@@ -538,6 +537,8 @@ const styles = StyleSheet.create({
   },
   progressLabel: {
     marginTop: spacing.xs,
+    fontSize: spacing.lg - 4,
+    paddingHorizontal: spacing.xs,
   },
 
   menuOverlay: {
