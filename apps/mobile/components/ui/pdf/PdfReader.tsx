@@ -411,8 +411,9 @@ const styles = StyleSheet.create({
 
   pageBadge: {
     position: "absolute",
+    left: "50%",
     bottom: spacing.lg,
-    alignSelf: "center",
+    transform: [{ translateX: "-50%" }],
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
     borderRadius: radii.full,

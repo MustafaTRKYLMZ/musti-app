@@ -155,7 +155,6 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     flex: 1,
-    backgroundColor: "transparent",
   },
   sidebar: {
     width: SIDEBAR_WIDTH,
