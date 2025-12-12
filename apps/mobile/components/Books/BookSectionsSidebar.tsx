@@ -1,4 +1,4 @@
-// apps/mobile/components/ui/Books/BookSectionsSidebar.tsx
+// apps/mobile/components/Books/BookSectionsSidebar.tsx
 
 import React, { useState } from "react";
 import { View, StyleSheet, Pressable, Dimensions } from "react-native";
@@ -54,7 +54,7 @@ export function BookSectionsSidebar({
 
     const num = Number(value);
     if (!value || !totalPages || Number.isNaN(num)) return;
-    if (num <= 0) return;
+    if (num < 1) return;
 
     if (num > totalPages) {
       setPageError(`This book has only ${totalPages} pages.`);
@@ -63,7 +63,7 @@ export function BookSectionsSidebar({
 
   const handleAdd = () => {
     const page = Number(startPage);
-    if (!title.trim() || !page || page <= 0 || !bookUri) return;
+    if (!title.trim() || !page || page < 1 || !bookUri) return;
 
     if (totalPages && page > totalPages) {
       setPageError(`This book has only ${totalPages} pages.`);
@@ -107,7 +107,10 @@ export function BookSectionsSidebar({
 
   return (
     <View style={styles.overlay} pointerEvents="box-none">
-      <Pressable style={styles.backdrop} onPress={onClose} />
+      <Pressable 
+        style={[styles.backdrop, { backgroundColor: colors.backdrop }]} 
+        onPress={onClose} 
+      />
 
       <View
         style={[
@@ -115,6 +118,7 @@ export function BookSectionsSidebar({
           {
             backgroundColor: colors.surface,
             borderLeftColor: colors.borderSubtle,
+            shadowColor: colors.shadowStrong,
           },
         ]}
       >
@@ -151,7 +155,6 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.25)",
   },
   sidebar: {
     width: SIDEBAR_WIDTH,
@@ -159,7 +162,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.lg,
     borderLeftWidth: StyleSheet.hairlineWidth,
-    shadowColor: "#000",
     shadowOpacity: 0.2,
     shadowRadius: 10,
     shadowOffset: { width: -4, height: 0 },

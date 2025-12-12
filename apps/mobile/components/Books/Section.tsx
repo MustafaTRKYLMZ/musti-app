@@ -130,6 +130,7 @@ export const Section: FC<SectionProps> = ({
                   name="pencil-outline"
                   onPress={handleStartEdit}
                   style={styles.menuIcon}
+                  accessibilityLabel="Edit section"
                 />
                 <IconButton
                   name="trash-outline"
@@ -138,6 +139,7 @@ export const Section: FC<SectionProps> = ({
                     onDeleteSection(id);
                   }}
                   style={styles.menuIcon}
+                  accessibilityLabel="Delete section"
                 />
               </View>
             </View>

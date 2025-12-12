@@ -229,18 +229,20 @@ export const PdfReader: FC<PdfReaderProps> = ({
                 size={iconSizes.lg}
                 onPress={() => setIsFullscreen(true)}
                 style={styles.iconButton}
+                accessibilityLabel="Enter fullscreen"
               />
               <IconButton
                 name="close-outline"
                 size={iconSizes.xl}
                 onPress={handleClose}
                 style={styles.iconButton}
+                accessibilityLabel="Close reader"
               />
             </View>
           </View>
 
           {/* Zoom + menu bar */}
-          <View style={styles.menuButton}>
+          <View style={[styles.menuButton, { backgroundColor: colors.surface }]}>
             <IconButton
               name="remove-outline"
               onPress={handleZoomOut}
@@ -316,10 +318,12 @@ export const PdfReader: FC<PdfReaderProps> = ({
 
       {/* Page badge */}
       {typeof currentPage === "number" && typeof totalPages === "number" && (
-        <View style={styles.pageBadge}>
-          <MText variant="caption" color="textInverse">
-            {currentPage} / {totalPages}
-          </MText>
+        <View style={styles.pageBadgeContainer}>
+          <View style={[styles.pageBadge, { backgroundColor: colors.background }]}>
+            <MText variant="caption" color="textInverse">
+              {currentPage} / {totalPages}
+            </MText>
+          </View>
         </View>
       )}
 
@@ -406,19 +410,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xs,
-    backgroundColor: bookshelfColors.surface,
     gap: spacing.sm,
   },
 
-  pageBadge: {
+  pageBadgeContainer: {
     position: "absolute",
-    left: "50%",
     bottom: spacing.lg,
-    transform: [{ translateX: -25 }],
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    pointerEvents: "none",
+  },
+
+  pageBadge: {
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
     borderRadius: radii.full,
-    backgroundColor: bookshelfColors.background,
   },
 
   zoomBadge: {
