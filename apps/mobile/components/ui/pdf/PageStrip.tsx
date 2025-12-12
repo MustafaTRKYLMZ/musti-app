@@ -6,6 +6,7 @@ type PageStripProps = {
   totalPages: number;
   currentPage?: number;
   onPressPage: (page: number) => void;
+  orientation?: "horizontal" | "vertical";
 };
 
 const CHIP_WIDTH = 40;
@@ -15,11 +16,18 @@ export const PageStrip: FC<PageStripProps> = ({
   totalPages,
   currentPage,
   onPressPage,
+  orientation = "horizontal",
 }) => {
   const theme = useTheme();
   const { colors } = theme;
+
   const scrollRef = useRef<ScrollView | null>(null);
-  const [containerWidth, setContainerWidth] = useState(0);
+
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+
+  const chipLayoutsRef = useRef<
+    Record<number, { x: number; y: number; width: number; height: number }>
+  >({});
 
   const MAX_CHIPS = 300;
 
@@ -37,18 +45,24 @@ export const PageStrip: FC<PageStripProps> = ({
   const pages = buildPages();
 
   useEffect(() => {
-    if (!scrollRef.current || !currentPage || containerWidth <= 0) return;
+    if (!scrollRef.current || !currentPage) return;
+    if (containerSize.width <= 0 || containerSize.height <= 0) return;
 
-    const index = pages.findIndex((p) => p === currentPage);
-    if (index === -1) return;
+    const layout = chipLayoutsRef.current[currentPage];
+    if (!layout) return;
 
-    const chipCenterX =
-      index * (CHIP_WIDTH + CHIP_SPACING) + CHIP_WIDTH / 2 + CHIP_SPACING;
+    const isVertical = orientation === "vertical";
 
-    const offsetX = Math.max(0, chipCenterX - containerWidth / 2);
-
-    scrollRef.current.scrollTo({ x: offsetX, animated: true });
-  }, [currentPage, containerWidth, totalPages]);
+    if (isVertical) {
+      const chipCenterY = layout.y + layout.height / 2;
+      const offsetY = Math.max(0, chipCenterY - containerSize.height / 2);
+      scrollRef.current.scrollTo({ y: offsetY, animated: true });
+    } else {
+      const chipCenterX = layout.x + layout.width / 2;
+      const offsetX = Math.max(0, chipCenterX - containerSize.width / 2);
+      scrollRef.current.scrollTo({ x: offsetX, animated: true });
+    }
+  }, [currentPage, containerSize.width, containerSize.height, orientation]);
 
   return (
     <View
@@ -59,13 +73,20 @@ export const PageStrip: FC<PageStripProps> = ({
           borderColor: colors.borderSubtle,
         },
       ]}
-      onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
+      onLayout={(e) => {
+        const { width, height } = e.nativeEvent.layout;
+        setContainerSize({ width, height });
+      }}
     >
       <ScrollView
         ref={scrollRef}
-        horizontal
+        horizontal={orientation !== "vertical"}
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.pageStripContent}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[
+          styles.pageStripContent,
+          orientation === "vertical" && { alignItems: "center" },
+        ]}
       >
         {pages.map((page) => {
           const isActive = page === currentPage;
@@ -74,6 +95,9 @@ export const PageStrip: FC<PageStripProps> = ({
             <Pressable
               key={page}
               onPress={() => onPressPage(page)}
+              onLayout={(e) => {
+                chipLayoutsRef.current[page] = e.nativeEvent.layout;
+              }}
               style={[
                 styles.pageChip,
                 {
@@ -101,9 +125,8 @@ export const PageStrip: FC<PageStripProps> = ({
 const styles = StyleSheet.create({
   pageStripContainer: {
     borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: radii.full,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.xs,
+    borderRadius: radii.lg,
+    padding: spacing.xs,
   },
   pageStripContent: {
     paddingHorizontal: spacing.xs,

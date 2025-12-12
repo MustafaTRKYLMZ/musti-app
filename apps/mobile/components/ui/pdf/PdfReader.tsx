@@ -252,6 +252,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
             totalPages={totalPages}
             currentPage={currentPage}
             onPressPage={handlePressPageThumb}
+            orientation="vertical"
           />
         </View>
       )}
@@ -334,10 +335,10 @@ const styles = StyleSheet.create({
 
   pageStripWrapper: {
     position: "absolute",
-    left: 0,
     right: 0,
-    bottom: spacing.lg * 3,
-    paddingHorizontal: spacing.md,
+    bottom: spacing.lg,
+    top: spacing.lg * 50,
+    zIndex: 5,
   },
   pageStripContainer: {
     borderWidth: StyleSheet.hairlineWidth,
