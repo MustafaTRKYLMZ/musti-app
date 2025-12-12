@@ -1,5 +1,6 @@
-// apps/mobile/.../PlanViewerScreen.tsx
-import React, { useEffect, useState } from "react";
+// apps/mobile/app/(tabs)/bookshelf/plan/plan-viewer.tsx
+
+import React, { useEffect, useState, useRef } from "react";
 import { View, StyleSheet, Animated } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { MText, spacing, radii, iconSizes, useTheme } from "@budget/ui-native";
@@ -7,6 +8,8 @@ import { MText, spacing, radii, iconSizes, useTheme } from "@budget/ui-native";
 import { PdfReader } from "@/components/ui/pdf/PdfReader";
 import { useReadingPlanStore } from "@/store/useReadingPlanStore";
 import { IconButton, BaseIcon } from "@/components/ui/AppIcon";
+import { BookSectionsSidebar } from "@/components/Books/BookSectionsSidebar";
+import { PdfRef } from "react-native-pdf";
 
 export default function PlanViewerScreen() {
   const router = useRouter();
@@ -27,6 +30,14 @@ export default function PlanViewerScreen() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [initialPage, setInitialPage] = useState(1);
 
+  // sections sidebar
+  const [sectionsOpen, setSectionsOpen] = useState(false);
+  const pdfRef = useRef<PdfRef | null>(null);
+
+  // page indicator state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState<number | null>(null);
+
   // Session-local state
   const [sessionStartPage, setSessionStartPage] = useState<number | null>(null);
   const [sessionLastPage, setSessionLastPage] = useState<number | null>(null);
@@ -40,7 +51,6 @@ export default function PlanViewerScreen() {
   const [targetForToday, setTargetForToday] = useState(0);
   const [todayPagesForThisBook, setTodayPagesForThisBook] = useState(0);
   const [hasReachedTarget, setHasReachedTarget] = useState(false);
-
   // banner animation
   const bannerAnim = React.useRef(new Animated.Value(0)).current;
 
@@ -67,6 +77,8 @@ export default function PlanViewerScreen() {
     setTargetForToday(target);
     setTodayPagesForThisBook(alreadyReadToday);
     setHasReachedTarget(alreadyReadToday >= target && target > 0);
+
+    setCurrentPage(startPage);
   }, [uri, activePlan]);
 
   useEffect(() => {
@@ -112,18 +124,19 @@ export default function PlanViewerScreen() {
 
   const handleLoadComplete = (pages: number) => {
     setSessionTotalPages(pages);
+    setTotalPages(pages);
   };
 
   const handlePageChanged = (page: number, total: number) => {
     setSessionTotalPages(total);
     setSessionLastPage(page);
+    setCurrentPage(page);
 
     setMaxPageVisited((prev) => {
       if (prev == null) return page;
       return Math.max(prev, page);
     });
 
-    // Target check (local only)
     const start = sessionStartPage ?? page;
     const maxVisited = Math.max(page, maxPageVisited ?? page);
     const pagesInThisSession = Math.max(0, maxVisited - start);
@@ -226,6 +239,15 @@ export default function PlanViewerScreen() {
     backgroundColor: colors.primary,
   } as const;
 
+  const handleOpenSections = () => setSectionsOpen(true);
+  const handleCloseSections = () => setSectionsOpen(false);
+
+  const handleJumpToPage = (page: number) => {
+    if (!pdfRef.current) return;
+    if (page <= 0) return;
+    pdfRef.current.setPage(page);
+  };
+
   return (
     <>
       <PdfReader
@@ -237,9 +259,19 @@ export default function PlanViewerScreen() {
         initialPage={initialPage}
         handleLoadComplete={handleLoadComplete}
         handlePageChanged={handlePageChanged}
+        pdfRef={pdfRef}
+        onPressMenu={handleOpenSections}
+        currentPage={currentPage}
+        totalPages={totalPages ?? undefined}
       />
 
-      {/* Strong banner when the daily target is completed */}
+      <BookSectionsSidebar
+        visible={sectionsOpen}
+        onClose={handleCloseSections}
+        bookUri={uri}
+        onJumpToPage={handleJumpToPage}
+      />
+
       {hasReachedTarget && (
         <View style={styles.bannerWrapper} pointerEvents="box-none">
           <Animated.View style={[styles.banner, bannerStyle]}>
@@ -251,7 +283,7 @@ export default function PlanViewerScreen() {
             />
             <View style={styles.bannerText}>
               <MText variant="body" color="textPrimary" numberOfLines={1}>
-                Today's target is done 🎉
+                {"Today's target is done 🎉"}
               </MText>
               {targetForToday > 0 && (
                 <MText variant="body" color="textSecondary" numberOfLines={1}>
