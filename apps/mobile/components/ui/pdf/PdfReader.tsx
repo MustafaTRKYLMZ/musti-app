@@ -1,5 +1,7 @@
-import React, { FC, useState, useRef } from "react";
-import { View, StyleSheet } from "react-native";
+// apps/mobile/components/ui/pdf/PdfReader.tsx
+
+import React, { FC, useState, useRef, useEffect } from "react";
+import { View, StyleSheet, ScrollView, Pressable } from "react-native";
 import Pdf, { PdfRef } from "react-native-pdf";
 import {
   MText,
@@ -10,6 +12,7 @@ import {
   useTheme,
 } from "@budget/ui-native";
 import { IconButton } from "@/components/ui/AppIcon";
+import { PageStrip } from "./PageStrip";
 
 const { colors: bookshelfColors } = bookshelfTheme;
 
@@ -86,6 +89,20 @@ export const PdfReader: FC<PdfReaderProps> = ({
     showZoomHint();
   };
 
+  const handlePressPageThumb = (page: number) => {
+    if (!pdfRef?.current) return;
+    if (page <= 0) return;
+    pdfRef.current.setPage(page);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (hideZoomTimeoutRef.current) {
+        clearTimeout(hideZoomTimeoutRef.current);
+      }
+    };
+  }, []);
+
   return (
     <View
       style={[
@@ -135,7 +152,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
             </View>
           </View>
 
-          {/* Zoom + menu bar */}
+          {/* Zoom + menu bar  */}
           <View style={styles.menuButton}>
             <IconButton
               name="remove-outline"
@@ -160,7 +177,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
         </View>
       )}
 
-      {/* Fullscreen toggle */}
+      {/* Fullscreen button */}
       {isFullscreen && (
         <View style={styles.fullscreenOverlay}>
           <IconButton
@@ -204,7 +221,9 @@ export const PdfReader: FC<PdfReaderProps> = ({
           onLoadComplete={handleLoadComplete}
           onError={(error) => console.log("PDF error:", error)}
           onPageChanged={handlePageChanged}
-          onScaleChanged={handleInternalScaleChanged}
+          onScaleChanged={(newScale: number) =>
+            handleInternalScaleChanged(newScale)
+          }
         />
       </View>
 
@@ -217,12 +236,23 @@ export const PdfReader: FC<PdfReaderProps> = ({
         </View>
       )}
 
-      {/* Zoom hint badge (ephemeral) */}
+      {/* Zoom hint –*/}
       {zoomHintVisible && (
         <View style={styles.zoomBadge}>
           <MText variant="caption" color="textPrimary">
             {zoomPercent}%
           </MText>
+        </View>
+      )}
+
+      {/* Page strip  */}
+      {typeof totalPages === "number" && totalPages > 1 && (
+        <View style={styles.pageStripWrapper} pointerEvents="box-none">
+          <PageStrip
+            totalPages={totalPages}
+            currentPage={currentPage}
+            onPressPage={handlePressPageThumb}
+          />
         </View>
       )}
     </View>
@@ -231,6 +261,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+
   header: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.xl,
@@ -251,6 +282,7 @@ const styles = StyleSheet.create({
   iconButton: {
     marginLeft: spacing.sm,
   },
+
   viewer: {
     flex: 1,
   },
@@ -259,20 +291,24 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
   },
+
   fullscreenOverlay: {
     position: "absolute",
     top: spacing.lg,
     right: spacing.lg,
     zIndex: 10,
   },
+
   menuButton: {
     flexDirection: "row",
     justifyContent: "flex-end",
+    alignItems: "center",
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xs,
     backgroundColor: bookshelfColors.surface,
     gap: spacing.sm,
   },
+
   pageBadge: {
     position: "absolute",
     left: "50%",
@@ -283,15 +319,34 @@ const styles = StyleSheet.create({
     borderRadius: radii.full,
     backgroundColor: bookshelfColors.background,
   },
+
   zoomBadge: {
     position: "absolute",
     right: spacing.lg,
-    bottom: spacing.lg + 40,
+    bottom: spacing.lg + 80,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: radii.full,
     backgroundColor: bookshelfColors.surface,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: bookshelfColors.borderSubtle,
+  },
+
+  pageStripWrapper: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: spacing.lg * 3,
+    paddingHorizontal: spacing.md,
+  },
+  pageStripContainer: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radii.full,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.xs,
+  },
+  pageStripContent: {
+    paddingHorizontal: spacing.xs,
+    alignItems: "center",
   },
 });
