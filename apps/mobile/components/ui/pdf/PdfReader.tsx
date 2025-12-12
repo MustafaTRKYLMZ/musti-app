@@ -13,6 +13,7 @@ import {
 } from "@budget/ui-native";
 import { IconButton } from "@/components/ui/AppIcon";
 import { PageStrip } from "./PageStrip";
+import { FloatingPageStrip } from "@/components/Books/FloatingStrip";
 
 const { colors: bookshelfColors } = bookshelfTheme;
 
@@ -30,6 +31,7 @@ type PdfReaderProps = {
   currentPage?: number;
   totalPages?: number;
 };
+type StripMode = "vertical" | "horizontal";
 
 export const PdfReader: FC<PdfReaderProps> = ({
   isFullscreen,
@@ -51,6 +53,9 @@ export const PdfReader: FC<PdfReaderProps> = ({
   const [scale, setScale] = useState(1);
   const [zoomHintVisible, setZoomHintVisible] = useState(false);
   const hideZoomTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const [stripMode, setStripMode] = useState<StripMode>("vertical");
+  const [stripMinimized, setStripMinimized] = useState(false);
 
   const zoomPercent = Math.round(scale * 100);
 
@@ -247,14 +252,22 @@ export const PdfReader: FC<PdfReaderProps> = ({
 
       {/* Page strip  */}
       {typeof totalPages === "number" && totalPages > 1 && (
-        <View style={styles.pageStripWrapper} pointerEvents="box-none">
+        <FloatingPageStrip
+          mode={stripMode}
+          minimized={stripMinimized}
+          onToggleMinimized={() => setStripMinimized((v) => !v)}
+          onToggleMode={() =>
+            setStripMode((m) => (m === "vertical" ? "horizontal" : "vertical"))
+          }
+        >
           <PageStrip
             totalPages={totalPages}
             currentPage={currentPage}
             onPressPage={handlePressPageThumb}
-            orientation="vertical"
+            orientation={stripMode === "vertical" ? "vertical" : "horizontal"}
+            maxVisibleChips={stripMinimized ? 3 : undefined}
           />
-        </View>
+        </FloatingPageStrip>
       )}
     </View>
   );
