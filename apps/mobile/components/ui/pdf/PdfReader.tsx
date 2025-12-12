@@ -1,8 +1,8 @@
-// apps/mobile/components/ui/pdf/PdfReader.tsx
-
-import React, { FC, useState, useRef, useEffect } from "react";
-import { View, StyleSheet, ScrollView, Pressable } from "react-native";
+import React, { FC, useState, useRef, useEffect, useMemo } from "react";
+import { View, StyleSheet } from "react-native";
 import Pdf, { PdfRef } from "react-native-pdf";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 import {
   MText,
   bookshelfTheme,
@@ -13,7 +13,11 @@ import {
 } from "@budget/ui-native";
 import { IconButton } from "@/components/ui/AppIcon";
 import { PageStrip } from "./PageStrip";
-import { FloatingPageStrip } from "@/components/Books/FloatingStrip";
+import {
+  FloatingPageStrip,
+  StripMode,
+  StripPos,
+} from "@/components/Books/FloatingPageStrip";
 
 const { colors: bookshelfColors } = bookshelfTheme;
 
@@ -31,7 +35,13 @@ type PdfReaderProps = {
   currentPage?: number;
   totalPages?: number;
 };
-type StripMode = "vertical" | "horizontal";
+
+type StripPrefs = {
+  mode: StripMode;
+  minimized: boolean;
+  hidden: boolean;
+  pos?: StripPos;
+};
 
 export const PdfReader: FC<PdfReaderProps> = ({
   isFullscreen,
@@ -54,15 +64,16 @@ export const PdfReader: FC<PdfReaderProps> = ({
   const [zoomHintVisible, setZoomHintVisible] = useState(false);
   const hideZoomTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // ✅ Strip prefs (persist)
   const [stripMode, setStripMode] = useState<StripMode>("vertical");
   const [stripMinimized, setStripMinimized] = useState(false);
+  const [stripHidden, setStripHidden] = useState(false);
+  const [stripPos, setStripPos] = useState<StripPos | undefined>(undefined);
 
   const zoomPercent = Math.round(scale * 100);
 
   const scheduleHideZoomHint = () => {
-    if (hideZoomTimeoutRef.current) {
-      clearTimeout(hideZoomTimeoutRef.current);
-    }
+    if (hideZoomTimeoutRef.current) clearTimeout(hideZoomTimeoutRef.current);
     hideZoomTimeoutRef.current = setTimeout(() => {
       setZoomHintVisible(false);
     }, 1200);
@@ -74,18 +85,12 @@ export const PdfReader: FC<PdfReaderProps> = ({
   };
 
   const handleZoomOut = () => {
-    setScale((prev) => {
-      const next = Math.max(1, Number((prev - 0.2).toFixed(2)));
-      return next;
-    });
+    setScale((prev) => Math.max(1, Number((prev - 0.2).toFixed(2))));
     showZoomHint();
   };
 
   const handleZoomIn = () => {
-    setScale((prev) => {
-      const next = Math.min(5, Number((prev + 0.2).toFixed(2)));
-      return next;
-    });
+    setScale((prev) => Math.min(5, Number((prev + 0.2).toFixed(2))));
     showZoomHint();
   };
 
@@ -100,13 +105,90 @@ export const PdfReader: FC<PdfReaderProps> = ({
     pdfRef.current.setPage(page);
   };
 
+  const storageKey = useMemo(() => {
+    const id = typeof source === "object" ? source.uri : String(source);
+    return `pdf_strip_v1:${id}`;
+  }, [source]);
+
+  const saveStripPrefs = async (patch: Partial<StripPrefs>) => {
+    try {
+      const payload: StripPrefs = {
+        mode: patch.mode ?? stripMode,
+        minimized: patch.minimized ?? stripMinimized,
+        hidden: patch.hidden ?? stripHidden,
+        pos: patch.pos ?? stripPos,
+      };
+      await AsyncStorage.setItem(storageKey, JSON.stringify(payload));
+    } catch (e) {
+      console.log("strip prefs save error", e);
+    }
+  };
+
+  // ✅ Load prefs once per PDF
+  useEffect(() => {
+    let alive = true;
+
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(storageKey);
+        if (!raw) return;
+
+        const data = JSON.parse(raw) as Partial<StripPrefs>;
+        if (!alive) return;
+
+        if (data.mode === "vertical" || data.mode === "horizontal") {
+          setStripMode(data.mode);
+        }
+        if (typeof data.minimized === "boolean")
+          setStripMinimized(data.minimized);
+        if (typeof data.hidden === "boolean") setStripHidden(data.hidden);
+
+        if (
+          data.pos &&
+          typeof data.pos.x === "number" &&
+          typeof data.pos.y === "number"
+        ) {
+          setStripPos({ x: data.pos.x, y: data.pos.y });
+        }
+      } catch (e) {
+        console.log("strip prefs load error", e);
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [storageKey]);
+
   useEffect(() => {
     return () => {
-      if (hideZoomTimeoutRef.current) {
-        clearTimeout(hideZoomTimeoutRef.current);
-      }
+      if (hideZoomTimeoutRef.current) clearTimeout(hideZoomTimeoutRef.current);
     };
   }, []);
+
+  const toggleMinimized = () => {
+    setStripMinimized((v) => {
+      const nv = !v;
+      saveStripPrefs({ minimized: nv });
+      return nv;
+    });
+  };
+
+  const toggleHidden = () => {
+    setStripHidden((v) => {
+      const nv = !v;
+      saveStripPrefs({ hidden: nv });
+      return nv;
+    });
+  };
+
+  const toggleMode = () => {
+    setStripMode((m) => {
+      const nm: StripMode = m === "vertical" ? "horizontal" : "vertical";
+      saveStripPrefs({ mode: nm });
+      return nm;
+    });
+  };
 
   return (
     <View
@@ -157,7 +239,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
             </View>
           </View>
 
-          {/* Zoom + menu bar  */}
+          {/* Zoom + menu bar */}
           <View style={styles.menuButton}>
             <IconButton
               name="remove-outline"
@@ -241,7 +323,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
         </View>
       )}
 
-      {/* Zoom hint –*/}
+      {/* Zoom hint */}
       {zoomHintVisible && (
         <View style={styles.zoomBadge}>
           <MText variant="caption" color="textPrimary">
@@ -250,15 +332,20 @@ export const PdfReader: FC<PdfReaderProps> = ({
         </View>
       )}
 
-      {/* Page strip  */}
-      {typeof totalPages === "number" && totalPages > 1 && (
+      {/* ✅ Persisted Floating Page Strip */}
+      {!isFullscreen && typeof totalPages === "number" && totalPages > 1 && (
         <FloatingPageStrip
           mode={stripMode}
           minimized={stripMinimized}
-          onToggleMinimized={() => setStripMinimized((v) => !v)}
-          onToggleMode={() =>
-            setStripMode((m) => (m === "vertical" ? "horizontal" : "vertical"))
-          }
+          hidden={stripHidden}
+          initialPos={stripPos}
+          onPosChange={(p) => {
+            setStripPos(p);
+            saveStripPrefs({ pos: p });
+          }}
+          onToggleMinimized={toggleMinimized}
+          onToggleHidden={toggleHidden}
+          onToggleMode={toggleMode}
         >
           <PageStrip
             totalPages={totalPages}
@@ -344,23 +431,5 @@ const styles = StyleSheet.create({
     backgroundColor: bookshelfColors.surface,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: bookshelfColors.borderSubtle,
-  },
-
-  pageStripWrapper: {
-    position: "absolute",
-    right: 0,
-    bottom: spacing.lg,
-    top: spacing.lg * 50,
-    zIndex: 5,
-  },
-  pageStripContainer: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: radii.full,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.xs,
-  },
-  pageStripContent: {
-    paddingHorizontal: spacing.xs,
-    alignItems: "center",
   },
 });

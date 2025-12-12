@@ -1,4 +1,4 @@
-import React, { ReactNode, useMemo, useRef, useState } from "react";
+import React, { ReactNode, useMemo, useRef, useState, useEffect } from "react";
 import {
   View,
   StyleSheet,
@@ -10,25 +10,42 @@ import { IconButton } from "@/components/ui/AppIcon";
 import { spacing, useTheme, radii, iconSizes } from "@budget/ui-native";
 
 export type StripMode = "vertical" | "horizontal";
+export type StripPos = { x: number; y: number };
 
 type FloatingPageStripProps = {
   mode: StripMode;
   minimized: boolean;
+  hidden: boolean;
+
+  initialPos?: StripPos;
+  onPosChange?: (pos: StripPos) => void;
+
   onToggleMinimized: () => void;
+  onToggleHidden: () => void;
   onToggleMode: () => void;
+
   children: ReactNode;
 };
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
 
 const EDGE_PADDING = 10;
-const BOTTOM_SAFE = 24; // istersen sonra SafeAreaInsets yaparız
+const BOTTOM_SAFE = 24;
 const TOP_SAFE = 24;
+
+const defaultPosForMode = (mode: StripMode): StripPos =>
+  mode === "vertical"
+    ? { x: SCREEN_W - 80, y: SCREEN_H - 260 }
+    : { x: (SCREEN_W - 220) / 2, y: SCREEN_H - 170 };
 
 export const FloatingPageStrip = ({
   mode,
   minimized,
+  hidden,
+  initialPos,
+  onPosChange,
   onToggleMinimized,
+  onToggleHidden,
   onToggleMode,
   children,
 }: FloatingPageStripProps) => {
@@ -36,25 +53,26 @@ export const FloatingPageStrip = ({
   const [boxSize, setBoxSize] = useState({ width: 0, height: 0 });
 
   const pos = useRef(
-    new Animated.ValueXY(
-      mode === "vertical"
-        ? { x: SCREEN_W - 80, y: SCREEN_H - 260 }
-        : { x: (SCREEN_W - 220) / 2, y: SCREEN_H - 170 }
-    )
+    new Animated.ValueXY(initialPos ?? defaultPosForMode(mode))
   ).current;
 
-  const snapToDefaultForMode = (nextMode: StripMode) => {
-    const to =
-      nextMode === "vertical"
-        ? { x: SCREEN_W - 80, y: SCREEN_H - 260 }
-        : { x: (SCREEN_W - 220) / 2, y: SCREEN_H - 170 };
+  // AsyncStorage load sonrası initialPos gelirse uygula
+  useEffect(() => {
+    if (!initialPos) return;
+    pos.setValue({ x: initialPos.x, y: initialPos.y });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPos?.x, initialPos?.y]);
 
+  const snapToDefaultForMode = (nextMode: StripMode) => {
+    const to = defaultPosForMode(nextMode);
     Animated.spring(pos, {
       toValue: to,
       useNativeDriver: false,
       tension: 120,
       friction: 16,
-    }).start();
+    }).start(() => {
+      onPosChange?.(to);
+    });
   };
 
   const panResponder = useMemo(() => {
@@ -97,15 +115,41 @@ export const FloatingPageStrip = ({
           y = maxY;
         }
 
+        const finalPos = { x, y };
+
         Animated.spring(pos, {
-          toValue: { x, y },
+          toValue: finalPos,
           useNativeDriver: false,
           tension: 140,
           friction: 18,
-        }).start();
+        }).start(() => {
+          onPosChange?.(finalPos);
+        });
       },
     });
-  }, [mode, pos, boxSize.width, boxSize.height]);
+  }, [mode, pos, boxSize.width, boxSize.height, onPosChange]);
+
+  // Hidden mod: sağ-alt sabit göz ikonu
+  if (hidden) {
+    return (
+      <View
+        style={[
+          styles.hiddenFixed,
+          {
+            backgroundColor: colors.surface,
+            borderColor: colors.borderSubtle,
+          },
+        ]}
+      >
+        <IconButton
+          name="eye-outline"
+          size={iconSizes.lg}
+          onPress={onToggleHidden}
+          accessibilityLabel="Show pagination"
+        />
+      </View>
+    );
+  }
 
   return (
     <Animated.View
@@ -125,7 +169,6 @@ export const FloatingPageStrip = ({
           },
         ]}
       >
-        {/* Toolbar */}
         <View style={styles.toolbar}>
           <IconButton
             name={minimized ? "chevron-up" : "chevron-down"}
@@ -146,9 +189,15 @@ export const FloatingPageStrip = ({
             }}
             accessibilityLabel="Switch pagination mode"
           />
+
+          <IconButton
+            name="eye-off-outline"
+            size={iconSizes.md}
+            onPress={onToggleHidden}
+            accessibilityLabel="Hide pagination"
+          />
         </View>
 
-        {/* ✅ Minimized modda da children görünür (sadece daha kompakt padding) */}
         <View style={[styles.content, minimized && styles.contentMinimized]}>
           {children}
         </View>
@@ -182,5 +231,15 @@ const styles = StyleSheet.create({
   contentMinimized: {
     paddingHorizontal: 0,
     paddingBottom: 0,
+  },
+  hiddenFixed: {
+    position: "absolute",
+    right: spacing.lg,
+    bottom: spacing.lg * 1.2,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radii.full,
+    padding: spacing.sm,
+    zIndex: 100,
+    elevation: 6,
   },
 });
