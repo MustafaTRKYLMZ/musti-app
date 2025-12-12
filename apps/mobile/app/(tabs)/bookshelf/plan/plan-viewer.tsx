@@ -51,7 +51,6 @@ export default function PlanViewerScreen() {
   const [targetForToday, setTargetForToday] = useState(0);
   const [todayPagesForThisBook, setTodayPagesForThisBook] = useState(0);
   const [hasReachedTarget, setHasReachedTarget] = useState(false);
-
   // banner animation
   const bannerAnim = React.useRef(new Animated.Value(0)).current;
 

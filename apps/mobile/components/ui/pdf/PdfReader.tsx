@@ -1,4 +1,4 @@
-import React, { FC } from "react";
+import React, { FC, useState, useRef } from "react";
 import { View, StyleSheet } from "react-native";
 import Pdf, { PdfRef } from "react-native-pdf";
 import {
@@ -11,7 +11,8 @@ import {
 } from "@budget/ui-native";
 import { IconButton } from "@/components/ui/AppIcon";
 
-const { colors } = bookshelfTheme;
+const { colors: bookshelfColors } = bookshelfTheme;
+
 type PdfReaderProps = {
   isFullscreen: boolean;
   name: string;
@@ -44,6 +45,47 @@ export const PdfReader: FC<PdfReaderProps> = ({
   const theme = useTheme();
   const { colors } = theme;
 
+  const [scale, setScale] = useState(1);
+  const [zoomHintVisible, setZoomHintVisible] = useState(false);
+  const hideZoomTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const zoomPercent = Math.round(scale * 100);
+
+  const scheduleHideZoomHint = () => {
+    if (hideZoomTimeoutRef.current) {
+      clearTimeout(hideZoomTimeoutRef.current);
+    }
+    hideZoomTimeoutRef.current = setTimeout(() => {
+      setZoomHintVisible(false);
+    }, 1200);
+  };
+
+  const showZoomHint = () => {
+    setZoomHintVisible(true);
+    scheduleHideZoomHint();
+  };
+
+  const handleZoomOut = () => {
+    setScale((prev) => {
+      const next = Math.max(1, Number((prev - 0.2).toFixed(2)));
+      return next;
+    });
+    showZoomHint();
+  };
+
+  const handleZoomIn = () => {
+    setScale((prev) => {
+      const next = Math.min(5, Number((prev + 0.2).toFixed(2)));
+      return next;
+    });
+    showZoomHint();
+  };
+
+  const handleInternalScaleChanged = (newScale: number) => {
+    setScale(newScale);
+    showZoomHint();
+  };
+
   return (
     <View
       style={[
@@ -51,6 +93,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
         { backgroundColor: isFullscreen ? "#000" : colors.background },
       ]}
     >
+      {/* Header */}
       {!isFullscreen && (
         <View>
           <View
@@ -75,6 +118,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
             >
               {name}
             </MText>
+
             <View style={styles.headerActions}>
               <IconButton
                 name="expand-outline"
@@ -84,21 +128,39 @@ export const PdfReader: FC<PdfReaderProps> = ({
               />
               <IconButton
                 name="close-outline"
-                size={iconSizes["xl"]}
+                size={iconSizes.xl}
                 onPress={handleClose}
                 style={styles.iconButton}
               />
             </View>
           </View>
 
-          {onPressMenu && (
-            <View style={styles.menuButton}>
-              <IconButton name="menu" onPress={onPressMenu} />
-            </View>
-          )}
+          {/* Zoom + menu bar */}
+          <View style={styles.menuButton}>
+            <IconButton
+              name="remove-outline"
+              onPress={handleZoomOut}
+              accessibilityLabel="Zoom out"
+            />
+
+            <IconButton
+              name="add-outline"
+              onPress={handleZoomIn}
+              accessibilityLabel="Zoom in"
+            />
+
+            {onPressMenu && (
+              <IconButton
+                name="menu"
+                onPress={onPressMenu}
+                accessibilityLabel="Open chapters"
+              />
+            )}
+          </View>
         </View>
       )}
 
+      {/* Fullscreen toggle */}
       {isFullscreen && (
         <View style={styles.fullscreenOverlay}>
           <IconButton
@@ -113,6 +175,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
         </View>
       )}
 
+      {/* PDF */}
       <View
         style={[
           styles.viewer,
@@ -121,7 +184,6 @@ export const PdfReader: FC<PdfReaderProps> = ({
       >
         <Pdf
           ref={pdfRef}
-          fitPolicy={2}
           source={source}
           style={[
             styles.pdf,
@@ -134,16 +196,32 @@ export const PdfReader: FC<PdfReaderProps> = ({
           horizontal
           enablePaging
           page={initialPage}
+          scale={scale}
+          minScale={1}
+          maxScale={5}
+          enableDoubleTapZoom
+          fitPolicy={2}
           onLoadComplete={handleLoadComplete}
           onError={(error) => console.log("PDF error:", error)}
           onPageChanged={handlePageChanged}
+          onScaleChanged={handleInternalScaleChanged}
         />
       </View>
 
+      {/* Page badge */}
       {typeof currentPage === "number" && typeof totalPages === "number" && (
         <View style={styles.pageBadge}>
           <MText variant="caption" color="textInverse">
             {currentPage} / {totalPages}
+          </MText>
+        </View>
+      )}
+
+      {/* Zoom hint badge (ephemeral) */}
+      {zoomHintVisible && (
+        <View style={styles.zoomBadge}>
+          <MText variant="caption" color="textPrimary">
+            {zoomPercent}%
           </MText>
         </View>
       )}
@@ -155,7 +233,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing["xl"],
+    paddingTop: spacing.xl,
     paddingVertical: spacing.md,
     flexDirection: "row",
     alignItems: "center",
@@ -192,7 +270,8 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xs,
-    backgroundColor: colors.surface,
+    backgroundColor: bookshelfColors.surface,
+    gap: spacing.sm,
   },
   pageBadge: {
     position: "absolute",
@@ -202,6 +281,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
     borderRadius: radii.full,
-    backgroundColor: colors.background,
+    backgroundColor: bookshelfColors.background,
+  },
+  zoomBadge: {
+    position: "absolute",
+    right: spacing.lg,
+    bottom: spacing.lg + 40,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.full,
+    backgroundColor: bookshelfColors.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: bookshelfColors.borderSubtle,
   },
 });
