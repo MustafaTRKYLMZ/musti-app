@@ -163,6 +163,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: spacing.lg,
-    backgroundColor: "red",
   },
 });

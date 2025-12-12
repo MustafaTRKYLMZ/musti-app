@@ -1,4 +1,4 @@
-// apps/mobile/components/ui/Books/SectionList.tsx
+// apps/mobile/components/Books/SectionList.tsx
 
 import { BookSection } from "@/store/useBookSectionsStore";
 import { spacing } from "@budget/ui-native";

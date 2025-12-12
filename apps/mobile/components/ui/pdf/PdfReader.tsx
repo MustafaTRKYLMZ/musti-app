@@ -240,7 +240,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
           </View>
 
           {/* Zoom + menu bar */}
-          <View style={styles.menuButton}>
+          <View style={[styles.menuButton, { backgroundColor: colors.surface }]}>
             <IconButton
               name="remove-outline"
               onPress={handleZoomOut}
@@ -316,7 +316,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
 
       {/* Page badge */}
       {typeof currentPage === "number" && typeof totalPages === "number" && (
-        <View style={styles.pageBadge}>
+        <View style={[styles.pageBadge, { backgroundColor: colors.background }]}>
           <MText variant="caption" color="textInverse">
             {currentPage} / {totalPages}
           </MText>
@@ -406,19 +406,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xs,
-    backgroundColor: bookshelfColors.surface,
     gap: spacing.sm,
   },
 
   pageBadge: {
     position: "absolute",
-    left: "50%",
     bottom: spacing.lg,
-    transform: [{ translateX: -25 }],
+    alignSelf: "center",
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
     borderRadius: radii.full,
-    backgroundColor: bookshelfColors.background,
   },
 
   zoomBadge: {

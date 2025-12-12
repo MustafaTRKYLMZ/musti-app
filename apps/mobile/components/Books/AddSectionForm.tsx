@@ -70,10 +70,11 @@ export const AddSectionForm: FC<AddSectionFormProps> = ({
               styles.addButton,
               {
                 opacity: isValid ? 1 : 0.4,
-                backgroundColor: isValid ? colors.background : colors.primary,
+                backgroundColor: isValid ? colors.primary : colors.background,
               },
             ]}
             onPress={handleSubmit}
+            accessibilityLabel="Add chapter"
           />
         </View>
       </View>

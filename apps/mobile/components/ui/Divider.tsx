@@ -7,7 +7,6 @@ export const Divider = () => {
 const styles = StyleSheet.create({
   divider: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    marginBottom: spacing.sm,
     marginVertical: spacing.sm,
   },
 });

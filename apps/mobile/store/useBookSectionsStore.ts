@@ -36,7 +36,7 @@ export const useBookSectionsStore = create<BookSectionsState>()(
       addSection: (bookUri, sectionInput) =>
         set((state) => {
           const current = state.byBook[bookUri] ?? [];
-          const id = Date.now().toString(); 
+          const id = crypto.randomUUID();
           const newSection: BookSection = {
             id,
             ...sectionInput,

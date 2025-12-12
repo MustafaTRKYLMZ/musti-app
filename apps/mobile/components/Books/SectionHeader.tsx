@@ -1,5 +1,4 @@
 import { MText, spacing } from "@budget/ui-native";
-import { useTheme } from "@react-navigation/native";
 import { FC } from "react";
 import { View, StyleSheet } from "react-native";
 import { IconButton } from "../ui/AppIcon";
@@ -16,6 +15,7 @@ export const SectionHeader: FC<SectionHeaderProps> = ({ title, onClose }) => {
         name="close-outline"
         style={styles.closeIcon}
         onPress={onClose}
+        accessibilityLabel="Close chapters"
       />
     </View>
   );
