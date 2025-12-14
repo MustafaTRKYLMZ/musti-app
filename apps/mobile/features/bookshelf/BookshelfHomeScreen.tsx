@@ -29,6 +29,7 @@ import { BookshelfHeader } from "@/components/BookshelfHeader";
 import { bookshelfTheme, iconSizes, MText } from "@budget/ui-native";
 import { ShelfHeader } from "@/components/ShelfHeader";
 import { IconButton } from "@/components/ui/AppIcon";
+import { AppSwitcherButton } from "@/components/AppSwitcherButton";
 
 const { colors, spacing, radii } = bookshelfTheme;
 
@@ -222,6 +223,23 @@ export default function BookshelfHomeScreen() {
       title="Bookshelf"
       onPressMenu={() => setSidebarOpen(true)}
       headerCenter={<BookshelfHeader />}
+      headerRight={
+        <View style={styles.headerActions}>
+          <IconButton
+            name="notifications-circle-outline"
+            size={iconSizes.lg}
+            color={bColors.textPrimary}
+            onPress={() => router.push("/(tabs)/bookshelf/reminders")}
+          />
+          <IconButton
+            name="settings-outline"
+            size={iconSizes.lg}
+            color={bColors.textPrimary}
+            onPress={() => router.push("/(tabs)/bookshelf/settings")}
+          />
+          <AppSwitcherButton />
+        </View>
+      }
       safeAreaStyle={bookshelfHeaderStyles.safe}
       headerContainerStyle={bookshelfHeaderStyles.header}
       headerTitleStyle={bookshelfHeaderStyles.title}
@@ -233,21 +251,6 @@ export default function BookshelfHomeScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <IconButton
-            name="notifications-circle-outline"
-            size={iconSizes.lg}
-            color={colors.textPrimary}
-            style={styles.iconButton}
-            onPress={() => router.push("/(tabs)/bookshelf/reminders")}
-          />
-          <IconButton
-            name="settings-outline"
-            size={iconSizes.lg}
-            color={colors.textPrimary}
-            style={styles.iconButton}
-            onPress={() => router.push("/(tabs)/bookshelf/settings")}
-          />
-
           {/* PLAN SHELF */}
           <View style={styles.shelfSection}>
             <ShelfHeader
@@ -395,6 +398,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+
   scrollContent: {
     paddingTop: spacing.lg,
     paddingBottom: spacing["3xl"],
