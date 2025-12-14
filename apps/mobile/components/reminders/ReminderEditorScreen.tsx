@@ -261,17 +261,18 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
           <MText style={{ color: text2 }}>Message</MText>
           <TextInput
             value={body}
-            onChangeText={setBody}
-            placeholder="Örn: Bugün 10 sayfa oku"
+            onChange={(e) => setBody(e.nativeEvent.text)}
+            placeholder="E.g: Today read 10 pages"
             placeholderTextColor={text2}
             multiline
+            disableFullscreenUI
+            keyboardType="default"
             style={[
               styles.input,
               styles.textarea,
               { color: text, borderColor: border, backgroundColor: innerBg },
             ]}
           />
-
           <View style={{ height: spacing.md }} />
 
           <View style={styles.row}>

@@ -6,6 +6,7 @@ import {
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
+import "expo-notifications";
 
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTransactionsStore } from "../store/budget/transactions/useTransactionsStore";
