@@ -6,7 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import dayjs from "dayjs";
 
-import { useTransactionsStore } from "../../../store/useTransactionsStore";
+import { useTransactionsStore } from "../../../store/budget/transactions/useTransactionsStore";
 import { SimulationItemModal } from "../../../components/ui/modals/SimulationItemModal";
 import { RenameScenarioModal } from "@/components/ui/modals/RenameScenarioModal";
 import { DailyBalanceSection } from "@/features/transactions";
@@ -23,7 +23,7 @@ import {
   shadows,
   iconSizes,
 } from "@budget/ui-native";
-import { useSimulationStore } from "@/store/useSimulationStore";
+import { useSimulationStore } from "@/store/budget/simulation/useSimulationStore";
 import { BaseIcon, IconButton } from "@/components/ui/AppIcon";
 
 export function SimulationScreen() {

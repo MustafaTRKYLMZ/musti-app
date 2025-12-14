@@ -3,8 +3,8 @@
 import { useMemo } from "react";
 import dayjs from "dayjs";
 
-import { useReadingPlanStore } from "@/store/useReadingPlanStore";
-import { useBooksStore } from "@/store/useBooksStore";
+import { useReadingPlanStore } from "@/store/bookshelf/useReadingPlanStore";
+import { useBooksStore } from "@/store/bookshelf/useBooksStore";
 import type { LocalPdfFile } from "@/utils/getPdfsDirectory";
 
 export type CurrentPlanInfo = {

@@ -13,7 +13,7 @@ import {
 import { MText, spacing, radii, iconSizes, useTheme } from "@budget/ui-native";
 
 import type { LocalPdfFile } from "@/utils/getPdfsDirectory";
-import { useReadingPlanStore } from "@/store/useReadingPlanStore";
+import { useReadingPlanStore } from "@/store/bookshelf/useReadingPlanStore";
 import { BaseIcon, IconButton } from "@/components/ui/AppIcon";
 
 interface ReadingPlanModalProps {

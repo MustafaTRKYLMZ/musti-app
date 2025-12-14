@@ -8,11 +8,12 @@ import {
   TextStyle,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MText, colors, spacing, radii } from "@budget/ui-native";
+import { MText, spacing, radii, bookshelfTheme } from "@budget/ui-native";
 import { AppSwitcherButton } from "@/components/AppSwitcherButton";
 import { HeaderMenuButton } from "@/components/ui/HeaderMenuButton";
 
 type AppScreenVariant = "default" | "bookshelf" | "budget";
+const { colors } = bookshelfTheme;
 
 type AppScreenProps = {
   title?: string;

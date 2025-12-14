@@ -8,13 +8,18 @@ import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
 
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { useTransactionsStore } from "../store/useTransactionsStore";
-import { useSettingsStore } from "../store/useSettingsStore";
+import { useTransactionsStore } from "../store/budget/transactions/useTransactionsStore";
+import { useSettingsStore } from "../store/budget/useSettingsStore";
 import { useEffect } from "react";
-
+import { initNotificationsOnce } from "@budget/notifications";
+import { SchedulersHost } from "@/components/SchedulersHost";
 export const unstable_settings = {
   anchor: "(tabs)",
 };
+
+useEffect(() => {
+  initNotificationsOnce();
+}, []);
 
 export default function RootLayout() {
   "use no memo";
@@ -30,6 +35,7 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+      <SchedulersHost />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="launcher" />

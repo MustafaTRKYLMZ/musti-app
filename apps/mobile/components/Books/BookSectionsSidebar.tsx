@@ -6,8 +6,8 @@ import { spacing, useTheme } from "@budget/ui-native";
 import {
   useBookSectionsStore,
   type BookSection,
-} from "@/store/useBookSectionsStore";
-import { useBooksStore } from "@/store/useBooksStore";
+} from "@/store/bookshelf/useBookSectionsStore";
+import { useBooksStore } from "@/store/bookshelf/useBooksStore";
 import { SectionHeader } from "./SectionHeader";
 import { AddSectionForm } from "./AddSectionForm";
 import { SectionList } from "./SectionList";
@@ -107,9 +107,9 @@ export function BookSectionsSidebar({
 
   return (
     <View style={styles.overlay} pointerEvents="box-none">
-      <Pressable 
-        style={[styles.backdrop, { backgroundColor: colors.backdrop }]} 
-        onPress={onClose} 
+      <Pressable
+        style={[styles.backdrop, { backgroundColor: colors.backdropStrong }]}
+        onPress={onClose}
       />
 
       <View

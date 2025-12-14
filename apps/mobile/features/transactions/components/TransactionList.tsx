@@ -16,7 +16,7 @@ import dayjs from "dayjs";
 import { LocalizedDateText, type LocalTransaction } from "@budget/core";
 import { MText, colors, spacing, radii } from "@budget/ui-native";
 
-import { useTransactionsStore } from "../../../store/useTransactionsStore";
+import { useTransactionsStore } from "../../../store/budget/transactions/useTransactionsStore";
 import { CashflowRow } from "@/components/ui/CashflowRow";
 import { findSectionIndexForDate } from "@/utils/findSectionIndexForDate";
 import { AnimatedFutureRow } from "../../../components/ui/AnimatedFutureRow";

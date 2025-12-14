@@ -13,10 +13,10 @@ import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import * as DocumentPicker from "expo-document-picker";
 
-import { useSettingsStore } from "@/store/useSettingsStore";
-import { useSimulationStore } from "@/store/useSimulationStore";
-import { useTransactionsStore } from "@/store/useTransactionsStore";
-import { persistSimulationState } from "@/store/simulation/persistState";
+import { useSettingsStore } from "@/store/budget/useSettingsStore";
+import { useSimulationStore } from "@/store/budget/simulation/useSimulationStore";
+import { useTransactionsStore } from "@/store/budget/transactions/useTransactionsStore";
+import { persistSimulationState } from "@/store/budget/simulation/persistState";
 
 export const BackupSection = () => {
   const { t } = useTranslation();

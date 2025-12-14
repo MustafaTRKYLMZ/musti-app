@@ -13,8 +13,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import dayjs from "dayjs";
 
-import { useSettingsStore } from "../../../store/useSettingsStore";
-import { useTransactionsStore } from "../../../store/useTransactionsStore";
+import { useSettingsStore } from "../../../store/budget/useSettingsStore";
+import { useTransactionsStore } from "../../../store/budget/transactions/useTransactionsStore";
 import { syncTransactions } from "../../../services/syncTransactions";
 import { useTranslation } from "@budget/core";
 import { LocalizedDatePicker } from "@/components/ui/LocalizedDatePicker";

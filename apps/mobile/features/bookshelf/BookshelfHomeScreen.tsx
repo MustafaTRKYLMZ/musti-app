@@ -1,5 +1,12 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
-import { View, StyleSheet, FlatList, Alert, ScrollView } from "react-native";
+import {
+  View,
+  StyleSheet,
+  FlatList,
+  Alert,
+  ScrollView,
+  Pressable,
+} from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
 import { useRouter } from "expo-router";
 import dayjs from "dayjs";
@@ -10,17 +17,18 @@ import {
   type LocalPdfFile,
 } from "@/utils/getPdfsDirectory";
 import { AddPdfModal } from "@/components/ui/pdf/AddPdfModal";
-import { useBooksStore } from "@/store/useBooksStore";
-import { useReadingStatsStore } from "@/store/useReadingStatsStore";
-import { useReadingPlanStore } from "@/store/useReadingPlanStore";
+import { useBooksStore } from "@/store/bookshelf/useBooksStore";
+import { useReadingStatsStore } from "@/store/bookshelf/useReadingStatsStore";
+import { useReadingPlanStore } from "@/store/bookshelf/useReadingPlanStore";
 import { ReadingPlanModal } from "@/components/ui/modals/CreatePlanModal";
 import { CurrentPlanCard } from "@/features/bookshelf/CurrentPlanCard";
 import { BookCard } from "@/components/Books/BookCard";
 import { useCurrentPlanInfo } from "@/hooks/useCurrentPlanInfo";
 import { AppScreen } from "@/components/AppScreen";
 import { BookshelfHeader } from "@/components/BookshelfHeader";
-import { bookshelfTheme, MText } from "@budget/ui-native";
+import { bookshelfTheme, iconSizes, MText } from "@budget/ui-native";
 import { ShelfHeader } from "@/components/ShelfHeader";
+import { IconButton } from "@/components/ui/AppIcon";
 
 const { colors, spacing, radii } = bookshelfTheme;
 
@@ -156,24 +164,19 @@ export default function BookshelfHomeScreen() {
           : `${baseNewName}.${ext}`
         : baseNewName;
 
-      const oldUri = file.uri; // 🔥 önce eski URI'yi al
+      const oldUri = file.uri;
 
       const lastSlashIndex = file.uri.lastIndexOf("/");
       const dirUri = file.uri.slice(0, lastSlashIndex + 1);
       const newUri =
         dirUri + encodeURIComponent(finalName).replace(/%2F/g, "/");
 
-      // 🔥 Dosyayı taşı
       await FileSystem.moveAsync({
         from: oldUri,
         to: newUri,
       });
 
-      // 🔥 PLAN içindeki tüm referansları güncelle
       renameBookInPlan(oldUri, newUri, finalName);
-
-      // (İleride: progress ve stats için rename action eklersen buradan çağırırız.)
-
       await loadBooks();
     } catch (e) {
       console.warn("Rename error", e);
@@ -184,8 +187,6 @@ export default function BookshelfHomeScreen() {
     }
   }
 
-  // ---- LAST READ LOGIC ----
-  // ---- LAST READ LOGIC (by updatedAt from useBooksStore) ----
   const lastReadBooks = useMemo(() => {
     return books
       .map((b) => {
@@ -198,7 +199,7 @@ export default function BookshelfHomeScreen() {
         if (!a.updatedAt && !b.updatedAt) return 0;
         if (!a.updatedAt) return 1;
         if (!b.updatedAt) return -1;
-        return a.updatedAt < b.updatedAt ? 1 : -1; // newest first
+        return a.updatedAt < b.updatedAt ? 1 : -1;
       })
       .map((x) => x.book)
       .slice(0, 12);
@@ -232,6 +233,21 @@ export default function BookshelfHomeScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
+          <IconButton
+            name="notifications-circle-outline"
+            size={iconSizes.lg}
+            color={colors.textPrimary}
+            style={styles.iconButton}
+            onPress={() => router.push("/(tabs)/bookshelf/reminders")}
+          />
+          <IconButton
+            name="settings-outline"
+            size={iconSizes.lg}
+            color={colors.textPrimary}
+            style={styles.iconButton}
+            onPress={() => router.push("/(tabs)/bookshelf/settings")}
+          />
+
           {/* PLAN SHELF */}
           <View style={styles.shelfSection}>
             <ShelfHeader
@@ -383,13 +399,6 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
     paddingBottom: spacing["3xl"],
   },
-  //shelf header
-  shelfHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  // Shared shelf layout
   shelfSection: {
     marginBottom: spacing.xl,
   },
@@ -412,8 +421,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.backgroundSecondary,
     opacity: 0.6,
   },
-
-  // Plan shelf specifics
   emptyPlanShelf: {
     borderRadius: radii.lg,
     borderWidth: 1,
@@ -423,7 +430,6 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.lg,
     marginTop: spacing.xs,
   },
-
   emptyState: {
     minHeight: 120,
     alignItems: "center",
@@ -440,8 +446,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
     paddingRight: spacing.lg,
   },
-
-  // Grid
   gridContent: {
     paddingTop: spacing.lg,
     paddingBottom: spacing.lg,
