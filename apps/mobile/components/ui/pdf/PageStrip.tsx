@@ -21,8 +21,7 @@ export const PageStrip: FC<PageStripProps> = ({
   orientation = "horizontal",
   maxVisibleChips,
 }) => {
-  const theme = useTheme();
-  const { colors } = theme;
+  const { colors } = useTheme();
 
   const scrollRef = useRef<ScrollView | null>(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
@@ -31,7 +30,7 @@ export const PageStrip: FC<PageStripProps> = ({
     Record<number, { x: number; y: number; width: number; height: number }>
   >({});
 
-  const MAX_CHIPS = 300;
+  const MAX_CHIPS = 10000;
 
   const pages = useMemo(() => {
     if (totalPages <= MAX_CHIPS) {
@@ -58,6 +57,8 @@ export const PageStrip: FC<PageStripProps> = ({
     return best;
   };
 
+  const isVertical = orientation === "vertical";
+
   useEffect(() => {
     if (!scrollRef.current || !currentPage) return;
     if (containerSize.width <= 0 || containerSize.height <= 0) return;
@@ -68,8 +69,6 @@ export const PageStrip: FC<PageStripProps> = ({
 
     const layout = chipLayoutsRef.current[actualPage];
     if (!layout) return;
-
-    const isVertical = orientation === "vertical";
 
     if (isVertical) {
       const chipCenterY = layout.y + layout.height / 2;
@@ -84,11 +83,9 @@ export const PageStrip: FC<PageStripProps> = ({
     currentPage,
     containerSize.width,
     containerSize.height,
-    orientation,
+    isVertical,
     pages,
   ]);
-
-  const isVertical = orientation === "vertical";
 
   const visibleWindowStyle =
     maxVisibleChips && maxVisibleChips > 0
@@ -120,7 +117,12 @@ export const PageStrip: FC<PageStripProps> = ({
       ]}
       onLayout={(e) => {
         const { width, height } = e.nativeEvent.layout;
-        setContainerSize({ width, height });
+
+        // ✅ Only update state when size actually changes (prevents first-render jump)
+        setContainerSize((prev) => {
+          if (prev.width === width && prev.height === height) return prev;
+          return { width, height };
+        });
       }}
     >
       <ScrollView

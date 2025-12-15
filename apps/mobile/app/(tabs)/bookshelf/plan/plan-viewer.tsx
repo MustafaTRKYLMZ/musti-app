@@ -316,7 +316,7 @@ const styles = StyleSheet.create({
   },
   bannerWrapper: {
     position: "absolute",
-    bottom: spacing.lg,
+    bottom: spacing["6xl"] + 16,
     left: 0,
     right: 0,
     alignItems: "center",

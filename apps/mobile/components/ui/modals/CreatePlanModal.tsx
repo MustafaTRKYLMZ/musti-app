@@ -44,8 +44,7 @@ export function ReadingPlanModal({
   const [selectedBookUri, setSelectedBookUri] = useState<string | null>(null);
   const [bookPickerOpen, setBookPickerOpen] = useState(false);
 
-  const theme = useTheme();
-  const { colors } = theme;
+  const { colors } = useTheme();
 
   useEffect(() => {
     if (visible) {
@@ -193,7 +192,8 @@ export function ReadingPlanModal({
             backgroundColor: colors.backdropStrong,
           },
         ]}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 24}
       >
         <TouchableOpacity
           style={styles.backdropTouchable}
@@ -225,263 +225,277 @@ export function ReadingPlanModal({
             />
           </View>
 
-          {/* Plan name */}
-          <View style={styles.field}>
-            <MText variant="body" color="textSecondary">
-              Plan name
-            </MText>
-            <TextInput
-              value={planName}
-              onChangeText={setPlanName}
-              placeholder="Reading plan"
-              style={[
-                styles.textInput,
-                {
-                  borderColor: colors.borderSubtle,
-                  color: colors.textPrimary,
-                  backgroundColor: colors.surfaceElevated ?? colors.surface,
-                },
-              ]}
-              placeholderTextColor={colors.textSecondary}
-            />
-          </View>
-
-          {/* Quick actions */}
-          <View style={styles.quickRow}>
-            <MText variant="body" color="textSecondary">
-              Quick plan
-            </MText>
-            <View style={styles.quickButtons}>
-              <TouchableOpacity
-                style={[
-                  styles.quickButton,
-                  { borderColor: colors.borderSubtle },
-                ]}
-                onPress={() => applyQuickPlanAll(5)}
-              >
-                <MText variant="body" color="textPrimary">
-                  Use all (5 pages/day)
-                </MText>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Book select + input + plus */}
-          <MText
-            variant="body"
-            color="textSecondary"
-            style={styles.sectionLabel}
+          {/* ✅ Scrollable content (keyboard-safe) */}
+          <ScrollView
+            style={{ flex: 1 }}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            contentContainerStyle={{
+              paddingBottom: spacing["3xl"] ?? spacing.xl,
+            }}
           >
-            Add book to plan
-          </MText>
-
-          <View style={styles.selectRow}>
-            {/* Select field */}
-            <View style={styles.selectColumn}>
+            {/* Plan name */}
+            <View style={styles.field}>
               <MText variant="body" color="textSecondary">
-                Book
+                Plan name
               </MText>
-              <TouchableOpacity
+              <TextInput
+                value={planName}
+                onChangeText={setPlanName}
+                placeholder="Reading plan"
                 style={[
-                  styles.bookSelectField,
+                  styles.textInput,
                   {
                     borderColor: colors.borderSubtle,
+                    color: colors.textPrimary,
                     backgroundColor: colors.surfaceElevated ?? colors.surface,
                   },
                 ]}
-                activeOpacity={0.8}
-                onPress={() => {
-                  if (!availableBooks.length) return;
-                  setBookPickerOpen((prev) => !prev);
-                }}
-              >
-                <MText
-                  variant="body"
-                  color={selectedBook ? "textPrimary" : "textSecondary"}
-                  numberOfLines={1}
-                >
-                  {selectedBook
-                    ? selectedBook.name
-                    : availableBooks.length
-                    ? "Select book"
-                    : "All books are in the plan"}
-                </MText>
-
-                {availableBooks.length > 0 && (
-                  <BaseIcon
-                    family="ion"
-                    name={bookPickerOpen ? "chevron-up" : "chevron-down"}
-                    size={iconSizes.md}
-                  />
-                )}
-              </TouchableOpacity>
+                placeholderTextColor={colors.textSecondary}
+              />
             </View>
 
-            {/* Pages input + plus */}
-            <View style={styles.selectRight}>
-              <View style={styles.pagesInputWrapper}>
-                <TextInput
-                  value={currentPagesValue}
-                  onChangeText={(text) => {
-                    if (!selectedBookUri) return;
-                    handleChangePages(selectedBookUri, text);
-                  }}
-                  keyboardType="numeric"
-                  placeholder="0"
+            {/* Quick actions */}
+            <View style={styles.quickRow}>
+              <MText variant="body" color="textSecondary">
+                Quick plan
+              </MText>
+              <View style={styles.quickButtons}>
+                <TouchableOpacity
                   style={[
-                    styles.pagesInput,
+                    styles.quickButton,
+                    { borderColor: colors.borderSubtle },
+                  ]}
+                  onPress={() => applyQuickPlanAll(5)}
+                >
+                  <MText variant="body" color="textPrimary">
+                    Use all (5 pages/day)
+                  </MText>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Book select + input + plus */}
+            <MText
+              variant="body"
+              color="textSecondary"
+              style={styles.sectionLabel}
+            >
+              Add book to plan
+            </MText>
+
+            <View style={styles.selectRow}>
+              {/* Select field */}
+              <View style={styles.selectColumn}>
+                <MText variant="body" color="textSecondary">
+                  Book
+                </MText>
+                <TouchableOpacity
+                  style={[
+                    styles.bookSelectField,
                     {
                       borderColor: colors.borderSubtle,
-                      color: colors.textPrimary,
-                      backgroundColor:
-                        (colors as any).surfaceElevated || colors.surface,
+                      backgroundColor: colors.surfaceElevated ?? colors.surface,
                     },
                   ]}
-                  placeholderTextColor={colors.textSecondary}
-                  editable={!!selectedBookUri}
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    if (!availableBooks.length) return;
+                    setBookPickerOpen((prev) => !prev);
+                  }}
+                >
+                  <MText
+                    variant="body"
+                    color={selectedBook ? "textPrimary" : "textSecondary"}
+                    numberOfLines={1}
+                  >
+                    {selectedBook
+                      ? selectedBook.name
+                      : availableBooks.length
+                      ? "Select book"
+                      : "All books are in the plan"}
+                  </MText>
+
+                  {availableBooks.length > 0 && (
+                    <BaseIcon
+                      family="ion"
+                      name={bookPickerOpen ? "chevron-up" : "chevron-down"}
+                      size={iconSizes.md}
+                    />
+                  )}
+                </TouchableOpacity>
+              </View>
+
+              {/* Pages input + plus */}
+              <View style={styles.selectRight}>
+                <View style={styles.pagesInputWrapper}>
+                  <TextInput
+                    value={currentPagesValue}
+                    onChangeText={(text) => {
+                      if (!selectedBookUri) return;
+                      handleChangePages(selectedBookUri, text);
+                    }}
+                    keyboardType="numeric"
+                    placeholder="0"
+                    style={[
+                      styles.pagesInput,
+                      {
+                        borderColor: colors.borderSubtle,
+                        color: colors.textPrimary,
+                        backgroundColor:
+                          (colors as any).surfaceElevated || colors.surface,
+                      },
+                    ]}
+                    placeholderTextColor={colors.textSecondary}
+                    editable={!!selectedBookUri}
+                  />
+                  <MText
+                    variant="body"
+                    color="textSecondary"
+                    style={styles.pagesSuffix}
+                  >
+                    pages
+                  </MText>
+                </View>
+
+                <IconButton
+                  name="add-circle-outline"
+                  size={iconSizes.lg}
+                  onPress={handleAddOrUpdateSelected}
+                  style={styles.addButton}
                 />
+              </View>
+            </View>
+
+            {/* Dropdown list */}
+            {bookPickerOpen && availableBooks.length > 0 && (
+              <View
+                style={[
+                  styles.dropdown,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.borderSubtle,
+                  },
+                ]}
+              >
+                <ScrollView
+                  style={styles.dropdownList}
+                  contentContainerStyle={styles.dropdownContent}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  {availableBooks.map((book) => {
+                    const isActive = book.uri === selectedBookUri;
+                    return (
+                      <TouchableOpacity
+                        key={book.uri}
+                        style={[
+                          styles.dropdownItem,
+                          isActive && {
+                            backgroundColor:
+                              (colors as any).surfaceStrong || colors.surface,
+                          },
+                        ]}
+                        activeOpacity={0.8}
+                        onPress={() => {
+                          setSelectedBookUri(book.uri);
+                          setBookPickerOpen(false);
+                        }}
+                      >
+                        <MText
+                          variant="body"
+                          color="textPrimary"
+                          numberOfLines={1}
+                        >
+                          {book.name}
+                        </MText>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            )}
+
+            {/* Selected books list */}
+            {selectedBooks.length > 0 && (
+              <View style={styles.selectedSection}>
                 <MText
                   variant="body"
                   color="textSecondary"
-                  style={styles.pagesSuffix}
+                  style={styles.sectionLabel}
                 >
-                  pages
+                  Selected books
                 </MText>
-              </View>
 
-              <IconButton
-                name="add-circle-outline"
-                size={iconSizes.lg}
-                onPress={handleAddOrUpdateSelected}
-                style={styles.addButton}
-              />
-            </View>
-          </View>
+                {selectedBooks.map((book) => {
+                  const pagesValue = entries[book.uri] ?? "";
 
-          {/* Dropdown list */}
-          {bookPickerOpen && availableBooks.length > 0 && (
-            <View
-              style={[
-                styles.dropdown,
-                {
-                  backgroundColor: colors.surface, // 🔹 her zaman açık yüzey
-                  borderColor: colors.borderSubtle,
-                },
-              ]}
-            >
-              <ScrollView
-                style={styles.dropdownList}
-                contentContainerStyle={styles.dropdownContent}
-                keyboardShouldPersistTaps="handled"
-              >
-                {availableBooks.map((book) => {
-                  const isActive = book.uri === selectedBookUri;
                   return (
-                    <TouchableOpacity
-                      key={book.uri}
-                      style={[
-                        styles.dropdownItem,
-                        isActive && {
-                          backgroundColor:
-                            (colors as any).surfaceStrong || colors.surface,
-                        },
-                      ]}
-                      activeOpacity={0.8}
-                      onPress={() => {
-                        setSelectedBookUri(book.uri);
-                        setBookPickerOpen(false);
-                      }}
-                    >
-                      <MText
-                        variant="body"
-                        color="textPrimary"
-                        numberOfLines={1}
-                      >
-                        {book.name}
-                      </MText>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            </View>
-          )}
-
-          {/* Selected books list */}
-          {selectedBooks.length > 0 && (
-            <View style={styles.selectedSection}>
-              <MText
-                variant="body"
-                color="textSecondary"
-                style={styles.sectionLabel}
-              >
-                Selected books
-              </MText>
-
-              {selectedBooks.map((book) => {
-                const pagesValue = entries[book.uri] ?? "";
-
-                return (
-                  <View key={book.uri} style={styles.selectedRow}>
-                    <View style={styles.selectedInfo}>
-                      <MText
-                        variant="body"
-                        color="textPrimary"
-                        numberOfLines={1}
-                      >
-                        {book.name}
-                      </MText>
-                    </View>
-
-                    <View style={styles.selectedControls}>
-                      <View style={styles.pagesInputWrapper}>
-                        <TextInput
-                          value={pagesValue}
-                          onChangeText={(text) =>
-                            handleChangePages(book.uri, text)
-                          }
-                          keyboardType="numeric"
-                          placeholder="0"
-                          style={[
-                            styles.pagesInput,
-                            {
-                              borderColor: colors.borderSubtle,
-                              color: colors.textPrimary,
-                              backgroundColor:
-                                colors.surfaceElevated ?? colors.surface,
-                            },
-                          ]}
-                          placeholderTextColor={colors.textSecondary}
-                        />
+                    <View key={book.uri} style={styles.selectedRow}>
+                      <View style={styles.selectedInfo}>
                         <MText
                           variant="body"
-                          color="textSecondary"
-                          style={styles.pagesSuffix}
+                          color="textPrimary"
+                          numberOfLines={1}
                         >
-                          pages
+                          {book.name}
                         </MText>
                       </View>
 
-                      <IconButton
-                        name="trash-outline"
-                        size={iconSizes.md}
-                        onPress={() => handleRemoveBook(book.uri)}
-                        style={styles.removeButton}
-                      />
-                    </View>
-                  </View>
-                );
-              })}
-            </View>
-          )}
+                      <View style={styles.selectedControls}>
+                        <View style={styles.pagesInputWrapper}>
+                          <TextInput
+                            value={pagesValue}
+                            onChangeText={(text) =>
+                              handleChangePages(book.uri, text)
+                            }
+                            keyboardType="numeric"
+                            placeholder="0"
+                            style={[
+                              styles.pagesInput,
+                              {
+                                borderColor: colors.borderSubtle,
+                                color: colors.textPrimary,
+                                backgroundColor:
+                                  colors.surfaceElevated ?? colors.surface,
+                              },
+                            ]}
+                            placeholderTextColor={colors.textSecondary}
+                          />
+                          <MText
+                            variant="body"
+                            color="textSecondary"
+                            style={styles.pagesSuffix}
+                          >
+                            pages
+                          </MText>
+                        </View>
 
-          {/* Actions */}
+                        <IconButton
+                          name="trash-outline"
+                          size={iconSizes.md}
+                          onPress={() => handleRemoveBook(book.uri)}
+                          style={styles.removeButton}
+                        />
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+          </ScrollView>
+
+          {/* ✅ Actions fixed at bottom */}
           <View style={styles.actions}>
             <TouchableOpacity
               onPress={onClose}
               style={[
                 styles.button,
                 styles.secondaryButton,
-                { borderColor: colors.borderSubtle },
+                {
+                  borderColor: colors.borderSubtle,
+                  backgroundColor: colors.surface,
+                },
               ]}
             >
               <MText variant="body" color="textPrimary">
@@ -517,9 +531,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   modalContent: {
+    height: "86%", // ✅ important: gives ScrollView room + keeps actions visible
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
-    paddingBottom: spacing["2xl"],
+    paddingBottom: spacing.lg,
     borderTopLeftRadius: radii.xl,
     borderTopRightRadius: radii.xl,
     borderTopWidth: StyleSheet.hairlineWidth,
@@ -652,7 +667,7 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: "row",
     justifyContent: "flex-end",
-    marginTop: spacing.lg,
+    marginTop: spacing.md,
     gap: spacing.sm,
   },
   button: {

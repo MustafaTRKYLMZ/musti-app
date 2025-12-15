@@ -36,8 +36,8 @@ export function BookSectionsSidebar({
   const removeSectionFromStore = useBookSectionsStore((s) => s.removeSection);
   const updateSection = useBookSectionsStore((s) => s.updateSection);
 
-  const sections: BookSection[] = bookUri ? byBook[bookUri] ?? [] : [];
-
+  const sectionsData: BookSection[] = bookUri ? byBook[bookUri] ?? [] : [];
+  const sections = sectionsData.sort((a, b) => a.startPage - b.startPage);
   const [title, setTitle] = useState("");
   const [startPage, setStartPage] = useState("");
   const [pageError, setPageError] = useState<string | null>(null);

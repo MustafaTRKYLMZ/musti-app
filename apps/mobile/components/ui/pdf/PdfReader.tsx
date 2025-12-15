@@ -69,6 +69,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
   const [stripMinimized, setStripMinimized] = useState(false);
   const [stripHidden, setStripHidden] = useState(false);
   const [stripPos, setStripPos] = useState<StripPos | undefined>(undefined);
+  const [stripPrefsReady, setStripPrefsReady] = useState(false);
 
   const zoomPercent = Math.round(scale * 100);
 
@@ -131,27 +132,30 @@ export const PdfReader: FC<PdfReaderProps> = ({
     (async () => {
       try {
         const raw = await AsyncStorage.getItem(storageKey);
-        if (!raw) return;
-
-        const data = JSON.parse(raw) as Partial<StripPrefs>;
         if (!alive) return;
 
-        if (data.mode === "vertical" || data.mode === "horizontal") {
-          setStripMode(data.mode);
-        }
-        if (typeof data.minimized === "boolean")
-          setStripMinimized(data.minimized);
-        if (typeof data.hidden === "boolean") setStripHidden(data.hidden);
+        if (raw) {
+          const data = JSON.parse(raw) as Partial<StripPrefs>;
 
-        if (
-          data.pos &&
-          typeof data.pos.x === "number" &&
-          typeof data.pos.y === "number"
-        ) {
-          setStripPos({ x: data.pos.x, y: data.pos.y });
+          if (data.mode === "vertical" || data.mode === "horizontal") {
+            setStripMode(data.mode);
+          }
+          if (typeof data.minimized === "boolean")
+            setStripMinimized(data.minimized);
+          if (typeof data.hidden === "boolean") setStripHidden(data.hidden);
+
+          if (
+            data.pos &&
+            typeof data.pos.x === "number" &&
+            typeof data.pos.y === "number"
+          ) {
+            setStripPos({ x: data.pos.x, y: data.pos.y });
+          }
         }
       } catch (e) {
         console.log("strip prefs load error", e);
+      } finally {
+        if (alive) setStripPrefsReady(true); // ✅ kritik
       }
     })();
 
@@ -211,6 +215,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
                 shadowOpacity: 0.12,
                 shadowRadius: 8,
                 shadowOffset: { width: 0, height: 3 },
+                paddingTop: isFullscreen ? 0 : spacing["2xl"],
               },
             ]}
           >
@@ -242,7 +247,9 @@ export const PdfReader: FC<PdfReaderProps> = ({
           </View>
 
           {/* Zoom + menu bar */}
-          <View style={[styles.menuButton, { backgroundColor: colors.surface }]}>
+          <View
+            style={[styles.menuButton, { backgroundColor: colors.surface }]}
+          >
             <IconButton
               name="remove-outline"
               onPress={handleZoomOut}
@@ -319,7 +326,9 @@ export const PdfReader: FC<PdfReaderProps> = ({
       {/* Page badge */}
       {typeof currentPage === "number" && typeof totalPages === "number" && (
         <View style={styles.pageBadgeContainer}>
-          <View style={[styles.pageBadge, { backgroundColor: colors.background }]}>
+          <View
+            style={[styles.pageBadge, { backgroundColor: colors.background }]}
+          >
             <MText variant="caption" color="textInverse">
               {currentPage} / {totalPages}
             </MText>
@@ -337,29 +346,32 @@ export const PdfReader: FC<PdfReaderProps> = ({
       )}
 
       {/* ✅ Persisted Floating Page Strip */}
-      {!isFullscreen && typeof totalPages === "number" && totalPages > 1 && (
-        <FloatingPageStrip
-          mode={stripMode}
-          minimized={stripMinimized}
-          hidden={stripHidden}
-          initialPos={stripPos}
-          onPosChange={(p) => {
-            setStripPos(p);
-            saveStripPrefs({ pos: p });
-          }}
-          onToggleMinimized={toggleMinimized}
-          onToggleHidden={toggleHidden}
-          onToggleMode={toggleMode}
-        >
-          <PageStrip
-            totalPages={totalPages}
-            currentPage={currentPage}
-            onPressPage={handlePressPageThumb}
-            orientation={stripMode === "vertical" ? "vertical" : "horizontal"}
-            maxVisibleChips={stripMinimized ? 3 : undefined}
-          />
-        </FloatingPageStrip>
-      )}
+      {stripPrefsReady &&
+        !isFullscreen &&
+        typeof totalPages === "number" &&
+        totalPages > 1 && (
+          <FloatingPageStrip
+            mode={stripMode}
+            minimized={stripMinimized}
+            hidden={stripHidden}
+            initialPos={stripPos}
+            onPosChange={(p) => {
+              setStripPos(p);
+              saveStripPrefs({ pos: p });
+            }}
+            onToggleMinimized={toggleMinimized}
+            onToggleHidden={toggleHidden}
+            onToggleMode={toggleMode}
+          >
+            <PageStrip
+              totalPages={totalPages}
+              currentPage={currentPage}
+              onPressPage={handlePressPageThumb}
+              orientation={stripMode === "vertical" ? "vertical" : "horizontal"}
+              maxVisibleChips={stripMinimized ? 3 : undefined}
+            />
+          </FloatingPageStrip>
+        )}
     </View>
   );
 };
@@ -399,7 +411,7 @@ const styles = StyleSheet.create({
 
   fullscreenOverlay: {
     position: "absolute",
-    top: spacing.lg,
+    top: spacing["2xl"],
     right: spacing.lg,
     zIndex: 10,
   },
@@ -415,7 +427,7 @@ const styles = StyleSheet.create({
 
   pageBadgeContainer: {
     position: "absolute",
-    bottom: spacing.lg,
+    bottom: spacing["2xl"] + 16,
     left: 0,
     right: 0,
     alignItems: "center",

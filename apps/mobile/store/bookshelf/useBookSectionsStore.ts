@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { nanoid } from "nanoid";
+import { createId } from "@/utils/id";
 
 export type BookSection = {
   id: string;         
@@ -37,9 +37,8 @@ export const useBookSectionsStore = create<BookSectionsState>()(
       addSection: (bookUri, sectionInput) =>
         set((state) => {
           const current = state.byBook[bookUri] ?? [];
-          const id = nanoid();
-          const newSection: BookSection = {
-            id,
+                const newSection: BookSection = {
+            id:createId("section"),
             ...sectionInput,
           };
 

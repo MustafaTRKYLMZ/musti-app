@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
   hiddenFixed: {
     position: "absolute",
     right: spacing.lg,
-    bottom: spacing.lg * 1.2,
+    bottom: spacing.lg * 3,
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radii.full,
     padding: spacing.sm,
