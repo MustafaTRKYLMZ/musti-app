@@ -1,14 +1,10 @@
-// apps/mobile/store/useTransactionsStore.ts
-
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-
-
-import type { TransactionsStore } from "./types";
-import { createTransactionAction } from "./transactions/createTransaction";
-import { updateTransactionScopedAction } from "./transactions/updateTransactionScoped";
-import { deleteTransactionScopedAction } from "./transactions/deleteTransactionScoped";
-import { getBalanceOnDateSelector } from "./transactions/getBalanceOnDate";
+import type { TransactionsStore } from "../../types";
+import { createTransactionAction } from "./createTransaction";
+import { updateTransactionScopedAction } from "./updateTransactionScoped";
+import { deleteTransactionScopedAction } from "./deleteTransactionScoped";
+import { getBalanceOnDateSelector } from "./getBalanceOnDate";
 import { getZustandStorage } from "@/utils/storage/zustandStorage";
 
 

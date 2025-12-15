@@ -6,7 +6,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { MText, spacing, radii, iconSizes, useTheme } from "@budget/ui-native";
 
 import { PdfReader } from "@/components/ui/pdf/PdfReader";
-import { useReadingPlanStore } from "@/store/useReadingPlanStore";
+import { useReadingPlanStore } from "@/store/bookshelf/useReadingPlanStore";
 import { IconButton, BaseIcon } from "@/components/ui/AppIcon";
 import { BookSectionsSidebar } from "@/components/Books/BookSectionsSidebar";
 import { PdfRef } from "react-native-pdf";

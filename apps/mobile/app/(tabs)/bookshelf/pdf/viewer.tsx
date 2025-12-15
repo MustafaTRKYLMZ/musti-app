@@ -7,8 +7,8 @@ import { MText, spacing } from "@budget/ui-native";
 import dayjs from "dayjs";
 
 import { PdfReader } from "@/components/ui/pdf/PdfReader";
-import { useBooksStore } from "@/store/useBooksStore";
-import { useReadingStatsStore } from "@/store/useReadingStatsStore";
+import { useBooksStore } from "@/store/bookshelf/useBooksStore";
+import { useReadingStatsStore } from "@/store/bookshelf/useReadingStatsStore";
 import { BookSectionsSidebar } from "@/components/Books/BookSectionsSidebar";
 import { PdfRef } from "react-native-pdf";
 

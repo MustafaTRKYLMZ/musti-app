@@ -10,8 +10,8 @@ import {
 } from "@budget/core";
 
 import TransactionList from "../components/TransactionList";
-import { useTransactionsStore } from "../../../store/useTransactionsStore";
-import { useSettingsStore } from "../../../store/useSettingsStore";
+import { useTransactionsStore } from "../../../store/budget/transactions/useTransactionsStore";
+import { useSettingsStore } from "../../../store/budget/useSettingsStore";
 
 import { BudgetHeader } from "../../../components/ui/BudgetHeader";
 import { DailyBalanceSection } from "../components/DailyBalanceSection";

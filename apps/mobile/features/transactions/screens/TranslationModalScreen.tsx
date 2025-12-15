@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Scope, useTranslation, type LocalTransaction } from "@budget/core";
-import { useTransactionsStore } from "@/store/useTransactionsStore";
+import { useTransactionsStore } from "@/store/budget/transactions/useTransactionsStore";
 import { AppModal } from "@/components/ui/AppModal";
 import { ScopeSheet } from "@/features/transactions/components/ScopeSheet";
 import TransactionForm from "@/features/transactions/components/TransactionForm";

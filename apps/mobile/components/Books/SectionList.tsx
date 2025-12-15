@@ -1,6 +1,4 @@
-// apps/mobile/components/Books/SectionList.tsx
-
-import { BookSection } from "@/store/useBookSectionsStore";
+import { BookSection } from "@/store/bookshelf/useBookSectionsStore";
 import { spacing } from "@budget/ui-native";
 import React, { FC } from "react";
 import { FlatList, StyleSheet } from "react-native";

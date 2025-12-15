@@ -2,7 +2,7 @@
 
 import { LocalTransaction } from "@budget/core";
 import { apiConfig } from "../constants/apiConfig";
-import { useTransactionsStore } from "../store/useTransactionsStore";
+import { useTransactionsStore } from "../store/budget/transactions/useTransactionsStore";
 // adjust import path if needed
 
 const BASE_URL = apiConfig.baseUrl;

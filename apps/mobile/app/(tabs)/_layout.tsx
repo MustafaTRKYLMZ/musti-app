@@ -5,7 +5,6 @@ import { useTranslation } from "@budget/core";
 
 export default function TabLayout() {
   const { t } = useTranslation();
-
   return (
     <Tabs
       screenOptions={{
