@@ -32,7 +32,7 @@ type RemindersState = {
   setScheduledHash: (id: string, hash?: string) => void;
 };
 
-function uuid() {
+function generateReminderId() {
   // RN'de ekstra dependency istemeden yeterli unique id
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
@@ -47,7 +47,7 @@ export const useRemindersStore = create<RemindersState>()(
       getByOwner: (owner) => get().reminders.filter((r) => r.owner === owner),
 
       addReminder: (input) => {
-        const id = uuid();
+        const id = generateReminderId();
         const now = Date.now();
 
         const item: ReminderItem = {
