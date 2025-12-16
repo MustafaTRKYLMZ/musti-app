@@ -1,5 +1,3 @@
-// apps/mobile/store/useReadingPlanStore.ts
-
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -7,17 +5,18 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 export type PlanItemConfig = {
   bookUri: string;
   bookName: string;
-  pagesPerDay: number; // daily target for this book
+  pagesPerDay: number;
 };
 
 export type PlanBookProgress = {
   bookUri: string;
-  currentPageInBook: number; // cursor within the plan (book progress)
-  pagesReadToday: number; // pages read TODAY from this book for this plan
-  bookTotalPages?: number; // total page count of that book (for the plan)
+  currentPageInBook: number; // 1-based
+  pagesReadToday: number;
+  bookTotalPages?: number;
 };
 
-export type ActiveReadingPlan = {
+export type ReadingPlan = {
+  id: string;
   name: string;
   items: PlanItemConfig[];
   perBook: Record<string, PlanBookProgress>;
@@ -26,102 +25,129 @@ export type ActiveReadingPlan = {
 };
 
 type AddPagesFromSessionInput = {
+  planId: string;
   bookUri: string;
   pages: number;
-  bookTotalPages?: number; // optional, comes from viewer
+  bookTotalPages?: number;
 };
 
 type ReadingPlanState = {
-  activePlan: ActiveReadingPlan | null;
-  setActivePlan: (input: { name: string; items: PlanItemConfig[] }) => void;
-  clearActivePlan: () => void;
+  plans: ReadingPlan[];
+
+  // CRUD
+  createPlan: (input: { name: string; items: PlanItemConfig[] }) => string; // returns planId
+  deletePlan: (planId: string) => void;
+
+  // daily reset
   ensureTodayPlan: (todayKey: string) => void;
+
+  // progress
   addPagesFromSession: (input: AddPagesFromSessionInput) => void;
+
+  // rename pdf across ALL plans (critical for multi-plan)
   renameBookInPlan: (oldUri: string, newUri: string, newName?: string) => void;
+  updatePlan: (input: { planId: string; name: string; items: PlanItemConfig[] }) => void;
+
 };
+
+function makeId() {
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function todayKeyISO() {
+  return new Date().toISOString().slice(0, 10);
+}
 
 export const useReadingPlanStore = create<ReadingPlanState>()(
   persist(
     (set, get) => ({
-      activePlan: null,
+      plans: [],
 
-      // Create plan from modal
-      setActivePlan: ({ name, items }) => {
-        const today = new Date().toISOString().slice(0, 10);
+      createPlan: ({ name, items }) => {
+        const dayKey = todayKeyISO();
+        const id = makeId();
 
         const perBook: Record<string, PlanBookProgress> = {};
-        items.forEach((it) => {
+        for (const it of items) {
           perBook[it.bookUri] = {
             bookUri: it.bookUri,
             currentPageInBook: 1,
             pagesReadToday: 0,
             bookTotalPages: undefined,
           };
-        });
+        }
 
-        set({
-          activePlan: {
-            name,
-            items,
-            perBook,
-            dayKey: today,
-            totalReadToday: 0,
-          },
-        });
+        const plan: ReadingPlan = {
+          id,
+          name: name?.trim() || "Reading plan",
+          items,
+          perBook,
+          dayKey,
+          totalReadToday: 0,
+        };
+
+        set((state) => ({
+          plans: [plan, ...(state.plans ?? [])], // newest first
+        }));
+
+        return id;
       },
 
-      clearActivePlan: () => set({ activePlan: null }),
+      deletePlan: (planId) =>
+        set((state) => ({
+          plans: (state.plans ?? []).filter((p) => p.id !== planId),
+        })),
 
-      // When the day changes, only reset "pages read today"
-      // Do NOT touch the plan cursor (currentPageInBook) or bookTotalPages.
+      // resets ONLY "today read" fields for every plan when day changes
       ensureTodayPlan: (todayKey) => {
         const state = get();
-        const plan = state.activePlan;
-        if (!plan) return;
-        if (plan.dayKey === todayKey) return;
+        const plans = state.plans ?? [];
+        if (!plans.length) return;
 
-        const newPerBook: Record<string, PlanBookProgress> = {};
-        Object.values(plan.perBook).forEach((pb) => {
-          newPerBook[pb.bookUri] = {
-            ...pb,
-            pagesReadToday: 0,
-          };
-        });
+        const nextPlans = plans.map((plan) => {
+          if (plan.dayKey === todayKey) return plan;
 
-        set({
-          activePlan: {
+          const newPerBook: Record<string, PlanBookProgress> = {};
+          Object.values(plan.perBook ?? {}).forEach((pb) => {
+            newPerBook[pb.bookUri] = {
+              ...pb,
+              pagesReadToday: 0,
+            };
+          });
+
+          return {
             ...plan,
             perBook: newPerBook,
             dayKey: todayKey,
             totalReadToday: 0,
-          },
+          };
         });
+
+        set({ plans: nextPlans });
       },
 
-      // In one session X pages were read → distribute this into the plan
-      // 1) Start with the book where the session was opened
-      // 2) If the daily target for that book is filled, move to the next book
-      // 3) If there are still pages left after the last book, that part is "outside the plan" (for now)
-      addPagesFromSession: ({ bookUri, pages, bookTotalPages }) => {
+      addPagesFromSession: ({ planId, bookUri, pages, bookTotalPages }) => {
         const state = get();
-        const plan = state.activePlan;
-        if (!plan) return;
+        const plans = state.plans ?? [];
         if (!pages || pages <= 0) return;
 
-        const items = plan.items;
+        const planIndex = plans.findIndex((p) => p.id === planId);
+        if (planIndex === -1) return;
+
+        const plan = plans[planIndex];
+        const items = plan.items ?? [];
         const startIndex = items.findIndex((it) => it.bookUri === bookUri);
         if (startIndex === -1) return;
 
-        const perBook: Record<string, PlanBookProgress> = { ...plan.perBook };
+        const perBook: Record<string, PlanBookProgress> = { ...(plan.perBook ?? {}) };
 
         let remainingPages = pages;
-        let totalReadToday = plan.totalReadToday;
+        let totalReadToday = plan.totalReadToday || 0;
         let idx = startIndex;
 
         while (remainingPages > 0 && idx < items.length) {
           const item = items[idx];
 
-          // if perBook record does not exist, initialize it
           if (!perBook[item.bookUri]) {
             perBook[item.bookUri] = {
               bookUri: item.bookUri,
@@ -132,30 +158,25 @@ export const useReadingPlanStore = create<ReadingPlanState>()(
           }
 
           const prev = perBook[item.bookUri];
-
-          const alreadyRead = prev.pagesReadToday;
-          const target = item.pagesPerDay;
+          const alreadyRead = prev.pagesReadToday || 0;
+          const target = item.pagesPerDay || 0;
           const remainingForToday = Math.max(0, target - alreadyRead);
 
           if (remainingForToday <= 0) {
-            // today's target for this book is already filled → move to the next book
             idx++;
             continue;
           }
 
           const usePages = Math.min(remainingPages, remainingForToday);
 
-          // update total page count if provided
           const effectiveTotalPages =
             bookTotalPages && bookTotalPages > 0
               ? bookTotalPages
               : prev.bookTotalPages;
 
-          // update currentPageInBook + wrap if necessary
-          let newCurrentPage = prev.currentPageInBook + usePages;
+          let newCurrentPage = (prev.currentPageInBook || 1) + usePages;
 
           if (effectiveTotalPages && effectiveTotalPages > 0) {
-            // Wrap around using 1-based page numbers: convert to 0-based, mod by total, convert back to 1-based
             const zeroBased = (newCurrentPage - 1) % effectiveTotalPages;
             newCurrentPage = zeroBased + 1;
           }
@@ -170,59 +191,99 @@ export const useReadingPlanStore = create<ReadingPlanState>()(
           totalReadToday += usePages;
           remainingPages -= usePages;
 
-          // daily target for this book is done, move to the next one
           if (alreadyRead + usePages >= target) {
             idx++;
           }
         }
 
-        set({
-          activePlan: {
-            ...plan,
-            perBook,
-            totalReadToday,
-          },
-        });
+        const nextPlans = [...plans];
+        nextPlans[planIndex] = {
+          ...plan,
+          perBook,
+          totalReadToday,
+        };
+
+        set({ plans: nextPlans });
       },
 
+      // ✅ rename across ALL plans
       renameBookInPlan: (oldUri, newUri, newName) =>
         set((state) => {
-          const plan = state.activePlan;
-          if (!plan) return {}; 
+          const plans = state.plans ?? [];
+          if (!plans.length) return {};
 
-          const items = plan.items.map((item) =>
-            item.bookUri === oldUri
-              ? {
-                  ...item,
-                  bookUri: newUri,
-                  bookName: newName ?? item.bookName,
-                }
-              : item
-          );
+          const nextPlans = plans.map((plan) => {
+            const items = (plan.items ?? []).map((item) =>
+              item.bookUri === oldUri
+                ? {
+                    ...item,
+                    bookUri: newUri,
+                    bookName: newName ?? item.bookName,
+                  }
+                : item
+            );
 
-          const perBook: Record<string, PlanBookProgress> = {};
-          Object.entries(plan.perBook).forEach(([bookUri, progress]) => {
-            if (bookUri === oldUri) {
-              perBook[newUri] = {
-                ...progress,
-                bookUri: newUri,
-              };
-            } else {
-              perBook[bookUri] = progress;
-            }
+            const perBook: Record<string, PlanBookProgress> = {};
+            Object.entries(plan.perBook ?? {}).forEach(([bookUri, progress]) => {
+              if (bookUri === oldUri) {
+                perBook[newUri] = { ...progress, bookUri: newUri };
+              } else {
+                perBook[bookUri] = progress;
+              }
+            });
+
+            return { ...plan, items, perBook };
           });
 
-          return {
-            activePlan: {
-              ...plan,
-              items,
-              perBook,
-            },
-          };
+          return { plans: nextPlans };
         }),
+        updatePlan: ({ planId, name, items }) =>
+          set((state) => {
+            const plans = state.plans ?? [];
+            const idx = plans.findIndex((p) => p.id === planId);
+            if (idx === -1) return {};
+        
+            const plan = plans[idx];
+        
+            // ✅ perBook: var olanı koru, yeni kitapları init et, kaldırılanları drop et
+            const nextPerBook: Record<string, PlanBookProgress> = {};
+        
+            for (const it of items) {
+              const prev = plan.perBook?.[it.bookUri];
+        
+              nextPerBook[it.bookUri] =
+                prev ??
+                ({
+                  bookUri: it.bookUri,
+                  currentPageInBook: 1,
+                  pagesReadToday: 0,
+                  bookTotalPages: undefined,
+                } as PlanBookProgress);
+            }
+        
+            // ✅ totalReadToday: kalan kitapların pagesReadToday toplamı
+            const nextTotalReadToday = Object.values(nextPerBook).reduce(
+              (sum, pb) => sum + (pb.pagesReadToday || 0),
+              0
+            );
+        
+            const nextPlan = {
+              ...plan,
+              name: name?.trim() || plan.name,
+              items,
+              perBook: nextPerBook,
+              totalReadToday: nextTotalReadToday,
+            };
+        
+            const nextPlans = [...plans];
+            nextPlans[idx] = nextPlan;
+        
+            return { plans: nextPlans };
+          }),
+        
     }),
     {
-      name: "reading-plan-v1",
+      name: "reading-plan-v2",
       storage: createJSONStorage(() => AsyncStorage),
     }
   )

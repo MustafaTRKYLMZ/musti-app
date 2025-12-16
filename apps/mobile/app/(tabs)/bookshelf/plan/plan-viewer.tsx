@@ -1,6 +1,4 @@
-// apps/mobile/app/(tabs)/bookshelf/plan/plan-viewer.tsx
-
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import { View, StyleSheet, Animated } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { MText, spacing, radii, iconSizes, useTheme } from "@budget/ui-native";
@@ -13,32 +11,35 @@ import { PdfRef } from "react-native-pdf";
 
 export default function PlanViewerScreen() {
   const router = useRouter();
-  const theme = useTheme();
-  const { colors } = theme;
+  const { colors } = useTheme();
 
   const params = useLocalSearchParams<{
+    planId?: string;
     uri?: string;
     name?: string;
   }>();
 
-  const uri = params.uri as string | undefined;
-  const name = (params.name as string) || "PDF";
+  const planId = params.planId ? String(params.planId) : undefined;
+  const uri = params.uri ? decodeURIComponent(String(params.uri)) : undefined;
+  const name = params.name ? decodeURIComponent(String(params.name)) : "PDF";
 
-  const activePlan = useReadingPlanStore((s) => s.activePlan);
+  const plans = useReadingPlanStore((s) => s.plans);
   const addPagesFromSession = useReadingPlanStore((s) => s.addPagesFromSession);
+
+  const plan = useMemo(() => {
+    if (!planId) return null;
+    return (plans ?? []).find((p) => p.id === planId) ?? null;
+  }, [plans, planId]);
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [initialPage, setInitialPage] = useState(1);
 
-  // sections sidebar
   const [sectionsOpen, setSectionsOpen] = useState(false);
   const pdfRef = useRef<PdfRef | null>(null);
 
-  // page indicator state
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState<number | null>(null);
 
-  // Session-local state
   const [sessionStartPage, setSessionStartPage] = useState<number | null>(null);
   const [sessionLastPage, setSessionLastPage] = useState<number | null>(null);
   const [maxPageVisited, setMaxPageVisited] = useState<number | null>(null);
@@ -46,27 +47,33 @@ export default function PlanViewerScreen() {
     null
   );
 
-  // Plan config / meta
   const [initialPagesReadToday, setInitialPagesReadToday] = useState(0);
   const [targetForToday, setTargetForToday] = useState(0);
   const [todayPagesForThisBook, setTodayPagesForThisBook] = useState(0);
   const [hasReachedTarget, setHasReachedTarget] = useState(false);
-  // banner animation
+
   const bannerAnim = React.useRef(new Animated.Value(0)).current;
 
+  const items = plan?.items ?? [];
+  const currentItemIndex = uri
+    ? items.findIndex((it) => it.bookUri === uri)
+    : -1;
+
   useEffect(() => {
-    if (!uri || !activePlan) return;
+    if (!uri || !plan) return;
+    if (currentItemIndex === -1) return;
 
-    const items = activePlan.items;
-    const itemIndex = items.findIndex((it) => it.bookUri === uri);
-    if (itemIndex === -1) return;
+    const item = items[currentItemIndex];
+    const pb = plan.perBook?.[uri] ?? {
+      bookUri: uri,
+      currentPageInBook: 1,
+      pagesReadToday: 0,
+      bookTotalPages: undefined,
+    };
 
-    const item = items[itemIndex];
-    const pb = activePlan.perBook[uri];
-
-    const startPage = pb?.currentPageInBook ?? 1;
-    const alreadyReadToday = pb?.pagesReadToday ?? 0;
-    const target = item.pagesPerDay;
+    const startPage = pb.currentPageInBook ?? 1;
+    const alreadyReadToday = pb.pagesReadToday ?? 0;
+    const target = item.pagesPerDay ?? 0;
 
     setInitialPage(startPage);
     setSessionStartPage(startPage);
@@ -79,7 +86,7 @@ export default function PlanViewerScreen() {
     setHasReachedTarget(alreadyReadToday >= target && target > 0);
 
     setCurrentPage(startPage);
-  }, [uri, activePlan]);
+  }, [uri, plan, currentItemIndex, items]);
 
   useEffect(() => {
     if (hasReachedTarget) {
@@ -97,28 +104,35 @@ export default function PlanViewerScreen() {
     }
   }, [hasReachedTarget, bannerAnim]);
 
-  if (!uri) {
+  if (!planId || !uri) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <MText variant="body" color="textPrimary">
-          Invalid PDF path
+          Invalid route params
         </MText>
       </View>
     );
   }
 
-  if (!activePlan || !activePlan.perBook[uri]) {
+  if (!plan) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <MText variant="body" color="textPrimary">
-          This book is not in the current plan.
+          Plan not found.
         </MText>
       </View>
     );
   }
 
-  const items = activePlan.items;
-  const currentItemIndex = items.findIndex((it) => it.bookUri === uri);
+  if (currentItemIndex === -1) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <MText variant="body" color="textPrimary">
+          This book is not in this plan.
+        </MText>
+      </View>
+    );
+  }
 
   const source = { uri, cache: true };
 
@@ -132,10 +146,7 @@ export default function PlanViewerScreen() {
     setSessionLastPage(page);
     setCurrentPage(page);
 
-    setMaxPageVisited((prev) => {
-      if (prev == null) return page;
-      return Math.max(prev, page);
-    });
+    setMaxPageVisited((prev) => (prev == null ? page : Math.max(prev, page)));
 
     const start = sessionStartPage ?? page;
     const maxVisited = Math.max(page, maxPageVisited ?? page);
@@ -144,10 +155,12 @@ export default function PlanViewerScreen() {
     const totalTodayForThisBook = initialPagesReadToday + pagesInThisSession;
     setTodayPagesForThisBook(totalTodayForThisBook);
 
-    if (!hasReachedTarget && targetForToday > 0) {
-      if (totalTodayForThisBook >= targetForToday) {
-        setHasReachedTarget(true);
-      }
+    if (
+      !hasReachedTarget &&
+      targetForToday > 0 &&
+      totalTodayForThisBook >= targetForToday
+    ) {
+      setHasReachedTarget(true);
     }
   };
 
@@ -158,6 +171,7 @@ export default function PlanViewerScreen() {
 
     if (pagesDelta > 0) {
       addPagesFromSession({
+        planId,
         bookUri,
         pages: pagesDelta,
         bookTotalPages: sessionTotalPages ?? undefined,
@@ -166,32 +180,28 @@ export default function PlanViewerScreen() {
   };
 
   const goToNextBookInPlan = () => {
-    if (!activePlan || currentItemIndex === -1) return;
-
     flushToPlan(uri);
+
     const totalItems = items.length;
     let idx = (currentItemIndex + 1) % totalItems;
-    let looped = false;
     let nextItem: (typeof items)[number] | null = null;
 
     while (true) {
       const candidate = items[idx];
-      const pb = activePlan.perBook[candidate.bookUri];
+      const pb = plan.perBook?.[candidate.bookUri];
       const alreadyRead = pb?.pagesReadToday ?? 0;
+      const target = candidate.pagesPerDay ?? 0;
 
-      if (alreadyRead < candidate.pagesPerDay) {
+      if (alreadyRead < target) {
         nextItem = candidate;
         break;
       }
 
       idx = (idx + 1) % totalItems;
-      if (idx === currentItemIndex) {
-        looped = true;
-        break;
-      }
+      if (idx === currentItemIndex) break;
     }
 
-    if (!nextItem || looped) {
+    if (!nextItem) {
       router.replace("/(tabs)/bookshelf");
       return;
     }
@@ -199,8 +209,9 @@ export default function PlanViewerScreen() {
     router.replace({
       pathname: "/(tabs)/bookshelf/plan/plan-viewer",
       params: {
-        uri: nextItem.bookUri,
-        name: nextItem.bookName,
+        planId,
+        uri: encodeURIComponent(nextItem.bookUri),
+        name: encodeURIComponent(nextItem.bookName),
       },
     });
   };
@@ -235,18 +246,7 @@ export default function PlanViewerScreen() {
     borderColor: colors.success,
   } as const;
 
-  const bannerButtonStyle = {
-    backgroundColor: colors.primary,
-  } as const;
-
-  const handleOpenSections = () => setSectionsOpen(true);
-  const handleCloseSections = () => setSectionsOpen(false);
-
-  const handleJumpToPage = (page: number) => {
-    if (!pdfRef.current) return;
-    if (page <= 0) return;
-    pdfRef.current.setPage(page);
-  };
+  const bannerButtonStyle = { backgroundColor: colors.primary } as const;
 
   return (
     <>
@@ -260,16 +260,20 @@ export default function PlanViewerScreen() {
         handleLoadComplete={handleLoadComplete}
         handlePageChanged={handlePageChanged}
         pdfRef={pdfRef}
-        onPressMenu={handleOpenSections}
+        onPressMenu={() => setSectionsOpen(true)}
         currentPage={currentPage}
         totalPages={totalPages ?? undefined}
       />
 
       <BookSectionsSidebar
         visible={sectionsOpen}
-        onClose={handleCloseSections}
+        onClose={() => setSectionsOpen(false)}
         bookUri={uri}
-        onJumpToPage={handleJumpToPage}
+        onJumpToPage={(page) => {
+          if (!pdfRef.current) return;
+          if (page <= 0) return;
+          pdfRef.current.setPage(page);
+        }}
       />
 
       {hasReachedTarget && (
@@ -335,9 +339,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 6,
   },
-  bannerText: {
-    flex: 1,
-  },
+  bannerText: { flex: 1 },
   bannerButton: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,

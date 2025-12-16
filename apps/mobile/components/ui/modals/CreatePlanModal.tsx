@@ -35,7 +35,8 @@ export function ReadingPlanModal({
   onClose,
   books,
 }: ReadingPlanModalProps) {
-  const setActivePlan = useReadingPlanStore((s) => s.setActivePlan);
+  // ✅ NEW: multi-plan store action
+  const createPlan = useReadingPlanStore((s) => s.createPlan);
 
   const [planName, setPlanName] = useState("Reading plan");
   const [entries, setEntries] = useState<PlanEntryState>({});
@@ -165,7 +166,8 @@ export function ReadingPlanModal({
 
     const finalName = planName.trim() || "Reading plan";
 
-    setActivePlan({
+    // ✅ NEW: creates a NEW plan, does NOT delete existing plans
+    createPlan({
       name: finalName,
       items,
     });
@@ -225,7 +227,7 @@ export function ReadingPlanModal({
             />
           </View>
 
-          {/* ✅ Scrollable content (keyboard-safe) */}
+          {/* Scrollable content */}
           <ScrollView
             style={{ flex: 1 }}
             showsVerticalScrollIndicator={false}
@@ -485,7 +487,7 @@ export function ReadingPlanModal({
             )}
           </ScrollView>
 
-          {/* ✅ Actions fixed at bottom */}
+          {/* Actions fixed at bottom */}
           <View style={styles.actions}>
             <TouchableOpacity
               onPress={onClose}
@@ -531,7 +533,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   modalContent: {
-    height: "86%", // ✅ important: gives ScrollView room + keeps actions visible
+    height: "86%",
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     paddingBottom: spacing.lg,

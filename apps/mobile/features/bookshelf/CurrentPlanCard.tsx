@@ -61,9 +61,7 @@ export const CurrentPlanCard: FC<CurrentPlanCardProps> = ({
     remainingInItem,
     suggestedBookName,
   } = currentPlanInfo;
-
   const progressText = `${totalCompleted} / ${totalPagesInPlan} pages`;
-
   const subtitle = isCompleted
     ? suggestedBookName
       ? `Today's plan is done. To keep reading, continue with "${suggestedBookName}".`
