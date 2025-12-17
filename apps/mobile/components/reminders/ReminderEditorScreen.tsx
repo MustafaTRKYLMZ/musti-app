@@ -331,7 +331,7 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
 
           {targetType === "book" ? (
             <MText style={{ marginTop: spacing.sm, color: text2 }}>
-              Choose book (bookUri/bookName) We will add nex step.
+              Choose book (bookUri/bookName) We will add next step.
             </MText>
           ) : null}
         </View>
