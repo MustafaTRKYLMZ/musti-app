@@ -11,7 +11,7 @@ import { router } from "expo-router";
 import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
-import { MText, spacing, radii, useTheme } from "@budget/ui-native";
+import { MText, spacing, radii, useTheme, iconSizes } from "@budget/ui-native";
 
 import { useRemindersStore } from "@/store/reminders/useRemindersStore";
 import type {
@@ -20,7 +20,7 @@ import type {
   ReminderTarget,
 } from "@/store/reminders/types";
 import { AppScreen } from "@/components/AppScreen";
-import { IconButton } from "@/components/ui/AppIcon";
+import { BaseIcon, IconButton, IconTile } from "@/components/ui/AppIcon";
 
 type Props = {
   owner: ReminderOwner;
@@ -43,7 +43,6 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
   const { colors } = theme;
 
   // ---- Design tokens  ----
-  const screenBg = colors.background;
   const cardBg = colors.surface;
   const innerBg = colors.surfaceElevated;
   const border = colors.borderSubtle;
@@ -197,6 +196,36 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
     </Pressable>
   );
 
+  const RowAction = ({
+    label,
+    value,
+    icon,
+    onPress,
+  }: {
+    label: string;
+    value: string;
+    icon: string;
+    onPress: () => void;
+  }) => (
+    <Pressable
+      onPress={onPress}
+      style={[styles.rowBtn, { borderColor: border, backgroundColor: innerBg }]}
+    >
+      <View style={styles.rowBtnLeft}>
+        <BaseIcon name={icon as any} size={iconSizes.md} color={text2} />
+        <MText style={{ color: text }}>{label}</MText>
+      </View>
+      <View style={styles.rowBtnRight}>
+        <MText style={{ color: text2 }}>{value}</MText>
+        <BaseIcon
+          name={"chevron-forward" as any}
+          size={iconSizes.md}
+          color={text2}
+        />
+      </View>
+    </Pressable>
+  );
+
   const titleText = mode === "new" ? "New Reminder" : "Reminder";
 
   const onBack = () => {
@@ -233,7 +262,7 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <MText variant="heading2" style={{ color: colors.textInverse }}>
+        <MText variant="heading2" style={{ color: colors.textPrimary }}>
           {mode === "new" ? "New Reminder" : "Edit Reminder"}
         </MText>
 
@@ -245,39 +274,57 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
           ]}
         >
           <MText style={{ color: text2 }}>Title</MText>
-          <TextInput
-            value={title}
-            onChangeText={setTitle}
-            placeholder="E.g: Reading"
-            placeholderTextColor={text2}
+          <View
             style={[
-              styles.input,
-              { color: text, borderColor: border, backgroundColor: innerBg },
+              styles.inputWrap,
+              { borderColor: border, backgroundColor: innerBg },
             ]}
-          />
+          >
+            <BaseIcon
+              name={"text-outline" as any}
+              size={iconSizes.md}
+              color={text2}
+            />
+            <TextInput
+              value={title}
+              onChangeText={setTitle}
+              placeholder="E.g: Reading"
+              placeholderTextColor={text2}
+              style={[styles.inputInline, { color: text }]}
+            />
+          </View>
 
           <View style={{ height: spacing.md }} />
 
           <MText style={{ color: text2 }}>Message</MText>
-          <TextInput
-            value={body}
-            onChange={(e) => setBody(e.nativeEvent.text)}
-            placeholder="E.g: Today read 10 pages"
-            placeholderTextColor={text2}
-            multiline
-            disableFullscreenUI
-            keyboardType="default"
+          <View
             style={[
-              styles.input,
-              styles.textarea,
-              { color: text, borderColor: border, backgroundColor: innerBg },
+              styles.inputWrap,
+              styles.textareaWrap,
+              { borderColor: border, backgroundColor: innerBg },
             ]}
-          />
+          >
+            <BaseIcon
+              name={"chatbubble-ellipses-outline" as any}
+              size={iconSizes.md}
+              color={text2}
+            />
+            <TextInput
+              value={body}
+              onChangeText={setBody}
+              placeholder="E.g: Today read 10 pages"
+              placeholderTextColor={text2}
+              multiline
+              disableFullscreenUI
+              keyboardType="default"
+              style={[styles.inputInline, styles.textarea, { color: text }]}
+            />
+          </View>
+
           <View style={{ height: spacing.md }} />
 
           <View style={styles.row}>
             <MText style={{ color: text2 }}>Status</MText>
-
             <Pressable
               onPress={() => setEnabled((v) => !v)}
               style={[
@@ -288,9 +335,26 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
                 },
               ]}
             >
-              <MText style={{ color: enabled ? textInverse : text }}>
-                {enabled ? "Open" : "Close"}
-              </MText>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: spacing.xs,
+                }}
+              >
+                <BaseIcon
+                  name={
+                    (enabled
+                      ? "checkmark-circle-outline"
+                      : "close-circle-outline") as any
+                  }
+                  size={iconSizes.md}
+                  color={enabled ? textInverse : text2}
+                />
+                <MText style={{ color: enabled ? textInverse : text }}>
+                  {enabled ? "Open" : "Close"}
+                </MText>
+              </View>
             </Pressable>
           </View>
         </View>
@@ -331,7 +395,7 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
 
           {targetType === "book" ? (
             <MText style={{ marginTop: spacing.sm, color: text2 }}>
-              Choose book (bookUri/bookName) We will add nex step.
+              Choose book (bookUri/bookName) We will add next step.
             </MText>
           ) : null}
         </View>
@@ -380,35 +444,24 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
 
           {scheduleType === "once" ? (
             <View style={{ marginTop: spacing.md }}>
-              <Pressable
+              <RowAction
+                label="Date"
+                value={onceDate.toLocaleDateString()}
+                icon="calendar-outline"
                 onPress={() => setShowDate(true)}
-                style={[
-                  styles.rowBtn,
-                  { borderColor: border, backgroundColor: innerBg },
-                ]}
-              >
-                <MText style={{ color: text }}>Date</MText>
-                <MText style={{ color: text2 }}>
-                  {onceDate.toLocaleDateString()}
-                </MText>
-              </Pressable>
+              />
             </View>
           ) : null}
 
           <View style={{ marginTop: spacing.md }}>
-            <Pressable
+            <RowAction
+              label="Time"
+              value={`${String(hour).padStart(2, "0")}:${String(
+                minute
+              ).padStart(2, "0")}`}
+              icon="time-outline"
               onPress={() => setShowTime(true)}
-              style={[
-                styles.rowBtn,
-                { borderColor: border, backgroundColor: innerBg },
-              ]}
-            >
-              <MText style={{ color: text }}>Time</MText>
-              <MText style={{ color: text2 }}>
-                {String(hour).padStart(2, "0")}:
-                {String(minute).padStart(2, "0")}
-              </MText>
-            </Pressable>
+            />
           </View>
 
           {showDate ? (
@@ -428,23 +481,48 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
           ) : null}
         </View>
 
-        <Pressable
-          onPress={save}
-          style={[styles.primaryBtn, { backgroundColor: primaryBg }]}
-        >
-          <MText style={{ color: textInverse }}>
-            {mode === "new" ? "Create" : "Save"}
-          </MText>
-        </Pressable>
+        {/* ACTIONS */}
+        <View style={styles.actionsRow}>
+          <IconTile
+            label="Cancel"
+            name="close-outline"
+            onPress={onBack}
+            size={iconSizes.lg}
+            backgroundColor="transparent"
+            iconBackgroundColor={colors.surfaceElevated}
+            color={text}
+            labelColor={text}
+            style={[styles.actionTile, { borderColor: colors.borderSubtle }]}
+          />
 
-        {mode === "edit" ? (
-          <Pressable
-            onPress={del}
-            style={[styles.dangerBtn, { borderColor: danger }]}
-          >
-            <MText style={{ color: danger }}>Delete</MText>
-          </Pressable>
-        ) : null}
+          <View style={styles.actionsRight}>
+            {mode === "edit" ? (
+              <IconTile
+                label="Delete"
+                name="trash-outline"
+                onPress={del}
+                size={iconSizes.lg}
+                backgroundColor="transparent"
+                iconBackgroundColor={colors.surfaceElevated}
+                color={danger}
+                labelColor={danger}
+                style={[styles.actionTile, { borderColor: danger }]}
+              />
+            ) : null}
+
+            <IconTile
+              label={mode === "new" ? "Create" : "Save"}
+              name="save-outline"
+              onPress={save}
+              size={iconSizes.lg}
+              backgroundColor={primaryBg}
+              iconBackgroundColor="rgba(255,255,255,0.16)" // istersen kaldır
+              color={textInverse}
+              labelColor={textInverse}
+              style={[styles.actionTile, { borderColor: "transparent" }]}
+            />
+          </View>
+        </View>
       </ScrollView>
     </AppScreen>
   );
@@ -461,17 +539,29 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     borderWidth: 1,
   },
-  input: {
+
+  inputWrap: {
     marginTop: spacing.sm,
     borderWidth: 1,
     borderRadius: radii.lg,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.sm,
+  },
+  inputInline: {
+    flex: 1,
+    paddingVertical: 0,
+  },
+  textareaWrap: {
+    minHeight: 110,
   },
   textarea: {
     minHeight: 96,
     textAlignVertical: "top",
   },
+
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -496,6 +586,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     borderWidth: 1,
   },
+
   rowBtn: {
     borderWidth: 1,
     borderRadius: radii.lg,
@@ -505,6 +596,17 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
+  rowBtnLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  rowBtnRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+  },
+
   primaryBtn: {
     paddingVertical: spacing.md,
     borderRadius: radii.lg,
@@ -515,5 +617,52 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     alignItems: "center",
     borderWidth: 1,
+  },
+  actionsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.md,
+  },
+
+  actionBtnOutline: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+  },
+  actionBtnPrimary: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.lg,
+  },
+  tileOutline: {
+    borderWidth: 1,
+    borderRadius: radii.lg,
+    backgroundColor: "transparent",
+  },
+  tilePrimary: {
+    borderRadius: radii.lg,
+  },
+  actionsRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.lg,
+  },
+
+  actionTile: {
+    borderWidth: 1,
+    borderRadius: radii.lg,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    shadowOffset: { width: 0, height: 0 },
   },
 });

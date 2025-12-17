@@ -1,5 +1,4 @@
-// apps/mobile/features/books/CurrentPlanCard.tsx
-import React, { FC, useRef, useState } from "react";
+import React, { FC, useRef, useState, useMemo } from "react";
 import {
   TouchableOpacity,
   View,
@@ -19,6 +18,7 @@ import {
   Card,
 } from "@budget/ui-native";
 import { BaseIcon, IconButton } from "@/components/ui/AppIcon";
+import { ProgressPill, getProgressColor } from "@/components/ui/ProgressPill";
 
 export type PlanInfo = {
   name: string;
@@ -35,8 +35,6 @@ type PlanCardProps = {
   currentPlanInfo: PlanInfo | null;
   onPress: () => void;
   onDeletePlan: () => void;
-
-  // ✅ NEW
   onEditPlan?: () => void;
   wrapperStyle?: StyleProp<ViewStyle>;
   cardStyle?: StyleProp<ViewStyle>;
@@ -73,6 +71,7 @@ export const PlanCard: FC<PlanCardProps> = ({
   } = currentPlanInfo;
 
   const progressText = `${totalCompleted} / ${totalPagesInPlan} pages`;
+
   const subtitle = isCompleted
     ? suggestedBookName
       ? `Today's plan is done. To keep reading, continue with "${suggestedBookName}".`
@@ -90,10 +89,7 @@ export const PlanCard: FC<PlanCardProps> = ({
     if (!handle) return;
 
     UIManager.measure(handle, (_x, _y, width, height, pageX, pageY) => {
-      setMenuPos({
-        x: pageX + width - 160,
-        y: pageY + height + 8,
-      });
+      setMenuPos({ x: pageX + width - 160, y: pageY + height + 8 });
       setMenuVisible(true);
     });
   };
@@ -110,7 +106,17 @@ export const PlanCard: FC<PlanCardProps> = ({
     onPress();
   };
 
-  const statusColor = isCompleted ? colors.success : colors.primary;
+  const safeTotal = Math.max(totalPagesInPlan || 1, 1);
+  const pct01 = totalCompleted / safeTotal;
+
+  // ✅ Icon her zaman yeşil (pozitif)
+  const iconColor = colors.success;
+
+  // ✅ Progress sarı -> yeşil (ama iconu etkilemez)
+  const progressColor = useMemo(
+    () => getProgressColor(pct01, colors),
+    [pct01, colors]
+  );
 
   return (
     <>
@@ -133,7 +139,7 @@ export const PlanCard: FC<PlanCardProps> = ({
               <BaseIcon
                 name={isCompleted ? "checkmark-done-outline" : "time-outline"}
                 size={iconSizes.lg}
-                color={statusColor}
+                color={iconColor}
               />
             </View>
 
@@ -144,7 +150,7 @@ export const PlanCard: FC<PlanCardProps> = ({
                 numberOfLines={1}
                 style={styles.title}
               >
-                Current plan: {name}
+                {name}
               </MText>
 
               <MText
@@ -157,27 +163,13 @@ export const PlanCard: FC<PlanCardProps> = ({
               </MText>
 
               <View style={styles.progressRow}>
-                <View
-                  style={[
-                    styles.progressPill,
-                    { backgroundColor: colors.backgroundSecondary },
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.progressPillFill,
-                      {
-                        backgroundColor: statusColor,
-                        width: `${Math.min(
-                          100,
-                          (totalCompleted /
-                            Math.max(totalPagesInPlan || 1, 1)) *
-                            100
-                        )}%`,
-                      },
-                    ]}
-                  />
-                </View>
+                <ProgressPill
+                  value={totalCompleted}
+                  total={totalPagesInPlan}
+                  width={90}
+                  height={6}
+                  fillColor={progressColor}
+                />
                 <MText variant="caption" color="textSecondary">
                   {progressText}
                 </MText>
@@ -232,7 +224,6 @@ export const PlanCard: FC<PlanCardProps> = ({
               </TouchableOpacity>
             )}
 
-            {/* ✅ NEW: Edit plan */}
             {!!onEditPlan && (
               <TouchableOpacity
                 style={styles.menuItem}
@@ -298,14 +289,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.xs,
   },
-  progressPill: {
-    flex: 0,
-    width: 90,
-    height: 6,
-    borderRadius: 999,
-    overflow: "hidden",
-  },
-  progressPillFill: { height: "100%", borderRadius: 999 },
   rightSection: { marginLeft: spacing.sm },
 
   menuOverlay: { flex: 1, backgroundColor: "transparent" },

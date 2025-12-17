@@ -19,7 +19,6 @@ function stableHash(rem: ReminderItem) {
 }
 
 export function useReminderScheduler(owner: ReminderOwner) {
-  // ✅ signature: sadece user-data (kendi yazdığımız ids/hash tetiklemesin)
   const signature = useRemindersStore((s) =>
     s.reminders
       .filter((r) => r.owner === owner)
@@ -54,7 +53,6 @@ export function useReminderScheduler(owner: ReminderOwner) {
         try {
           const hash = stableHash(rem);
 
-          // disabled => varsa iptal/temizle
           if (!rem.enabled) {
             if (rem.notificationIds.length) {
               await cancelNotificationIds(rem.notificationIds);
@@ -64,13 +62,11 @@ export function useReminderScheduler(owner: ReminderOwner) {
             continue;
           }
 
-          // ✅ zaten doğru schedule edilmişse ve id var ise dokunma
           if (rem.scheduledHash === hash && rem.notificationIds.length > 0) {
             continue;
           }
 
-          // ✅ hash aynı ama id yoksa: bir kere schedule et (restore)
-          // (bu durumda cancel etmeye gerek yok)
+        
           if (rem.scheduledHash === hash && rem.notificationIds.length === 0) {
             const notifId = await scheduleCustomReminder({
               id: rem.id,
@@ -83,7 +79,6 @@ export function useReminderScheduler(owner: ReminderOwner) {
             continue;
           }
 
-          // hash değişmiş => reschedule
           if (rem.notificationIds.length) {
             await cancelNotificationIds(rem.notificationIds);
           }
