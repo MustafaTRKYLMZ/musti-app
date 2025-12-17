@@ -1,5 +1,3 @@
-// apps/mobile/app/(tabs)/bookshelf/pdf/viewer.tsx
-
 import React, { useEffect, useRef, useState } from "react";
 import { View, StyleSheet } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";

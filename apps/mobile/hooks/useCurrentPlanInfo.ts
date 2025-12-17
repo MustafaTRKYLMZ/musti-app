@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useReadingPlanStore } from "@/store/bookshelf/useReadingPlanStore";
 import type { LocalPdfFile } from "@/utils/getPdfsDirectory";
-import { CurrentPlanInfo } from "@/features/bookshelf/CurrentPlanCard";
+import { PlanInfo } from "@/components/Books/PlanCard";
 
 export function useCurrentPlanInfo(_books?: LocalPdfFile[]) {
   const plans = useReadingPlanStore((s) => s.plans);
@@ -10,7 +10,7 @@ export function useCurrentPlanInfo(_books?: LocalPdfFile[]) {
     return (plans ?? [])[0] ?? null; 
   }, [plans]);
 
-  const summary = useMemo<CurrentPlanInfo | null>(() => {
+  const summary = useMemo<PlanInfo | null>(() => {
     if (!plan) return null;
     if (!plan.items?.length) return null;
 

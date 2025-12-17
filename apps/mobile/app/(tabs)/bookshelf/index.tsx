@@ -1,4 +1,4 @@
-import BookshelfHomeScreen from "../../../features/bookshelf/BookshelfHomeScreen";
+import BookshelfHomeScreen from "../../../components/screens/BookshelfHomeScreen";
 
 import React from "react";
 

@@ -21,14 +21,14 @@ import { useBooksStore } from "@/store/bookshelf/useBooksStore";
 import { useReadingStatsStore } from "@/store/bookshelf/useReadingStatsStore";
 import { useReadingPlanStore } from "@/store/bookshelf/useReadingPlanStore";
 import { ReadingPlanModal } from "@/components/ui/modals/CreatePlanModal";
-import { BookCard } from "@/components/Books/BookCard";
 import { AppScreen } from "@/components/AppScreen";
-import { BookshelfHeader } from "@/components/BookshelfHeader";
+import { BookshelfHeader } from "@/components/Books/BookshelfHeader";
 import { bookshelfTheme, iconSizes, MText } from "@budget/ui-native";
-import { ShelfHeader } from "@/components/ShelfHeader";
 import { IconButton } from "@/components/ui/AppIcon";
 import { AppSwitcherButton } from "@/components/AppSwitcherButton";
-import { PlanOptionsMenu } from "@/components/PlanOptionsMenu";
+import { LastReadBook } from "@/components/Books/LastReadBook";
+import { PlanList } from "@/components/Books/PlanList";
+import { BookList } from "../Books/BookList";
 
 const { colors, spacing, radii } = bookshelfTheme;
 
@@ -244,214 +244,69 @@ export default function BookshelfHomeScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* PLANS */}
-          <View style={styles.shelfSection}>
-            <ShelfHeader
-              title="Plans"
-              handleOpen={() => setPlanModalVisible(true)}
-            />
-            <View style={styles.shelfInner}>
-              <View style={styles.shelfRail} />
-
-              {plans.length === 0 ? (
-                <View style={styles.emptyPlanShelf}>
-                  <MText variant="body" color="textSecondary">
-                    No plans yet. Create one to track your reading.
-                  </MText>
-                </View>
-              ) : (
-                <FlatList
-                  data={plans}
-                  keyExtractor={(p) => p.id}
-                  horizontal
-                  nestedScrollEnabled
-                  keyboardShouldPersistTaps="handled"
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.planListContent}
-                  renderItem={({ item }) => {
-                    const totalTarget = item.items.reduce(
-                      (s, it) => s + (it.pagesPerDay || 0),
-                      0
-                    );
-                    const done = item.totalReadToday || 0;
-
-                    return (
-                      <Pressable
-                        onPress={() => {
-                          if (suppressNextPlanOpenRef.current) return;
-                          openPlanDirect(item.id);
-                        }}
-                        style={[
-                          styles.planChip,
-                          {
-                            borderColor: colors.borderSubtle,
-                            backgroundColor: colors.surface,
-                          },
-                        ]}
-                      >
-                        <View
-                          style={{
-                            flexDirection: "row",
-                            justifyContent: "space-between",
-                            alignItems: "flex-start",
-                            gap: spacing.sm,
-                          }}
-                        >
-                          <View style={{ flex: 1 }}>
-                            <MText
-                              variant="bodyStrong"
-                              color="textPrimary"
-                              numberOfLines={1}
-                              style={{ maxWidth: 180 }}
-                            >
-                              {item.name}
-                            </MText>
-                            <MText
-                              variant="caption"
-                              color="textSecondary"
-                              style={{ marginTop: 2 }}
-                            >
-                              {done} / {totalTarget} pages
-                            </MText>
-                          </View>
-
-                          {/* ✅ 3-dot popover menu */}
-                          <Pressable
-                            onPress={() => {
-                              suppressNextPlanOpenRef.current = true;
-                              setTimeout(
-                                () => (suppressNextPlanOpenRef.current = false),
-                                300
-                              );
-                            }}
-                            hitSlop={10}
-                          >
-                            <PlanOptionsMenu
-                              onEdit={() => {
-                                router.push({
-                                  pathname: "/(tabs)/bookshelf/plan/edit-plan",
-                                  params: { planId: item.id },
-                                });
-                              }}
-                              onDelete={() => handleDeletePlan(item.id)}
-                            />
-                          </Pressable>
-                        </View>
-
-                        <MText
-                          variant="caption"
-                          color="textSecondary"
-                          style={{ marginTop: spacing.xs }}
-                        >
-                          {item.items.length} book
-                          {item.items.length === 1 ? "" : "s"}
-                        </MText>
-                      </Pressable>
-                    );
-                  }}
-                />
-              )}
-            </View>
-          </View>
+          <PlanList
+            setPlanModalVisible={setPlanModalVisible}
+            plans={plans}
+            openPlanDirect={openPlanDirect}
+            handleDeletePlan={handleDeletePlan}
+            suppressNextPlanOpenRef={suppressNextPlanOpenRef}
+          />
 
           {/* LAST READ */}
-          <View style={styles.shelfSection}>
-            <MText
-              variant="heading3"
-              color="textPrimary"
-              style={styles.shelfTitle}
-            >
-              Last read
-            </MText>
-
-            <View style={styles.shelfInner}>
-              <View style={styles.shelfRail} />
-
-              {lastReadBooks.length === 0 ? (
-                <View style={styles.emptyState}>
-                  <MText color="textSecondary">
-                    Books you open will appear here.
-                  </MText>
-                </View>
-              ) : (
-                <FlatList
-                  data={lastReadBooks}
-                  keyExtractor={(item) => item.uri}
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.listContent}
-                  renderItem={({ item }) => {
-                    const progress = progressMap[item.uri];
-                    const statKey = `${item.uri}:${today}`;
-                    const todayStat = readingStats[statKey];
-
-                    return (
-                      <BookCard
-                        file={item}
-                        onOpen={() => handleOpenPdf(item)}
-                        onDelete={() => handleDeletePdf(item)}
-                        lastPage={progress?.lastPage}
-                        totalPages={progress?.totalPages}
-                        todayPages={todayStat?.pagesRead}
-                        todayTargetPages={todayStat?.targetPages}
-                        onRename={(newName) => renameBook(item, newName)}
-                        variant="row"
-                      />
-                    );
-                  }}
-                />
-              )}
-            </View>
-          </View>
+          <LastReadBook
+            lastReadBooks={lastReadBooks.map((book) => ({
+              uri: book.uri,
+              name: book.name,
+              lastOpened: Number(progressMap[book.uri]?.updatedAt) || 0,
+            }))}
+            handleOpenPdf={handleOpenPdf}
+            handleDeletePdf={handleDeletePdf}
+            renameBook={renameBook}
+            progressMap={Object.fromEntries(
+              Object.entries(progressMap).map(([key, value]) => [
+                key,
+                {
+                  ...value,
+                  totalPages: value.totalPages ?? 0,
+                },
+              ])
+            )}
+            readingStats={Object.fromEntries(
+              Object.entries(readingStats).map(([key, stat]) => [
+                key,
+                { ...stat, targetPages: stat.targetPages ?? 0 },
+              ])
+            )}
+          />
 
           {/* ALL BOOKS */}
-          <View style={styles.shelfSection}>
-            <ShelfHeader
-              title="Books"
-              handleOpen={() => setModalVisible(true)}
-            />
-            <View style={styles.shelfInner}>
-              {gridRows.length === 0 ? (
-                <View style={styles.emptyState}>
-                  <MText color="textSecondary">
-                    No books yet. Use the plus button to add one.
-                  </MText>
-                </View>
-              ) : (
-                <View style={styles.gridContent}>
-                  {gridRows.map((row, rowIndex) => (
-                    <View key={rowIndex} style={styles.gridRowContainer}>
-                      <View style={styles.gridRowRail} />
-                      <View style={styles.gridRow}>
-                        {row.map((item) => {
-                          const progress = progressMap[item.uri];
-                          const statKey = `${item.uri}:${today}`;
-                          const todayStat = readingStats[statKey];
-
-                          return (
-                            <View key={item.uri} style={styles.gridItem}>
-                              <BookCard
-                                file={item}
-                                onOpen={() => handleOpenPdf(item)}
-                                onDelete={() => handleDeletePdf(item)}
-                                lastPage={progress?.lastPage}
-                                totalPages={progress?.totalPages}
-                                todayPages={todayStat?.pagesRead}
-                                todayTargetPages={todayStat?.targetPages}
-                                onRename={(newName) =>
-                                  renameBook(item, newName)
-                                }
-                                variant="grid"
-                              />
-                            </View>
-                          );
-                        })}
-                      </View>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
-          </View>
+          <BookList
+            setModalVisible={setModalVisible}
+            gridRows={gridRows.map((row) =>
+              row.map((book) => ({
+                ...book,
+                lastOpened: Number(progressMap[book.uri]?.updatedAt) || 0,
+              }))
+            )}
+            handleOpenPdf={handleOpenPdf}
+            handleDeletePdf={handleDeletePdf}
+            renameBook={renameBook}
+            progressMap={Object.fromEntries(
+              Object.entries(progressMap).map(([key, value]) => [
+                key,
+                {
+                  ...value,
+                  totalPages: value.totalPages ?? 0,
+                },
+              ])
+            )}
+            readingStats={Object.fromEntries(
+              Object.entries(readingStats).map(([key, stat]) => [
+                key,
+                { ...stat, targetPages: stat.targetPages ?? 0 },
+              ])
+            )}
+          />
         </ScrollView>
 
         <AddPdfModal
@@ -488,18 +343,11 @@ const styles = StyleSheet.create({
   },
 
   shelfSection: { marginBottom: spacing.xl },
-
-  shelfTitle: {
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.xs,
-  },
-
   shelfInner: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
     position: "relative",
   },
-
   shelfRail: {
     position: "absolute",
     left: spacing.lg,
@@ -510,7 +358,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.backgroundSecondary,
     opacity: 0.6,
   },
-
   planListContent: {
     paddingVertical: spacing.sm,
     paddingRight: spacing.lg,
@@ -549,37 +396,5 @@ const styles = StyleSheet.create({
   listContent: {
     paddingVertical: spacing.lg,
     paddingRight: spacing.lg,
-  },
-
-  gridContent: {
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.lg,
-    paddingRight: spacing.lg,
-  },
-
-  gridRowContainer: {
-    marginBottom: spacing.md,
-    paddingBottom: spacing.sm,
-    position: "relative",
-  },
-
-  gridRowRail: {
-    position: "absolute",
-    left: 0,
-    right: spacing.lg,
-    bottom: 0,
-    height: 4,
-    borderRadius: radii.full,
-    backgroundColor: colors.backgroundSecondary,
-    opacity: 0.6,
-  },
-
-  gridRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-
-  gridItem: {
-    width: "38%",
   },
 });

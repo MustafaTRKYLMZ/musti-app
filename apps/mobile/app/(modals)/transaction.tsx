@@ -1,7 +1,7 @@
 // apps/mobile/app/(modals)/transaction.tsx
 import React from "react";
 import { Stack } from "expo-router";
-import { TransactionModalScreen } from "@/features/transactions/screens/TranslationModalScreen";
+import { TransactionModalScreen } from "@/components/screens/TranslationModalScreen";
 
 export default function TransactionRoute() {
   return (

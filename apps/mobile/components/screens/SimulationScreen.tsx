@@ -1,17 +1,15 @@
-// apps/mobile/features/transactions/screens/SimulationScreen.tsx
-
 import React, { useState, useEffect } from "react";
 import { View, StyleSheet, TouchableOpacity, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import dayjs from "dayjs";
 
-import { useTransactionsStore } from "../../../store/budget/transactions/useTransactionsStore";
-import { SimulationItemModal } from "../../../components/ui/modals/SimulationItemModal";
+import { useTransactionsStore } from "../../store/budget/transactions/useTransactionsStore";
+import { SimulationItemModal } from "../ui/modals/SimulationItemModal";
 import { RenameScenarioModal } from "@/components/ui/modals/RenameScenarioModal";
-import { DailyBalanceSection } from "@/features/transactions";
+import { DailyBalanceSection } from "@/components/transactions";
 import { CashflowTotals } from "@/components/ui/CashflowTotals";
-import { SimulationList } from "../components/SimulationList";
+import { SimulationList } from "../simulation/SimulationList";
 import { getOccurrencesUntilDate } from "@/helper/getOccurrencesUntilDate";
 import { SimulationScenario, useTranslation } from "@budget/core";
 import {

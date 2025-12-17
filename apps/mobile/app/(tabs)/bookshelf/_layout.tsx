@@ -5,8 +5,6 @@ import {
   bookshelfTheme,
   ThemeProvider,
 } from "@budget/ui-native";
-import { useBookshelfNotificationScheduler } from "@/store/bookshelf/useBookshelfNotificationScheduler";
-import { useReminderScheduler } from "@/hooks/useReminderScheduler";
 
 export default function BookshelfTabLayout() {
   return (

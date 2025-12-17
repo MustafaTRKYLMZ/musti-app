@@ -19,8 +19,8 @@ import type {
   ReminderSchedule,
   ReminderTarget,
 } from "@/store/reminders/types";
-import { AppScreen } from "../AppScreen";
-import { IconButton } from "../ui/AppIcon";
+import { AppScreen } from "@/components/AppScreen";
+import { IconButton } from "@/components/ui/AppIcon";
 
 type Props = {
   owner: ReminderOwner;

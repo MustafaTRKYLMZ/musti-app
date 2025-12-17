@@ -7,6 +7,8 @@ import {
   Modal,
   UIManager,
   findNodeHandle,
+  StyleProp,
+  ViewStyle,
 } from "react-native";
 import {
   MText,
@@ -18,7 +20,7 @@ import {
 } from "@budget/ui-native";
 import { BaseIcon, IconButton } from "@/components/ui/AppIcon";
 
-export type CurrentPlanInfo = {
+export type PlanInfo = {
   name: string;
   isCompleted: boolean;
   totalCompleted: number;
@@ -29,16 +31,24 @@ export type CurrentPlanInfo = {
   suggestedBookName?: string;
 };
 
-type CurrentPlanCardProps = {
-  currentPlanInfo: CurrentPlanInfo | null;
+type PlanCardProps = {
+  currentPlanInfo: PlanInfo | null;
   onPress: () => void;
   onDeletePlan: () => void;
+
+  // ✅ NEW
+  onEditPlan?: () => void;
+  wrapperStyle?: StyleProp<ViewStyle>;
+  cardStyle?: StyleProp<ViewStyle>;
 };
 
-export const CurrentPlanCard: FC<CurrentPlanCardProps> = ({
+export const PlanCard: FC<PlanCardProps> = ({
   currentPlanInfo,
   onPress,
   onDeletePlan,
+  onEditPlan,
+  wrapperStyle,
+  cardStyle,
 }) => {
   const theme = useTheme();
   const { colors } = theme;
@@ -61,6 +71,7 @@ export const CurrentPlanCard: FC<CurrentPlanCardProps> = ({
     remainingInItem,
     suggestedBookName,
   } = currentPlanInfo;
+
   const progressText = `${totalCompleted} / ${totalPagesInPlan} pages`;
   const subtitle = isCompleted
     ? suggestedBookName
@@ -104,13 +115,12 @@ export const CurrentPlanCard: FC<CurrentPlanCardProps> = ({
   return (
     <>
       <TouchableOpacity
-        style={styles.wrapper}
+        style={[styles.wrapper, wrapperStyle]}
         activeOpacity={0.9}
         onPress={handleCardPress}
       >
-        <Card style={styles.card}>
+        <Card style={[styles.card, cardStyle]}>
           <View style={styles.leftSection}>
-            {/* Icon + status badge */}
             <View
               style={[
                 styles.iconWrapper,
@@ -186,7 +196,6 @@ export const CurrentPlanCard: FC<CurrentPlanCardProps> = ({
         </Card>
       </TouchableOpacity>
 
-      {/* 3-dot menu */}
       <Modal
         visible={menuVisible}
         transparent
@@ -219,6 +228,21 @@ export const CurrentPlanCard: FC<CurrentPlanCardProps> = ({
               >
                 <MText variant="body" color="textPrimary">
                   Open plan
+                </MText>
+              </TouchableOpacity>
+            )}
+
+            {/* ✅ NEW: Edit plan */}
+            {!!onEditPlan && (
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => {
+                  closeMenu();
+                  onEditPlan();
+                }}
+              >
+                <MText variant="body" color="textPrimary">
+                  Edit plan
                 </MText>
               </TouchableOpacity>
             )}
@@ -266,15 +290,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1,
   },
-  textBlock: {
-    flex: 1,
-  },
-  title: {
-    marginBottom: spacing.xs / 2,
-  },
-  subtitle: {
-    marginBottom: spacing.xs,
-  },
+  textBlock: { flex: 1 },
+  title: { marginBottom: spacing.xs / 2 },
+  subtitle: { marginBottom: spacing.xs },
   progressRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -287,19 +305,10 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     overflow: "hidden",
   },
-  progressPillFill: {
-    height: "100%",
-    borderRadius: 999,
-  },
-  rightSection: {
-    marginLeft: spacing.sm,
-  },
+  progressPillFill: { height: "100%", borderRadius: 999 },
+  rightSection: { marginLeft: spacing.sm },
 
-  // Popover menu
-  menuOverlay: {
-    flex: 1,
-    backgroundColor: "transparent",
-  },
+  menuOverlay: { flex: 1, backgroundColor: "transparent" },
   popover: {
     position: "absolute",
     paddingVertical: spacing.xs,
@@ -312,7 +321,5 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 8,
   },
-  menuItem: {
-    paddingVertical: spacing.sm,
-  },
+  menuItem: { paddingVertical: spacing.sm },
 });
