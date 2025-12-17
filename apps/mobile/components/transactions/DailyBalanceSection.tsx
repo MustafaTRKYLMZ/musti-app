@@ -1,10 +1,10 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
 import dayjs from "dayjs";
-import { QuickChip } from "./QuickChip";
 import { useTranslation } from "@budget/core";
 import { LocalizedDatePicker } from "@/components/ui/LocalizedDatePicker";
 import { MText, colors, spacing } from "@budget/ui-native";
+import { QuickChip } from "./QuickChip";
 
 interface Props {
   selectedDate: string | undefined;

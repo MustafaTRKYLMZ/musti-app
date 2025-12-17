@@ -1,5 +1,4 @@
-// apps/mobile/features/books/CurrentPlanCard.tsx
-import React, { FC, useRef, useState } from "react";
+import React, { FC, useRef, useState, useMemo } from "react";
 import {
   TouchableOpacity,
   View,
@@ -7,6 +6,8 @@ import {
   Modal,
   UIManager,
   findNodeHandle,
+  StyleProp,
+  ViewStyle,
 } from "react-native";
 import {
   MText,
@@ -17,8 +18,9 @@ import {
   Card,
 } from "@budget/ui-native";
 import { BaseIcon, IconButton } from "@/components/ui/AppIcon";
+import { ProgressPill, getProgressColor } from "@/components/ui/ProgressPill";
 
-export type CurrentPlanInfo = {
+export type PlanInfo = {
   name: string;
   isCompleted: boolean;
   totalCompleted: number;
@@ -29,16 +31,22 @@ export type CurrentPlanInfo = {
   suggestedBookName?: string;
 };
 
-type CurrentPlanCardProps = {
-  currentPlanInfo: CurrentPlanInfo | null;
+type PlanCardProps = {
+  currentPlanInfo: PlanInfo | null;
   onPress: () => void;
   onDeletePlan: () => void;
+  onEditPlan?: () => void;
+  wrapperStyle?: StyleProp<ViewStyle>;
+  cardStyle?: StyleProp<ViewStyle>;
 };
 
-export const CurrentPlanCard: FC<CurrentPlanCardProps> = ({
+export const PlanCard: FC<PlanCardProps> = ({
   currentPlanInfo,
   onPress,
   onDeletePlan,
+  onEditPlan,
+  wrapperStyle,
+  cardStyle,
 }) => {
   const theme = useTheme();
   const { colors } = theme;
@@ -81,10 +89,7 @@ export const CurrentPlanCard: FC<CurrentPlanCardProps> = ({
     if (!handle) return;
 
     UIManager.measure(handle, (_x, _y, width, height, pageX, pageY) => {
-      setMenuPos({
-        x: pageX + width - 160,
-        y: pageY + height + 8,
-      });
+      setMenuPos({ x: pageX + width - 160, y: pageY + height + 8 });
       setMenuVisible(true);
     });
   };
@@ -101,18 +106,27 @@ export const CurrentPlanCard: FC<CurrentPlanCardProps> = ({
     onPress();
   };
 
-  const statusColor = isCompleted ? colors.success : colors.primary;
+  const safeTotal = Math.max(totalPagesInPlan || 1, 1);
+  const pct01 = totalCompleted / safeTotal;
+
+  // ✅ Icon her zaman yeşil (pozitif)
+  const iconColor = colors.success;
+
+  // ✅ Progress sarı -> yeşil (ama iconu etkilemez)
+  const progressColor = useMemo(
+    () => getProgressColor(pct01, colors),
+    [pct01, colors]
+  );
 
   return (
     <>
       <TouchableOpacity
-        style={styles.wrapper}
+        style={[styles.wrapper, wrapperStyle]}
         activeOpacity={0.9}
         onPress={handleCardPress}
       >
-        <Card style={styles.card}>
+        <Card style={[styles.card, cardStyle]}>
           <View style={styles.leftSection}>
-            {/* Icon + status badge */}
             <View
               style={[
                 styles.iconWrapper,
@@ -125,7 +139,7 @@ export const CurrentPlanCard: FC<CurrentPlanCardProps> = ({
               <BaseIcon
                 name={isCompleted ? "checkmark-done-outline" : "time-outline"}
                 size={iconSizes.lg}
-                color={statusColor}
+                color={iconColor}
               />
             </View>
 
@@ -136,7 +150,7 @@ export const CurrentPlanCard: FC<CurrentPlanCardProps> = ({
                 numberOfLines={1}
                 style={styles.title}
               >
-                Current plan: {name}
+                {name}
               </MText>
 
               <MText
@@ -149,27 +163,13 @@ export const CurrentPlanCard: FC<CurrentPlanCardProps> = ({
               </MText>
 
               <View style={styles.progressRow}>
-                <View
-                  style={[
-                    styles.progressPill,
-                    { backgroundColor: colors.backgroundSecondary },
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.progressPillFill,
-                      {
-                        backgroundColor: statusColor,
-                        width: `${Math.min(
-                          100,
-                          (totalCompleted /
-                            Math.max(totalPagesInPlan || 1, 1)) *
-                            100
-                        )}%`,
-                      },
-                    ]}
-                  />
-                </View>
+                <ProgressPill
+                  value={totalCompleted}
+                  total={totalPagesInPlan}
+                  width={90}
+                  height={6}
+                  fillColor={progressColor}
+                />
                 <MText variant="caption" color="textSecondary">
                   {progressText}
                 </MText>
@@ -188,7 +188,6 @@ export const CurrentPlanCard: FC<CurrentPlanCardProps> = ({
         </Card>
       </TouchableOpacity>
 
-      {/* 3-dot menu */}
       <Modal
         visible={menuVisible}
         transparent
@@ -221,6 +220,20 @@ export const CurrentPlanCard: FC<CurrentPlanCardProps> = ({
               >
                 <MText variant="body" color="textPrimary">
                   Open plan
+                </MText>
+              </TouchableOpacity>
+            )}
+
+            {!!onEditPlan && (
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => {
+                  closeMenu();
+                  onEditPlan();
+                }}
+              >
+                <MText variant="body" color="textPrimary">
+                  Edit plan
                 </MText>
               </TouchableOpacity>
             )}
@@ -268,40 +281,17 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1,
   },
-  textBlock: {
-    flex: 1,
-  },
-  title: {
-    marginBottom: spacing.xs / 2,
-  },
-  subtitle: {
-    marginBottom: spacing.xs,
-  },
+  textBlock: { flex: 1 },
+  title: { marginBottom: spacing.xs / 2 },
+  subtitle: { marginBottom: spacing.xs },
   progressRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
   },
-  progressPill: {
-    flex: 0,
-    width: 90,
-    height: 6,
-    borderRadius: 999,
-    overflow: "hidden",
-  },
-  progressPillFill: {
-    height: "100%",
-    borderRadius: 999,
-  },
-  rightSection: {
-    marginLeft: spacing.sm,
-  },
+  rightSection: { marginLeft: spacing.sm },
 
-  // Popover menu
-  menuOverlay: {
-    flex: 1,
-    backgroundColor: "transparent",
-  },
+  menuOverlay: { flex: 1, backgroundColor: "transparent" },
   popover: {
     position: "absolute",
     paddingVertical: spacing.xs,
@@ -314,7 +304,5 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 8,
   },
-  menuItem: {
-    paddingVertical: spacing.sm,
-  },
+  menuItem: { paddingVertical: spacing.sm },
 });

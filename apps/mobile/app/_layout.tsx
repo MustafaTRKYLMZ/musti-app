@@ -14,6 +14,7 @@ import { useSettingsStore } from "../store/budget/useSettingsStore";
 import { useEffect } from "react";
 import { initNotificationsOnce } from "@budget/notifications";
 import { SchedulersHost } from "@/components/SchedulersHost";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 export const unstable_settings = {
   anchor: "(tabs)",
 };
@@ -35,13 +36,15 @@ export default function RootLayout() {
   }, [loadInitialBalance, loadFromStorage]);
 
   return (
-    <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-      <SchedulersHost />
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="launcher" />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+        <SchedulersHost />
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="launcher" />
+        </Stack>
+        <StatusBar style="auto" />
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }

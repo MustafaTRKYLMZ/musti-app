@@ -5,6 +5,7 @@ import DateTimePicker, {
 } from "@react-native-community/datetimepicker";
 import Toast from "react-native-root-toast";
 import { MText, spacing, radii, useTheme } from "@budget/ui-native";
+import { IconButton, IconTile } from "../ui/AppIcon";
 
 type Props = {
   title: string;
@@ -85,8 +86,7 @@ export function NotificationReminderSection({
 
       <View style={[styles.row, { marginTop: spacing.md }]}>
         <MText style={{ color: colors.textSecondary }}>Time</MText>
-
-        <Pressable
+        <IconTile
           onPress={openPicker}
           style={[
             styles.timePill,
@@ -95,15 +95,11 @@ export function NotificationReminderSection({
               opacity: enabled ? 1 : 0.5,
             },
           ]}
-        >
-          <MText
-            style={{
-              color: enabled ? colors.textPrimary : colors.textSecondary,
-            }}
-          >
-            {timeLabel}
-          </MText>
-        </Pressable>
+          label={timeLabel}
+          name="time-outline"
+          size={16}
+          color={enabled ? colors.textPrimary : colors.textSecondary}
+        />
       </View>
 
       {showPicker ? (

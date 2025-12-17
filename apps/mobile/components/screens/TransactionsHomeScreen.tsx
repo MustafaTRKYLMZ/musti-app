@@ -9,23 +9,24 @@ import {
   type LocalTransaction,
 } from "@budget/core";
 
-import TransactionList from "../components/TransactionList";
-import { useTransactionsStore } from "../../../store/budget/transactions/useTransactionsStore";
-import { useSettingsStore } from "../../../store/budget/useSettingsStore";
-
-import { BudgetHeader } from "../../../components/ui/BudgetHeader";
-import { DailyBalanceSection } from "../components/DailyBalanceSection";
-import { ViewTabs, type ViewTab } from "../../../components/ui/ViewTabs";
-import { MonthNavigator } from "../components/MonthNavigator";
-import { MonthlyBalanceBar } from "../components/MonthlyBalanceBar";
-import { SidebarMenu } from "../../../components/ui/SidebarMenu";
-import { DeleteTransactionSheet } from "../components/DeleteTransactionSheet";
-import { syncTransactions } from "../../../services/syncTransactions";
 import { CustomAlert } from "@/components/CustomAlert";
 
 import { FAB, MText, colors, spacing, radii } from "@budget/ui-native";
 import { AppScreen } from "@/components/AppScreen";
 import { BaseIcon } from "@/components/ui/AppIcon";
+import { syncTransactions } from "@/services/syncTransactions";
+import { useTransactionsStore } from "@/store/budget/transactions/useTransactionsStore";
+import { useSettingsStore } from "@/store/budget/useSettingsStore";
+import {
+  DailyBalanceSection,
+  MonthNavigator,
+  MonthlyBalanceBar,
+  DeleteTransactionSheet,
+} from "../transactions";
+import TransactionList from "../transactions/TransactionList";
+import { BudgetHeader } from "../ui/BudgetHeader";
+import { SidebarMenu } from "../ui/SidebarMenu";
+import { ViewTab, ViewTabs } from "../ui/ViewTabs";
 
 const getCurrentMonth = () => dayjs().format("YYYY-MM");
 

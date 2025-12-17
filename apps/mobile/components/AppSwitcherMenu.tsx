@@ -32,39 +32,50 @@ export function AppSwitcherMenu({ visible, onClose }: Props) {
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade">
-      <Pressable style={styles.backdrop} onPress={onClose} />
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      {/* ✅ Tek overlay: dışa basınca kapanır */}
+      <Pressable style={styles.overlay} onPress={onClose}>
+        {/* ✅ Menü: basılınca overlay'e düşmesin (kapanmasın) */}
+        <Pressable
+          onPress={() => {}}
+          style={styles.menuContainer}
+          android_disableSound
+        >
+          <MText variant="heading3" style={styles.menuTitle}>
+            Apps
+          </MText>
 
-      <View style={styles.menuContainer}>
-        <MText variant="heading3" style={styles.menuTitle}>
-          Apps
-        </MText>
+          <View style={styles.grid}>
+            <IconTile
+              name="wallet-outline"
+              label="Budget"
+              color={budgetTheme.colors.success}
+              labelColor={colors.textInverse}
+              onPress={goBudget}
+            />
 
-        <View style={styles.grid}>
-          <IconTile
-            name="wallet-outline"
-            label="Budget"
-            color={budgetTheme.colors.success}
-            labelColor={colors.textInverse}
-            onPress={goBudget}
-          />
-
-          <IconTile
-            name="book-outline"
-            label="Bookshelf"
-            color={bookshelfTheme.colors.success}
-            labelColor={colors.textInverse}
-            onPress={goBookshelf}
-          />
-        </View>
-      </View>
+            <IconTile
+              name="book-outline"
+              label="Bookshelf"
+              color={bookshelfTheme.colors.success}
+              labelColor={colors.textInverse}
+              onPress={goBookshelf}
+            />
+          </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
 
 const makeStyles = (colors: typeof budgetTheme.colors) =>
   StyleSheet.create({
-    backdrop: {
+    overlay: {
       flex: 1,
       backgroundColor: colors.backdropStrong,
     },
@@ -77,15 +88,17 @@ const makeStyles = (colors: typeof budgetTheme.colors) =>
       borderRadius: radii.xl,
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.md,
-      elevation: 6,
+
+      // ✅ Android: mutlaka üstte olsun
+      elevation: 20,
+
+      // ✅ iOS
       shadowColor: "#000",
       shadowOpacity: 0.18,
       shadowRadius: 10,
       shadowOffset: { width: 0, height: 4 },
     },
-    menuTitle: {
-      marginBottom: spacing.sm,
-    },
+    menuTitle: { marginBottom: spacing.sm },
     grid: {
       flexDirection: "row",
       justifyContent: "space-between",

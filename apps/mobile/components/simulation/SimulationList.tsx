@@ -1,5 +1,3 @@
-// apps/mobile/features/transactions/components/SimulationList.tsx
-
 import React from "react";
 import { View, StyleSheet } from "react-native";
 import { CashflowRow } from "@/components/ui/CashflowRow";

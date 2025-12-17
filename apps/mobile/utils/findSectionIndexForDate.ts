@@ -1,4 +1,4 @@
-import { TxSection } from "@/features/transactions";
+import { TxSection } from "@/components/transactions";
 import dayjs from "dayjs";
 
 export function findSectionIndexForDate(

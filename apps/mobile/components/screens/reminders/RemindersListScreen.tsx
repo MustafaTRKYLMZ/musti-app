@@ -6,7 +6,7 @@ import { MText, spacing, radii, useTheme } from "@budget/ui-native";
 import { useRemindersStore } from "@/store/reminders/useRemindersStore";
 import type { ReminderOwner, ReminderItem } from "@/store/reminders/types";
 import { useShallow } from "zustand/react/shallow";
-import { AppScreen } from "../AppScreen";
+import { AppScreen } from "@/components/AppScreen";
 
 function formatTime(hour: number, minute: number) {
   const hh = String(hour).padStart(2, "0");

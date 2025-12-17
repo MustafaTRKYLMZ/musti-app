@@ -1,6 +1,6 @@
 import React from "react";
 import { Stack } from "expo-router";
-import { ReminderEditorScreen } from "@/components/reminders/ReminderEditorScreen";
+import { ReminderEditorScreen } from "@/components/screens/reminders/ReminderEditorScreen";
 
 export default function BudgetRemindersNew() {
   return (
