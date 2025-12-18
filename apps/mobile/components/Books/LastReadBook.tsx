@@ -1,8 +1,11 @@
-import React, { FC, useState } from "react";
+import React, { FC } from "react";
 import { View, FlatList, StyleSheet } from "react-native";
 import { bookshelfTheme, MText, radii, spacing } from "@budget/ui-native";
 import { BookCard } from "./BookCard";
-import { ShelfPlank } from "./ShelfPlank";
+import {
+  ShelfPlankWrapper,
+  SHELF_PLANK_HEIGHT,
+} from "./ShelfPlankWrapper";
 
 const { colors } = bookshelfTheme;
 
@@ -40,15 +43,8 @@ export const LastReadBook: FC<LastReadBookProps> = ({
   progressMap,
   readingStats,
 }) => {
-  const PLANK_H = 46;
-  const PLANK_DEPTH = 22;
-  const PLANK_THICK = 14;
-
   const BOOK_SINK = 44;
-
   const LIFT_UP = Math.max(0, BOOK_SINK - 8);
-
-  const [rowWidth, setRowWidth] = useState(0);
 
   return (
     <View style={styles.shelfSection}>
@@ -67,33 +63,11 @@ export const LastReadBook: FC<LastReadBookProps> = ({
           <View
             style={[
               styles.rowContainer,
-              { paddingBottom: PLANK_H - 12, marginTop: -LIFT_UP },
+              { paddingBottom: SHELF_PLANK_HEIGHT - 12, marginTop: -LIFT_UP },
             ]}
-            onLayout={(e) => {
-              if (!rowWidth) setRowWidth(e.nativeEvent.layout.width);
-            }}
           >
             {/* Shelf */}
-            <View
-              style={[styles.plankWrap, { height: PLANK_H }]}
-              pointerEvents="none"
-            >
-              {rowWidth > 0 && (
-                <ShelfPlank
-                  width={rowWidth + spacing.lg * 3}
-                  height={PLANK_H}
-                  thickness={PLANK_THICK}
-                  depth={PLANK_DEPTH}
-                  skewX={16}
-                  skewY={10}
-                  radius={4}
-                  brightness={0.75}
-                  accent
-                  accentHeight={2}
-                  accentGlow={false}
-                />
-              )}
-            </View>
+            <ShelfPlankWrapper />
 
             <FlatList
               data={lastReadBooks}
@@ -102,7 +76,7 @@ export const LastReadBook: FC<LastReadBookProps> = ({
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={[
                 styles.listContent,
-                { paddingBottom: PLANK_H - 12 },
+                { paddingBottom: SHELF_PLANK_HEIGHT - 12 },
               ]}
               renderItem={({ item }) => {
                 const progress = progressMap[item.uri];
@@ -161,13 +135,6 @@ const styles = StyleSheet.create({
   listContent: {
     paddingRight: spacing.lg,
     alignItems: "flex-end",
-  },
-
-  plankWrap: {
-    position: "absolute",
-    left: -spacing.lg,
-    right: -spacing.lg,
-    bottom: 0,
   },
 
   emptyState: {
