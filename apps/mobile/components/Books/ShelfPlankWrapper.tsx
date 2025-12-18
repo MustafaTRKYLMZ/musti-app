@@ -1,5 +1,11 @@
-import React, { FC, useState } from "react";
-import { View, StyleSheet, StyleProp, ViewStyle } from "react-native";
+import React, { FC, useState, useCallback } from "react";
+import {
+  View,
+  StyleSheet,
+  StyleProp,
+  ViewStyle,
+  LayoutChangeEvent,
+} from "react-native";
 import { spacing } from "@budget/ui-native";
 import { ShelfPlank } from "./ShelfPlank";
 
@@ -14,16 +20,21 @@ type ShelfPlankWrapperProps = {
 export const ShelfPlankWrapper: FC<ShelfPlankWrapperProps> = ({ style }) => {
   const [rowWidth, setRowWidth] = useState(0);
 
+  const handleLayout = useCallback(
+    (e: LayoutChangeEvent) => {
+      const width = e.nativeEvent.layout.width;
+      if (width > 0 && rowWidth !== width) {
+        setRowWidth(width);
+      }
+    },
+    [rowWidth]
+  );
+
   return (
     <View
       style={[styles.plankWrap, { height: SHELF_PLANK_HEIGHT }, style]}
       pointerEvents="none"
-      onLayout={(e) => {
-        const width = e.nativeEvent.layout.width;
-        if (width > 0 && rowWidth !== width) {
-          setRowWidth(width);
-        }
-      }}
+      onLayout={handleLayout}
     >
       {rowWidth > 0 && (
         <ShelfPlank
