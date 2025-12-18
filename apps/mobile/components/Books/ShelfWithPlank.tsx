@@ -1,5 +1,5 @@
 import React, { FC, ReactNode, useState, useCallback } from "react";
-import { View, StyleSheet, ViewStyle } from "react-native";
+import { View, StyleSheet, ViewStyle, LayoutChangeEvent } from "react-native";
 import { spacing } from "@budget/ui-native";
 import { ShelfPlank } from "./ShelfPlank";
 
@@ -24,7 +24,7 @@ export const ShelfWithPlank: FC<ShelfWithPlankProps> = ({
   const [rowWidth, setRowWidth] = useState(0);
 
   const handleLayout = useCallback(
-    (e: any) => {
+    (e: LayoutChangeEvent) => {
       const width = e.nativeEvent.layout.width;
       if (width !== rowWidth) {
         setRowWidth(width);
