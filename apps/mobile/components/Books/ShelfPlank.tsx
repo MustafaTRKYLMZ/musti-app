@@ -19,7 +19,7 @@ type ShelfPlankProps = {
 
   radius?: number;
   strokeWidth?: number;
-  brightness?: number; // 0..1
+  brightness?: number;
 
   accent?: boolean;
   accentHeight?: number;

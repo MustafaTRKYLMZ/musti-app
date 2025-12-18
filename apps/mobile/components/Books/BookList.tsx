@@ -52,7 +52,7 @@ export const BookList: FC<BookListProps> = ({
   const [rowWidth, setRowWidth] = useState(0);
 
   return (
-    <View style={styles.shelfSection}>
+    <View>
       <ShelfHeader title="Books" handleOpen={() => setModalVisible(true)} />
       <View style={styles.shelfInner}>
         {gridRows.length === 0 ? (
@@ -133,10 +133,8 @@ export const BookList: FC<BookListProps> = ({
 };
 
 const styles = StyleSheet.create({
-  shelfSection: { marginBottom: spacing.xl },
   shelfInner: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
     position: "relative",
   },
 
@@ -153,13 +151,11 @@ const styles = StyleSheet.create({
   },
 
   gridContent: {
-    paddingTop: spacing.lg,
     paddingBottom: spacing.lg,
     paddingRight: spacing.lg,
   },
 
   gridRowContainer: {
-    marginBottom: spacing.lg,
     position: "relative",
   },
 
@@ -174,7 +170,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-end",
-    minHeight: 160,
   },
 
   gridItem: {

@@ -1,7 +1,8 @@
-import { bookshelfTheme, MText, radii, spacing } from "@budget/ui-native";
+import React, { FC, useState } from "react";
 import { View, FlatList, StyleSheet } from "react-native";
+import { bookshelfTheme, MText, radii, spacing } from "@budget/ui-native";
 import { BookCard } from "./BookCard";
-import { FC } from "react";
+import { ShelfPlank } from "./ShelfPlank";
 
 const { colors } = bookshelfTheme;
 
@@ -25,19 +26,10 @@ type LastReadBookProps = {
     file: { uri: string; name: string; lastOpened: number },
     newName: string
   ) => void;
-  progressMap: {
-    [uri: string]: {
-      lastPage: number;
-      totalPages: number;
-    };
-  };
-  readingStats: {
-    [key: string]: {
-      pagesRead: number;
-      targetPages: number;
-    };
-  };
+  progressMap: { [uri: string]: { lastPage: number; totalPages: number } };
+  readingStats: { [key: string]: { pagesRead: number; targetPages: number } };
 };
+
 const today = new Date().toISOString().split("T")[0];
 
 export const LastReadBook: FC<LastReadBookProps> = ({
@@ -48,6 +40,16 @@ export const LastReadBook: FC<LastReadBookProps> = ({
   progressMap,
   readingStats,
 }) => {
+  const PLANK_H = 46;
+  const PLANK_DEPTH = 22;
+  const PLANK_THICK = 14;
+
+  const BOOK_SINK = 44;
+
+  const LIFT_UP = Math.max(0, BOOK_SINK - 8);
+
+  const [rowWidth, setRowWidth] = useState(0);
+
   return (
     <View style={styles.shelfSection}>
       <MText variant="heading3" color="textPrimary" style={styles.shelfTitle}>
@@ -55,8 +57,6 @@ export const LastReadBook: FC<LastReadBookProps> = ({
       </MText>
 
       <View style={styles.shelfInner}>
-        <View style={styles.shelfRail} />
-
         {lastReadBooks.length === 0 ? (
           <View style={styles.emptyState}>
             <MText color="textSecondary">
@@ -64,32 +64,74 @@ export const LastReadBook: FC<LastReadBookProps> = ({
             </MText>
           </View>
         ) : (
-          <FlatList
-            data={lastReadBooks}
-            keyExtractor={(item) => item.uri}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.listContent}
-            renderItem={({ item }) => {
-              const progress = progressMap[item.uri];
-              const statKey = `${item.uri}:${today}`;
-              const todayStat = readingStats[statKey];
-
-              return (
-                <BookCard
-                  file={item}
-                  onOpen={() => handleOpenPdf(item)}
-                  onDelete={() => handleDeletePdf(item)}
-                  lastPage={progress?.lastPage}
-                  totalPages={progress?.totalPages}
-                  todayPages={todayStat?.pagesRead}
-                  todayTargetPages={todayStat?.targetPages}
-                  onRename={(newName) => renameBook(item, newName)}
-                  variant="row"
-                />
-              );
+          <View
+            style={[
+              styles.rowContainer,
+              { paddingBottom: PLANK_H - 12, marginTop: -LIFT_UP },
+            ]}
+            onLayout={(e) => {
+              if (!rowWidth) setRowWidth(e.nativeEvent.layout.width);
             }}
-          />
+          >
+            {/* Shelf */}
+            <View
+              style={[styles.plankWrap, { height: PLANK_H }]}
+              pointerEvents="none"
+            >
+              {rowWidth > 0 && (
+                <ShelfPlank
+                  width={rowWidth + spacing.lg * 3}
+                  height={PLANK_H}
+                  thickness={PLANK_THICK}
+                  depth={PLANK_DEPTH}
+                  skewX={16}
+                  skewY={10}
+                  radius={4}
+                  brightness={0.75}
+                  accent
+                  accentHeight={2}
+                  accentGlow={false}
+                />
+              )}
+            </View>
+
+            <FlatList
+              data={lastReadBooks}
+              keyExtractor={(item) => item.uri}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={[
+                styles.listContent,
+                { paddingBottom: PLANK_H - 12 },
+              ]}
+              renderItem={({ item }) => {
+                const progress = progressMap[item.uri];
+                const statKey = `${item.uri}:${today}`;
+                const todayStat = readingStats[statKey];
+
+                return (
+                  <View
+                    style={{
+                      transform: [{ translateY: BOOK_SINK }],
+                      marginBottom: -2,
+                    }}
+                  >
+                    <BookCard
+                      file={item as any}
+                      onOpen={() => handleOpenPdf(item)}
+                      onDelete={() => handleDeletePdf(item)}
+                      lastPage={progress?.lastPage}
+                      totalPages={progress?.totalPages}
+                      todayPages={todayStat?.pagesRead}
+                      todayTargetPages={todayStat?.targetPages}
+                      onRename={(newName) => renameBook(item, newName)}
+                      variant="row"
+                    />
+                  </View>
+                );
+              }}
+            />
+          </View>
         )}
       </View>
     </View>
@@ -97,31 +139,37 @@ export const LastReadBook: FC<LastReadBookProps> = ({
 };
 
 const styles = StyleSheet.create({
-  listContent: {
-    paddingVertical: spacing.lg,
-    paddingRight: spacing.lg,
+  shelfSection: {
+    borderRadius: radii.sm,
   },
-  shelfSection: { marginBottom: spacing.xl },
+
   shelfInner: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
     position: "relative",
   },
+
   shelfTitle: {
     marginHorizontal: spacing.lg,
     marginBottom: spacing.xs,
+    marginTop: spacing.sm,
   },
 
-  shelfRail: {
-    position: "absolute",
-    left: spacing.lg,
-    right: spacing.lg,
-    bottom: spacing.xs,
-    height: 4,
-    borderRadius: radii.full,
-    backgroundColor: colors.backgroundSecondary,
-    opacity: 0.6,
+  rowContainer: {
+    position: "relative",
   },
+
+  listContent: {
+    paddingRight: spacing.lg,
+    alignItems: "flex-end",
+  },
+
+  plankWrap: {
+    position: "absolute",
+    left: -spacing.lg,
+    right: -spacing.lg,
+    bottom: 0,
+  },
+
   emptyState: {
     minHeight: 120,
     alignItems: "center",
