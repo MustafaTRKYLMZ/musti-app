@@ -1,4 +1,4 @@
-import React, { FC, ReactNode, useState } from "react";
+import React, { FC, ReactNode, useState, useCallback } from "react";
 import { View, StyleSheet, ViewStyle } from "react-native";
 import { spacing } from "@budget/ui-native";
 import { ShelfPlank } from "./ShelfPlank";
@@ -18,18 +18,26 @@ export const ShelfWithPlank: FC<ShelfWithPlankProps> = ({
   containerStyle,
   onLayout,
 }) => {
+  // Track the row width for the shelf plank. Start at 0 to prevent
+  // the plank from rendering before we know the actual width, which
+  // would cause layout flicker.
   const [rowWidth, setRowWidth] = useState(0);
+
+  const handleLayout = useCallback(
+    (e: any) => {
+      const width = e.nativeEvent.layout.width;
+      if (width !== rowWidth) {
+        setRowWidth(width);
+        onLayout?.(width);
+      }
+    },
+    [rowWidth, onLayout]
+  );
 
   return (
     <View
       style={[styles.container, containerStyle]}
-      onLayout={(e) => {
-        const width = e.nativeEvent.layout.width;
-        if (width !== rowWidth) {
-          setRowWidth(width);
-          onLayout?.(width);
-        }
-      }}
+      onLayout={handleLayout}
     >
       {/* Shelf Plank */}
       <View
