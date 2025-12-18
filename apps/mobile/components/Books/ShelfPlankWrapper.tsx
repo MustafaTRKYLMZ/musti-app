@@ -1,5 +1,5 @@
 import React, { FC, useState } from "react";
-import { View, StyleSheet } from "react-native";
+import { View, StyleSheet, StyleProp, ViewStyle } from "react-native";
 import { spacing } from "@budget/ui-native";
 import { ShelfPlank } from "./ShelfPlank";
 
@@ -8,7 +8,7 @@ export const SHELF_PLANK_DEPTH = 22;
 export const SHELF_PLANK_THICKNESS = 14;
 
 type ShelfPlankWrapperProps = {
-  style?: any;
+  style?: StyleProp<ViewStyle>;
   onWidthMeasured?: (width: number) => void;
 };
 
@@ -24,7 +24,7 @@ export const ShelfPlankWrapper: FC<ShelfPlankWrapperProps> = ({
       pointerEvents="none"
       onLayout={(e) => {
         const width = e.nativeEvent.layout.width;
-        if (!rowWidth && width > 0) {
+        if (width > 0 && rowWidth !== width) {
           setRowWidth(width);
           onWidthMeasured?.(width);
         }
