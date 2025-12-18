@@ -2,10 +2,8 @@ import React, { FC } from "react";
 import { View, FlatList, StyleSheet } from "react-native";
 import { bookshelfTheme, MText, radii, spacing } from "@budget/ui-native";
 import { BookCard } from "./BookCard";
-import {
-  ShelfPlankWrapper,
-  SHELF_PLANK_HEIGHT,
-} from "./ShelfPlankWrapper";
+import { SHELF_PLANK_HEIGHT } from "./ShelfPlankWrapper";
+import { ShelfWithPlank } from "./ShelfWithPlank";
 
 const { colors } = bookshelfTheme;
 
@@ -66,9 +64,6 @@ export const LastReadBook: FC<LastReadBookProps> = ({
               { paddingBottom: SHELF_PLANK_HEIGHT - 12, marginTop: -LIFT_UP },
             ]}
           >
-            {/* Shelf */}
-            <ShelfPlankWrapper />
-
             <FlatList
               data={lastReadBooks}
               keyExtractor={(item) => item.uri}
