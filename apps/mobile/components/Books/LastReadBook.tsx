@@ -59,10 +59,10 @@ export const LastReadBook: FC<LastReadBookProps> = ({
           </View>
         ) : (
           <ShelfWithPlank
-            containerStyle={[
-              styles.rowContainer,
-              { paddingBottom: SHELF_PLANK_HEIGHT - 12, marginTop: -LIFT_UP },
-            ]}
+            containerStyle={{
+              paddingBottom: SHELF_PLANK_HEIGHT - 12,
+              marginTop: -LIFT_UP,
+            }}
           >
             <FlatList
               data={lastReadBooks}
