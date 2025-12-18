@@ -2,7 +2,7 @@ import React, { FC } from "react";
 import { View, FlatList, StyleSheet } from "react-native";
 import { bookshelfTheme, MText, radii, spacing } from "@budget/ui-native";
 import { BookCard } from "./BookCard";
-import { BookShelf } from "./BookShelf";
+import { ShelfWithPlank, PLANK_H } from "./ShelfWithPlank";
 
 const { colors } = bookshelfTheme;
 
@@ -42,6 +42,7 @@ export const LastReadBook: FC<LastReadBookProps> = ({
 }) => {
   const BOOK_SINK = 44;
   const LIFT_UP = Math.max(0, BOOK_SINK - 8);
+  const PLANK_PADDING = PLANK_H - 12;
 
   return (
     <View style={styles.shelfSection}>
@@ -57,43 +58,49 @@ export const LastReadBook: FC<LastReadBookProps> = ({
             </MText>
           </View>
         ) : (
-          <View style={[styles.rowContainer, { marginTop: -LIFT_UP }]}>
-            <BookShelf>
-              <FlatList
-                data={lastReadBooks}
-                keyExtractor={(item) => item.uri}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.listContent}
-                renderItem={({ item }) => {
-                  const progress = progressMap[item.uri];
-                  const statKey = `${item.uri}:${today}`;
-                  const todayStat = readingStats[statKey];
+          <ShelfWithPlank
+            containerStyle={[
+              styles.rowContainer,
+              { paddingBottom: PLANK_PADDING, marginTop: -LIFT_UP },
+            ]}
+          >
+            <FlatList
+              data={lastReadBooks}
+              keyExtractor={(item) => item.uri}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={[
+                styles.listContent,
+                { paddingBottom: PLANK_PADDING },
+              ]}
+              renderItem={({ item }) => {
+                const progress = progressMap[item.uri];
+                const statKey = `${item.uri}:${today}`;
+                const todayStat = readingStats[statKey];
 
-                  return (
-                    <View
-                      style={{
-                        transform: [{ translateY: BOOK_SINK }],
-                        marginBottom: -2,
-                      }}
-                    >
-                      <BookCard
-                        file={item as any}
-                        onOpen={() => handleOpenPdf(item)}
-                        onDelete={() => handleDeletePdf(item)}
-                        lastPage={progress?.lastPage}
-                        totalPages={progress?.totalPages}
-                        todayPages={todayStat?.pagesRead}
-                        todayTargetPages={todayStat?.targetPages}
-                        onRename={(newName) => renameBook(item, newName)}
-                        variant="row"
-                      />
-                    </View>
-                  );
-                }}
-              />
-            </BookShelf>
-          </View>
+                return (
+                  <View
+                    style={{
+                      transform: [{ translateY: BOOK_SINK }],
+                      marginBottom: -2,
+                    }}
+                  >
+                    <BookCard
+                      file={item as any}
+                      onOpen={() => handleOpenPdf(item)}
+                      onDelete={() => handleDeletePdf(item)}
+                      lastPage={progress?.lastPage}
+                      totalPages={progress?.totalPages}
+                      todayPages={todayStat?.pagesRead}
+                      todayTargetPages={todayStat?.targetPages}
+                      onRename={(newName) => renameBook(item, newName)}
+                      variant="row"
+                    />
+                  </View>
+                );
+              }}
+            />
+          </ShelfWithPlank>
         )}
       </View>
     </View>
