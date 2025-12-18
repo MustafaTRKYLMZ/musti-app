@@ -9,13 +9,9 @@ export const SHELF_PLANK_THICKNESS = 14;
 
 type ShelfPlankWrapperProps = {
   style?: StyleProp<ViewStyle>;
-  onWidthMeasured?: (width: number) => void;
 };
 
-export const ShelfPlankWrapper: FC<ShelfPlankWrapperProps> = ({
-  style,
-  onWidthMeasured,
-}) => {
+export const ShelfPlankWrapper: FC<ShelfPlankWrapperProps> = ({ style }) => {
   const [rowWidth, setRowWidth] = useState(0);
 
   return (
@@ -26,7 +22,6 @@ export const ShelfPlankWrapper: FC<ShelfPlankWrapperProps> = ({
         const width = e.nativeEvent.layout.width;
         if (width > 0 && rowWidth !== width) {
           setRowWidth(width);
-          onWidthMeasured?.(width);
         }
       }}
     >
