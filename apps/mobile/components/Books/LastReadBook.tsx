@@ -123,10 +123,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
 
-  rowContainer: {
-    position: "relative",
-  },
-
   listContent: {
     paddingRight: spacing.lg,
     alignItems: "flex-end",
