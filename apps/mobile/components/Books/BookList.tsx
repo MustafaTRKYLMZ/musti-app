@@ -45,6 +45,7 @@ export const BookList: FC<BookListProps> = ({
   readingStats,
 }) => {
   const BOOK_SINK = 12;
+  const PLANK_PADDING = PLANK_H - 12;
 
   return (
     <View>
@@ -63,7 +64,7 @@ export const BookList: FC<BookListProps> = ({
                 key={rowIndex}
                 containerStyle={[
                   styles.gridRowContainer,
-                  { paddingBottom: PLANK_H - 12 },
+                  { paddingBottom: PLANK_PADDING },
                 ]}
               >
                 {/* Books */}
