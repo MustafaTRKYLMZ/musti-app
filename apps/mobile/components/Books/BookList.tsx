@@ -1,9 +1,9 @@
-import React, { FC, useState } from "react";
+import React, { FC } from "react";
 import { View, StyleSheet } from "react-native";
 import { bookshelfTheme, MText, radii, spacing } from "@budget/ui-native";
 import { ShelfHeader } from "../ShelfHeader";
 import { BookCard } from "./BookCard";
-import { ShelfPlank } from "./ShelfPlank";
+import { BookShelf } from "./BookShelf";
 
 const { colors } = bookshelfTheme;
 const today = new Date().toISOString().split("T")[0];
@@ -44,12 +44,7 @@ export const BookList: FC<BookListProps> = ({
   progressMap,
   readingStats,
 }) => {
-  const PLANK_H = 46;
-  const PLANK_DEPTH = 22;
-  const PLANK_THICK = 14;
   const BOOK_SINK = 12;
-
-  const [rowWidth, setRowWidth] = useState(0);
 
   return (
     <View>
@@ -64,36 +59,7 @@ export const BookList: FC<BookListProps> = ({
         ) : (
           <View style={styles.gridContent}>
             {gridRows.map((row, rowIndex) => (
-              <View
-                key={rowIndex}
-                style={[
-                  styles.gridRowContainer,
-                  { paddingBottom: PLANK_H - 12 },
-                ]}
-                onLayout={(e) => {
-                  if (!rowWidth) setRowWidth(e.nativeEvent.layout.width);
-                }}
-              >
-                {/* Shelf: bottom */}
-                <View style={[styles.plankWrap, { height: PLANK_H }]}>
-                  {rowWidth > 0 && (
-                    <ShelfPlank
-                      width={rowWidth + spacing.lg * 3}
-                      height={PLANK_H}
-                      thickness={PLANK_THICK}
-                      depth={PLANK_DEPTH}
-                      skewX={16}
-                      skewY={10}
-                      radius={4}
-                      brightness={0.75}
-                      accent
-                      accentHeight={2}
-                      accentGlow={false}
-                    />
-                  )}
-                </View>
-
-                {/* Books */}
+              <BookShelf key={rowIndex} bookSink={BOOK_SINK}>
                 <View style={styles.gridRow}>
                   {row.map((item) => {
                     const progress = progressMap[item.uri];
@@ -101,13 +67,7 @@ export const BookList: FC<BookListProps> = ({
                     const todayStat = readingStats[statKey];
 
                     return (
-                      <View
-                        key={item.uri}
-                        style={[
-                          styles.gridItem,
-                          { transform: [{ translateY: BOOK_SINK }] },
-                        ]}
-                      >
+                      <View key={item.uri} style={styles.gridItem}>
                         <BookCard
                           file={item as any}
                           onOpen={() => handleOpenPdf(item)}
@@ -123,7 +83,7 @@ export const BookList: FC<BookListProps> = ({
                     );
                   })}
                 </View>
-              </View>
+              </BookShelf>
             ))}
           </View>
         )}
@@ -153,17 +113,6 @@ const styles = StyleSheet.create({
   gridContent: {
     paddingBottom: spacing.lg,
     paddingRight: spacing.lg,
-  },
-
-  gridRowContainer: {
-    position: "relative",
-  },
-
-  plankWrap: {
-    position: "absolute",
-    left: -spacing.lg,
-    right: -spacing.lg,
-    bottom: 0,
   },
 
   gridRow: {
