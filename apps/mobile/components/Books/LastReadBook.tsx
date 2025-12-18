@@ -2,7 +2,10 @@ import React, { FC } from "react";
 import { View, FlatList, StyleSheet } from "react-native";
 import { bookshelfTheme, MText, radii, spacing } from "@budget/ui-native";
 import { BookCard } from "./BookCard";
-import { ShelfWithPlank, PLANK_H } from "./ShelfWithPlank";
+import {
+  ShelfPlankWrapper,
+  SHELF_PLANK_HEIGHT,
+} from "./ShelfPlankWrapper";
 
 const { colors } = bookshelfTheme;
 
@@ -42,7 +45,6 @@ export const LastReadBook: FC<LastReadBookProps> = ({
 }) => {
   const BOOK_SINK = 44;
   const LIFT_UP = Math.max(0, BOOK_SINK - 8);
-  const PLANK_PADDING = PLANK_H - 12;
 
   return (
     <View style={styles.shelfSection}>
@@ -61,9 +63,12 @@ export const LastReadBook: FC<LastReadBookProps> = ({
           <ShelfWithPlank
             containerStyle={[
               styles.rowContainer,
-              { paddingBottom: PLANK_PADDING, marginTop: -LIFT_UP },
+              { paddingBottom: SHELF_PLANK_HEIGHT - 12, marginTop: -LIFT_UP },
             ]}
           >
+            {/* Shelf */}
+            <ShelfPlankWrapper />
+
             <FlatList
               data={lastReadBooks}
               keyExtractor={(item) => item.uri}
@@ -71,7 +76,7 @@ export const LastReadBook: FC<LastReadBookProps> = ({
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={[
                 styles.listContent,
-                { paddingBottom: PLANK_PADDING },
+                { paddingBottom: SHELF_PLANK_HEIGHT - 12 },
               ]}
               renderItem={({ item }) => {
                 const progress = progressMap[item.uri];

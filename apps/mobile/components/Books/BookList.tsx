@@ -3,7 +3,10 @@ import { View, StyleSheet } from "react-native";
 import { bookshelfTheme, MText, radii, spacing } from "@budget/ui-native";
 import { ShelfHeader } from "../ShelfHeader";
 import { BookCard } from "./BookCard";
-import { ShelfWithPlank, PLANK_H } from "./ShelfWithPlank";
+import {
+  ShelfPlankWrapper,
+  SHELF_PLANK_HEIGHT,
+} from "./ShelfPlankWrapper";
 
 const { colors } = bookshelfTheme;
 const today = new Date().toISOString().split("T")[0];
@@ -45,7 +48,6 @@ export const BookList: FC<BookListProps> = ({
   readingStats,
 }) => {
   const BOOK_SINK = 12;
-  const PLANK_PADDING = PLANK_H - 12;
 
   return (
     <View>
@@ -64,9 +66,12 @@ export const BookList: FC<BookListProps> = ({
                 key={rowIndex}
                 containerStyle={[
                   styles.gridRowContainer,
-                  { paddingBottom: PLANK_PADDING },
+                  { paddingBottom: SHELF_PLANK_HEIGHT - 12 },
                 ]}
               >
+                {/* Shelf: bottom */}
+                <ShelfPlankWrapper />
+
                 {/* Books */}
                 <View style={styles.gridRow}>
                   {row.map((item) => {
