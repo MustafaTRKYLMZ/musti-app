@@ -58,7 +58,7 @@ export const LastReadBook: FC<LastReadBookProps> = ({
           </View>
         ) : (
           <View style={[styles.rowContainer, { marginTop: -LIFT_UP }]}>
-            <BookShelf bookSink={BOOK_SINK}>
+            <BookShelf>
               <FlatList
                 data={lastReadBooks}
                 keyExtractor={(item) => item.uri}
@@ -71,7 +71,12 @@ export const LastReadBook: FC<LastReadBookProps> = ({
                   const todayStat = readingStats[statKey];
 
                   return (
-                    <View style={{ marginBottom: -2 }}>
+                    <View
+                      style={{
+                        transform: [{ translateY: BOOK_SINK }],
+                        marginBottom: -2,
+                      }}
+                    >
                       <BookCard
                         file={item as any}
                         onOpen={() => handleOpenPdf(item)}

@@ -5,19 +5,13 @@ import { ShelfPlank } from "./ShelfPlank";
 
 type BookShelfProps = {
   children: ReactNode;
-  bookSink?: number;
-  onLayoutWidth?: (width: number) => void;
 };
 
 const PLANK_H = 46;
 const PLANK_DEPTH = 22;
 const PLANK_THICK = 14;
 
-export const BookShelf: FC<BookShelfProps> = ({
-  children,
-  bookSink = 12,
-  onLayoutWidth,
-}) => {
+export const BookShelf: FC<BookShelfProps> = ({ children }) => {
   const [rowWidth, setRowWidth] = useState(0);
 
   return (
@@ -27,7 +21,6 @@ export const BookShelf: FC<BookShelfProps> = ({
         const width = e.nativeEvent.layout.width;
         if (!rowWidth) {
           setRowWidth(width);
-          onLayoutWidth?.(width);
         }
       }}
     >
@@ -51,9 +44,7 @@ export const BookShelf: FC<BookShelfProps> = ({
       </View>
 
       {/* Content */}
-      <View style={{ transform: [{ translateY: bookSink }] }}>
-        {children}
-      </View>
+      {children}
     </View>
   );
 };

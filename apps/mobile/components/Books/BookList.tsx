@@ -59,7 +59,7 @@ export const BookList: FC<BookListProps> = ({
         ) : (
           <View style={styles.gridContent}>
             {gridRows.map((row, rowIndex) => (
-              <BookShelf key={rowIndex} bookSink={BOOK_SINK}>
+              <BookShelf key={rowIndex}>
                 <View style={styles.gridRow}>
                   {row.map((item) => {
                     const progress = progressMap[item.uri];
@@ -67,7 +67,13 @@ export const BookList: FC<BookListProps> = ({
                     const todayStat = readingStats[statKey];
 
                     return (
-                      <View key={item.uri} style={styles.gridItem}>
+                      <View
+                        key={item.uri}
+                        style={[
+                          styles.gridItem,
+                          { transform: [{ translateY: BOOK_SINK }] },
+                        ]}
+                      >
                         <BookCard
                           file={item as any}
                           onOpen={() => handleOpenPdf(item)}
