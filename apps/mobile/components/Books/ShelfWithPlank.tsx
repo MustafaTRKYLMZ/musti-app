@@ -25,7 +25,7 @@ export const ShelfWithPlank: FC<ShelfWithPlankProps> = ({
       style={[styles.container, containerStyle]}
       onLayout={(e) => {
         const width = e.nativeEvent.layout.width;
-        if (!rowWidth) {
+        if (width !== rowWidth) {
           setRowWidth(width);
           onLayout?.(width);
         }
