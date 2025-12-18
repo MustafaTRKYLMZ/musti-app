@@ -62,9 +62,9 @@ export const BookList: FC<BookListProps> = ({
         ) : (
           <View style={styles.gridContent}>
             {gridRows.map((row, rowIndex) => (
-              <View
+              <ShelfWithPlank
                 key={rowIndex}
-                style={[
+                containerStyle={[
                   styles.gridRowContainer,
                   { paddingBottom: SHELF_PLANK_HEIGHT - 12 },
                 ]}
@@ -102,7 +102,7 @@ export const BookList: FC<BookListProps> = ({
                     );
                   })}
                 </View>
-              </View>
+              </ShelfWithPlank>
             ))}
           </View>
         )}

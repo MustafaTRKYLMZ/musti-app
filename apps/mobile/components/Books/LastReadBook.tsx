@@ -60,8 +60,8 @@ export const LastReadBook: FC<LastReadBookProps> = ({
             </MText>
           </View>
         ) : (
-          <View
-            style={[
+          <ShelfWithPlank
+            containerStyle={[
               styles.rowContainer,
               { paddingBottom: SHELF_PLANK_HEIGHT - 12, marginTop: -LIFT_UP },
             ]}
@@ -105,7 +105,7 @@ export const LastReadBook: FC<LastReadBookProps> = ({
                 );
               }}
             />
-          </View>
+          </ShelfWithPlank>
         )}
       </View>
     </View>
@@ -126,10 +126,6 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.lg,
     marginBottom: spacing.xs,
     marginTop: spacing.sm,
-  },
-
-  rowContainer: {
-    position: "relative",
   },
 
   listContent: {
