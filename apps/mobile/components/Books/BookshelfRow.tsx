@@ -1,5 +1,5 @@
 import React, { FC, ReactNode, useState } from "react";
-import { View, StyleSheet } from "react-native";
+import { View, StyleSheet, StyleProp, ViewStyle } from "react-native";
 import { spacing } from "@budget/ui-native";
 import { ShelfPlank } from "./ShelfPlank";
 
@@ -8,8 +8,7 @@ type BookshelfRowProps = {
   plankHeight?: number;
   plankDepth?: number;
   plankThickness?: number;
-  bookSink?: number;
-  style?: any;
+  style?: StyleProp<ViewStyle>;
 };
 
 export const BookshelfRow: FC<BookshelfRowProps> = ({
@@ -17,16 +16,19 @@ export const BookshelfRow: FC<BookshelfRowProps> = ({
   plankHeight = 46,
   plankDepth = 22,
   plankThickness = 14,
-  bookSink = 12,
   style,
 }) => {
   const [rowWidth, setRowWidth] = useState(0);
+
+  // The padding bottom offset (plankHeight - 12) creates the correct spacing
+  // between the shelf plank and the books above it
+  const PLANK_OFFSET = 12;
 
   return (
     <View
       style={[
         styles.container,
-        { paddingBottom: plankHeight - 12 },
+        { paddingBottom: plankHeight - PLANK_OFFSET },
         style,
       ]}
       onLayout={(e) => {
