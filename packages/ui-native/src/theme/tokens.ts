@@ -58,13 +58,14 @@ export const iconSizes = {
   
   export const gradients = {
     bookshelfBackground: [
-      "#C28C4A", // top — warm light teak highlight
-      "#A8743F", // mid — natural teak tone
-      "#8F6237", // bottom — slightly deeper wood
+      "#D3A15A",
+      "#B57C41", 
+      "#8A5A30",
     ],
   
     shelfBoard: [
-      "#A8743F", // mid-tone teak
-      "#D8AC6B", // lighter golden reflection
+      "#9C6738",
+      "#D8AC6B",
     ],
   } as const;
+  

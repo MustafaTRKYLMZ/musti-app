@@ -1,10 +1,14 @@
-import { colors, MText, radii, spacing } from "@budget/ui-native";
+import React, { FC } from "react";
 import { View, StyleSheet } from "react-native";
+import { bookshelfTheme, MText, radii, spacing } from "@budget/ui-native";
 import { ShelfHeader } from "../ShelfHeader";
 import { BookCard } from "./BookCard";
-import { FC } from "react";
+import { SHELF_PLANK_HEIGHT } from "./ShelfPlankWrapper";
+import { ShelfWithPlank } from "./ShelfWithPlank";
 
+const { colors } = bookshelfTheme;
 const today = new Date().toISOString().split("T")[0];
+
 type BookListProps = {
   setModalVisible: (visible: boolean) => void;
   gridRows: Array<
@@ -28,18 +32,8 @@ type BookListProps = {
     file: { uri: string; name: string; lastOpened: number },
     newName: string
   ) => void;
-  progressMap: {
-    [uri: string]: {
-      lastPage: number;
-      totalPages: number;
-    };
-  };
-  readingStats: {
-    [key: string]: {
-      pagesRead: number;
-      targetPages: number;
-    };
-  };
+  progressMap: { [uri: string]: { lastPage: number; totalPages: number } };
+  readingStats: { [key: string]: { pagesRead: number; targetPages: number } };
 };
 
 export const BookList: FC<BookListProps> = ({
@@ -51,8 +45,10 @@ export const BookList: FC<BookListProps> = ({
   progressMap,
   readingStats,
 }) => {
+  const BOOK_SINK = 12;
+
   return (
-    <View style={styles.shelfSection}>
+    <View>
       <ShelfHeader title="Books" handleOpen={() => setModalVisible(true)} />
       <View style={styles.shelfInner}>
         {gridRows.length === 0 ? (
@@ -64,8 +60,14 @@ export const BookList: FC<BookListProps> = ({
         ) : (
           <View style={styles.gridContent}>
             {gridRows.map((row, rowIndex) => (
-              <View key={rowIndex} style={styles.gridRowContainer}>
-                <View style={styles.gridRowRail} />
+              <ShelfWithPlank
+                key={rowIndex}
+                containerStyle={[
+                  styles.gridRowContainer,
+                  { paddingBottom: SHELF_PLANK_HEIGHT - 12 },
+                ]}
+              >
+                {/* Books */}
                 <View style={styles.gridRow}>
                   {row.map((item) => {
                     const progress = progressMap[item.uri];
@@ -73,9 +75,15 @@ export const BookList: FC<BookListProps> = ({
                     const todayStat = readingStats[statKey];
 
                     return (
-                      <View key={item.uri} style={styles.gridItem}>
+                      <View
+                        key={item.uri}
+                        style={[
+                          styles.gridItem,
+                          { transform: [{ translateY: BOOK_SINK }] },
+                        ]}
+                      >
                         <BookCard
-                          file={item}
+                          file={item as any}
                           onOpen={() => handleOpenPdf(item)}
                           onDelete={() => handleDeletePdf(item)}
                           lastPage={progress?.lastPage}
@@ -89,7 +97,7 @@ export const BookList: FC<BookListProps> = ({
                     );
                   })}
                 </View>
-              </View>
+              </ShelfWithPlank>
             ))}
           </View>
         )}
@@ -99,27 +107,11 @@ export const BookList: FC<BookListProps> = ({
 };
 
 const styles = StyleSheet.create({
-  shelfSection: { marginBottom: spacing.xl },
   shelfInner: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
     position: "relative",
   },
-  shelfTitle: {
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.xs,
-  },
 
-  shelfRail: {
-    position: "absolute",
-    left: spacing.lg,
-    right: spacing.lg,
-    bottom: spacing.xs,
-    height: 4,
-    borderRadius: radii.full,
-    backgroundColor: colors.backgroundSecondary,
-    opacity: 0.6,
-  },
   emptyState: {
     minHeight: 120,
     alignItems: "center",
@@ -133,31 +125,18 @@ const styles = StyleSheet.create({
   },
 
   gridContent: {
-    paddingTop: spacing.lg,
     paddingBottom: spacing.lg,
     paddingRight: spacing.lg,
   },
 
   gridRowContainer: {
-    marginBottom: spacing.md,
-    paddingBottom: spacing.sm,
     position: "relative",
-  },
-
-  gridRowRail: {
-    position: "absolute",
-    left: 0,
-    right: spacing.lg,
-    bottom: 0,
-    height: 4,
-    borderRadius: radii.full,
-    backgroundColor: colors.backgroundSecondary,
-    opacity: 0.6,
   },
 
   gridRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "flex-end",
   },
 
   gridItem: {
