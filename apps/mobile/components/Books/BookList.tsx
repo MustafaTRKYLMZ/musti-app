@@ -3,7 +3,7 @@ import { View, StyleSheet } from "react-native";
 import { bookshelfTheme, MText, radii, spacing } from "@budget/ui-native";
 import { ShelfHeader } from "../ShelfHeader";
 import { BookCard } from "./BookCard";
-import { BookshelfRow } from "./BookshelfRow";
+import { BookShelf } from "./BookShelf";
 
 const { colors } = bookshelfTheme;
 const today = new Date().toISOString().split("T")[0];
@@ -59,7 +59,7 @@ export const BookList: FC<BookListProps> = ({
         ) : (
           <View style={styles.gridContent}>
             {gridRows.map((row, rowIndex) => (
-              <BookshelfRow key={rowIndex}>
+              <BookShelf key={rowIndex}>
                 <View style={styles.gridRow}>
                   {row.map((item) => {
                     const progress = progressMap[item.uri];
@@ -89,7 +89,7 @@ export const BookList: FC<BookListProps> = ({
                     );
                   })}
                 </View>
-              </BookshelfRow>
+              </BookShelf>
             ))}
           </View>
         )}

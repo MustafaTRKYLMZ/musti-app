@@ -2,7 +2,7 @@ import React, { FC } from "react";
 import { View, FlatList, StyleSheet } from "react-native";
 import { bookshelfTheme, MText, radii, spacing } from "@budget/ui-native";
 import { BookCard } from "./BookCard";
-import { BookshelfRow } from "./BookshelfRow";
+import { BookShelf } from "./BookShelf";
 
 const { colors } = bookshelfTheme;
 
@@ -57,41 +57,43 @@ export const LastReadBook: FC<LastReadBookProps> = ({
             </MText>
           </View>
         ) : (
-          <BookshelfRow style={{ marginTop: -LIFT_UP }}>
-            <FlatList
-              data={lastReadBooks}
-              keyExtractor={(item) => item.uri}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.listContent}
-              renderItem={({ item }) => {
-                const progress = progressMap[item.uri];
-                const statKey = `${item.uri}:${today}`;
-                const todayStat = readingStats[statKey];
+          <View style={[styles.rowContainer, { marginTop: -LIFT_UP }]}>
+            <BookShelf>
+              <FlatList
+                data={lastReadBooks}
+                keyExtractor={(item) => item.uri}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.listContent}
+                renderItem={({ item }) => {
+                  const progress = progressMap[item.uri];
+                  const statKey = `${item.uri}:${today}`;
+                  const todayStat = readingStats[statKey];
 
-                return (
-                  <View
-                    style={{
-                      transform: [{ translateY: BOOK_SINK }],
-                      marginBottom: -2,
-                    }}
-                  >
-                    <BookCard
-                      file={item as any}
-                      onOpen={() => handleOpenPdf(item)}
-                      onDelete={() => handleDeletePdf(item)}
-                      lastPage={progress?.lastPage}
-                      totalPages={progress?.totalPages}
-                      todayPages={todayStat?.pagesRead}
-                      todayTargetPages={todayStat?.targetPages}
-                      onRename={(newName) => renameBook(item, newName)}
-                      variant="row"
-                    />
-                  </View>
-                );
-              }}
-            />
-          </BookshelfRow>
+                  return (
+                    <View
+                      style={{
+                        transform: [{ translateY: BOOK_SINK }],
+                        marginBottom: -2,
+                      }}
+                    >
+                      <BookCard
+                        file={item as any}
+                        onOpen={() => handleOpenPdf(item)}
+                        onDelete={() => handleDeletePdf(item)}
+                        lastPage={progress?.lastPage}
+                        totalPages={progress?.totalPages}
+                        todayPages={todayStat?.pagesRead}
+                        todayTargetPages={todayStat?.targetPages}
+                        onRename={(newName) => renameBook(item, newName)}
+                        variant="row"
+                      />
+                    </View>
+                  );
+                }}
+              />
+            </BookShelf>
+          </View>
         )}
       </View>
     </View>
