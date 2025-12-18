@@ -1,4 +1,4 @@
-import React, { FC, useState, useCallback } from "react";
+import React, { FC, useState, useCallback, useRef } from "react";
 import {
   View,
   StyleSheet,
@@ -19,16 +19,15 @@ type ShelfPlankWrapperProps = {
 
 export const ShelfPlankWrapper: FC<ShelfPlankWrapperProps> = ({ style }) => {
   const [rowWidth, setRowWidth] = useState(0);
+  const rowWidthRef = useRef(0);
 
-  const handleLayout = useCallback(
-    (e: LayoutChangeEvent) => {
-      const width = e.nativeEvent.layout.width;
-      if (width > 0 && rowWidth !== width) {
-        setRowWidth(width);
-      }
-    },
-    [rowWidth]
-  );
+  const handleLayout = useCallback((e: LayoutChangeEvent) => {
+    const width = e.nativeEvent.layout.width;
+    if (width > 0 && rowWidthRef.current !== width) {
+      rowWidthRef.current = width;
+      setRowWidth(width);
+    }
+  }, []);
 
   return (
     <View
