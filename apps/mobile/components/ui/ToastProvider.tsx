@@ -6,12 +6,33 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { Toast, ToastState } from "./Toast";
+import { Toast } from "./Toast";
+
+export type ToastAction = {
+  label: string;
+  onPress: () => void;
+  destructive?: boolean;
+};
+
+export type ToastPayload =
+  | string
+  | {
+      title?: string;
+      message: string;
+      duration?: number;
+      actions?: ToastAction[];
+    };
+
+type ToastState = {
+  visible: boolean;
+  title?: string;
+  message: string;
+  actions?: ToastAction[];
+};
 
 type ToastApi = {
-  showToast: (text: string, durationMs?: number) => void;
+  showToast: (payload: ToastPayload, durationMs?: number) => void;
   hideToast: () => void;
-  toast: ToastState;
 };
 
 const ToastContext = createContext<ToastApi | null>(null);
@@ -22,10 +43,14 @@ type Props = {
 };
 
 export function ToastProvider({ children, defaultDurationMs = 3000 }: Props) {
-  const [toast, setToast] = useState<ToastState>({ visible: false, text: "" });
+  const [toast, setToast] = useState<ToastState>({
+    visible: false,
+    message: "",
+  });
+
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const clear = useCallback(() => {
+  const clearTimer = useCallback(() => {
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
@@ -33,36 +58,53 @@ export function ToastProvider({ children, defaultDurationMs = 3000 }: Props) {
   }, []);
 
   const hideToast = useCallback(() => {
-    clear();
+    clearTimer();
     setToast((t) => (t.visible ? { ...t, visible: false } : t));
-  }, [clear]);
+  }, [clearTimer]);
 
   const showToast = useCallback(
-    (text: string, durationMs = defaultDurationMs) => {
-      clear();
-      setToast({ visible: true, text });
+    (payload: ToastPayload, durationMs?: number) => {
+      clearTimer();
 
-      if (durationMs > 0) {
-        timerRef.current = setTimeout(() => {
-          setToast((t) => ({ ...t, visible: false }));
-          timerRef.current = null;
-        }, durationMs);
+      if (typeof payload === "string") {
+        setToast({
+          visible: true,
+          message: payload,
+        });
+
+        timerRef.current = setTimeout(
+          hideToast,
+          durationMs ?? defaultDurationMs
+        );
+        return;
       }
+
+      setToast({
+        visible: true,
+        title: payload.title,
+        message: payload.message,
+        actions: payload.actions,
+      });
+
+      const d = payload.duration ?? durationMs ?? defaultDurationMs;
+      timerRef.current = setTimeout(hideToast, d);
     },
-    [clear, defaultDurationMs]
+    [clearTimer, hideToast, defaultDurationMs]
   );
 
-  // ✅ unmount cleanup
-  useEffect(() => clear, [clear]);
-
-  const value: ToastApi = { showToast, hideToast, toast };
+  useEffect(() => clearTimer, [clearTimer]);
 
   return (
-    <ToastContext.Provider value={value}>
+    <ToastContext.Provider value={{ showToast, hideToast }}>
       {children}
 
-      {/* ✅ App root'ta tek Toast */}
-      <Toast visible={toast.visible} text={toast.text} />
+      <Toast
+        visible={toast.visible}
+        title={toast.title}
+        message={toast.message}
+        actions={toast.actions}
+        onDismiss={hideToast}
+      />
     </ToastContext.Provider>
   );
 }

@@ -61,7 +61,6 @@ export const TargetList = ({ onOpenCreate }: TargetListProps) => {
       <TargetCard
         target={item}
         onBeforeOpen={async (targetId, itemId) => {
-          // ✅ store side-effect here
           await setActiveItem(targetId, itemId);
         }}
         onOpen={(t) => {
@@ -152,7 +151,6 @@ export const TargetList = ({ onOpenCreate }: TargetListProps) => {
 
 const styles = StyleSheet.create({
   section: { marginBottom: spacing.xl },
-
   headerRow: {
     paddingHorizontal: spacing.lg,
     flexDirection: "row",
@@ -190,8 +188,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.sm,
   },
-
-  // ✅ improved Done button (mini card / chip)
   doneMini: {
     minWidth: 150,
     borderRadius: radii.lg,

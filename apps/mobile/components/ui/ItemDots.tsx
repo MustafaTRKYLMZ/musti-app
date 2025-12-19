@@ -76,8 +76,6 @@ export const ItemDots = ({
             </Pressable>
           );
         }
-
-        // pending (more visible)
         const pendingBg = isSelected ? pendingColor : pendingColor + "66";
 
         return (

@@ -1,15 +1,23 @@
-import React, { useEffect, useRef } from "react";
-import { Animated, View, StyleSheet } from "react-native";
+import React, { useEffect, useMemo, useRef } from "react";
+import { Animated, View, StyleSheet, Pressable } from "react-native";
 import { MText, radii, spacing, useTheme } from "@budget/ui-native";
-
-export type ToastState = { visible: boolean; text: string };
+import type { ToastAction } from "./ToastProvider";
 
 type ToastProps = {
   visible: boolean;
-  text: string;
+  title?: string;
+  message: string;
+  actions?: ToastAction[];
+  onDismiss: () => void;
 };
 
-export const Toast = ({ visible, text }: ToastProps) => {
+export const Toast = ({
+  visible,
+  title,
+  message,
+  actions,
+  onDismiss,
+}: ToastProps) => {
   const { colors } = useTheme();
   const anim = useRef(new Animated.Value(0)).current;
 
@@ -21,8 +29,15 @@ export const Toast = ({ visible, text }: ToastProps) => {
     }).start();
   }, [visible, anim]);
 
+  const wrapPointerEvents = useMemo(
+    () => (visible ? ("box-none" as const) : ("none" as const)),
+    [visible]
+  );
+
   return (
-    <View style={styles.toastWrap} pointerEvents="none">
+    <View style={styles.toastWrap} pointerEvents={wrapPointerEvents}>
+      <Pressable style={StyleSheet.absoluteFill} onPress={onDismiss} />
+
       <Animated.View
         style={[
           styles.toast,
@@ -47,9 +62,56 @@ export const Toast = ({ visible, text }: ToastProps) => {
           },
         ]}
       >
+        {title ? (
+          <MText
+            variant="body"
+            color="textPrimary"
+            numberOfLines={1}
+            style={styles.title}
+          >
+            {title}
+          </MText>
+        ) : null}
+
         <MText variant="body" color="textPrimary" numberOfLines={2}>
-          {text}
+          {message}
         </MText>
+
+        {actions?.length ? (
+          <View style={styles.actionsRow}>
+            {actions.slice(0, 2).map((a, idx) => (
+              <Pressable
+                key={`${a.label}-${idx}`}
+                onPress={() => {
+                  onDismiss();
+                  a.onPress();
+                }}
+                style={[
+                  styles.actionBtn,
+                  { borderColor: colors.borderSubtle },
+                  a.destructive
+                    ? {
+                        borderColor: colors.danger,
+                        backgroundColor: colors.danger + "1A",
+                      }
+                    : { backgroundColor: colors.surfaceElevated },
+                ]}
+              >
+                <MText
+                  variant="body"
+                  color="textPrimary"
+                  numberOfLines={1}
+                  style={[
+                    styles.actionText,
+                    a.destructive ? { color: colors.danger } : null,
+                  ]}
+                >
+                  {a.label}
+                </MText>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
       </Animated.View>
     </View>
   );
@@ -74,5 +136,26 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.16,
     shadowRadius: 10,
     elevation: 6,
+  },
+
+  title: {
+    fontWeight: "900",
+    marginBottom: spacing.xs,
+  },
+
+  actionsRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+    justifyContent: "flex-end",
+  },
+  actionBtn: {
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.md,
+    borderWidth: 1,
+  },
+  actionText: {
+    fontWeight: "900",
   },
 });

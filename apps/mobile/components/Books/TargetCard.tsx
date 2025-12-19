@@ -15,6 +15,7 @@ import type {
 } from "@/store/bookshelf/useReadingTargetsStore";
 import { ItemDots } from "../ui/ItemDots";
 import { pickActiveItem } from "@/utils/pickActiveItem";
+import { useToast } from "../ui/ToastProvider";
 
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 const clamp = (x: number, a: number, b: number) => Math.max(a, Math.min(b, x));
@@ -59,11 +60,9 @@ export const TargetCard = ({
   const { colors } = useTheme();
 
   const activeItem = useMemo(() => pickActiveItem(target), [target]);
-
-  // ✅ preview selection
+  const { showToast } = useToast();
   const [previewIndex, setPreviewIndex] = useState(0);
 
-  // target changes => default preview to active (else 0)
   useEffect(() => {
     const idx = activeItem
       ? target.items.findIndex((i) => i.id === activeItem.id)
@@ -72,17 +71,14 @@ export const TargetCard = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [target.id]);
 
-  // ✅ compute displayItem (can be null if no items)
   const displayItem = useMemo(() => {
     if (!target.items.length) return null;
     const i = Math.max(0, Math.min(target.items.length - 1, previewIndex));
     return target.items[i] ?? null;
   }, [target.items, previewIndex]);
 
-  // ✅ safeDisplayItem: ALWAYS non-null for hooks
   const safeDisplayItem = displayItem ?? FALLBACK_ITEM;
 
-  // ✅ animate only text lines on preview item change
   const anim = useRef(new Animated.Value(1)).current;
   const lastItemIdRef = useRef<string | null>(null);
 
@@ -126,7 +122,6 @@ export const TargetCard = ({
     [target.items.length]
   );
 
-  // ---- calculations (use safeDisplayItem so hooks never disappear) ----
   const rangeStart = useMemo(() => {
     return Math.max(
       1,
@@ -164,7 +159,6 @@ export const TargetCard = ({
   const remainingPages = Math.max(0, total - donePages);
   const pct = clamp01(donePages / total);
 
-  // auto done only for active item when cursor crosses end
   const prevRef = useRef<number>(rangeStart);
 
   useEffect(() => {
@@ -191,30 +185,27 @@ export const TargetCard = ({
   }, [displayItem, rangeStart, rangeEnd]);
 
   const openMenu = () => {
-    const buttons: any[] = [{ text: "Cancel", style: "cancel" as const }];
+    showToast({
+      title: "Target",
+      message: target.title,
+      actions: [
+        ...(target.status === "done" && onRestart
+          ? [{ label: "Restart", onPress: () => onRestart(target) }]
+          : []),
 
-    if (target.status === "done" && onRestart) {
-      buttons.push({ text: "Restart", onPress: () => onRestart(target) });
-    }
-
-    buttons.push({
-      text: "Delete",
-      style: "destructive" as const,
-      onPress: () => onDelete(target),
+        { label: "Delete", destructive: true, onPress: () => onDelete(target) },
+      ],
+      duration: 6000,
     });
-
-    Alert.alert("Target", target.title, buttons);
   };
 
-  // ✅ status colors (guaranteed)
-  const statusActive = colors.success; // green
-  const statusPending = colors.primaryLight; // pink/coral
-  const statusDone = colors.textMuted; // neutral
+  const statusActive = colors.success;
+  const statusPending = colors.primaryLight;
+  const statusDone = colors.textMuted;
 
   const handleOpen = async () => {
     if (!displayItem) return;
 
-    // ✅ parent handles side effects
     try {
       await onBeforeOpen?.(target.id, displayItem.id);
     } catch {
@@ -224,7 +215,6 @@ export const TargetCard = ({
     onOpen(target, displayItem, openPage);
   };
 
-  // ✅ render decision at the END (hooks already executed)
   if (!target.items.length || !displayItem) {
     return (
       <View
