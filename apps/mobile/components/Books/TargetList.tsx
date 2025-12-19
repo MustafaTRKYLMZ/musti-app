@@ -69,7 +69,6 @@ export function TargetList({ progressMap, onOpenCreate }: Props) {
     return (
       <TargetCard
         target={item}
-        progressMap={progressMap}
         onOpen={(t) => {
           router.push({
             pathname: "/(tabs)/bookshelf/target/target-viewer",

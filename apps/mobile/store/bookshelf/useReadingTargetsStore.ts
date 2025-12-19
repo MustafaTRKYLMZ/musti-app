@@ -1,11 +1,9 @@
 import { create } from "zustand";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-export type TargetStatus = "active" | "done";
+export type TargetStatus = "active" | "done"; // group status
+export type TargetItemStatus = "active" | "pending" | "done"; // item status
 export type TargetType = "section" | "pages";
-
-// ✅ sequential flow
-export type TargetItemStatus = "pending" | "active" | "done";
 
 export type TargetItem = {
   id: string;
@@ -22,8 +20,9 @@ export type TargetItem = {
   labelId: string;
   label: string;
 
-  // run baseline for THIS item (reset on activate/restart)
-  activeFromPage?: number;
+  // ✅ target-run baseline + cursor (target progress)
+  activeFromPage: number; // run baseline (reset on restart)
+  cursorPage: number; // current page within target run
 
   status: TargetItemStatus;
   doneAt?: number;
@@ -49,17 +48,23 @@ type TargetsState = {
   // group actions
   addTarget: (title: string) => Promise<string>;
   deleteTarget: (id: string) => Promise<void>;
-  markTargetActive: (id: string) => Promise<void>;
   clearDone: () => Promise<void>;
 
   // item actions
   addItem: (
     targetId: string,
-    item: Omit<TargetItem, "id" | "status" | "doneAt" | "activeFromPage">
+    item: Omit<TargetItem, "id" | "status" | "doneAt" | "activeFromPage" | "cursorPage">
   ) => Promise<void>;
-
   deleteItem: (targetId: string, itemId: string) => Promise<void>;
+
+  // ✅ when item reaches end
   markItemDone: (targetId: string, itemId: string) => Promise<void>;
+
+  // ✅ target-only progress update (do NOT touch book progressMap)
+  setItemCursor: (targetId: string, itemId: string, cursorPage: number) => Promise<void>;
+
+  // restart
+  restartTarget: (targetId: string) => Promise<void>;
   restartItem: (targetId: string, itemId: string) => Promise<void>;
 };
 
@@ -70,41 +75,55 @@ async function persist(targets: ReadingTarget[]) {
   await AsyncStorage.setItem(KEY, JSON.stringify({ targets }));
 }
 
-function ensureSingleActive(items: TargetItem[]): TargetItem[] {
-  const firstActiveIndex = items.findIndex((it) => it.status === "active");
-  if (firstActiveIndex === -1) return items;
-
-  return items.map((it, idx) => {
-    if (it.status !== "active") return it;
-    if (idx === firstActiveIndex) return it;
-    return { ...it, status: "pending" as const };
-  });
+function clampInt(n: any) {
+  const v = Math.floor(Number(n) || 0);
+  return Math.max(0, Math.min(999999, v));
 }
 
-function promoteNextPending(items: TargetItem[]): TargetItem[] {
-  if (items.some((it) => it.status === "active")) return items;
-
-  const nextIdx = items.findIndex((it) => it.status === "pending");
-  if (nextIdx === -1) return items;
-
-  return items.map((it, idx) => {
-    if (idx !== nextIdx) return it;
-    const baseline = it.jumpPage ?? it.startPage ?? 1;
-    return { ...it, status: "active" as const, activeFromPage: baseline };
-  });
+function normalizeRange(startLike: any, endLike: any) {
+  const start = Math.max(1, clampInt(startLike) || 1);
+  const end = Math.max(start, clampInt(endLike) || start);
+  return { start, end };
 }
 
-function recomputeTarget(t: ReadingTarget): ReadingTarget {
-  const items = promoteNextPending(ensureSingleActive(t.items ?? []));
+function recomputeTargetStatus(t: ReadingTarget): ReadingTarget {
+  if (!t.items.length) return { ...t, status: "active", doneAt: undefined };
 
-  const allDone =
-    items.length > 0 && items.every((it) => it.status === "done");
+  const allDone = t.items.every((it) => it.status === "done");
+  if (allDone) return { ...t, status: "done", doneAt: t.doneAt ?? Date.now() };
 
-  if (allDone) {
-    return { ...t, items, status: "done", doneAt: t.doneAt ?? Date.now() };
+  return { ...t, status: "active", doneAt: undefined };
+}
+
+/**
+ * ✅ Ensure exactly ONE active item at a time:
+ * - If there is an active item, keep ONLY the first active and set other actives => pending.
+ * - If there is no active item, promote the first pending item to active.
+ */
+function ensureSingleActive(t: ReadingTarget): ReadingTarget {
+  const items = t.items ?? [];
+  if (!items.length) return t;
+
+  const activeIdx = items.findIndex((it) => it.status === "active");
+
+  // if there is an active item, keep only first active
+  if (activeIdx !== -1) {
+    const nextItems = items.map((it, idx) => {
+      if (idx === activeIdx) return it;
+      if (it.status === "active") return { ...it, status: "pending" as const };
+      return it;
+    });
+    return { ...t, items: nextItems };
   }
 
-  return { ...t, items, status: "active", doneAt: undefined };
+  // no active => promote first pending
+  const pendingIdx = items.findIndex((it) => it.status === "pending");
+  if (pendingIdx === -1) return t;
+
+  const nextItems = items.map((it, idx) =>
+    idx === pendingIdx ? { ...it, status: "active" as const } : it
+  );
+  return { ...t, items: nextItems };
 }
 
 export const useReadingTargetsStore = create<TargetsState>((set, get) => ({
@@ -114,15 +133,10 @@ export const useReadingTargetsStore = create<TargetsState>((set, get) => ({
   hydrate: async () => {
     try {
       const raw = await AsyncStorage.getItem(KEY);
-      if (!raw) {
-        set({ hydrated: true });
-        return;
-      }
+      if (!raw) return set({ hydrated: true });
+
       const parsed = JSON.parse(raw) as { targets?: ReadingTarget[] };
-      const hydratedTargets = (parsed.targets ?? []).map((t) =>
-        recomputeTarget(t)
-      );
-      set({ targets: hydratedTargets, hydrated: true });
+      set({ targets: parsed.targets ?? [], hydrated: true });
     } catch {
       set({ hydrated: true });
     }
@@ -136,7 +150,6 @@ export const useReadingTargetsStore = create<TargetsState>((set, get) => ({
       status: "active",
       items: [],
     };
-
     const targets = [next, ...get().targets];
     set({ targets });
     await persist(targets);
@@ -144,49 +157,13 @@ export const useReadingTargetsStore = create<TargetsState>((set, get) => ({
   },
 
   deleteTarget: async (id) => {
-    const targets = get().targets.filter((x) => x.id !== id);
-    set({ targets });
-    await persist(targets);
-  },
-
-  markTargetActive: async (id) => {
-    const targets = get().targets.map((t) => {
-      if (t.id !== id) return t;
-
-      const nextItems = (t.items ?? []).map((it, idx) => {
-        const baseline = it.jumpPage ?? it.startPage ?? 1;
-
-        if (idx === 0) {
-          return {
-            ...it,
-            status: "active" as const,
-            doneAt: undefined,
-            activeFromPage: baseline,
-          };
-        }
-
-        return {
-          ...it,
-          status: "pending" as const,
-          doneAt: undefined,
-          activeFromPage: baseline,
-        };
-      });
-
-      return recomputeTarget({
-        ...t,
-        status: "active",
-        doneAt: undefined,
-        items: nextItems,
-      });
-    });
-
+    const targets = get().targets.filter((t) => t.id !== id);
     set({ targets });
     await persist(targets);
   },
 
   clearDone: async () => {
-    const targets = get().targets.filter((x) => x.status !== "done");
+    const targets = get().targets.filter((t) => t.status !== "done");
     set({ targets });
     await persist(targets);
   },
@@ -195,18 +172,29 @@ export const useReadingTargetsStore = create<TargetsState>((set, get) => ({
     const targets = get().targets.map((t) => {
       if (t.id !== targetId) return t;
 
-      const baseline = itemInput.jumpPage ?? itemInput.startPage ?? 1;
-      const isFirst = (t.items?.length ?? 0) === 0;
+      const hasActive = t.items.some((it) => it.status === "active");
+
+      const { start, end } = normalizeRange(
+        itemInput.jumpPage ?? itemInput.startPage ?? 1,
+        itemInput.endPage ?? itemInput.startPage ?? 1
+      );
 
       const item: TargetItem = {
         id: uid(),
-        status: isFirst ? ("active" as const) : ("pending" as const),
-        activeFromPage: baseline,
+        status: hasActive ? "pending" : "active",
         doneAt: undefined,
+        activeFromPage: start,
+        cursorPage: start,
         ...itemInput,
+        startPage: start,
+        endPage: end,
+        jumpPage: start,
       };
 
-      return recomputeTarget({ ...t, items: [...(t.items ?? []), item] });
+      let nextTarget: ReadingTarget = { ...t, items: [...t.items, item] };
+      nextTarget = ensureSingleActive(nextTarget);
+      nextTarget = recomputeTargetStatus(nextTarget);
+      return nextTarget;
     });
 
     set({ targets });
@@ -216,8 +204,38 @@ export const useReadingTargetsStore = create<TargetsState>((set, get) => ({
   deleteItem: async (targetId, itemId) => {
     const targets = get().targets.map((t) => {
       if (t.id !== targetId) return t;
-      const next = { ...t, items: (t.items ?? []).filter((it) => it.id !== itemId) };
-      return recomputeTarget(next);
+
+      let next: ReadingTarget = {
+        ...t,
+        items: (t.items ?? []).filter((it) => it.id !== itemId),
+      };
+
+      next = ensureSingleActive(next);
+      next = recomputeTargetStatus(next);
+      return next;
+    });
+
+    set({ targets });
+    await persist(targets);
+  },
+
+  setItemCursor: async (targetId, itemId, cursorPage) => {
+    const c = clampInt(cursorPage) || 1;
+
+    const targets = get().targets.map((t) => {
+      if (t.id !== targetId) return t;
+
+      const nextItems = t.items.map((it) => {
+        if (it.id !== itemId) return it;
+        if (it.status !== "active") return it;
+
+        const { start, end } = normalizeRange(it.activeFromPage, it.endPage);
+        const clamped = Math.max(start, Math.min(end, c));
+
+        return { ...it, cursorPage: clamped };
+      });
+
+      return { ...t, items: nextItems };
     });
 
     set({ targets });
@@ -230,13 +248,42 @@ export const useReadingTargetsStore = create<TargetsState>((set, get) => ({
     const targets = get().targets.map((t) => {
       if (t.id !== targetId) return t;
 
-      const nextItems = (t.items ?? []).map((it) =>
+      // 1) mark done
+      const items = t.items.map((it) =>
         it.id === itemId
           ? { ...it, status: "done" as const, doneAt: it.doneAt ?? now }
           : it
       );
 
-      return recomputeTarget({ ...t, items: nextItems });
+      // 2) promote next pending -> active (ONLY if no active remains)
+      const hasActive = items.some((it) => it.status === "active");
+      let nextItems = items;
+
+      if (!hasActive) {
+        const nextIdx = items.findIndex((it) => it.status === "pending");
+        if (nextIdx !== -1) {
+          const nxt = items[nextIdx];
+          nextItems = items.map((it, idx) => {
+            if (idx !== nextIdx) return it;
+            const { start } = normalizeRange(
+              nxt.activeFromPage ?? nxt.jumpPage ?? nxt.startPage ?? 1,
+              nxt.endPage
+            );
+            return {
+              ...nxt,
+              status: "active" as const,
+              doneAt: undefined,
+              activeFromPage: start,
+              cursorPage: start,
+            };
+          });
+        }
+      }
+
+      let nextTarget: ReadingTarget = { ...t, items: nextItems };
+      nextTarget = ensureSingleActive(nextTarget);
+      nextTarget = recomputeTargetStatus(nextTarget);
+      return nextTarget;
     });
 
     set({ targets });
@@ -247,30 +294,74 @@ export const useReadingTargetsStore = create<TargetsState>((set, get) => ({
     const targets = get().targets.map((t) => {
       if (t.id !== targetId) return t;
 
-      const nextItems = ensureSingleActive(
-        (t.items ?? []).map((it) => {
-          if (it.id !== itemId) return it;
-          const baseline = it.jumpPage ?? it.startPage ?? 1;
-          return {
-            ...it,
-            status: "active" as const,
-            doneAt: undefined,
-            activeFromPage: baseline,
-          };
-        })
-      ).map((it) => {
-        // normalize other actives to pending, keep done as done
-        if (it.status === "done") return it;
-        if (it.status === "active") return it;
-        return { ...it, status: "pending" as const };
+      const nextItems = t.items.map((it) => {
+        // ✅ any existing active -> pending (we will activate the restarted one)
+        if (it.status === "active" && it.id !== itemId) {
+          return { ...it, status: "pending" as const };
+        }
+
+        if (it.id !== itemId) return it;
+
+        const { start, end } = normalizeRange(
+          it.jumpPage ?? it.startPage ?? 1,
+          it.endPage ?? it.startPage ?? 1
+        );
+
+        return {
+          ...it,
+          status: "active" as const,
+          doneAt: undefined,
+          activeFromPage: start,
+          cursorPage: start,
+          startPage: start,
+          endPage: end,
+          jumpPage: start,
+        };
       });
 
-      return recomputeTarget({
+      let next: ReadingTarget = { ...t, status: "active", doneAt: undefined, items: nextItems };
+      next = ensureSingleActive(next);
+      next = recomputeTargetStatus(next);
+      return next;
+    });
+
+    set({ targets });
+    await persist(targets);
+  },
+
+  restartTarget: async (targetId) => {
+    const targets = get().targets.map((t) => {
+      if (t.id !== targetId) return t;
+
+      // all -> pending, cursor reset, then first becomes active
+      const resetItems = t.items.map((it) => {
+        const { start, end } = normalizeRange(
+          it.jumpPage ?? it.startPage ?? 1,
+          it.endPage ?? it.startPage ?? 1
+        );
+
+        return {
+          ...it,
+          status: "pending" as const,
+          doneAt: undefined,
+          activeFromPage: start,
+          cursorPage: start,
+          startPage: start,
+          endPage: end,
+          jumpPage: start,
+        };
+      });
+
+      let next: ReadingTarget = {
         ...t,
         status: "active",
         doneAt: undefined,
-        items: nextItems,
-      });
+        items: resetItems,
+      };
+
+      next = ensureSingleActive(next);
+      next = recomputeTargetStatus(next);
+      return next;
     });
 
     set({ targets });

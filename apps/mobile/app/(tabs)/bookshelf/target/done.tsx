@@ -47,7 +47,7 @@ export default function DoneTargetsScreen() {
 
   // ✅ v2 store APIs
   const restartItem = useReadingTargetsStore((s) => s.restartItem);
-  const markTargetActive = useReadingTargetsStore((s) => s.markTargetActive);
+  //   const markTargetActive = useReadingTargetsStore((s) => s.markTargetActive);
 
   const progressMap = useBooksStore((s) => s.items);
 
@@ -77,7 +77,7 @@ export default function DoneTargetsScreen() {
 
   const handleRestart = async (t: ReadingTarget) => {
     // group restart (senin store'da nasıl yaptığını biliyorum)
-    await markTargetActive(t.id);
+    // await markTargetActive(t.id);
     for (const it of t.items) {
       await restartItem(t.id, it.id);
     }
@@ -117,7 +117,6 @@ export default function DoneTargetsScreen() {
             renderItem={({ item }) => (
               <TargetCard
                 target={item}
-                progressMap={progressMap}
                 onOpen={(t, it, openPage) =>
                   openBook(it.bookUri, it.bookName, openPage)
                 }

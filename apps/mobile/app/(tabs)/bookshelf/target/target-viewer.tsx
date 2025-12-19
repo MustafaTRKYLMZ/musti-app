@@ -93,6 +93,7 @@ export default function TargetViewerScreen() {
   const router = useRouter();
   const { colors } = useTheme();
 
+  // ✅ hooks must be called before ANY early return
   const params = useLocalSearchParams<{ targetId?: string }>();
   const targetId = params.targetId ? String(params.targetId) : undefined;
 
@@ -100,6 +101,9 @@ export default function TargetViewerScreen() {
   const hydrated = useReadingTargetsStore((s) => s.hydrated);
   const targets = useReadingTargetsStore((s) => s.targets);
   const markItemDone = useReadingTargetsStore((s) => s.markItemDone);
+
+  // ✅ IMPORTANT: this hook was previously BELOW early returns -> caused "Rendered fewer hooks"
+  const setItemCursor = useReadingTargetsStore((s) => (s as any).setItemCursor);
 
   const target = useMemo(() => {
     if (!targetId) return null;
@@ -125,9 +129,7 @@ export default function TargetViewerScreen() {
 
   const showToast = useCallback((text: string, durationMs = 1200) => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-
     setToast({ visible: true, text });
-
     toastTimerRef.current = setTimeout(() => {
       setToast((t) => ({ ...t, visible: false }));
     }, durationMs);
@@ -139,10 +141,10 @@ export default function TargetViewerScreen() {
     };
   }, []);
 
-  // prevent duplicate done
+  // ✅ prevent duplicate done
   const doneOnceRef = useRef<string | null>(null);
 
-  // for “completed -> continuing”
+  // ✅ for “completed -> continuing”
   const lastCompletedItemIdRef = useRef<string | null>(null);
 
   // hydrate
@@ -165,6 +167,7 @@ export default function TargetViewerScreen() {
     setCurrentPage(start);
     setTotalPages(null);
 
+    // new item => allow done again for this item
     doneOnceRef.current = null;
   }, [displayItem?.id]);
 
@@ -197,7 +200,7 @@ export default function TargetViewerScreen() {
     return () => clearTimeout(tmr);
   }, [targetId, target, displayItem, showToast, router]);
 
-  // ✅ If target exists but no active item (already done) => toast + close
+  // If target exists but no active item => toast + close
   useEffect(() => {
     if (!hydrated) return;
     if (!targetId) return;
@@ -210,7 +213,7 @@ export default function TargetViewerScreen() {
     }
   }, [hydrated, targetId, target, displayItem, showToast, router]);
 
-  // Guards (safe)
+  // Guards (now safe: all hooks above already executed)
   if (!targetId) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -249,7 +252,7 @@ export default function TargetViewerScreen() {
     );
   }
 
-  // If no active item, effect will close; render a minimal screen meanwhile
+  // If no active item, effect will close; render minimal meanwhile
   if (!displayItem || !uri) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -267,25 +270,33 @@ export default function TargetViewerScreen() {
 
   const handleClose = () => {
     router.back();
-    // alternatively:
-    // router.replace("/(tabs)/bookshelf");
   };
 
   const handlePageChanged = async (page: number, total: number) => {
     setTotalPages(total);
     setCurrentPage(page);
 
+    // ✅ update cursor (target-only) — fire-and-forget (no await)
+    try {
+      if (typeof setItemCursor === "function") {
+        setItemCursor(targetId, displayItem.id, page);
+      }
+    } catch {
+      // ignore cursor errors
+    }
+
     const end = Math.max(1, Math.floor(displayItem.endPage ?? 1));
-    if (page < end) return;
 
-    if (doneOnceRef.current === displayItem.id) return;
-    doneOnceRef.current = displayItem.id;
+    // ✅ only mark done once per item
+    if (page >= end) {
+      if (doneOnceRef.current === displayItem.id) return;
+      doneOnceRef.current = displayItem.id;
 
-    lastCompletedItemIdRef.current = displayItem.id;
-    showToast(`${displayItem.bookName} completed`, 900);
+      // ✅ enable "completed → continuing" toast chain
+      lastCompletedItemIdRef.current = displayItem.id;
 
-    await markItemDone(targetId, displayItem.id);
-    // next toast / close is handled by the effect watching displayItem/target changes
+      await markItemDone(targetId, displayItem.id);
+    }
   };
 
   return (
