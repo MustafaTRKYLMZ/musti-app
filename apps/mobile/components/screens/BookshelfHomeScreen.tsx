@@ -8,7 +8,7 @@ import {
   Pressable,
 } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import dayjs from "dayjs";
 
 import {
@@ -29,6 +29,10 @@ import { AppSwitcherButton } from "@/components/AppSwitcherButton";
 import { LastReadBook } from "@/components/Books/LastReadBook";
 import { PlanList } from "@/components/Books/PlanList";
 import { BookList } from "../Books/BookList";
+import { BookshelfTabs, BookshelfTopTab } from "../Books/BookshelfTabs";
+import { TargetList } from "../Books/TargetList";
+import { CreateTargetModal } from "../ui/modals/CreateTargetModal";
+import { useBookshelfTabsStore } from "@/store/bookshelf/useBookshelfTabsStore";
 
 const { colors, spacing, radii } = bookshelfTheme;
 
@@ -54,18 +58,42 @@ const bookshelfHeaderStyles = StyleSheet.create({
 
 export default function BookshelfHomeScreen() {
   const router = useRouter();
+  const selectedTab = useBookshelfTabsStore((s) => s.selected);
+  const setSelectedTab = useBookshelfTabsStore((s) => s.setSelected);
 
   const [books, setBooks] = useState<LocalPdfFile[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [planModalVisible, setPlanModalVisible] = useState(false);
+  const [targetModalVisible, setTargetModalVisible] = useState(false);
+  const [createTargetInitialBookUri, setCreateTargetInitialBookUri] = useState<
+    string | null
+  >(null);
 
   const progressMap = useBooksStore((s) => s.items);
   const readingStats = useReadingStatsStore((s) => s.stats);
-
+  //stores
   const plans = useReadingPlanStore((s) => s.plans);
   const deletePlan = useReadingPlanStore((s) => s.deletePlan);
   const ensureTodayPlan = useReadingPlanStore((s) => s.ensureTodayPlan);
   const renameBookInPlan = useReadingPlanStore((s) => s.renameBookInPlan);
+
+  const params = useLocalSearchParams<{
+    openCreateTarget?: string;
+    targetBookUri?: string;
+  }>();
+  useEffect(() => {
+    if (params.openCreateTarget !== "1") return;
+
+    const bookUri = params.targetBookUri
+      ? decodeURIComponent(params.targetBookUri)
+      : null;
+
+    // modalı aç
+    setTargetModalVisible(true);
+
+    // modal içinde seçili kitabı set etmek için bir state daha tutacağız:
+    if (bookUri) setCreateTargetInitialBookUri(bookUri);
+  }, [params.openCreateTarget, params.targetBookUri]);
 
   const today = dayjs().format("YYYY-MM-DD");
 
@@ -243,14 +271,23 @@ export default function BookshelfHomeScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
+          <BookshelfTabs value={selectedTab} onChange={setSelectedTab} />
+
           {/* PLANS */}
-          <PlanList
-            setPlanModalVisible={setPlanModalVisible}
-            plans={plans}
-            openPlanDirect={openPlanDirect}
-            handleDeletePlan={handleDeletePlan}
-            suppressNextPlanOpenRef={suppressNextPlanOpenRef}
-          />
+          {selectedTab === "plans" ? (
+            <PlanList
+              setPlanModalVisible={setPlanModalVisible}
+              plans={plans}
+              openPlanDirect={openPlanDirect}
+              handleDeletePlan={handleDeletePlan}
+              suppressNextPlanOpenRef={suppressNextPlanOpenRef}
+            />
+          ) : (
+            <TargetList
+              progressMap={progressMap}
+              onOpenCreate={() => setTargetModalVisible(true)}
+            />
+          )}
 
           {/* LAST READ */}
           <LastReadBook
@@ -322,6 +359,29 @@ export default function BookshelfHomeScreen() {
           visible={planModalVisible}
           onClose={() => setPlanModalVisible(false)}
           books={books}
+        />
+        <CreateTargetModal
+          visible={targetModalVisible}
+          onClose={() => setTargetModalVisible(false)}
+          books={books}
+          progressMap={progressMap}
+          initialBookUri={createTargetInitialBookUri}
+          onOpenChapters={(bookUri, bookName) => {
+            setTargetModalVisible(false);
+
+            const start = Number(progressMap[bookUri]?.lastPage ?? 1) || 1;
+            router.push({
+              pathname: "/(tabs)/bookshelf/pdf/viewer",
+              params: {
+                uri: encodeURIComponent(bookUri),
+                name: encodeURIComponent(bookName),
+                openSections: "1",
+                jumpPage: String(start),
+                returnTo: "createTarget",
+                returnBookUri: encodeURIComponent(bookUri),
+              },
+            });
+          }}
         />
       </View>
     </AppScreen>
