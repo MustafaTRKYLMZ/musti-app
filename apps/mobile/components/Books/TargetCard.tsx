@@ -8,7 +8,10 @@ import {
   radii,
 } from "@budget/ui-native";
 import { IconButton } from "@/components/ui/AppIcon";
-import type { ReadingTarget } from "@/store/bookshelf/useReadingTargetsStore";
+import type {
+  ReadingTarget,
+  TargetItem,
+} from "@/store/bookshelf/useReadingTargetsStore";
 
 const { colors } = bookshelfTheme;
 
@@ -17,91 +20,115 @@ const clamp = (x: number, a: number, b: number) => Math.max(a, Math.min(b, x));
 
 type Props = {
   target: ReadingTarget;
-  currentPage: number;
-  onOpen: (t: ReadingTarget, openPage: number) => void;
+  progressMap: Record<string, any>;
+
+  onOpen: (t: ReadingTarget, item: TargetItem, openPage: number) => void;
   onDelete: (t: ReadingTarget) => void;
-  onAutoDone: (id: string) => void;
+
+  onAutoDoneItem: (targetId: string, itemId: string) => void;
+
   onRestart?: (t: ReadingTarget) => void;
 };
 
+function getCurrentPage(progressMap: Record<string, any>, bookUri: string) {
+  const v = progressMap?.[bookUri]?.lastPage ?? 0;
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
+}
+
+function pickDisplayItem(t: ReadingTarget): TargetItem | null {
+  const items = t.items ?? [];
+  const active = items.find((it) => it.status === "active");
+  if (active) return active;
+
+  const pending = items.find((it) => it.status === "pending");
+  if (pending) return pending;
+
+  return items[items.length - 1] ?? null;
+}
+
 export function TargetCard({
   target,
-  currentPage,
+  progressMap,
   onOpen,
   onDelete,
-  onAutoDone,
+  onAutoDoneItem,
   onRestart,
 }: Props) {
-  // ✅ baseline for this "run"
-  const baseStart =
-    target.status === "active"
-      ? (target as any).activeFromPage ??
-        target.jumpPage ??
-        target.startPage ??
-        1
-      : target.jumpPage ?? target.startPage ?? 1;
+  const displayItem = useMemo(() => pickDisplayItem(target), [target]);
 
-  const rangeStart = Math.max(1, Math.floor(baseStart));
-  const rangeEnd = Math.max(
-    rangeStart,
-    Math.floor(target.endPage ?? rangeStart)
-  );
+  const currentPage = useMemo(() => {
+    if (!displayItem) return 0;
+    return getCurrentPage(progressMap, displayItem.bookUri);
+  }, [progressMap, displayItem]);
+
+  const rangeStart = useMemo(() => {
+    if (!displayItem) return 1;
+    const base =
+      displayItem.status === "active"
+        ? displayItem.activeFromPage ??
+          displayItem.jumpPage ??
+          displayItem.startPage ??
+          1
+        : displayItem.jumpPage ?? displayItem.startPage ?? 1;
+
+    return Math.max(1, Math.floor(base));
+  }, [displayItem]);
+
+  const rangeEnd = useMemo(() => {
+    if (!displayItem) return rangeStart;
+    return Math.max(rangeStart, Math.floor(displayItem.endPage ?? rangeStart));
+  }, [displayItem, rangeStart]);
 
   const total = Math.max(1, rangeEnd - rangeStart + 1);
 
-  // ✅ normalize current page
   const rawCurrent = Number.isFinite(Number(currentPage))
     ? Math.floor(Number(currentPage))
     : 0;
 
-  // ✅ if book progress already past the target end while target is active (common after restart),
-  // treat as "not started" for display + open behavior.
-  const isPastEnd = target.status === "active" && rawCurrent > rangeEnd;
+  // restart sonrası book progress end'in ilerisindeyse progress 0 göster
+  const isPastEnd = displayItem?.status === "active" && rawCurrent > rangeEnd;
 
-  // ✅ progress math uses clamped current page (not openPage)
   const clampedCurrent = clamp(rawCurrent || rangeStart, rangeStart, rangeEnd);
-
   const openPage = isPastEnd ? rangeStart : clampedCurrent;
 
-  // ✅ show 0 progress when "past end" so remaining isn't 0 after restart
   const donePages = isPastEnd
     ? 0
     : Math.max(0, clampedCurrent - rangeStart + 1);
   const remainingPages = Math.max(0, total - donePages);
   const pct = clamp01(donePages / total);
 
-  // ✅ auto-done only when user crosses end during reading (prevents instant re-done)
-  const prevPageRef = useRef<number>(rawCurrent || 0);
+  // crossing detection (yalnız aktif item)
+  const prevRef = useRef<number>(rangeStart);
 
   useEffect(() => {
-    // reset when target/run baseline changes
-    prevPageRef.current = rangeStart;
-  }, [target.id, rangeStart]);
+    prevRef.current = rangeStart;
+  }, [target.id, displayItem?.id, rangeStart]);
 
   useEffect(() => {
-    if (target.status !== "active") return;
+    if (!displayItem) return;
+    if (displayItem.status !== "active") return;
+    if (isPastEnd) return;
 
-    const prev = prevPageRef.current || 0;
+    const prev = prevRef.current || 0;
     const curr = rawCurrent || 0;
 
     const crossedEnd = prev < rangeEnd && curr >= rangeEnd;
-    if (crossedEnd) onAutoDone(target.id);
+    if (crossedEnd) onAutoDoneItem(target.id, displayItem.id);
 
-    prevPageRef.current = curr;
-  }, [target.status, rawCurrent, rangeEnd, onAutoDone, target.id]);
+    prevRef.current = curr;
+  }, [target.id, displayItem, rawCurrent, rangeEnd, isPastEnd, onAutoDoneItem]);
 
   const subtitle = useMemo(() => {
-    return `${target.label} • ${rangeStart}–${rangeEnd}`;
-  }, [target.label, rangeStart, rangeEnd]);
+    if (!displayItem) return "";
+    return `${displayItem.label} • ${rangeStart}–${rangeEnd}`;
+  }, [displayItem, rangeStart, rangeEnd]);
 
   const openMenu = () => {
     const buttons: any[] = [{ text: "Cancel", style: "cancel" as const }];
 
     if (target.status === "done" && onRestart) {
-      buttons.push({
-        text: "Restart",
-        onPress: () => onRestart(target),
-      });
+      buttons.push({ text: "Restart", onPress: () => onRestart(target) });
     }
 
     buttons.push({
@@ -110,17 +137,27 @@ export function TargetCard({
       onPress: () => onDelete(target),
     });
 
-    Alert.alert("Target", target.label, buttons);
+    Alert.alert("Target", target.title, buttons);
   };
 
+  if (!displayItem) return null;
+
   return (
-    <Pressable onPress={() => onOpen(target, openPage)} style={styles.card}>
+    <Pressable
+      onPress={() => onOpen(target, displayItem, openPage)}
+      style={styles.card}
+    >
       <View style={styles.topRow}>
         <View style={{ flex: 1 }}>
           <MText numberOfLines={1} style={styles.title}>
-            {target.bookName}
+            {target.title}
           </MText>
+
           <MText numberOfLines={1} style={styles.sub}>
+            {displayItem.bookName}
+          </MText>
+
+          <MText numberOfLines={1} style={[styles.sub, { opacity: 0.75 }]}>
             {subtitle}
           </MText>
         </View>
@@ -139,13 +176,9 @@ export function TargetCard({
 
       <View style={styles.bottomRow}>
         <MText style={styles.progressText}>
-          {donePages} / {total} pages
+          {donePages} / {total}
         </MText>
         <MText style={styles.progressText}>Remaining: {remainingPages}</MText>
-      </View>
-
-      <View style={[styles.bottomRow, { marginTop: spacing.xs }]}>
-        <MText style={styles.progressText}>Current: {rawCurrent}</MText>
       </View>
     </Pressable>
   );
@@ -161,8 +194,8 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   topRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  title: { fontWeight: "800" },
-  sub: { marginTop: spacing.xs, opacity: 0.75 },
+  title: { fontWeight: "900" },
+  sub: { marginTop: spacing.xs, opacity: 0.9 },
 
   barWrap: {
     marginTop: spacing.md,
@@ -178,5 +211,5 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
   },
-  progressText: { opacity: 0.75, fontWeight: "700" },
+  progressText: { opacity: 0.75, fontWeight: "800" },
 });

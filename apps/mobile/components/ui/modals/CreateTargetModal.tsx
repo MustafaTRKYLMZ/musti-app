@@ -84,15 +84,24 @@ export function CreateTargetModal({
   onOpenChapters,
   initialBookUri,
 }: Props) {
+  // ✅ group + items store API (v2)
   const addTarget = useReadingTargetsStore((s) => s.addTarget);
+  const addItem = useReadingTargetsStore((s) => s.addItem);
+  const deleteItem = useReadingTargetsStore((s) => s.deleteItem);
+  const targets = useReadingTargetsStore((s) => s.targets);
 
+  // ⚠️ store’da bu helper varsa direkt al; yoksa (s as any) ile çekiyorsun
   const getResolvedSections = useBookSectionsStore(
-    (s) => s.getResolvedSections
+    (s) => (s as any).getResolvedSections
   );
 
+  // group state
+  const [title, setTitle] = useState("");
+  const [targetId, setTargetId] = useState<string | null>(null);
+
+  // selection state
   const [query, setQuery] = useState("");
   const [selectedUri, setSelectedUri] = useState<string | null>(null);
-
   const [type, setType] = useState<TargetType>("section");
 
   // pages: quick + custom
@@ -109,9 +118,10 @@ export function CreateTargetModal({
     [books, selectedUri]
   );
 
-  const startPage = useMemo(() => {
-    if (!selectedUri) return 0;
-    return clampInt(progressMap[selectedUri]?.lastPage ?? 0);
+  const currentBookPage = useMemo(() => {
+    if (!selectedUri) return 1;
+    const v = clampInt(progressMap[selectedUri]?.lastPage ?? 1);
+    return Math.max(1, v || 1);
   }, [progressMap, selectedUri]);
 
   const totalPages = useMemo(() => {
@@ -119,25 +129,29 @@ export function CreateTargetModal({
     return clampInt(progressMap[selectedUri]?.totalPages ?? 0);
   }, [progressMap, selectedUri]);
 
-  // ✅ resolved sections (endPage guaranteed)
+  // ✅ resolved sections (endPage guaranteed by helper)
   const resolvedSections = useMemo(() => {
     if (!selectedUri) return [];
-    // totalPages yoksa bile store helper 999999 gibi davranır (bizim store update’te)
-    return getResolvedSections(selectedUri, totalPages || null);
+    if (!getResolvedSections) return [];
+    return getResolvedSections(selectedUri, totalPages || null) ?? [];
   }, [getResolvedSections, selectedUri, totalPages]);
 
+  // ✅ kritik: bitmiş section’ları LİSTELEME (instant done biter)
   const sectionLabels = useMemo<TargetLabel[]>(() => {
     if (!selectedBook) return [];
     return resolvedSections
-      .filter((sec) => (sec.endPage ?? 0) > startPage)
-      .map((sec) => ({
+      .filter((sec: any) => {
+        const end = Number(sec.endPage ?? 0);
+        return end > currentBookPage; // ✅ only not-finished
+      })
+      .map((sec: any) => ({
         id: `sec:${sec.id}`,
         type: "section",
         label: sec.title,
-        endPage: sec.endPage ?? 0, // Ensure endPage is a number
-        jumpPage: sec.startPage, // ✅ chapter başı
+        endPage: Number(sec.endPage ?? 0),
+        jumpPage: Number(sec.startPage ?? 1),
       }));
-  }, [resolvedSections, selectedBook, startPage]);
+  }, [resolvedSections, selectedBook, currentBookPage]);
 
   const pagesSelected = useMemo(() => {
     const custom = clampInt(parseInt(customPages, 10));
@@ -152,15 +166,22 @@ export function CreateTargetModal({
     if (type === "pages") {
       const p = pagesSelected;
       if (!p) return null;
+
       const tp = Math.max(1, totalPages || 1);
-      const endPage = Math.min(tp, startPage + p);
+
+      // pages target starts at current reading page (>=1)
+      const jumpPage = Math.max(1, currentBookPage || 1);
+      const endPage = Math.min(tp, jumpPage + p);
+
+      // ✅ endPage currentPage’den küçük/eşit olmasın
+      if (endPage <= jumpPage) return null;
 
       return {
         id: customPages ? `p:custom:${p}` : `p:${p}`,
         type: "pages",
         label: `${p} pages`,
         endPage,
-        jumpPage: startPage,
+        jumpPage,
       };
     }
 
@@ -172,7 +193,7 @@ export function CreateTargetModal({
     type,
     pagesSelected,
     totalPages,
-    startPage,
+    currentBookPage,
     customPages,
     selectedSectionId,
     sectionLabels,
@@ -185,45 +206,78 @@ export function CreateTargetModal({
     return sorted.filter((b) => b.name.toLowerCase().includes(q));
   }, [books, query]);
 
+  // current group (for rendering items)
+  const currentTarget = useMemo(() => {
+    if (!targetId) return null;
+    return targets.find((t) => t.id === targetId) ?? null;
+  }, [targets, targetId]);
+
+  // initial book
   useEffect(() => {
     if (!visible) return;
     if (!initialBookUri) return;
     setSelectedUri(initialBookUri);
   }, [visible, initialBookUri]);
 
+  // reset selection when switching book/type
   useEffect(() => {
     setSelectedSectionId(null);
     setCustomPages("");
     setQuickPages(20);
   }, [selectedUri, type]);
 
-  const canCreate = !!selectedBook && !!selectedLabel;
+  const canAddItem = !!selectedBook && !!selectedLabel && !!targetId;
+  const canCreateGroup = title.trim().length > 0 && !targetId;
+  const canFinish = !!targetId && (currentTarget?.items?.length ?? 0) > 0;
 
-  const closeAndReset = () => {
+  const resetAll = () => {
+    setTitle("");
+    setTargetId(null);
+
     setQuery("");
     setSelectedUri(null);
     setType("section");
     setQuickPages(20);
     setCustomPages("");
     setSelectedSectionId(null);
+  };
+
+  const closeAndReset = () => {
+    resetAll();
     onClose();
   };
 
-  const onCreate = async () => {
-    if (!selectedBook || !selectedLabel) return;
+  const createGroup = async () => {
+    const t = title.trim();
+    if (!t) return;
+    const id = await addTarget(t);
+    setTargetId(id);
+  };
 
-    await addTarget({
+  const addSelectedItem = async () => {
+    if (!targetId || !selectedBook || !selectedLabel) return;
+
+    const jumpPage = Math.max(1, selectedLabel.jumpPage || 1);
+    const endPage = Math.max(jumpPage, selectedLabel.endPage || jumpPage);
+
+    // ✅ safety: instant done koruması (pages ve section için)
+    if (endPage <= currentBookPage) return;
+
+    await addItem(targetId, {
       bookUri: selectedBook.uri,
       bookName: selectedBook.name,
       type: selectedLabel.type,
-      startPage,
-      endPage: selectedLabel.endPage,
+      startPage: jumpPage,
+      endPage,
       labelId: selectedLabel.id,
       label: selectedLabel.label,
-      jumpPage: selectedLabel.jumpPage,
+      jumpPage,
     });
 
-    closeAndReset();
+    // clear selection for faster adding
+    setSelectedSectionId(null);
+    setCustomPages("");
+    setQuickPages(20);
   };
 
   return (
@@ -236,7 +290,9 @@ export function CreateTargetModal({
       <View style={styles.backdrop}>
         <View style={styles.sheet}>
           <View style={styles.header}>
-            <MText variant="heading3">New Target</MText>
+            <MText variant="heading3">
+              {targetId ? "Edit Target" : "New Target"}
+            </MText>
             <IconButton
               name="close"
               size={iconSizes.lg}
@@ -249,6 +305,70 @@ export function CreateTargetModal({
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: spacing.lg }}
           >
+            {/* GROUP TITLE */}
+            <MText style={styles.sectionTitle}>Title</MText>
+            <View style={styles.titleRow}>
+              <TextInput
+                value={title}
+                onChangeText={setTitle}
+                placeholder="e.g. Morning routine"
+                placeholderTextColor={colors.textSecondary}
+                style={styles.titleInput}
+                editable={!targetId}
+              />
+
+              {!targetId ? (
+                <Pressable
+                  onPress={createGroup}
+                  disabled={!canCreateGroup}
+                  style={[
+                    styles.primaryBtn,
+                    !canCreateGroup && { opacity: 0.5 },
+                  ]}
+                >
+                  <MText style={styles.primaryBtnText}>Create</MText>
+                </Pressable>
+              ) : (
+                <View style={styles.lockPill}>
+                  <MText style={{ fontWeight: "900", opacity: 0.7 }}>
+                    Created
+                  </MText>
+                </View>
+              )}
+            </View>
+
+            {/* ITEMS LIST */}
+            {currentTarget?.items?.length ? (
+              <>
+                <MText style={styles.sectionTitle}>
+                  Items ({currentTarget.items.length})
+                </MText>
+
+                <View style={styles.itemsBox}>
+                  {currentTarget.items.map((it) => (
+                    <View key={it.id} style={styles.itemRow}>
+                      <View style={{ flex: 1 }}>
+                        <MText numberOfLines={1} style={{ fontWeight: "800" }}>
+                          {it.bookName}
+                        </MText>
+                        <MText style={{ opacity: 0.75 }} numberOfLines={1}>
+                          {it.label} • {it.jumpPage}–{it.endPage}
+                        </MText>
+                      </View>
+
+                      <IconButton
+                        name="trash-outline"
+                        size={iconSizes.md}
+                        color={colors.textPrimary}
+                        onPress={() => deleteItem(currentTarget.id, it.id)}
+                      />
+                    </View>
+                  ))}
+                </View>
+              </>
+            ) : null}
+
+            {/* BOOK SELECT */}
             <MText style={styles.sectionTitle}>Book</MText>
 
             <View style={styles.searchWrap}>
@@ -294,7 +414,8 @@ export function CreateTargetModal({
             {selectedBook ? (
               <>
                 <MText style={styles.hint}>
-                  Start page: <MText style={styles.strong}>{startPage}</MText>
+                  Current page:{" "}
+                  <MText style={styles.strong}>{currentBookPage}</MText>
                   {"  "}• Total:{" "}
                   <MText style={styles.strong}>{totalPages || "—"}</MText>
                 </MText>
@@ -346,7 +467,7 @@ export function CreateTargetModal({
 
                     {selectedLabel ? (
                       <MText style={styles.hint}>
-                        Target:{" "}
+                        Selected:{" "}
                         <MText style={styles.strong}>
                           {selectedLabel.label}
                         </MText>
@@ -378,8 +499,8 @@ export function CreateTargetModal({
 
                     {sectionLabels.length === 0 ? (
                       <MText style={{ opacity: 0.7 }}>
-                        No chapters found for this book yet. Add them from the
-                        PDF menu.
+                        No available chapters (or all finished). Add/edit from
+                        the PDF menu.
                       </MText>
                     ) : (
                       <View style={styles.sectionList}>
@@ -396,21 +517,38 @@ export function CreateTargetModal({
                     )}
                   </>
                 )}
+
+                {/* ADD ITEM CTA */}
+                <Pressable
+                  onPress={addSelectedItem}
+                  disabled={!canAddItem}
+                  style={[styles.cta, !canAddItem && { opacity: 0.5 }]}
+                >
+                  <MText style={{ fontWeight: "900" }}>
+                    {targetId ? "Add item" : "Create group first"}
+                  </MText>
+                  {selectedLabel ? (
+                    <MText
+                      style={{ opacity: 0.75, marginTop: 2 }}
+                      numberOfLines={1}
+                    >
+                      {selectedBook.name} • {selectedLabel.label}
+                    </MText>
+                  ) : null}
+                </Pressable>
               </>
             ) : null}
           </ScrollView>
 
+          {/* FINISH */}
           <Pressable
-            onPress={onCreate}
-            disabled={!canCreate}
-            style={[styles.cta, !canCreate && { opacity: 0.5 }]}
+            onPress={closeAndReset}
+            disabled={!canFinish}
+            style={[styles.finish, !canFinish && { opacity: 0.5 }]}
           >
-            <MText style={{ fontWeight: "800" }}>Create Target</MText>
-            {selectedLabel ? (
-              <MText style={{ opacity: 0.75, marginTop: 2 }} numberOfLines={1}>
-                {selectedLabel.label}
-              </MText>
-            ) : null}
+            <MText style={{ fontWeight: "900" }}>
+              {canFinish ? "Save & Close" : "Add at least 1 item"}
+            </MText>
           </Pressable>
         </View>
       </View>
@@ -446,7 +584,57 @@ const styles = StyleSheet.create({
     opacity: 0.85,
   },
   hint: { marginTop: spacing.sm, opacity: 0.75 },
-  strong: { fontWeight: "800", opacity: 1 },
+  strong: { fontWeight: "900", opacity: 1 },
+
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  titleInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    borderRadius: radii.lg,
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    color: colors.textPrimary,
+  },
+  primaryBtn: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    backgroundColor: colors.surfaceElevated,
+  },
+  primaryBtnText: { fontWeight: "900" },
+  lockPill: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.full,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    backgroundColor: colors.surface,
+  },
+
+  itemsBox: {
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    borderRadius: radii.lg,
+    backgroundColor: colors.surface,
+    overflow: "hidden",
+  },
+  itemRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.borderSubtle,
+  },
 
   sectionHeaderRow: {
     flexDirection: "row",
@@ -536,6 +724,17 @@ const styles = StyleSheet.create({
     borderColor: colors.borderSubtle,
     borderRadius: radii.lg,
     backgroundColor: colors.surface,
+    paddingVertical: spacing.md,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  finish: {
+    marginTop: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    borderRadius: radii.lg,
+    backgroundColor: colors.surfaceElevated,
     paddingVertical: spacing.md,
     alignItems: "center",
     justifyContent: "center",

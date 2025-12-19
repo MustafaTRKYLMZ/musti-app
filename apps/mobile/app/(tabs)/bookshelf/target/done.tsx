@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from "react";
-import { View, StyleSheet, FlatList, Alert } from "react-native";
+import { View, StyleSheet, FlatList } from "react-native";
 import { useRouter } from "expo-router";
 import { MText, bookshelfTheme, iconSizes } from "@budget/ui-native";
 
@@ -8,8 +8,8 @@ import { IconButton } from "@/components/ui/AppIcon";
 import { TargetCard } from "@/components/Books/TargetCard";
 
 import {
-  ReadingTarget,
   useReadingTargetsStore,
+  type ReadingTarget,
 } from "@/store/bookshelf/useReadingTargetsStore";
 import { useBooksStore } from "@/store/bookshelf/useBooksStore";
 import { AppSwitcherButton } from "@/components/AppSwitcherButton";
@@ -35,6 +35,7 @@ const bookshelfHeaderStyles = StyleSheet.create({
   },
   title: { fontWeight: "600" },
 });
+
 export default function DoneTargetsScreen() {
   const router = useRouter();
 
@@ -43,7 +44,10 @@ export default function DoneTargetsScreen() {
 
   const targets = useReadingTargetsStore((s) => s.targets);
   const deleteTarget = useReadingTargetsStore((s) => s.deleteTarget);
-  const markActive = useReadingTargetsStore((s) => s.markActive);
+
+  // ✅ v2 store APIs
+  const restartItem = useReadingTargetsStore((s) => s.restartItem);
+  const markTargetActive = useReadingTargetsStore((s) => s.markTargetActive);
 
   const progressMap = useBooksStore((s) => s.items);
 
@@ -60,12 +64,6 @@ export default function DoneTargetsScreen() {
       );
   }, [targets]);
 
-  const getCurrentPage = (bookUri: string) => {
-    const v = (progressMap as any)[bookUri]?.lastPage ?? 0;
-    const n = Number(v);
-    return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
-  };
-
   const openBook = (bookUri: string, bookName: string, jumpPage: number) => {
     router.push({
       pathname: "/(tabs)/bookshelf/pdf/viewer",
@@ -78,20 +76,19 @@ export default function DoneTargetsScreen() {
   };
 
   const handleRestart = async (t: ReadingTarget) => {
-    await markActive(t.id);
-
-    // ✅ restart demek: start’tan başla
-    const start = Math.max(1, Math.floor(t.jumpPage ?? t.startPage ?? 1));
+    // group restart (senin store'da nasıl yaptığını biliyorum)
+    await markTargetActive(t.id);
+    for (const it of t.items) {
+      await restartItem(t.id, it.id);
+    }
 
     router.push({
-      pathname: "/(tabs)/bookshelf/pdf/viewer",
-      params: {
-        uri: encodeURIComponent(t.bookUri),
-        name: encodeURIComponent(t.bookName),
-        jumpPage: String(start),
-      },
+      pathname: "/(tabs)/bookshelf/target/target-viewer",
+      params: { targetId: t.id },
     });
   };
+
+  const markItemDone = useReadingTargetsStore((s) => s.markItemDone);
 
   return (
     <AppScreen
@@ -117,22 +114,20 @@ export default function DoneTargetsScreen() {
             data={done}
             keyExtractor={(x) => x.id}
             contentContainerStyle={styles.list}
-            renderItem={({ item }) => {
-              const currentPage = getCurrentPage(item.bookUri);
-
-              return (
-                <TargetCard
-                  target={item}
-                  currentPage={currentPage}
-                  onOpen={(t, openPage) =>
-                    openBook(t.bookUri, t.bookName, openPage)
-                  }
-                  onDelete={(t) => deleteTarget(t.id)}
-                  onAutoDone={() => {}}
-                  onRestart={(t) => handleRestart(t)}
-                />
-              );
-            }}
+            renderItem={({ item }) => (
+              <TargetCard
+                target={item}
+                progressMap={progressMap}
+                onOpen={(t, it, openPage) =>
+                  openBook(it.bookUri, it.bookName, openPage)
+                }
+                onDelete={(t) => deleteTarget(t.id)}
+                onAutoDoneItem={(targetId, itemId) =>
+                  markItemDone(targetId, itemId)
+                }
+                onRestart={(t) => handleRestart(t)}
+              />
+            )}
           />
         )}
       </View>
