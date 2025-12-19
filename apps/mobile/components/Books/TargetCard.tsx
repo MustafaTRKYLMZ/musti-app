@@ -13,7 +13,6 @@ import type {
   ReadingTarget,
   TargetItem,
 } from "@/store/bookshelf/useReadingTargetsStore";
-import { useReadingTargetsStore } from "@/store/bookshelf/useReadingTargetsStore";
 import { ItemDots } from "../ui/ItemDots";
 import { pickActiveItem } from "@/utils/pickActiveItem";
 
@@ -28,6 +27,9 @@ type Props = {
 
   onAutoDoneItem: (targetId: string, itemId: string) => void;
   onRestart?: (t: ReadingTarget) => void;
+
+  // ✅ NEW: parent handles store side-effects (setActiveItem etc)
+  onBeforeOpen?: (targetId: string, itemId: string) => Promise<void> | void;
 };
 
 // ✅ fallback item to keep hooks stable even if items is empty
@@ -46,15 +48,15 @@ const FALLBACK_ITEM: TargetItem = {
   status: "pending",
 };
 
-export function TargetCard({
+export const TargetCard = ({
   target,
   onOpen,
   onDelete,
   onAutoDoneItem,
   onRestart,
-}: Props) {
+  onBeforeOpen,
+}: Props) => {
   const { colors } = useTheme();
-  const setActiveItem = useReadingTargetsStore((s) => s.setActiveItem);
 
   const activeItem = useMemo(() => pickActiveItem(target), [target]);
 
@@ -85,7 +87,6 @@ export function TargetCard({
   const lastItemIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    // if no real item, do nothing
     if (!displayItem) return;
 
     const id = displayItem.id;
@@ -171,7 +172,7 @@ export function TargetCard({
   }, [target.id, displayItem?.id, rangeStart]);
 
   useEffect(() => {
-    if (!displayItem) return; // only real items
+    if (!displayItem) return;
     if (displayItem.status !== "active") return;
 
     const prev = prevRef.current || 0;
@@ -211,16 +212,13 @@ export function TargetCard({
   const statusDone = colors.textMuted; // neutral
 
   const handleOpen = async () => {
-    // if no real item, do nothing
     if (!displayItem) return;
 
-    // if user chose another item to start, make it active
-    if (activeItem?.id !== displayItem.id && displayItem.status !== "done") {
-      try {
-        await setActiveItem(target.id, displayItem.id);
-      } catch {
-        // ignore
-      }
+    // ✅ parent handles side effects
+    try {
+      await onBeforeOpen?.(target.id, displayItem.id);
+    } catch {
+      // ignore
     }
 
     onOpen(target, displayItem, openPage);
@@ -371,7 +369,7 @@ export function TargetCard({
       </View>
     </Pressable>
   );
-}
+};
 
 const styles = StyleSheet.create({
   card: {
