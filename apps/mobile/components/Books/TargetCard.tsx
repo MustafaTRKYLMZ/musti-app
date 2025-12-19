@@ -3,7 +3,6 @@ import {
   View,
   StyleSheet,
   Pressable,
-  Alert,
   PanResponder,
   Animated,
 } from "react-native";
@@ -16,6 +15,7 @@ import type {
 import { ItemDots } from "../ui/ItemDots";
 import { pickActiveItem } from "@/utils/pickActiveItem";
 import { useToast } from "../ui/ToastProvider";
+import { TargetItemSummary } from "./TargetItemSummary";
 
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 const clamp = (x: number, a: number, b: number) => Math.max(a, Math.min(b, x));
@@ -28,12 +28,9 @@ type Props = {
 
   onAutoDoneItem: (targetId: string, itemId: string) => void;
   onRestart?: (t: ReadingTarget) => void;
-
-  // ✅ NEW: parent handles store side-effects (setActiveItem etc)
   onBeforeOpen?: (targetId: string, itemId: string) => Promise<void> | void;
 };
 
-// ✅ fallback item to keep hooks stable even if items is empty
 const FALLBACK_ITEM: TargetItem = {
   id: "__fallback__",
   bookUri: "",
@@ -102,7 +99,6 @@ export const TargetCard = ({
     }).start();
   }, [displayItem?.id, displayItem, anim]);
 
-  // ✅ swipe on dot area
   const swipeThreshold = 18;
   const panResponder = useMemo(
     () =>
@@ -179,11 +175,6 @@ export const TargetCard = ({
     prevRef.current = curr;
   }, [target.id, displayItem, clampedCurrent, rangeEnd, onAutoDoneItem]);
 
-  const subtitle = useMemo(() => {
-    if (!displayItem) return "";
-    return `${displayItem.label} • ${rangeStart}–${rangeEnd}`;
-  }, [displayItem, rangeStart, rangeEnd]);
-
   const openMenu = () => {
     showToast({
       title: "Target",
@@ -206,10 +197,15 @@ export const TargetCard = ({
   const handleOpen = async () => {
     if (!displayItem) return;
 
+    const shouldChangeActive = activeItem?.id !== displayItem.id;
+
     try {
-      await onBeforeOpen?.(target.id, displayItem.id);
+      if (shouldChangeActive) {
+        await onBeforeOpen?.(target.id, displayItem.id);
+      }
     } catch {
-      // ignore
+      showToast("Failed to open target item.");
+      return;
     }
 
     onOpen(target, displayItem, openPage);
@@ -296,19 +292,7 @@ export const TargetCard = ({
               ],
             }}
           >
-            <MText
-              numberOfLines={1}
-              style={[styles.sub, { color: colors.textPrimary, opacity: 0.9 }]}
-            >
-              {displayItem.bookName}
-            </MText>
-
-            <MText
-              numberOfLines={1}
-              style={[styles.sub, { color: colors.textPrimary, opacity: 0.75 }]}
-            >
-              {subtitle}
-            </MText>
+            <TargetItemSummary item={displayItem} />
           </Animated.View>
         </View>
       </View>

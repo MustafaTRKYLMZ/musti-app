@@ -1,5 +1,12 @@
 import React, { useEffect, useMemo, useRef } from "react";
-import { Animated, View, StyleSheet, Pressable } from "react-native";
+import {
+  Animated,
+  View,
+  StyleSheet,
+  Pressable,
+  Modal,
+  Platform,
+} from "react-native";
 import { MText, radii, spacing, useTheme } from "@budget/ui-native";
 import type { ToastAction } from "./ToastProvider";
 
@@ -35,114 +42,120 @@ export const Toast = ({
   );
 
   return (
-    <View style={styles.toastWrap} pointerEvents={wrapPointerEvents}>
-      <Pressable style={StyleSheet.absoluteFill} onPress={onDismiss} />
+    <Modal
+      visible={visible}
+      transparent
+      animationType="none"
+      presentationStyle="overFullScreen"
+      statusBarTranslucent={Platform.OS === "android"}
+      onRequestClose={onDismiss}
+    >
+      <View style={styles.toastWrap} pointerEvents={wrapPointerEvents}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onDismiss} />
 
-      <Animated.View
-        style={[
-          styles.toast,
-          {
-            backgroundColor: colors.surface,
-            borderColor: colors.borderSubtle,
-            opacity: anim,
-            transform: [
-              {
-                translateY: anim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [18, 0],
-                }),
-              },
-              {
-                scale: anim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0.98, 1],
-                }),
-              },
-            ],
-          },
-        ]}
-      >
-        {title ? (
-          <MText
-            variant="body"
-            color="textPrimary"
-            numberOfLines={1}
-            style={styles.title}
-          >
-            {title}
+        <Animated.View
+          style={[
+            styles.toast,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.borderSubtle,
+              opacity: anim,
+              transform: [
+                {
+                  translateY: anim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [18, 0],
+                  }),
+                },
+                {
+                  scale: anim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.98, 1],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          {title ? (
+            <MText
+              variant="body"
+              color="textPrimary"
+              numberOfLines={1}
+              style={styles.title}
+            >
+              {title}
+            </MText>
+          ) : null}
+
+          <MText variant="body" color="textPrimary" numberOfLines={2}>
+            {message}
           </MText>
-        ) : null}
 
-        <MText variant="body" color="textPrimary" numberOfLines={2}>
-          {message}
-        </MText>
-
-        {actions?.length ? (
-          <View style={styles.actionsRow}>
-            {actions.slice(0, 2).map((a, idx) => (
-              <Pressable
-                key={`${a.label}-${idx}`}
-                onPress={() => {
-                  onDismiss();
-                  a.onPress();
-                }}
-                style={[
-                  styles.actionBtn,
-                  { borderColor: colors.borderSubtle },
-                  a.destructive
-                    ? {
-                        borderColor: colors.danger,
-                        backgroundColor: colors.danger + "1A",
-                      }
-                    : { backgroundColor: colors.surfaceElevated },
-                ]}
-              >
-                <MText
-                  variant="body"
-                  color="textPrimary"
-                  numberOfLines={1}
+          {actions?.length ? (
+            <View style={styles.actionsRow}>
+              {actions.slice(0, 2).map((a, idx) => (
+                <Pressable
+                  key={`${a.label}-${idx}`}
+                  onPress={() => {
+                    onDismiss();
+                    a.onPress();
+                  }}
                   style={[
-                    styles.actionText,
-                    a.destructive ? { color: colors.danger } : null,
+                    styles.actionBtn,
+                    { borderColor: colors.borderSubtle },
+                    a.destructive
+                      ? {
+                          borderColor: colors.danger,
+                          backgroundColor: colors.danger + "1A",
+                        }
+                      : { backgroundColor: colors.surfaceElevated },
                   ]}
                 >
-                  {a.label}
-                </MText>
-              </Pressable>
-            ))}
-          </View>
-        ) : null}
-      </Animated.View>
-    </View>
+                  <MText
+                    variant="body"
+                    color="textPrimary"
+                    numberOfLines={1}
+                    style={[
+                      styles.actionText,
+                      a.destructive ? { color: colors.danger } : null,
+                    ]}
+                  >
+                    {a.label}
+                  </MText>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
+        </Animated.View>
+      </View>
+    </Modal>
   );
 };
 
 const styles = StyleSheet.create({
   toastWrap: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: spacing["6xl"] + 16,
+    flex: 1,
+    justifyContent: "flex-end",
     alignItems: "center",
     paddingHorizontal: spacing.lg,
+    paddingBottom: spacing["6xl"] + 16,
   },
   toast: {
     maxWidth: "94%",
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    borderRadius: radii.xl,
+    borderRadius: radii.md,
     borderWidth: 1,
     shadowColor: "#000",
     shadowOpacity: 0.16,
     shadowRadius: 10,
     elevation: 6,
   },
-
   title: {
     fontWeight: "900",
     marginBottom: spacing.xs,
   },
-
   actionsRow: {
     flexDirection: "row",
     gap: spacing.sm,
