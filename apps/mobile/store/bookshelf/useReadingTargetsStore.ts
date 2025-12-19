@@ -53,15 +53,25 @@ type TargetsState = {
   // item actions
   addItem: (
     targetId: string,
-    item: Omit<TargetItem, "id" | "status" | "doneAt" | "activeFromPage" | "cursorPage">
+    item: Omit<
+      TargetItem,
+      "id" | "status" | "doneAt" | "activeFromPage" | "cursorPage"
+    >
   ) => Promise<void>;
   deleteItem: (targetId: string, itemId: string) => Promise<void>;
+
+  // ✅ explicit: user picked another item to start => make it active
+  setActiveItem: (targetId: string, itemId: string) => Promise<void>;
 
   // ✅ when item reaches end
   markItemDone: (targetId: string, itemId: string) => Promise<void>;
 
   // ✅ target-only progress update (do NOT touch book progressMap)
-  setItemCursor: (targetId: string, itemId: string, cursorPage: number) => Promise<void>;
+  setItemCursor: (
+    targetId: string,
+    itemId: string,
+    cursorPage: number
+  ) => Promise<void>;
 
   // restart
   restartTarget: (targetId: string) => Promise<void>;
@@ -219,6 +229,45 @@ export const useReadingTargetsStore = create<TargetsState>((set, get) => ({
     await persist(targets);
   },
 
+  /**
+   * ✅ user explicitly chose another item to start from (via card press)
+   * - if chosen item is pending => make it active
+   * - if chosen item is done => do nothing (use restartItem for that)
+   * - make all other non-done items pending
+   */
+  setActiveItem: async (targetId, itemId) => {
+    const targets = get().targets.map((t) => {
+      if (t.id !== targetId) return t;
+
+      const chosen = t.items.find((it) => it.id === itemId);
+      if (!chosen) return t;
+
+      // don't auto-reactivate done items (safer UX)
+      if (chosen.status === "done") return t;
+
+      const nextItems = t.items.map((it) => {
+        if (it.status === "done") return it;
+
+        if (it.id === itemId) {
+          return { ...it, status: "active" as const };
+        }
+
+        if (it.status === "active") return { ...it, status: "pending" as const };
+        if (it.status === "pending") return it;
+
+        return it;
+      });
+
+      let nextTarget: ReadingTarget = { ...t, items: nextItems };
+      nextTarget = ensureSingleActive(nextTarget);
+      nextTarget = recomputeTargetStatus(nextTarget);
+      return nextTarget;
+    });
+
+    set({ targets });
+    await persist(targets);
+  },
+
   setItemCursor: async (targetId, itemId, cursorPage) => {
     const c = clampInt(cursorPage) || 1;
 
@@ -319,7 +368,12 @@ export const useReadingTargetsStore = create<TargetsState>((set, get) => ({
         };
       });
 
-      let next: ReadingTarget = { ...t, status: "active", doneAt: undefined, items: nextItems };
+      let next: ReadingTarget = {
+        ...t,
+        status: "active",
+        doneAt: undefined,
+        items: nextItems,
+      };
       next = ensureSingleActive(next);
       next = recomputeTargetStatus(next);
       return next;

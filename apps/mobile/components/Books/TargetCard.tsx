@@ -1,11 +1,21 @@
-import React, { useEffect, useMemo, useRef } from "react";
-import { View, StyleSheet, Pressable, Alert } from "react-native";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import {
+  View,
+  StyleSheet,
+  Pressable,
+  Alert,
+  PanResponder,
+  Animated,
+} from "react-native";
 import { MText, iconSizes, spacing, radii, useTheme } from "@budget/ui-native";
 import { IconButton } from "@/components/ui/AppIcon";
 import type {
   ReadingTarget,
   TargetItem,
 } from "@/store/bookshelf/useReadingTargetsStore";
+import { useReadingTargetsStore } from "@/store/bookshelf/useReadingTargetsStore";
+import { ItemDots } from "../ui/ItemDots";
+import { pickActiveItem } from "@/utils/pickActiveItem";
 
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 const clamp = (x: number, a: number, b: number) => Math.max(a, Math.min(b, x));
@@ -20,9 +30,21 @@ type Props = {
   onRestart?: (t: ReadingTarget) => void;
 };
 
-function pickActiveItem(t: ReadingTarget): TargetItem | null {
-  return t.items?.find((it) => it.status === "active") ?? null;
-}
+// ✅ fallback item to keep hooks stable even if items is empty
+const FALLBACK_ITEM: TargetItem = {
+  id: "__fallback__",
+  bookUri: "",
+  bookName: "",
+  type: "pages",
+  startPage: 1,
+  endPage: 1,
+  jumpPage: 1,
+  labelId: "",
+  label: "",
+  activeFromPage: 1,
+  cursorPage: 1,
+  status: "pending",
+};
 
 export function TargetCard({
   target,
@@ -32,36 +54,107 @@ export function TargetCard({
   onRestart,
 }: Props) {
   const { colors } = useTheme();
+  const setActiveItem = useReadingTargetsStore((s) => s.setActiveItem);
 
   const activeItem = useMemo(() => pickActiveItem(target), [target]);
-  const displayItem =
-    activeItem ?? target.items[target.items.length - 1] ?? null;
 
+  // ✅ preview selection
+  const [previewIndex, setPreviewIndex] = useState(0);
+
+  // target changes => default preview to active (else 0)
+  useEffect(() => {
+    const idx = activeItem
+      ? target.items.findIndex((i) => i.id === activeItem.id)
+      : -1;
+    setPreviewIndex(idx >= 0 ? idx : 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target.id]);
+
+  // ✅ compute displayItem (can be null if no items)
+  const displayItem = useMemo(() => {
+    if (!target.items.length) return null;
+    const i = Math.max(0, Math.min(target.items.length - 1, previewIndex));
+    return target.items[i] ?? null;
+  }, [target.items, previewIndex]);
+
+  // ✅ safeDisplayItem: ALWAYS non-null for hooks
+  const safeDisplayItem = displayItem ?? FALLBACK_ITEM;
+
+  // ✅ animate only text lines on preview item change
+  const anim = useRef(new Animated.Value(1)).current;
+  const lastItemIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    // if no real item, do nothing
+    if (!displayItem) return;
+
+    const id = displayItem.id;
+    if (lastItemIdRef.current === null) {
+      lastItemIdRef.current = id;
+      return;
+    }
+    if (lastItemIdRef.current === id) return;
+
+    lastItemIdRef.current = id;
+
+    anim.setValue(0);
+    Animated.timing(anim, {
+      toValue: 1,
+      duration: 160,
+      useNativeDriver: true,
+    }).start();
+  }, [displayItem?.id, displayItem, anim]);
+
+  // ✅ swipe on dot area
+  const swipeThreshold = 18;
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, g) =>
+          Math.abs(g.dx) > Math.abs(g.dy) && Math.abs(g.dx) > 6,
+        onPanResponderRelease: (_, g) => {
+          if (!target.items.length) return;
+
+          if (g.dx <= -swipeThreshold) {
+            setPreviewIndex((i) => Math.min(target.items.length - 1, i + 1));
+          } else if (g.dx >= swipeThreshold) {
+            setPreviewIndex((i) => Math.max(0, i - 1));
+          }
+        },
+      }),
+    [target.items.length]
+  );
+
+  // ---- calculations (use safeDisplayItem so hooks never disappear) ----
   const rangeStart = useMemo(() => {
-    if (!displayItem) return 1;
     return Math.max(
       1,
       Math.floor(
-        displayItem.activeFromPage ??
-          displayItem.jumpPage ??
-          displayItem.startPage ??
+        safeDisplayItem.activeFromPage ??
+          safeDisplayItem.jumpPage ??
+          safeDisplayItem.startPage ??
           1
       )
     );
-  }, [displayItem]);
+  }, [
+    safeDisplayItem.activeFromPage,
+    safeDisplayItem.jumpPage,
+    safeDisplayItem.startPage,
+  ]);
 
   const rangeEnd = useMemo(() => {
-    if (!displayItem) return rangeStart;
-    return Math.max(rangeStart, Math.floor(displayItem.endPage ?? rangeStart));
-  }, [displayItem, rangeStart]);
+    return Math.max(
+      rangeStart,
+      Math.floor(safeDisplayItem.endPage ?? rangeStart)
+    );
+  }, [safeDisplayItem.endPage, rangeStart]);
 
   const total = Math.max(1, rangeEnd - rangeStart + 1);
 
   const rawCurrent = useMemo(() => {
-    if (!displayItem) return rangeStart;
-    const c = Number(displayItem.cursorPage ?? rangeStart);
+    const c = Number(safeDisplayItem.cursorPage ?? rangeStart);
     return Number.isFinite(c) ? Math.floor(c) : rangeStart;
-  }, [displayItem, rangeStart]);
+  }, [safeDisplayItem.cursorPage, rangeStart]);
 
   const clampedCurrent = clamp(rawCurrent, rangeStart, rangeEnd);
   const openPage = clampedCurrent;
@@ -78,7 +171,7 @@ export function TargetCard({
   }, [target.id, displayItem?.id, rangeStart]);
 
   useEffect(() => {
-    if (!displayItem) return;
+    if (!displayItem) return; // only real items
     if (displayItem.status !== "active") return;
 
     const prev = prevRef.current || 0;
@@ -112,16 +205,71 @@ export function TargetCard({
     Alert.alert("Target", target.title, buttons);
   };
 
-  if (!displayItem) return null;
+  // ✅ status colors (guaranteed)
+  const statusActive = colors.success; // green
+  const statusPending = colors.primaryLight; // pink/coral
+  const statusDone = colors.textMuted; // neutral
 
-  // --- status colors from theme (fallback if you haven't added them yet) ---
-  const statusActive = (colors as any).statusActive ?? colors.success;
-  const statusDone = (colors as any).statusDone ?? colors.textMuted;
-  const statusPending = (colors as any).primaryLight ?? colors.warning;
+  const handleOpen = async () => {
+    // if no real item, do nothing
+    if (!displayItem) return;
+
+    // if user chose another item to start, make it active
+    if (activeItem?.id !== displayItem.id && displayItem.status !== "done") {
+      try {
+        await setActiveItem(target.id, displayItem.id);
+      } catch {
+        // ignore
+      }
+    }
+
+    onOpen(target, displayItem, openPage);
+  };
+
+  // ✅ render decision at the END (hooks already executed)
+  if (!target.items.length || !displayItem) {
+    return (
+      <View
+        style={[
+          styles.card,
+          {
+            borderColor: colors.borderSubtle,
+            backgroundColor: colors.surface,
+            opacity: 0.7,
+          },
+        ]}
+      >
+        <View style={styles.targetCardHeader}>
+          <MText
+            numberOfLines={1}
+            style={[styles.title, { color: colors.textPrimary }]}
+          >
+            {target.title}
+          </MText>
+          <IconButton
+            name="ellipsis-vertical"
+            size={iconSizes.lg}
+            color={colors.textPrimary}
+            onPress={openMenu}
+          />
+        </View>
+
+        <MText
+          style={{
+            marginTop: spacing.sm,
+            color: colors.textSecondary,
+            opacity: 0.85,
+          }}
+        >
+          No items yet
+        </MText>
+      </View>
+    );
+  }
 
   return (
     <Pressable
-      onPress={() => onOpen(target, displayItem, openPage)}
+      onPress={handleOpen}
       style={[
         styles.card,
         {
@@ -146,21 +294,37 @@ export function TargetCard({
               onPress={openMenu}
             />
           </View>
-          <MText
-            numberOfLines={1}
-            style={[styles.sub, { color: colors.textPrimary, opacity: 0.9 }]}
-          >
-            {displayItem.bookName}
-          </MText>
 
-          <MText
-            numberOfLines={1}
-            style={[styles.sub, { color: colors.textPrimary, opacity: 0.75 }]}
+          <Animated.View
+            style={{
+              opacity: anim,
+              transform: [
+                {
+                  translateY: anim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [3, 0],
+                  }),
+                },
+              ],
+            }}
           >
-            {subtitle}
-          </MText>
+            <MText
+              numberOfLines={1}
+              style={[styles.sub, { color: colors.textPrimary, opacity: 0.9 }]}
+            >
+              {displayItem.bookName}
+            </MText>
+
+            <MText
+              numberOfLines={1}
+              style={[styles.sub, { color: colors.textPrimary, opacity: 0.75 }]}
+            >
+              {subtitle}
+            </MText>
+          </Animated.View>
         </View>
       </View>
+
       <View
         style={[
           styles.barWrap,
@@ -174,6 +338,7 @@ export function TargetCard({
           ]}
         />
       </View>
+
       <View style={styles.bottomRow}>
         <MText
           style={[
@@ -192,93 +357,19 @@ export function TargetCard({
           Remaining: {remainingPages}
         </MText>
       </View>
-      <View style={styles.dotContainer}>
+
+      <View style={styles.dotContainer} {...panResponder.panHandlers}>
         <ItemDots
           items={target.items}
           activeColor={statusActive}
           doneColor={statusDone}
           pendingColor={statusPending}
           maxDots={10}
+          selectedIndex={previewIndex}
+          onSelectIndex={setPreviewIndex}
         />
       </View>
     </Pressable>
-  );
-}
-
-function ItemDots({
-  items,
-  activeColor,
-  doneColor,
-  pendingColor,
-  maxDots = 10,
-}: {
-  items: { id: string; status: "done" | "active" | "pending" }[];
-  activeColor: string;
-  doneColor: string;
-  pendingColor: string;
-  maxDots?: number;
-}) {
-  const { colors } = useTheme();
-
-  const total = items.length;
-  const shown = Math.min(total, maxDots);
-  const extra = total - shown;
-
-  return (
-    <View style={styles.dotsRow}>
-      {items.slice(0, shown).map((it) => {
-        const key = it.id;
-
-        if (it.status === "done") {
-          return (
-            <View
-              key={key}
-              style={[styles.dotFilled, { backgroundColor: doneColor }]}
-            />
-          );
-        }
-
-        if (it.status === "active") {
-          // ✅ active: bigger + ring
-          return (
-            <View
-              key={key}
-              style={[
-                styles.dotActiveWrap,
-                { borderColor: activeColor + "55" }, // ring (hex alpha)
-              ]}
-            >
-              <View
-                style={[
-                  styles.dotActiveInner,
-                  { backgroundColor: activeColor },
-                ]}
-              />
-            </View>
-          );
-        }
-
-        return (
-          <View
-            key={key}
-            style={[
-              styles.dotPending,
-              {
-                borderColor: pendingColor,
-                backgroundColor: pendingColor + "33",
-                opacity: 1,
-              },
-            ]}
-          />
-        );
-      })}
-
-      {extra > 0 && (
-        <MText style={[styles.extraText, { color: colors.textSecondary }]}>
-          +{extra}
-        </MText>
-      )}
-    </View>
   );
 }
 
@@ -298,36 +389,8 @@ const styles = StyleSheet.create({
   title: { fontWeight: "900" },
   sub: { marginTop: spacing.xs },
 
-  itemsRow: {
-    marginTop: spacing.xs,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing.sm,
-  },
-  itemsText: { fontWeight: "900", opacity: 0.9 },
-
-  dotsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    flexShrink: 0,
-  },
-  dotFilled: {
-    width: 10,
-    height: 10,
-    borderRadius: 999,
-  },
-  dotOutline: {
-    width: 10,
-    height: 10,
-    borderRadius: 999,
-    borderWidth: 2,
-  },
-  extraText: {
-    fontWeight: "900",
-    opacity: 0.85,
-    marginLeft: 2,
+  dotContainer: {
+    padding: spacing.xs,
   },
 
   barWrap: {
@@ -344,26 +407,4 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   progressText: { fontWeight: "800" },
-  dotActiveWrap: {
-    width: 16,
-    height: 16,
-    borderRadius: 999,
-    borderWidth: 2,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  dotActiveInner: {
-    width: 12,
-    height: 12,
-    borderRadius: 999,
-  },
-  dotPending: {
-    width: 10,
-    height: 10,
-    borderRadius: 999,
-    borderWidth: 2.5,
-  },
-  dotContainer: {
-    padding: spacing.xs,
-  },
 });
