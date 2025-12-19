@@ -1,19 +1,11 @@
 import React, { useEffect, useMemo, useRef } from "react";
 import { View, StyleSheet, Pressable, Alert } from "react-native";
-import {
-  MText,
-  bookshelfTheme,
-  iconSizes,
-  spacing,
-  radii,
-} from "@budget/ui-native";
+import { MText, iconSizes, spacing, radii, useTheme } from "@budget/ui-native";
 import { IconButton } from "@/components/ui/AppIcon";
 import type {
   ReadingTarget,
   TargetItem,
 } from "@/store/bookshelf/useReadingTargetsStore";
-
-const { colors } = bookshelfTheme;
 
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 const clamp = (x: number, a: number, b: number) => Math.max(a, Math.min(b, x));
@@ -39,6 +31,8 @@ export function TargetCard({
   onAutoDoneItem,
   onRestart,
 }: Props) {
+  const { colors } = useTheme();
+
   const activeItem = useMemo(() => pickActiveItem(target), [target]);
   const displayItem =
     activeItem ?? target.items[target.items.length - 1] ?? null;
@@ -63,7 +57,6 @@ export function TargetCard({
 
   const total = Math.max(1, rangeEnd - rangeStart + 1);
 
-  // ✅ target cursor
   const rawCurrent = useMemo(() => {
     if (!displayItem) return rangeStart;
     const c = Number(displayItem.cursorPage ?? rangeStart);
@@ -77,7 +70,7 @@ export function TargetCard({
   const remainingPages = Math.max(0, total - donePages);
   const pct = clamp01(donePages / total);
 
-  // ✅ auto done only for active item when cursor crosses end
+  // auto done only for active item when cursor crosses end
   const prevRef = useRef<number>(rangeStart);
 
   useEffect(() => {
@@ -121,43 +114,171 @@ export function TargetCard({
 
   if (!displayItem) return null;
 
+  // --- status colors from theme (fallback if you haven't added them yet) ---
+  const statusActive = (colors as any).statusActive ?? colors.success;
+  const statusDone = (colors as any).statusDone ?? colors.textMuted;
+  const statusPending = (colors as any).primaryLight ?? colors.warning;
+
   return (
     <Pressable
       onPress={() => onOpen(target, displayItem, openPage)}
-      style={styles.card}
+      style={[
+        styles.card,
+        {
+          borderColor: colors.borderSubtle,
+          backgroundColor: colors.surface,
+        },
+      ]}
     >
       <View style={styles.topRow}>
         <View style={{ flex: 1 }}>
-          <MText numberOfLines={1} style={styles.title}>
-            {target.title}
-          </MText>
-          <MText numberOfLines={1} style={styles.sub}>
+          <View style={styles.targetCardHeader}>
+            <MText
+              numberOfLines={1}
+              style={[styles.title, { color: colors.textPrimary }]}
+            >
+              {target.title}
+            </MText>
+            <IconButton
+              name="ellipsis-vertical"
+              size={iconSizes.lg}
+              color={colors.textPrimary}
+              onPress={openMenu}
+            />
+          </View>
+          <MText
+            numberOfLines={1}
+            style={[styles.sub, { color: colors.textPrimary, opacity: 0.9 }]}
+          >
             {displayItem.bookName}
           </MText>
-          <MText numberOfLines={1} style={[styles.sub, { opacity: 0.75 }]}>
+
+          <MText
+            numberOfLines={1}
+            style={[styles.sub, { color: colors.textPrimary, opacity: 0.75 }]}
+          >
             {subtitle}
           </MText>
         </View>
-
-        <IconButton
-          name="ellipsis-horizontal"
-          size={iconSizes.lg}
-          color={colors.textPrimary}
-          onPress={openMenu}
+      </View>
+      <View
+        style={[
+          styles.barWrap,
+          { backgroundColor: colors.backgroundSecondary },
+        ]}
+      >
+        <View
+          style={[
+            styles.barFill,
+            { width: `${pct * 100}%`, backgroundColor: colors.primary },
+          ]}
         />
       </View>
-
-      <View style={styles.barWrap}>
-        <View style={[styles.barFill, { width: `${pct * 100}%` }]} />
-      </View>
-
       <View style={styles.bottomRow}>
-        <MText style={styles.progressText}>
+        <MText
+          style={[
+            styles.progressText,
+            { color: colors.textPrimary, opacity: 0.75 },
+          ]}
+        >
           {donePages} / {total}
         </MText>
-        <MText style={styles.progressText}>Remaining: {remainingPages}</MText>
+        <MText
+          style={[
+            styles.progressText,
+            { color: colors.textPrimary, opacity: 0.75 },
+          ]}
+        >
+          Remaining: {remainingPages}
+        </MText>
+      </View>
+      <View style={styles.dotContainer}>
+        <ItemDots
+          items={target.items}
+          activeColor={statusActive}
+          doneColor={statusDone}
+          pendingColor={statusPending}
+          maxDots={10}
+        />
       </View>
     </Pressable>
+  );
+}
+
+function ItemDots({
+  items,
+  activeColor,
+  doneColor,
+  pendingColor,
+  maxDots = 10,
+}: {
+  items: { id: string; status: "done" | "active" | "pending" }[];
+  activeColor: string;
+  doneColor: string;
+  pendingColor: string;
+  maxDots?: number;
+}) {
+  const { colors } = useTheme();
+
+  const total = items.length;
+  const shown = Math.min(total, maxDots);
+  const extra = total - shown;
+
+  return (
+    <View style={styles.dotsRow}>
+      {items.slice(0, shown).map((it) => {
+        const key = it.id;
+
+        if (it.status === "done") {
+          return (
+            <View
+              key={key}
+              style={[styles.dotFilled, { backgroundColor: doneColor }]}
+            />
+          );
+        }
+
+        if (it.status === "active") {
+          // ✅ active: bigger + ring
+          return (
+            <View
+              key={key}
+              style={[
+                styles.dotActiveWrap,
+                { borderColor: activeColor + "55" }, // ring (hex alpha)
+              ]}
+            >
+              <View
+                style={[
+                  styles.dotActiveInner,
+                  { backgroundColor: activeColor },
+                ]}
+              />
+            </View>
+          );
+        }
+
+        return (
+          <View
+            key={key}
+            style={[
+              styles.dotPending,
+              {
+                borderColor: pendingColor,
+                backgroundColor: pendingColor + "33",
+                opacity: 1,
+              },
+            ]}
+          />
+        );
+      })}
+
+      {extra > 0 && (
+        <MText style={[styles.extraText, { color: colors.textSecondary }]}>
+          +{extra}
+        </MText>
+      )}
+    </View>
   );
 }
 
@@ -166,27 +287,83 @@ const styles = StyleSheet.create({
     width: 320,
     borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    backgroundColor: colors.surface,
     padding: spacing.md,
+  },
+  targetCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   topRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   title: { fontWeight: "900" },
-  sub: { marginTop: spacing.xs, opacity: 0.9 },
+  sub: { marginTop: spacing.xs },
+
+  itemsRow: {
+    marginTop: spacing.xs,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+  },
+  itemsText: { fontWeight: "900", opacity: 0.9 },
+
+  dotsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexShrink: 0,
+  },
+  dotFilled: {
+    width: 10,
+    height: 10,
+    borderRadius: 999,
+  },
+  dotOutline: {
+    width: 10,
+    height: 10,
+    borderRadius: 999,
+    borderWidth: 2,
+  },
+  extraText: {
+    fontWeight: "900",
+    opacity: 0.85,
+    marginLeft: 2,
+  },
 
   barWrap: {
     marginTop: spacing.md,
     height: 8,
     borderRadius: radii.full,
-    backgroundColor: colors.backgroundSecondary,
     overflow: "hidden",
   },
-  barFill: { height: "100%", backgroundColor: colors.primary },
+  barFill: { height: "100%" },
 
   bottomRow: {
     marginTop: spacing.sm,
     flexDirection: "row",
     justifyContent: "space-between",
   },
-  progressText: { opacity: 0.75, fontWeight: "800" },
+  progressText: { fontWeight: "800" },
+  dotActiveWrap: {
+    width: 16,
+    height: 16,
+    borderRadius: 999,
+    borderWidth: 2,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dotActiveInner: {
+    width: 12,
+    height: 12,
+    borderRadius: 999,
+  },
+  dotPending: {
+    width: 10,
+    height: 10,
+    borderRadius: 999,
+    borderWidth: 2.5,
+  },
+  dotContainer: {
+    padding: spacing.xs,
+  },
 });

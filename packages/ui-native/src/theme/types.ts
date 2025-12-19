@@ -1,5 +1,3 @@
-// packages/ui-native/src/theme/types.ts
-
 export type ThemeColors = {
     primary: string;
     primaryDark: string;
@@ -26,6 +24,10 @@ export type ThemeColors = {
     surfaceStrong: string;
     backdropStrong: string;
     shadowStrong: string;
+
+    statusActive: string;
+    statusDone: string;
+    statusPending: string;
   };
   
   export type TypographyVariant = {

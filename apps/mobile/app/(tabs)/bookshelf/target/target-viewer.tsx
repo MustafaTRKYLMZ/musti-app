@@ -1,10 +1,4 @@
-import React, {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  useCallback,
-} from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { View, StyleSheet } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { MText, spacing, iconSizes, useTheme } from "@budget/ui-native";
@@ -15,15 +9,15 @@ import { IconButton } from "@/components/ui/AppIcon";
 import { BookSectionsSidebar } from "@/components/Books/BookSectionsSidebar";
 
 import { useReadingTargetsStore } from "@/store/bookshelf/useReadingTargetsStore";
-import { Toast } from "@/components/ui/Toast";
 import { pickActiveItem } from "@/utils/pickActiveItem";
 import { findItemById } from "@/utils/findItemById";
 import { useToast } from "@/components/ui/ToastProvider";
+import { TargetItemPager } from "@/components/Books/TargetItemPager";
 
 export default function TargetViewerScreen() {
   const router = useRouter();
-  const theme = useTheme();
-  const { colors } = theme;
+  const { colors } = useTheme();
+  const { showToast } = useToast();
 
   const params = useLocalSearchParams<{ targetId?: string }>();
   const targetId = params.targetId ? String(params.targetId) : undefined;
@@ -31,8 +25,8 @@ export default function TargetViewerScreen() {
   const hydrate = useReadingTargetsStore((s) => s.hydrate);
   const hydrated = useReadingTargetsStore((s) => s.hydrated);
   const targets = useReadingTargetsStore((s) => s.targets);
-  const markItemDone = useReadingTargetsStore((s) => s.markItemDone);
 
+  const markItemDone = useReadingTargetsStore((s) => s.markItemDone);
   const setItemCursor = useReadingTargetsStore((s) => (s as any).setItemCursor);
 
   const target = useMemo(() => {
@@ -53,18 +47,7 @@ export default function TargetViewerScreen() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState<number | null>(null);
 
-  const toastTimerRef = useRef<any>(null);
-
-  const { toast, showToast } = useToast();
-
-  useEffect(() => {
-    return () => {
-      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    };
-  }, []);
-
   const doneOnceRef = useRef<string | null>(null);
-
   const lastCompletedItemIdRef = useRef<string | null>(null);
 
   // hydrate
@@ -72,10 +55,12 @@ export default function TargetViewerScreen() {
     if (!hydrated) hydrate();
   }, [hydrated, hydrate]);
 
+  // when active item changes => reset baseline/page
   useEffect(() => {
     if (!displayItem) return;
 
     const baseline =
+      displayItem.cursorPage ??
       displayItem.activeFromPage ??
       displayItem.jumpPage ??
       displayItem.startPage ??
@@ -86,10 +71,10 @@ export default function TargetViewerScreen() {
     setCurrentPage(start);
     setTotalPages(null);
 
-    // new item => allow done again for this item
     doneOnceRef.current = null;
   }, [displayItem?.id]);
 
+  // after an item completes, show contextual toast
   useEffect(() => {
     if (!targetId || !target) return;
 
@@ -128,7 +113,7 @@ export default function TargetViewerScreen() {
     }
   }, [hydrated, targetId, target, displayItem, showToast, router]);
 
-  // Guards (now safe: all hooks above already executed)
+  // Guards
   if (!targetId) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -174,18 +159,14 @@ export default function TargetViewerScreen() {
         <MText variant="body" color="textPrimary" style={{ opacity: 0.8 }}>
           Finishing…
         </MText>
-        <Toast visible={toast.visible} text={toast.text} />
       </View>
     );
   }
 
   const source = { uri, cache: true };
-
   const handleLoadComplete = (pages: number) => setTotalPages(pages);
 
-  const handleClose = () => {
-    router.back();
-  };
+  const handleClose = () => router.back();
 
   const handlePageChanged = async (page: number, total: number) => {
     setTotalPages(total);
@@ -195,7 +176,7 @@ export default function TargetViewerScreen() {
       if (typeof setItemCursor === "function") {
         setItemCursor(targetId, displayItem.id, page);
       }
-    } catch (e) {
+    } catch {
       showToast("Error updating cursor", 3000);
     }
 
@@ -206,7 +187,6 @@ export default function TargetViewerScreen() {
       doneOnceRef.current = displayItem.id;
 
       lastCompletedItemIdRef.current = displayItem.id;
-
       await markItemDone(targetId, displayItem.id);
     }
   };
@@ -228,6 +208,12 @@ export default function TargetViewerScreen() {
         totalPages={totalPages ?? undefined}
       />
 
+      {!isFullscreen && (
+        <View style={styles.topOverlay} pointerEvents="none">
+          <TargetItemPager target={target} activeItemId={displayItem.id} />
+        </View>
+      )}
+
       <BookSectionsSidebar
         visible={sectionsOpen}
         onClose={() => setSectionsOpen(false)}
@@ -238,8 +224,6 @@ export default function TargetViewerScreen() {
           pdfRef.current.setPage(p);
         }}
       />
-
-      <Toast visible={toast.visible} text={toast.text} />
     </>
   );
 }
@@ -250,5 +234,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: spacing.md,
+  },
+  topOverlay: {
+    position: "absolute",
+    top: spacing.lg,
+    left: spacing.md,
+    right: spacing.md,
+    alignItems: "center",
   },
 });
