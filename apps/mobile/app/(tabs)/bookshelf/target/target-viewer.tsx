@@ -5,95 +5,26 @@ import React, {
   useState,
   useCallback,
 } from "react";
-import { View, StyleSheet, Animated } from "react-native";
+import { View, StyleSheet } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { MText, spacing, radii, iconSizes, useTheme } from "@budget/ui-native";
+import { MText, spacing, iconSizes, useTheme } from "@budget/ui-native";
 import { PdfRef } from "react-native-pdf";
 
 import { PdfReader } from "@/components/ui/pdf/PdfReader";
 import { IconButton } from "@/components/ui/AppIcon";
 import { BookSectionsSidebar } from "@/components/Books/BookSectionsSidebar";
 
-import {
-  useReadingTargetsStore,
-  type ReadingTarget,
-  type TargetItem,
-} from "@/store/bookshelf/useReadingTargetsStore";
-
-/* ---------------- Toast (no external lib) ---------------- */
-
-type ToastState = { visible: boolean; text: string };
-
-function Toast({
-  visible,
-  text,
-  colors,
-}: {
-  visible: boolean;
-  text: string;
-  colors: any;
-}) {
-  const anim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.timing(anim, {
-      toValue: visible ? 1 : 0,
-      duration: visible ? 180 : 140,
-      useNativeDriver: true,
-    }).start();
-  }, [visible, anim]);
-
-  return (
-    <View style={styles.toastWrap} pointerEvents="none">
-      <Animated.View
-        style={[
-          styles.toast,
-          {
-            backgroundColor: colors.surface,
-            borderColor: colors.borderSubtle,
-            opacity: anim,
-            transform: [
-              {
-                translateY: anim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [18, 0],
-                }),
-              },
-              {
-                scale: anim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0.98, 1],
-                }),
-              },
-            ],
-          },
-        ]}
-      >
-        <MText variant="body" color="textPrimary" numberOfLines={2}>
-          {text}
-        </MText>
-      </Animated.View>
-    </View>
-  );
-}
-
-/* ---------------- Helpers ---------------- */
-
-function pickActiveItem(t: ReadingTarget | null): TargetItem | null {
-  if (!t?.items?.length) return null;
-  return t.items.find((it) => it.status === "active") ?? null;
-}
-
-function findItemById(t: ReadingTarget | null, itemId: string | null) {
-  if (!t || !itemId) return null;
-  return t.items.find((x) => x.id === itemId) ?? null;
-}
+import { useReadingTargetsStore } from "@/store/bookshelf/useReadingTargetsStore";
+import { Toast } from "@/components/ui/Toast";
+import { pickActiveItem } from "@/utils/pickActiveItem";
+import { findItemById } from "@/utils/findItemById";
+import { useToast } from "@/components/ui/ToastProvider";
 
 export default function TargetViewerScreen() {
   const router = useRouter();
-  const { colors } = useTheme();
+  const theme = useTheme();
+  const { colors } = theme;
 
-  // ✅ hooks must be called before ANY early return
   const params = useLocalSearchParams<{ targetId?: string }>();
   const targetId = params.targetId ? String(params.targetId) : undefined;
 
@@ -102,7 +33,6 @@ export default function TargetViewerScreen() {
   const targets = useReadingTargetsStore((s) => s.targets);
   const markItemDone = useReadingTargetsStore((s) => s.markItemDone);
 
-  // ✅ IMPORTANT: this hook was previously BELOW early returns -> caused "Rendered fewer hooks"
   const setItemCursor = useReadingTargetsStore((s) => (s as any).setItemCursor);
 
   const target = useMemo(() => {
@@ -123,17 +53,9 @@ export default function TargetViewerScreen() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState<number | null>(null);
 
-  // Toast
-  const [toast, setToast] = useState<ToastState>({ visible: false, text: "" });
   const toastTimerRef = useRef<any>(null);
 
-  const showToast = useCallback((text: string, durationMs = 1200) => {
-    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    setToast({ visible: true, text });
-    toastTimerRef.current = setTimeout(() => {
-      setToast((t) => ({ ...t, visible: false }));
-    }, durationMs);
-  }, []);
+  const { toast, showToast } = useToast();
 
   useEffect(() => {
     return () => {
@@ -141,10 +63,8 @@ export default function TargetViewerScreen() {
     };
   }, []);
 
-  // ✅ prevent duplicate done
   const doneOnceRef = useRef<string | null>(null);
 
-  // ✅ for “completed -> continuing”
   const lastCompletedItemIdRef = useRef<string | null>(null);
 
   // hydrate
@@ -152,7 +72,6 @@ export default function TargetViewerScreen() {
     if (!hydrated) hydrate();
   }, [hydrated, hydrate]);
 
-  // When active item changes => set initial page
   useEffect(() => {
     if (!displayItem) return;
 
@@ -171,29 +90,25 @@ export default function TargetViewerScreen() {
     doneOnceRef.current = null;
   }, [displayItem?.id]);
 
-  // After marking an item done, store should switch to next item OR target becomes done.
   useEffect(() => {
     if (!targetId || !target) return;
 
     const completedId = lastCompletedItemIdRef.current;
     if (!completedId) return;
 
-    // wait until active item changed away from completed
     if (displayItem?.id === completedId) return;
 
     const completed = findItemById(target, completedId);
 
-    // Next item exists
     if (displayItem) {
       const a = completed?.bookName ?? "Item";
       const b = displayItem.bookName ?? "Next item";
-      showToast(`${a} completed — continuing with ${b}`, 1300);
+      showToast(`${a} completed — continuing with ${b}`, 3000);
       lastCompletedItemIdRef.current = null;
       return;
     }
 
-    // No active item => target finished
-    showToast("Target completed 🎉", 1200);
+    showToast("Target completed 🎉", 3000);
     lastCompletedItemIdRef.current = null;
 
     const tmr = setTimeout(() => router.back(), 900);
@@ -259,7 +174,7 @@ export default function TargetViewerScreen() {
         <MText variant="body" color="textPrimary" style={{ opacity: 0.8 }}>
           Finishing…
         </MText>
-        <Toast visible={toast.visible} text={toast.text} colors={colors} />
+        <Toast visible={toast.visible} text={toast.text} />
       </View>
     );
   }
@@ -276,23 +191,20 @@ export default function TargetViewerScreen() {
     setTotalPages(total);
     setCurrentPage(page);
 
-    // ✅ update cursor (target-only) — fire-and-forget (no await)
     try {
       if (typeof setItemCursor === "function") {
         setItemCursor(targetId, displayItem.id, page);
       }
-    } catch {
-      // ignore cursor errors
+    } catch (e) {
+      showToast("Error updating cursor", 3000);
     }
 
     const end = Math.max(1, Math.floor(displayItem.endPage ?? 1));
 
-    // ✅ only mark done once per item
     if (page >= end) {
       if (doneOnceRef.current === displayItem.id) return;
       doneOnceRef.current = displayItem.id;
 
-      // ✅ enable "completed → continuing" toast chain
       lastCompletedItemIdRef.current = displayItem.id;
 
       await markItemDone(targetId, displayItem.id);
@@ -327,7 +239,7 @@ export default function TargetViewerScreen() {
         }}
       />
 
-      <Toast visible={toast.visible} text={toast.text} colors={colors} />
+      <Toast visible={toast.visible} text={toast.text} />
     </>
   );
 }
@@ -338,26 +250,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: spacing.md,
-  },
-
-  toastWrap: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: spacing["6xl"] + 16,
-    alignItems: "center",
-    paddingHorizontal: spacing.lg,
-  },
-
-  toast: {
-    maxWidth: "94%",
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: radii.xl,
-    borderWidth: 1,
-    shadowColor: "#000",
-    shadowOpacity: 0.16,
-    shadowRadius: 10,
-    elevation: 6,
   },
 });
