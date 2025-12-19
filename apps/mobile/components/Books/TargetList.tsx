@@ -102,7 +102,7 @@ export function TargetList({ progressMap, onOpenCreate }: Props) {
           ) : null}
 
           <IconButton
-            name="add"
+            name="add-circle-outline"
             size={iconSizes.lg}
             color={colors.textPrimary}
             onPress={onOpenCreate}
