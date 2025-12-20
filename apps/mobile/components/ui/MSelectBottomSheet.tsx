@@ -228,7 +228,7 @@ export function MSelectBottomSheet<T extends MSelectItemBase>({
                   backgroundColor: colors.surface,
                   borderColor: colors.borderSubtle,
                   transform: [{ translateY }],
-                  marginBottom: spacing.lg, // ✅ alttan uzak
+                  marginBottom: spacing.lg, // ✅ distance from bottom
                 },
               ]}
             >
@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.lg,
-    minHeight: "50%", // ✅ yarım ekran
+    minHeight: "50%", // ✅ half screen
     maxHeight: "85%",
   },
 

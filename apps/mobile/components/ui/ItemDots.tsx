@@ -1,4 +1,4 @@
-import { MText, spacing, useTheme } from "@budget/ui-native";
+import { MText, useTheme } from "@budget/ui-native";
 import { Pressable, View, StyleSheet } from "react-native";
 
 export const ItemDots = ({
@@ -63,7 +63,7 @@ export const ItemDots = ({
               <View
                 style={[
                   styles.dotActiveWrap,
-                  { borderColor: activeColor + "66" },
+                  { borderColor: activeColor + "CC" },
                 ]}
               >
                 <View

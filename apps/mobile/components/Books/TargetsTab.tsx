@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect } from "react";
 import { View, StyleSheet, Pressable } from "react-native";
 import { MText, bookshelfTheme, iconSizes } from "@budget/ui-native";
 import { IconButton } from "@/components/ui/AppIcon";

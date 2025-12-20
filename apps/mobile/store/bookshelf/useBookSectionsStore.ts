@@ -30,15 +30,15 @@ function normalizeSections(input: BookSection[]): BookSection[] {
     })
     .sort((a, b) => a.startPage - b.startPage);
 
-  // startPage çakışmalarında stabil hale getir (aynı sayfada birden fazla chapter istemiyorsan)
-  // burada "aynı startPage olabilir" durumunu bozmuyoruz.
+  // Make order stable when startPage values collide (if you do not want multiple chapters on the same page)
+  // Note: we do not change the fact that sections can share the same startPage.
   return arr;
 }
 
 /**
- * endPage boşsa: bir sonraki section'ın startPage - 1'i
- * son section ise: totalPages
- * endPage varsa ama start'tan küçükse: düzeltilir
+ * If endPage is empty: use (startPage of the next section) - 1
+ * If this is the last section: use totalPages
+ * If endPage exists but is smaller than startPage: adjust it
  */
 export function resolveEndPages(
   sectionsInput: BookSection[],
@@ -191,7 +191,7 @@ export const useBookSectionsStore = create<BookSectionsState>()(
         set((state) => {
           const existing = state.byBook[oldUri];
           if (!existing) return state;
-          const { [oldUri]: _removed, ...rest } = state.byBook;
+          const { [oldUri]: _, ...rest } = state.byBook;
 
           return {
             byBook: {

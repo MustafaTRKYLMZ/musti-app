@@ -27,7 +27,7 @@ export default function RootLayout() {
   const loadFromStorage = useTransactionsStore((s) => s.loadFromStorage);
   const loadInitialBalance = useSettingsStore((s) => s.loadInitialBalance);
 
-  // ✅ Hook'lar component içinde
+  // ✅ Hooks inside component
   useEffect(() => {
     initNotificationsOnce();
   }, []);

@@ -29,7 +29,7 @@ import { AppSwitcherButton } from "@/components/AppSwitcherButton";
 import { LastReadBook } from "@/components/Books/LastReadBook";
 import { PlanList } from "@/components/Books/PlanList";
 import { BookList } from "../Books/BookList";
-import { BookshelfTabs, BookshelfTopTab } from "../Books/BookshelfTabs";
+import { BookshelfTabs } from "../Books/BookshelfTabs";
 import { TargetList } from "../Books/TargetList";
 import { CreateTargetModal } from "../ui/modals/CreateTargetModal";
 import { useBookshelfTabsStore } from "@/store/bookshelf/useBookshelfTabsStore";
@@ -88,10 +88,10 @@ export default function BookshelfHomeScreen() {
       ? decodeURIComponent(params.targetBookUri)
       : null;
 
-    // modalı aç
+    // open the modal
     setTargetModalVisible(true);
 
-    // modal içinde seçili kitabı set etmek için bir state daha tutacağız:
+    // keep another state to set the selected book inside the modal:
     if (bookUri) setCreateTargetInitialBookUri(bookUri);
   }, [params.openCreateTarget, params.targetBookUri]);
 

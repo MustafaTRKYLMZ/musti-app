@@ -85,7 +85,7 @@ export function EditTargetModal({
   const addItem = useReadingTargetsStore((s) => s.addItem);
   const deleteItem = useReadingTargetsStore((s) => s.deleteItem);
 
-  const renameTarget = useReadingTargetsStore((s) => (s as any).renameTarget);
+  const updateTargetTitle = useReadingTargetsStore((s) => s.updateTargetTitle);
 
   const getResolvedSections = useBookSectionsStore(
     (s) => (s as any).getResolvedSections
@@ -203,7 +203,7 @@ export function EditTargetModal({
     if (!selectedBook) return false;
 
     if (type === "section") return !!selectedSection;
-    return pagesStart > 0 && pagesEnd > 0 && pagesEnd > pagesStart;
+    return pagesStart > 0 && pagesEnd > 0 && pagesEnd >= pagesStart;
   }, [targetId, selectedBook, type, selectedSection, pagesStart, pagesEnd]);
 
   const addSelectedItem = async () => {
@@ -239,9 +239,9 @@ export function EditTargetModal({
     }
 
     // pages
-    if (!(pagesEnd > pagesStart)) {
+    if (!(pagesEnd >= pagesStart)) {
       showToast({
-        message: "End page must be greater than start page.",
+        message: "End page must be greater than or equal to start page.",
         duration: 3500,
       });
       return;
@@ -271,11 +271,11 @@ export function EditTargetModal({
     try {
       if (
         target &&
-        renameTarget &&
+        updateTargetTitle &&
         title.trim() &&
         title.trim() !== target.title
       ) {
-        await renameTarget(target.id, title.trim());
+        await updateTargetTitle(target.id, title.trim());
       }
     } catch {
       showToast({ message: "Failed to update title.", duration: 3500 });
