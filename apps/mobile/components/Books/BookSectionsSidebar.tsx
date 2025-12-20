@@ -37,10 +37,14 @@ export function BookSectionsSidebar({
   const updateSection = useBookSectionsStore((s) => s.updateSection);
 
   const sectionsData: BookSection[] = bookUri ? byBook[bookUri] ?? [] : [];
-  const sections = sectionsData.sort((a, b) => a.startPage - b.startPage);
+  // const sections = sectionsData.sort((a, b) => a.startPage - b.startPage);
+  const sections = [...sectionsData].sort((a, b) => a.startPage - b.startPage);
+
   const [title, setTitle] = useState("");
   const [startPage, setStartPage] = useState("");
   const [pageError, setPageError] = useState<string | null>(null);
+  const [endPage, setEndPage] = useState("");
+  const [endPageError, setEndPageError] = useState<string | null>(null);
 
   const totalPages = useBooksStore((s) =>
     bookUri ? s.items[bookUri]?.totalPages ?? null : null
@@ -59,12 +63,35 @@ export function BookSectionsSidebar({
     if (num > totalPages) {
       setPageError(`This book has only ${totalPages} pages.`);
     }
+    setEndPageError(null);
+  };
+  const handleChangeEndPage = (value: string) => {
+    setEndPage(value);
+    setEndPageError(null);
+
+    const num = Number(value);
+    if (!value || !totalPages || Number.isNaN(num)) return;
+    if (num < 1) return;
+
+    if (num > totalPages) {
+      setEndPageError(`This book has only ${totalPages} pages.`);
+    }
   };
 
   const handleAdd = () => {
     const page = Number(startPage);
+    const end = endPage.trim() ? Number(endPage) : null;
     if (!title.trim() || !page || page < 1 || !bookUri) return;
-
+    if (end != null) {
+      if (Number.isNaN(end) || end < page) {
+        setEndPageError("End page must be >= start page.");
+        return;
+      }
+      if (totalPages && end > totalPages) {
+        setEndPageError(`This book has only ${totalPages} pages.`);
+        return;
+      }
+    }
     if (totalPages && page > totalPages) {
       setPageError(`This book has only ${totalPages} pages.`);
       return;
@@ -73,13 +100,15 @@ export function BookSectionsSidebar({
     addSectionToStore(bookUri, {
       title: title.trim(),
       startPage: page,
-      endPage: null,
+      endPage: end,
       color: null,
     });
 
     setTitle("");
     setStartPage("");
+    setEndPage("");
     setPageError(null);
+    setEndPageError(null);
   };
 
   const handleDeleteSection = (id: string) => {
@@ -90,13 +119,15 @@ export function BookSectionsSidebar({
   const handleUpdateSection = (
     id: string,
     newTitle: string,
-    newStartPage: number
+    newStartPage: number,
+    newEndPage: number | null
   ) => {
     if (!bookUri) return;
 
     updateSection(bookUri, id, {
       title: newTitle,
       startPage: newStartPage,
+      endPage: newEndPage,
     });
   };
 
@@ -128,9 +159,13 @@ export function BookSectionsSidebar({
           setTitle={setTitle}
           startPage={startPage}
           setStartPage={handleChangeStartPage}
+          endPage={endPage}
+          setEndPage={handleChangeEndPage}
           handleAdd={handleAdd}
           pageError={pageError}
+          endPageError={endPageError}
         />
+
         <Divider />
         <SectionList
           sections={sections}

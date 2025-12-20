@@ -15,20 +15,22 @@ import { useEffect } from "react";
 import { initNotificationsOnce } from "@budget/notifications";
 import { SchedulersHost } from "@/components/SchedulersHost";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { ToastProvider } from "@/components/ui/ToastProvider";
+
 export const unstable_settings = {
   anchor: "(tabs)",
 };
 
-useEffect(() => {
-  initNotificationsOnce();
-}, []);
-
 export default function RootLayout() {
-  "use no memo";
   const colorScheme = useColorScheme();
 
   const loadFromStorage = useTransactionsStore((s) => s.loadFromStorage);
   const loadInitialBalance = useSettingsStore((s) => s.loadInitialBalance);
+
+  // ✅ Hooks inside component
+  useEffect(() => {
+    initNotificationsOnce();
+  }, []);
 
   useEffect(() => {
     loadInitialBalance();
@@ -38,12 +40,14 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-        <SchedulersHost />
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="launcher" />
-        </Stack>
-        <StatusBar style="auto" />
+        <ToastProvider>
+          <SchedulersHost />
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="launcher" />
+          </Stack>
+          <StatusBar style="auto" />
+        </ToastProvider>
       </ThemeProvider>
     </GestureHandlerRootView>
   );

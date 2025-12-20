@@ -7,10 +7,19 @@ import { MText } from "@budget/ui-native";
 type AddSectionFormProps = {
   title: string;
   setTitle: (value: string) => void;
+
   startPage: string;
   setStartPage: (value: string) => void;
+
+  // ✅ new
+  endPage: string;
+  setEndPage: (value: string) => void;
+
   handleAdd: () => void;
+
   pageError?: string | null;
+  // ✅ new
+  endPageError?: string | null;
 };
 
 export const AddSectionForm: FC<AddSectionFormProps> = ({
@@ -18,18 +27,30 @@ export const AddSectionForm: FC<AddSectionFormProps> = ({
   setTitle,
   startPage,
   setStartPage,
+  endPage,
+  setEndPage,
   handleAdd,
   pageError,
+  endPageError,
 }) => {
-  const isValidBase = title.trim().length > 0 && Number(startPage) > 0;
-  const isValid = isValidBase && !pageError;
+  const startNum = Number(startPage);
+  const endNum = endPage.trim() ? Number(endPage) : null;
+
+  const baseValid = title.trim().length > 0 && startNum > 0 && !pageError;
+  const endValid =
+    !endPageError &&
+    (endNum == null || (!Number.isNaN(endNum) && endNum >= startNum));
+
+  const isValid = baseValid && endValid;
 
   const handleSubmit = () => {
     if (!isValid) return;
     handleAdd();
   };
+
   const theme = useTheme();
   const { colors } = theme;
+
   return (
     <>
       <View style={styles.formRow}>
@@ -46,7 +67,7 @@ export const AddSectionForm: FC<AddSectionFormProps> = ({
 
         <View style={styles.pageAndButton}>
           <TextInput
-            placeholder="Page"
+            placeholder="Start"
             value={startPage}
             onChangeText={setStartPage}
             keyboardType="number-pad"
@@ -54,6 +75,22 @@ export const AddSectionForm: FC<AddSectionFormProps> = ({
               styles.inputPage,
               {
                 borderColor: pageError ? colors.danger : colors.borderSubtle,
+                color: colors.textPrimary,
+              },
+            ]}
+            placeholderTextColor={colors.textSecondary}
+            returnKeyType="next"
+          />
+
+          <TextInput
+            placeholder="End"
+            value={endPage}
+            onChangeText={setEndPage}
+            keyboardType="number-pad"
+            style={[
+              styles.inputPage,
+              {
+                borderColor: endPageError ? colors.danger : colors.borderSubtle,
                 color: colors.textPrimary,
               },
             ]}
@@ -82,6 +119,12 @@ export const AddSectionForm: FC<AddSectionFormProps> = ({
       {pageError ? (
         <MText variant="caption" color="danger" style={styles.errorText}>
           {pageError}
+        </MText>
+      ) : null}
+
+      {endPageError ? (
+        <MText variant="caption" color="danger" style={styles.errorText}>
+          {endPageError}
         </MText>
       ) : null}
     </>

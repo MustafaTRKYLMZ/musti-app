@@ -13,9 +13,27 @@ import { PdfRef } from "react-native-pdf";
 export default function PdfViewerScreen() {
   const router = useRouter();
 
-  const params = useLocalSearchParams<{ uri?: string; name?: string }>();
-  const uri = params.uri as string | undefined;
-  const name = (params.name as string) || "PDF";
+  const params = useLocalSearchParams<{
+    uri?: string;
+    name?: string;
+    openSections?: string;
+    jumpPage?: string;
+    returnTo?: string;
+    returnBookUri?: string;
+  }>();
+  const returnTo = params.returnTo as string | undefined;
+  const returnBookUri = params.returnBookUri
+    ? decodeURIComponent(params.returnBookUri)
+    : undefined;
+
+  const uri = params.uri ? decodeURIComponent(params.uri) : undefined;
+  const name = params.name ? decodeURIComponent(params.name) : "PDF";
+
+  const shouldOpenSections = params.openSections === "1";
+  const jumpPageParam = params.jumpPage ? Number(params.jumpPage) : null;
+  const jumpPage = Number.isFinite(jumpPageParam as number)
+    ? (jumpPageParam as number)
+    : null;
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [initialPage, setInitialPage] = useState(1);
@@ -39,6 +57,15 @@ export default function PdfViewerScreen() {
   const [sessionTotalPages, setSessionTotalPages] = useState<number | null>(
     currentProgress?.totalPages ?? null
   );
+  const openedSectionsOnceRef = useRef(false);
+  const appliedJumpOnceRef = useRef(false);
+
+  useEffect(() => {
+    if (!shouldOpenSections) return;
+    if (openedSectionsOnceRef.current) return;
+    openedSectionsOnceRef.current = true;
+    setSectionsOpen(true);
+  }, [shouldOpenSections]);
 
   useEffect(() => {
     if (!uri) return;
@@ -77,6 +104,16 @@ export default function PdfViewerScreen() {
       lastPage: currentProgress?.lastPage ?? 1,
       totalPages: pages,
     });
+
+    // ✅ apply jumpPage once after load
+    if (jumpPage && !appliedJumpOnceRef.current) {
+      appliedJumpOnceRef.current = true;
+      const safe = Math.max(1, Math.min(pages, jumpPage));
+      // next tick (ref hazır olsun)
+      setTimeout(() => {
+        pdfRef.current?.setPage(safe);
+      }, 0);
+    }
   };
 
   const handlePageChanged = (page: number, total: number) => {
@@ -114,6 +151,16 @@ export default function PdfViewerScreen() {
         date: today,
         pages: pagesDelta,
       });
+    }
+    if (returnTo === "createTarget") {
+      router.replace({
+        pathname: "/(tabs)/bookshelf",
+        params: {
+          openCreateTarget: "1",
+          targetBookUri: returnBookUri ? encodeURIComponent(returnBookUri) : "",
+        },
+      });
+      return;
     }
 
     router.replace("/(tabs)/bookshelf");

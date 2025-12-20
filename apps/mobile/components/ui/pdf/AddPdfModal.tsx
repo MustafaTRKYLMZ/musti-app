@@ -141,6 +141,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.18,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: -4 },
+    marginBottom: spacing["6xl"],
   },
   title: {
     marginBottom: spacing.sm,

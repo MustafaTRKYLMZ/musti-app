@@ -1,5 +1,5 @@
 import { MText, radii, shadows, spacing, useTheme } from "@budget/ui-native";
-import React, { FC, useState } from "react";
+import React, { FC, useMemo, useState } from "react";
 import { View, StyleSheet, TextInput, TouchableOpacity } from "react-native";
 import { IconButton } from "../ui/AppIcon";
 
@@ -7,8 +7,16 @@ type SectionProps = {
   id: string;
   title: string;
   startPage: number;
+  endPage: number | null;
+
   onDeleteSection: (id: string) => void;
-  onUpdateSection: (id: string, title: string, startPage: number) => void;
+  onUpdateSection: (
+    id: string,
+    title: string,
+    startPage: number,
+    endPage: number | null
+  ) => void;
+
   onJumpToPage: (page: number) => void;
 };
 
@@ -16,6 +24,7 @@ export const Section: FC<SectionProps> = ({
   id,
   title,
   startPage,
+  endPage,
   onDeleteSection,
   onUpdateSection,
   onJumpToPage,
@@ -23,12 +32,20 @@ export const Section: FC<SectionProps> = ({
   const { colors } = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+
   const [draftTitle, setDraftTitle] = useState(title);
-  const [draftPage, setDraftPage] = useState(String(startPage));
+  const [draftStart, setDraftStart] = useState(String(startPage));
+  const [draftEnd, setDraftEnd] = useState(endPage ? String(endPage) : "");
+
+  const endLabel = useMemo(() => {
+    if (!endPage) return `Page ${startPage}`;
+    return `${startPage}–${endPage}`;
+  }, [startPage, endPage]);
 
   const handleStartEdit = () => {
     setDraftTitle(title);
-    setDraftPage(String(startPage));
+    setDraftStart(String(startPage));
+    setDraftEnd(endPage ? String(endPage) : "");
     setMenuOpen(false);
     setIsEditing(true);
   };
@@ -36,14 +53,18 @@ export const Section: FC<SectionProps> = ({
   const handleCancelEdit = () => {
     setIsEditing(false);
     setDraftTitle(title);
-    setDraftPage(String(startPage));
+    setDraftStart(String(startPage));
+    setDraftEnd(endPage ? String(endPage) : "");
   };
 
   const handleSaveEdit = () => {
-    const pageNum = Number(draftPage);
-    if (!draftTitle.trim() || !pageNum || pageNum <= 0) return;
+    const st = Number(draftStart);
+    const en = draftEnd.trim() ? Number(draftEnd) : null;
 
-    onUpdateSection(id, draftTitle.trim(), pageNum);
+    if (!draftTitle.trim() || !st || st <= 0) return;
+    if (en != null && (Number.isNaN(en) || en < st)) return;
+
+    onUpdateSection(id, draftTitle.trim(), st, en);
     setIsEditing(false);
   };
 
@@ -61,36 +82,51 @@ export const Section: FC<SectionProps> = ({
             onChangeText={setDraftTitle}
             style={[
               styles.titleInput,
-              {
-                borderColor: colors.borderSubtle,
-                color: colors.textPrimary,
-              },
+              { borderColor: colors.borderSubtle, color: colors.textPrimary },
             ]}
             placeholder="Title"
             placeholderTextColor={colors.textSecondary}
           />
+
           <TextInput
-            value={draftPage}
-            onChangeText={setDraftPage}
+            value={draftStart}
+            onChangeText={(t) => setDraftStart(t.replace(/[^\d]/g, ""))}
+            keyboardType="number-pad"
+            style={[
+              styles.pageInput,
+              { borderColor: colors.borderSubtle, color: colors.textPrimary },
+            ]}
+            placeholder="Start"
+            placeholderTextColor={colors.textSecondary}
+          />
+
+          <TextInput
+            value={draftEnd}
+            onChangeText={(t) => setDraftEnd(t.replace(/[^\d]/g, ""))}
             keyboardType="number-pad"
             style={[
               styles.pageInput,
               {
-                borderColor: colors.borderSubtle,
+                borderColor:
+                  draftEnd.trim() && Number(draftEnd) < Number(draftStart)
+                    ? colors.danger
+                    : colors.borderSubtle,
                 color: colors.textPrimary,
               },
             ]}
-            placeholder="Page"
+            placeholder="End"
             placeholderTextColor={colors.textSecondary}
+            returnKeyType="done"
+            onSubmitEditing={handleSaveEdit}
           />
         </View>
       ) : (
         <TouchableOpacity style={styles.sectionInfo} onPress={handleJump}>
-          <MText variant="bodyStrong" numberOfLines={2}>
+          <MText variant="bodyStrong" numberOfLines={2} style={{ flex: 1 }}>
             {title}
           </MText>
           <MText variant="body" color="textSecondary">
-            Page {startPage}
+            {endLabel}
           </MText>
         </TouchableOpacity>
       )}
@@ -162,6 +198,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: spacing.xs,
   },
 
   titleInput: {

@@ -8,7 +8,15 @@ import { Section } from "./Section";
 type SectionListProps = {
   sections: BookSection[];
   onDeleteSection: (id: string) => void;
-  onUpdateSection: (id: string, title: string, startPage: number) => void;
+
+  // ✅ endPage eklendi (null = boş bırak)
+  onUpdateSection: (
+    id: string,
+    title: string,
+    startPage: number,
+    endPage: number | null
+  ) => void;
+
   onJumpToPage: (page: number) => void;
 };
 
@@ -29,6 +37,7 @@ export const SectionList: FC<SectionListProps> = ({
           id={item.id}
           title={item.title}
           startPage={item.startPage}
+          endPage={item.endPage ?? null} // ✅ pass through
           onDeleteSection={onDeleteSection}
           onUpdateSection={onUpdateSection}
           onJumpToPage={onJumpToPage}

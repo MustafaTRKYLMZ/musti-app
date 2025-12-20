@@ -1,0 +1,723 @@
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  Modal,
+  View,
+  StyleSheet,
+  Pressable,
+  ScrollView,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
+import { MText, spacing, radii, iconSizes, useTheme } from "@budget/ui-native";
+import type { LocalPdfFile } from "@/utils/getPdfsDirectory";
+import { IconButton } from "@/components/ui/AppIcon";
+import {
+  useReadingTargetsStore,
+  type TargetType,
+} from "@/store/bookshelf/useReadingTargetsStore";
+import { useBookSectionsStore } from "@/store/bookshelf/useBookSectionsStore";
+import {
+  MSelectBottomSheet,
+  type MSelectItemBase,
+} from "@/components/ui/MSelectBottomSheet";
+import { TargetItemsList } from "@/components/Books/TargetItemsList";
+import { useToast } from "@/components/ui/ToastProvider";
+
+type Props = {
+  visible: boolean;
+  onClose: () => void;
+  books: LocalPdfFile[];
+  onOpenChapters: (bookUri: string, bookName: string) => void;
+  initialBookUri?: string | null;
+};
+
+type SectionPick = {
+  id: string;
+  title: string;
+  startPage: number;
+  endPage: number;
+};
+
+const clampInt = (n: any) => {
+  const v = Math.floor(Number(n) || 0);
+  return Math.max(0, Math.min(999999, v));
+};
+
+function Chip({
+  text,
+  active,
+  onPress,
+}: {
+  text: string;
+  active?: boolean;
+  onPress: () => void;
+}) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      style={[
+        styles.chip,
+        { borderColor: colors.borderSubtle, backgroundColor: colors.surface },
+        active && { backgroundColor: colors.surfaceElevated },
+      ]}
+    >
+      <MText
+        numberOfLines={1}
+        style={{ fontWeight: "800", opacity: active ? 1 : 0.75 }}
+      >
+        {text}
+      </MText>
+    </Pressable>
+  );
+}
+
+export function CreateTargetModal({
+  visible,
+  onClose,
+  books,
+  onOpenChapters,
+  initialBookUri,
+}: Props) {
+  const { colors } = useTheme();
+
+  const addTarget = useReadingTargetsStore((s) => s.addTarget);
+  const addItem = useReadingTargetsStore((s) => s.addItem);
+  const deleteItem = useReadingTargetsStore((s) => s.deleteItem);
+  const targets = useReadingTargetsStore((s) => s.targets);
+  const { showToast } = useToast();
+
+  const getResolvedSections = useBookSectionsStore(
+    (s) => (s as any).getResolvedSections
+  );
+
+  // group state
+  const [title, setTitle] = useState("");
+  const [targetId, setTargetId] = useState<string | null>(null);
+
+  // selection state
+  const [selectedBookId, setSelectedBookId] = useState<string | null>(null); // bookUri
+  const [type, setType] = useState<TargetType>("section");
+
+  // section selection
+  const [selectedSectionId, setSelectedSectionId] = useState<string | null>(
+    null
+  );
+
+  // pages inputs (user enters)
+  const [startPageInput, setStartPageInput] = useState<string>("");
+  const [endPageInput, setEndPageInput] = useState<string>("");
+
+  const selectedBook = useMemo(
+    () => books.find((b) => b.uri === selectedBookId) ?? null,
+    [books, selectedBookId]
+  );
+
+  // book items for MSelect
+  const bookItems = useMemo<MSelectItemBase[]>(
+    () =>
+      [...books]
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((b) => ({ id: b.uri, label: b.name })),
+    [books]
+  );
+
+  // sections resolved from store (no filtering)
+  const resolvedSections = useMemo<SectionPick[]>(() => {
+    if (!selectedBookId) return [];
+    if (!getResolvedSections) return [];
+    // totalPages: unknown olabilir, store helper zaten çözüyorsa null geç
+    const secs = getResolvedSections(selectedBookId, null) ?? [];
+    return secs
+      .map((s: any) => ({
+        id: String(s.id),
+        title: String(s.title ?? "Untitled"),
+        startPage: Math.max(1, clampInt(s.startPage ?? 1) || 1),
+        endPage: Math.max(1, clampInt(s.endPage ?? 1) || 1),
+      }))
+      .filter((s: any) => s.endPage >= s.startPage);
+  }, [getResolvedSections, selectedBookId]);
+
+  const sectionItems = useMemo<MSelectItemBase[]>(
+    () =>
+      resolvedSections.map((s) => ({
+        id: `sec:${s.id}`,
+        label: s.title,
+        subLabel: `${s.startPage}–${s.endPage}`,
+      })),
+    [resolvedSections]
+  );
+
+  const currentTarget = useMemo(() => {
+    if (!targetId) return null;
+    return targets.find((t) => t.id === targetId) ?? null;
+  }, [targets, targetId]);
+
+  // initial book
+  useEffect(() => {
+    if (!visible) return;
+    if (!initialBookUri) return;
+    setSelectedBookId(initialBookUri);
+  }, [visible, initialBookUri]);
+
+  // reset dependent state when switching book/type
+  useEffect(() => {
+    setSelectedSectionId(null);
+    setStartPageInput("");
+    setEndPageInput("");
+  }, [selectedBookId, type]);
+
+  const canCreateGroup = title.trim().length > 0 && !targetId;
+  const canFinish = !!targetId && (currentTarget?.items?.length ?? 0) > 0;
+
+  const resetAll = () => {
+    setTitle("");
+    setTargetId(null);
+
+    setSelectedBookId(null);
+    setType("section");
+    setSelectedSectionId(null);
+
+    setStartPageInput("");
+    setEndPageInput("");
+  };
+
+  const handleClose = () => {
+    resetAll();
+    onClose();
+  };
+
+  const handleSave = () => {
+    const saved = !!targetId && (currentTarget?.items?.length ?? 0) > 0;
+    if (!saved) return;
+
+    resetAll();
+    onClose();
+
+    showToast({ message: "Target saved.", duration: 2000 });
+  };
+
+  const createGroup = async () => {
+    const t = title.trim();
+    if (!t) return;
+
+    try {
+      const id = await addTarget(t);
+      setTargetId(id);
+
+      showToast({
+        message: "Target created. Now add items.",
+        duration: 2500,
+      });
+    } catch (e) {
+      showToast({
+        message: "Failed to create target.",
+        duration: 4000,
+      });
+    }
+  };
+
+  const selectedSection = useMemo(() => {
+    if (!selectedSectionId) return null;
+    const rawId = selectedSectionId.replace("sec:", "");
+    return resolvedSections.find((s) => String(s.id) === rawId) ?? null;
+  }, [selectedSectionId, resolvedSections]);
+
+  const pagesStart = Math.max(1, clampInt(startPageInput) || 0);
+  const pagesEnd = Math.max(1, clampInt(endPageInput) || 0);
+
+  const canAddItem = useMemo(() => {
+    if (!targetId) return false;
+    if (!selectedBook) return false;
+
+    if (type === "section") {
+      return !!selectedSection;
+    }
+
+    // pages: user must enter start + end
+    return pagesStart > 0 && pagesEnd > 0 && pagesEnd > pagesStart;
+  }, [targetId, selectedBook, type, selectedSection, pagesStart, pagesEnd]);
+  const addSelectedItem = async () => {
+    if (!targetId || !selectedBook) return;
+
+    // ---- SECTION ----
+    if (type === "section") {
+      if (!selectedSection) {
+        showToast({ message: "Select a section first.", duration: 2500 });
+        return;
+      }
+
+      const jumpPage = Math.max(1, selectedSection.startPage);
+      const endPage = Math.max(jumpPage, selectedSection.endPage);
+
+      try {
+        await addItem(targetId, {
+          bookUri: selectedBook.uri,
+          bookName: selectedBook.name,
+          type: "section",
+          startPage: jumpPage,
+          endPage,
+          labelId: `sec:${selectedSection.id}`,
+          label: selectedSection.title,
+          jumpPage,
+        });
+
+        showToast({ message: "Item added to target.", duration: 2000 });
+        setSelectedSectionId(null);
+      } catch {
+        showToast({ message: "Failed to add item.", duration: 4000 });
+      }
+
+      return;
+    }
+
+    // ---- PAGES ----
+    const jumpPage = pagesStart;
+    const endPage = pagesEnd;
+
+    if (!(jumpPage > 0 && endPage > 0)) {
+      showToast({ message: "Enter start and end page.", duration: 3000 });
+      return;
+    }
+
+    if (!(endPage > jumpPage)) {
+      showToast({
+        message: "End page must be greater than start page.",
+        duration: 3500,
+      });
+      return;
+    }
+
+    try {
+      await addItem(targetId, {
+        bookUri: selectedBook.uri,
+        bookName: selectedBook.name,
+        type: "pages",
+        startPage: jumpPage,
+        endPage,
+        labelId: `pages:${jumpPage}-${endPage}`,
+        label: `${jumpPage} → ${endPage}`,
+        jumpPage,
+      });
+
+      showToast({ message: "Item added to target.", duration: 2000 });
+      setStartPageInput("");
+      setEndPageInput("");
+    } catch {
+      showToast({ message: "Failed to add item.", duration: 4000 });
+    }
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent
+      onRequestClose={handleClose}
+    >
+      <View
+        style={[styles.backdrop, { backgroundColor: colors.backdropStrong }]}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={{ justifyContent: "flex-end" }}
+        >
+          <View style={[styles.sheet, { backgroundColor: colors.surface }]}>
+            <View style={styles.header}>
+              <MText variant="heading3">
+                {targetId ? "Edit Target" : "New Target"}
+              </MText>
+              <IconButton
+                name="close"
+                size={iconSizes.lg}
+                color={colors.textPrimary}
+                onPress={handleClose}
+              />
+            </View>
+
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: spacing.lg }}
+              keyboardShouldPersistTaps="handled"
+            >
+              {/* GROUP TITLE */}
+              <MText style={styles.sectionTitle}>Title</MText>
+              <View style={styles.titleRow}>
+                <TextInput
+                  value={title}
+                  onChangeText={setTitle}
+                  placeholder="e.g. Morning routine"
+                  placeholderTextColor={colors.textSecondary}
+                  style={[
+                    styles.titleInput,
+                    {
+                      borderColor: colors.borderSubtle,
+                      backgroundColor: colors.surface,
+                      color: colors.textPrimary,
+                    },
+                  ]}
+                  editable={!targetId}
+                />
+
+                {!targetId ? (
+                  <Pressable
+                    onPress={createGroup}
+                    disabled={!canCreateGroup}
+                    style={[
+                      styles.primaryBtn,
+                      {
+                        borderColor: colors.borderSubtle,
+                        backgroundColor: colors.surfaceElevated,
+                        opacity: canCreateGroup ? 1 : 0.5,
+                      },
+                    ]}
+                  >
+                    <MText style={styles.primaryBtnText}>Create</MText>
+                  </Pressable>
+                ) : (
+                  <View
+                    style={[
+                      styles.lockPill,
+                      {
+                        borderColor: colors.borderSubtle,
+                        backgroundColor: colors.surface,
+                      },
+                    ]}
+                  >
+                    <MText style={{ fontWeight: "900", opacity: 0.7 }}>
+                      Created
+                    </MText>
+                  </View>
+                )}
+              </View>
+
+              {/* BOOK SELECT (MSelect) */}
+              <View style={{ marginTop: spacing.md }}>
+                <MSelectBottomSheet
+                  label="Book"
+                  placeholder="Select a book…"
+                  valueId={selectedBookId}
+                  items={bookItems}
+                  onChange={(it) => setSelectedBookId(it.id)}
+                  searchable
+                  searchPlaceholder="Search book…"
+                />
+              </View>
+
+              {/* TYPE + SECTION/PAGES */}
+              {selectedBook ? (
+                <>
+                  <MText style={styles.sectionTitle}>Type</MText>
+                  <View style={styles.chipsRow}>
+                    <Chip
+                      text="Section"
+                      active={type === "section"}
+                      onPress={() => setType("section")}
+                    />
+                    <Chip
+                      text="Pages"
+                      active={type === "pages"}
+                      onPress={() => setType("pages")}
+                    />
+                  </View>
+
+                  {type === "section" ? (
+                    <>
+                      {sectionItems.length > 0 ? (
+                        <View style={{ marginTop: spacing.md }}>
+                          <MSelectBottomSheet
+                            label="Section"
+                            placeholder="Select a section…"
+                            valueId={selectedSectionId}
+                            items={sectionItems}
+                            onChange={(it) => setSelectedSectionId(it.id)}
+                            searchable
+                            searchPlaceholder="Search section…"
+                          />
+                        </View>
+                      ) : (
+                        <View style={{ marginTop: spacing.md }}>
+                          <MText style={{ opacity: 0.7 }}>
+                            No sections found for this book.
+                          </MText>
+
+                          <Pressable
+                            onPress={() =>
+                              onOpenChapters(
+                                selectedBook.uri,
+                                selectedBook.name
+                              )
+                            }
+                            style={[
+                              styles.smallBtn,
+                              {
+                                borderColor: colors.borderSubtle,
+                                backgroundColor: colors.surface,
+                                marginTop: spacing.sm,
+                              },
+                            ]}
+                          >
+                            <MText style={{ fontWeight: "800" }}>
+                              Open chapters
+                            </MText>
+                          </Pressable>
+                        </View>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <MText style={styles.sectionTitle}>Pages</MText>
+
+                      <View style={styles.pagesRow}>
+                        <View style={{ flex: 1 }}>
+                          <MText style={styles.pagesLabel}>Start page</MText>
+                          <TextInput
+                            value={startPageInput}
+                            onChangeText={(t) =>
+                              setStartPageInput(t.replace(/[^\d]/g, ""))
+                            }
+                            keyboardType="number-pad"
+                            placeholder="e.g. 10"
+                            placeholderTextColor={colors.textSecondary}
+                            style={[
+                              styles.pageInput,
+                              {
+                                borderColor: colors.borderSubtle,
+                                backgroundColor: colors.surface,
+                                color: colors.textPrimary,
+                              },
+                            ]}
+                          />
+                        </View>
+
+                        <View style={{ width: spacing.sm }} />
+
+                        <View style={{ flex: 1 }}>
+                          <MText style={styles.pagesLabel}>End page</MText>
+                          <TextInput
+                            value={endPageInput}
+                            onChangeText={(t) =>
+                              setEndPageInput(t.replace(/[^\d]/g, ""))
+                            }
+                            keyboardType="number-pad"
+                            placeholder="e.g. 30"
+                            placeholderTextColor={colors.textSecondary}
+                            style={[
+                              styles.pageInput,
+                              {
+                                borderColor: colors.borderSubtle,
+                                backgroundColor: colors.surface,
+                                color: colors.textPrimary,
+                              },
+                            ]}
+                          />
+                        </View>
+                      </View>
+
+                      <MText style={{ opacity: 0.7, marginTop: spacing.xs }}>
+                        Tip: End page must be greater than start page.
+                      </MText>
+                    </>
+                  )}
+
+                  {/* ADD ITEM CTA */}
+                  <Pressable
+                    onPress={addSelectedItem}
+                    disabled={!canAddItem}
+                    style={[
+                      styles.cta,
+                      {
+                        borderColor: colors.borderSubtle,
+                        backgroundColor: colors.surface,
+                        opacity: canAddItem ? 1 : 0.5,
+                      },
+                    ]}
+                  >
+                    <MText style={{ fontWeight: "900" }}>
+                      {targetId ? "Add item" : "Create group first"}
+                    </MText>
+
+                    {type === "section" && selectedSection ? (
+                      <MText
+                        style={{ opacity: 0.75, marginTop: 2 }}
+                        numberOfLines={1}
+                      >
+                        {selectedBook.name} • {selectedSection.title} •{" "}
+                        {selectedSection.startPage}–{selectedSection.endPage}
+                      </MText>
+                    ) : null}
+
+                    {type === "pages" && pagesStart > 0 && pagesEnd > 0 ? (
+                      <MText
+                        style={{ opacity: 0.75, marginTop: 2 }}
+                        numberOfLines={1}
+                      >
+                        {selectedBook.name} • {pagesStart} → {pagesEnd}
+                      </MText>
+                    ) : null}
+                  </Pressable>
+                </>
+              ) : null}
+              {/* ITEMS LIST */}
+              {currentTarget?.items?.length ? (
+                <>
+                  <TargetItemsList
+                    items={currentTarget.items}
+                    onDeleteItem={(itemId) =>
+                      deleteItem(currentTarget.id, itemId)
+                    }
+                  />
+                </>
+              ) : null}
+            </ScrollView>
+
+            {/* FINISH */}
+            <Pressable
+              onPress={handleSave}
+              disabled={!canFinish}
+              style={[
+                styles.finish,
+                {
+                  borderColor: colors.borderSubtle,
+                  backgroundColor: colors.surfaceElevated,
+                  opacity: canFinish ? 1 : 0.5,
+                },
+              ]}
+            >
+              <MText style={{ fontWeight: "900" }}>
+                {canFinish ? "Save & Close" : "Add at least 1 item"}
+              </MText>
+            </Pressable>
+          </View>
+
+          <View style={{ height: spacing["2xl"] }} />
+        </KeyboardAvoidingView>
+      </View>
+    </Modal>
+  );
+}
+
+const styles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  sheet: {
+    borderTopLeftRadius: radii.xl,
+    borderTopRightRadius: radii.xl,
+    padding: spacing.lg,
+    maxHeight: "92%",
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: spacing.md,
+  },
+
+  sectionTitle: {
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
+    fontWeight: "800",
+    opacity: 0.85,
+  },
+
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  titleInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: radii.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  primaryBtn: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+  },
+  primaryBtnText: { fontWeight: "900" },
+  lockPill: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.full,
+    borderWidth: 1,
+  },
+
+  itemsBox: {
+    borderWidth: 1,
+    borderRadius: radii.lg,
+    overflow: "hidden",
+  },
+  itemRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+
+  chipsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+    alignItems: "center",
+  },
+
+  chip: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+  },
+
+  pagesRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    marginTop: spacing.xs,
+  },
+  pagesLabel: {
+    fontWeight: "800",
+    opacity: 0.85,
+    marginBottom: spacing.xs,
+  },
+  pageInput: {
+    borderWidth: 1,
+    borderRadius: radii.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+
+  smallBtn: {
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.full,
+    borderWidth: 1,
+    alignSelf: "flex-start",
+  },
+
+  cta: {
+    marginTop: spacing.lg,
+    borderWidth: 1,
+    borderRadius: radii.lg,
+    paddingVertical: spacing.md,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  finish: {
+    marginTop: spacing.md,
+    borderWidth: 1,
+    borderRadius: radii.lg,
+    paddingVertical: spacing.md,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});
