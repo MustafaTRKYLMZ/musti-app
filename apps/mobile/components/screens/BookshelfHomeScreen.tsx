@@ -284,8 +284,23 @@ export default function BookshelfHomeScreen() {
             />
           ) : (
             <TargetList
-              progressMap={progressMap}
               onOpenCreate={() => setTargetModalVisible(true)}
+              onOpenChapters={(bookUri, bookName) => {
+                setTargetModalVisible(false);
+
+                const start = Number(progressMap[bookUri]?.lastPage ?? 1) || 1;
+                router.push({
+                  pathname: "/(tabs)/bookshelf/pdf/viewer",
+                  params: {
+                    uri: encodeURIComponent(bookUri),
+                    name: encodeURIComponent(bookName),
+                    openSections: "1",
+                    jumpPage: String(start),
+                    returnTo: "createTarget",
+                    returnBookUri: encodeURIComponent(bookUri),
+                  },
+                });
+              }}
             />
           )}
 
@@ -364,7 +379,6 @@ export default function BookshelfHomeScreen() {
           visible={targetModalVisible}
           onClose={() => setTargetModalVisible(false)}
           books={books}
-          progressMap={progressMap}
           initialBookUri={createTargetInitialBookUri}
           onOpenChapters={(bookUri, bookName) => {
             setTargetModalVisible(false);

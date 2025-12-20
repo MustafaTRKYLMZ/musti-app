@@ -5,9 +5,13 @@ import {
   Pressable,
   PanResponder,
   Animated,
+  Modal,
+  TouchableOpacity,
+  UIManager,
+  findNodeHandle,
 } from "react-native";
 import { MText, iconSizes, spacing, radii, useTheme } from "@budget/ui-native";
-import { IconButton } from "@/components/ui/AppIcon";
+import { IconButton, BaseIcon } from "@/components/ui/AppIcon";
 import type {
   ReadingTarget,
   TargetItem,
@@ -29,6 +33,9 @@ type Props = {
   onAutoDoneItem: (targetId: string, itemId: string) => void;
   onRestart?: (t: ReadingTarget) => void;
   onBeforeOpen?: (targetId: string, itemId: string) => Promise<void> | void;
+
+  // ✅ new
+  onEditTarget?: (t: ReadingTarget) => void;
 };
 
 const FALLBACK_ITEM: TargetItem = {
@@ -53,12 +60,51 @@ export const TargetCard = ({
   onAutoDoneItem,
   onRestart,
   onBeforeOpen,
+  onEditTarget,
 }: Props) => {
   const { colors } = useTheme();
+  const { showToast } = useToast();
 
   const activeItem = useMemo(() => pickActiveItem(target), [target]);
-  const { showToast } = useToast();
   const [previewIndex, setPreviewIndex] = useState(0);
+
+  // --- popover menu state (PlanCard style) ---
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ x: number; y: number }>({
+    x: 0,
+    y: 0,
+  });
+  const menuAnchorRef = useRef<View | null>(null);
+
+  const openMenu = () => {
+    const handle = findNodeHandle(menuAnchorRef.current);
+    if (!handle) return;
+
+    UIManager.measure(handle, (_x, _y, width, height, pageX, pageY) => {
+      setMenuPos({ x: pageX + width - 180, y: pageY + height + 8 });
+      setMenuVisible(true);
+    });
+  };
+
+  const closeMenu = () => setMenuVisible(false);
+
+  const confirmDelete = () => {
+    closeMenu();
+    showToast({
+      title: "Delete target?",
+      message: target.title,
+      actions: [
+        { label: "Cancel", onPress: () => {} },
+        { label: "Delete", destructive: true, onPress: () => onDelete(target) },
+      ],
+      duration: 6000,
+    });
+  };
+
+  const handleEdit = () => {
+    closeMenu();
+    onEditTarget?.(target);
+  };
 
   useEffect(() => {
     const idx = activeItem
@@ -175,21 +221,6 @@ export const TargetCard = ({
     prevRef.current = curr;
   }, [target.id, displayItem, clampedCurrent, rangeEnd, onAutoDoneItem]);
 
-  const openMenu = () => {
-    showToast({
-      title: "Target",
-      message: target.title,
-      actions: [
-        ...(target.status === "done" && onRestart
-          ? [{ label: "Restart", onPress: () => onRestart(target) }]
-          : []),
-
-        { label: "Delete", destructive: true, onPress: () => onDelete(target) },
-      ],
-      duration: 6000,
-    });
-  };
-
   const statusActive = colors.success;
   const statusPending = colors.primaryLight;
   const statusDone = colors.textMuted;
@@ -213,57 +244,17 @@ export const TargetCard = ({
 
   if (!target.items.length || !displayItem) {
     return (
-      <View
-        style={[
-          styles.card,
-          {
-            borderColor: colors.borderSubtle,
-            backgroundColor: colors.surface,
-            opacity: 0.7,
-          },
-        ]}
-      >
-        <View style={styles.targetCardHeader}>
-          <MText
-            numberOfLines={1}
-            style={[styles.title, { color: colors.textPrimary }]}
-          >
-            {target.title}
-          </MText>
-          <IconButton
-            name="ellipsis-vertical"
-            size={iconSizes.lg}
-            color={colors.textPrimary}
-            onPress={openMenu}
-          />
-        </View>
-
-        <MText
-          style={{
-            marginTop: spacing.sm,
-            color: colors.textSecondary,
-            opacity: 0.85,
-          }}
+      <>
+        <View
+          style={[
+            styles.card,
+            {
+              borderColor: colors.borderSubtle,
+              backgroundColor: colors.surface,
+              opacity: 0.7,
+            },
+          ]}
         >
-          No items yet
-        </MText>
-      </View>
-    );
-  }
-
-  return (
-    <Pressable
-      onPress={handleOpen}
-      style={[
-        styles.card,
-        {
-          borderColor: colors.borderSubtle,
-          backgroundColor: colors.surface,
-        },
-      ]}
-    >
-      <View style={styles.topRow}>
-        <View style={{ flex: 1 }}>
           <View style={styles.targetCardHeader}>
             <MText
               numberOfLines={1}
@@ -271,77 +262,220 @@ export const TargetCard = ({
             >
               {target.title}
             </MText>
-            <IconButton
-              name="ellipsis-vertical"
-              size={iconSizes.lg}
-              color={colors.textPrimary}
-              onPress={openMenu}
-            />
+
+            <View ref={menuAnchorRef} collapsable={false}>
+              <IconButton
+                name="ellipsis-vertical"
+                size={iconSizes.lg}
+                color={colors.textPrimary}
+                onPress={openMenu}
+              />
+            </View>
           </View>
 
-          <Animated.View
+          <MText
             style={{
-              opacity: anim,
-              transform: [
-                {
-                  translateY: anim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [3, 0],
-                  }),
-                },
-              ],
+              marginTop: spacing.sm,
+              color: colors.textSecondary,
+              opacity: 0.85,
             }}
           >
-            <TargetItemSummary item={displayItem} />
-          </Animated.View>
+            No items yet
+          </MText>
         </View>
-      </View>
 
-      <View
+        {/* ✅ popover menu */}
+        <Modal
+          visible={menuVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={closeMenu}
+        >
+          <TouchableOpacity
+            style={styles.menuOverlay}
+            activeOpacity={1}
+            onPress={closeMenu}
+          >
+            <View
+              style={[
+                styles.popover,
+                {
+                  top: menuPos.y,
+                  left: menuPos.x,
+                  backgroundColor: colors.surface,
+                  borderColor: colors.borderSubtle,
+                },
+              ]}
+            >
+              {!!onEditTarget && (
+                <TouchableOpacity style={styles.menuItem} onPress={handleEdit}>
+                  <BaseIcon
+                    name="create-outline"
+                    size={iconSizes.md}
+                    color={colors.textPrimary}
+                  />
+                  <MText style={{ fontWeight: "800" }}>Edit</MText>
+                </TouchableOpacity>
+              )}
+
+              <TouchableOpacity style={styles.menuItem} onPress={confirmDelete}>
+                <BaseIcon
+                  name="trash-outline"
+                  size={iconSizes.md}
+                  color={colors.danger}
+                />
+                <MText style={{ fontWeight: "800", color: colors.danger }}>
+                  Delete
+                </MText>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </Modal>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Pressable
+        onPress={handleOpen}
         style={[
-          styles.barWrap,
-          { backgroundColor: colors.backgroundSecondary },
+          styles.card,
+          { borderColor: colors.borderSubtle, backgroundColor: colors.surface },
         ]}
       >
+        <View style={styles.topRow}>
+          <View style={{ flex: 1 }}>
+            <View style={styles.targetCardHeader}>
+              <MText
+                numberOfLines={1}
+                style={[styles.title, { color: colors.textPrimary }]}
+              >
+                {target.title}
+              </MText>
+
+              <View ref={menuAnchorRef} collapsable={false}>
+                <IconButton
+                  name="ellipsis-vertical"
+                  size={iconSizes.lg}
+                  color={colors.textPrimary}
+                  onPress={openMenu}
+                />
+              </View>
+            </View>
+
+            <Animated.View
+              style={{
+                opacity: anim,
+                transform: [
+                  {
+                    translateY: anim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [3, 0],
+                    }),
+                  },
+                ],
+              }}
+            >
+              <TargetItemSummary item={displayItem} />
+            </Animated.View>
+          </View>
+        </View>
+
         <View
           style={[
-            styles.barFill,
-            { width: `${pct * 100}%`, backgroundColor: colors.primary },
-          ]}
-        />
-      </View>
-
-      <View style={styles.bottomRow}>
-        <MText
-          style={[
-            styles.progressText,
-            { color: colors.textPrimary, opacity: 0.75 },
+            styles.barWrap,
+            { backgroundColor: colors.backgroundSecondary },
           ]}
         >
-          {donePages} / {total}
-        </MText>
-        <MText
-          style={[
-            styles.progressText,
-            { color: colors.textPrimary, opacity: 0.75 },
-          ]}
-        >
-          Remaining: {remainingPages}
-        </MText>
-      </View>
+          <View
+            style={[
+              styles.barFill,
+              { width: `${pct * 100}%`, backgroundColor: colors.primary },
+            ]}
+          />
+        </View>
 
-      <View style={styles.dotContainer} {...panResponder.panHandlers}>
-        <ItemDots
-          items={target.items}
-          activeColor={statusActive}
-          doneColor={statusDone}
-          pendingColor={statusPending}
-          maxDots={10}
-          selectedIndex={previewIndex}
-          onSelectIndex={setPreviewIndex}
-        />
-      </View>
-    </Pressable>
+        <View style={styles.bottomRow}>
+          <MText
+            style={[
+              styles.progressText,
+              { color: colors.textPrimary, opacity: 0.75 },
+            ]}
+          >
+            {donePages} / {total}
+          </MText>
+          <MText
+            style={[
+              styles.progressText,
+              { color: colors.textPrimary, opacity: 0.75 },
+            ]}
+          >
+            Remaining: {remainingPages}
+          </MText>
+        </View>
+
+        <View style={styles.dotContainer} {...panResponder.panHandlers}>
+          <ItemDots
+            items={target.items}
+            activeColor={statusActive}
+            doneColor={statusDone}
+            pendingColor={statusPending}
+            maxDots={10}
+            selectedIndex={previewIndex}
+            onSelectIndex={setPreviewIndex}
+          />
+        </View>
+      </Pressable>
+
+      {/* ✅ popover menu */}
+      <Modal
+        visible={menuVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={closeMenu}
+      >
+        <TouchableOpacity
+          style={styles.menuOverlay}
+          activeOpacity={1}
+          onPress={closeMenu}
+        >
+          <View
+            style={[
+              styles.popover,
+              {
+                top: menuPos.y,
+                left: menuPos.x,
+                backgroundColor: colors.surface,
+                borderColor: colors.borderSubtle,
+              },
+            ]}
+          >
+            {!!onEditTarget && (
+              <TouchableOpacity style={styles.menuItem} onPress={handleEdit}>
+                <BaseIcon
+                  name="create-outline"
+                  size={iconSizes.md}
+                  color={colors.textPrimary}
+                />
+                <MText style={{ fontWeight: "800" }}>Edit</MText>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity style={styles.menuItem} onPress={confirmDelete}>
+              <BaseIcon
+                name="trash-outline"
+                size={iconSizes.md}
+                color={colors.danger}
+              />
+              <MText style={{ fontWeight: "800", color: colors.danger }}>
+                Delete
+              </MText>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    </>
   );
 };
 
@@ -359,11 +493,8 @@ const styles = StyleSheet.create({
   },
   topRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   title: { fontWeight: "900" },
-  sub: { marginTop: spacing.xs },
 
-  dotContainer: {
-    padding: spacing.xs,
-  },
+  dotContainer: { padding: spacing.xs },
 
   barWrap: {
     marginTop: spacing.md,
@@ -379,4 +510,25 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   progressText: { fontWeight: "800" },
+
+  // popover
+  menuOverlay: { flex: 1, backgroundColor: "transparent" },
+  popover: {
+    position: "absolute",
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    width: 180,
+    elevation: 6,
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+  },
+  menuItem: {
+    paddingVertical: spacing.sm,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
 });

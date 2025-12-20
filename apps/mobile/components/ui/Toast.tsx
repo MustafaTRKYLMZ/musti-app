@@ -94,7 +94,7 @@ export const Toast = ({
 
           {actions?.length ? (
             <View style={styles.actionsRow}>
-              {actions.slice(0, 2).map((a, idx) => (
+              {actions.map((a, idx) => (
                 <Pressable
                   key={`${a.label}-${idx}`}
                   onPress={() => {
@@ -114,11 +114,12 @@ export const Toast = ({
                 >
                   <MText
                     variant="body"
-                    color="textPrimary"
                     numberOfLines={1}
                     style={[
                       styles.actionText,
-                      a.destructive ? { color: colors.danger } : null,
+                      a.destructive
+                        ? { color: colors.danger }
+                        : { color: colors.textPrimary },
                     ]}
                   >
                     {a.label}
@@ -156,8 +157,10 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     marginBottom: spacing.xs,
   },
+
   actionsRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: spacing.sm,
     marginTop: spacing.sm,
     justifyContent: "flex-end",

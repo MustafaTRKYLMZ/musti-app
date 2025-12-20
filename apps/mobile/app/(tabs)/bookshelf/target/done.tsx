@@ -49,8 +49,6 @@ export default function DoneTargetsScreen() {
   const restartItem = useReadingTargetsStore((s) => s.restartItem);
   //   const markTargetActive = useReadingTargetsStore((s) => s.markTargetActive);
 
-  const progressMap = useBooksStore((s) => s.items);
-
   useEffect(() => {
     if (!hydrated) hydrate();
   }, [hydrated, hydrate]);

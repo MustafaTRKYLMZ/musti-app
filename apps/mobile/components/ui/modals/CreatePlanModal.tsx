@@ -166,7 +166,6 @@ export function ReadingPlanModal({
 
     const finalName = planName.trim() || "Reading plan";
 
-    // ✅ NEW: creates a NEW plan, does NOT delete existing plans
     createPlan({
       name: finalName,
       items,

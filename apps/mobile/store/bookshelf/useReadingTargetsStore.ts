@@ -47,10 +47,11 @@ type TargetsState = {
 
   // group actions
   addTarget: (title: string) => Promise<string>;
+  updateTargetTitle: (targetId: string, title: string) => Promise<void>;
+
   deleteTarget: (id: string) => Promise<void>;
   clearDone: () => Promise<void>;
 
-  // item actions
   addItem: (
     targetId: string,
     item: Omit<
@@ -105,18 +106,12 @@ function recomputeTargetStatus(t: ReadingTarget): ReadingTarget {
   return { ...t, status: "active", doneAt: undefined };
 }
 
-/**
- * ✅ Ensure exactly ONE active item at a time:
- * - If there is an active item, keep ONLY the first active and set other actives => pending.
- * - If there is no active item, promote the first pending item to active.
- */
 function ensureSingleActive(t: ReadingTarget): ReadingTarget {
   const items = t.items ?? [];
   if (!items.length) return t;
 
   const activeIdx = items.findIndex((it) => it.status === "active");
 
-  // if there is an active item, keep only first active
   if (activeIdx !== -1) {
     const nextItems = items.map((it, idx) => {
       if (idx === activeIdx) return it;
@@ -210,7 +205,15 @@ export const useReadingTargetsStore = create<TargetsState>((set, get) => ({
     set({ targets });
     await persist(targets);
   },
-
+  updateTargetTitle: async (targetId: string, title: string) => {
+    const nextTitle = title.trim() || "Untitled target";
+    const targets = get().targets.map((t) =>
+      t.id === targetId ? { ...t, title: nextTitle } : t
+    );
+    set({ targets });
+    await persist(targets);
+  },
+  
   deleteItem: async (targetId, itemId) => {
     const targets = get().targets.map((t) => {
       if (t.id !== targetId) return t;
@@ -229,12 +232,6 @@ export const useReadingTargetsStore = create<TargetsState>((set, get) => ({
     await persist(targets);
   },
 
-  /**
-   * ✅ user explicitly chose another item to start from (via card press)
-   * - if chosen item is pending => make it active
-   * - if chosen item is done => do nothing (use restartItem for that)
-   * - make all other non-done items pending
-   */
   setActiveItem: async (targetId, itemId) => {
     const targets = get().targets.map((t) => {
       if (t.id !== targetId) return t;

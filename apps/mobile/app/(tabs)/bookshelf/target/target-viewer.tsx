@@ -12,7 +12,6 @@ import { useReadingTargetsStore } from "@/store/bookshelf/useReadingTargetsStore
 import { pickActiveItem } from "@/utils/pickActiveItem";
 import { findItemById } from "@/utils/findItemById";
 import { useToast } from "@/components/ui/ToastProvider";
-import { TargetItemPager } from "@/components/Books/TargetItemPager";
 
 export default function TargetViewerScreen() {
   const router = useRouter();
@@ -55,7 +54,6 @@ export default function TargetViewerScreen() {
     if (!hydrated) hydrate();
   }, [hydrated, hydrate]);
 
-  // when active item changes => reset baseline/page
   useEffect(() => {
     if (!displayItem) return;
 
@@ -74,7 +72,6 @@ export default function TargetViewerScreen() {
     doneOnceRef.current = null;
   }, [displayItem?.id]);
 
-  // after an item completes, show contextual toast
   useEffect(() => {
     if (!targetId || !target) return;
 
@@ -100,7 +97,6 @@ export default function TargetViewerScreen() {
     return () => clearTimeout(tmr);
   }, [targetId, target, displayItem, showToast, router]);
 
-  // If target exists but no active item => toast + close
   useEffect(() => {
     if (!hydrated) return;
     if (!targetId) return;
@@ -207,13 +203,6 @@ export default function TargetViewerScreen() {
         currentPage={currentPage}
         totalPages={totalPages ?? undefined}
       />
-
-      {!isFullscreen && (
-        <View style={styles.topOverlay} pointerEvents="none">
-          <TargetItemPager target={target} activeItemId={displayItem.id} />
-        </View>
-      )}
-
       <BookSectionsSidebar
         visible={sectionsOpen}
         onClose={() => setSectionsOpen(false)}
@@ -234,12 +223,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: spacing.md,
-  },
-  topOverlay: {
-    position: "absolute",
-    top: spacing.lg,
-    left: spacing.md,
-    right: spacing.md,
-    alignItems: "center",
   },
 });

@@ -85,7 +85,7 @@ export function TargetItemPager({ target, activeItemId, maxDots = 7 }: Props) {
       <View style={styles.chipsRow}>
         <Chip label={`Done ${counts.done}`} />
         <Chip label={`Active ${counts.active}`} />
-        <Chip label={`Queued ${counts.pending}`} />
+        <Chip label={`Pending ${counts.pending}`} />
       </View>
     </View>
   );

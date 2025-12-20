@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { View, StyleSheet, Pressable, FlatList } from "react-native";
 import { useRouter } from "expo-router";
 import {
@@ -8,31 +8,34 @@ import {
   radii,
   iconSizes,
 } from "@budget/ui-native";
-import { IconButton, IconTile } from "@/components/ui/AppIcon";
+import { IconButton } from "@/components/ui/AppIcon";
 import {
   useReadingTargetsStore,
   type ReadingTarget,
 } from "@/store/bookshelf/useReadingTargetsStore";
 import { TargetCard } from "./TargetCard";
+import { EditTargetModal } from "@/components/ui/modals/EditTargetModal";
 
 const { colors } = bookshelfTheme;
 
 type TargetListProps = {
   onOpenCreate: () => void;
+  onOpenChapters: (bookUri: string, bookName: string) => void;
 };
 
-export const TargetList = ({ onOpenCreate }: TargetListProps) => {
+export const TargetList = ({
+  onOpenCreate,
+  onOpenChapters,
+}: TargetListProps) => {
   const router = useRouter();
+  const [editTargetId, setEditTargetId] = useState<string | null>(null);
 
   const hydrate = useReadingTargetsStore((s) => s.hydrate);
   const hydrated = useReadingTargetsStore((s) => s.hydrated);
 
   const targets = useReadingTargetsStore((s) => s.targets);
-
   const deleteTarget = useReadingTargetsStore((s) => s.deleteTarget);
   const markItemDone = useReadingTargetsStore((s) => s.markItemDone);
-
-  // ✅ moved here (TargetCard is UI only now)
   const setActiveItem = useReadingTargetsStore((s) => s.setActiveItem);
 
   useEffect(() => {
@@ -71,6 +74,7 @@ export const TargetList = ({ onOpenCreate }: TargetListProps) => {
         }}
         onDelete={(t) => deleteTarget(t.id)}
         onAutoDoneItem={(targetId, itemId) => markItemDone(targetId, itemId)}
+        onEditTarget={(t) => setEditTargetId(t.id)} // ✅ edit modal aç
       />
     );
   };
@@ -122,6 +126,7 @@ export const TargetList = ({ onOpenCreate }: TargetListProps) => {
                     name="checkmark"
                     size={iconSizes.md}
                     color={colors.textPrimary}
+                    onPress={() => router.push("/(tabs)/bookshelf/target/done")}
                   />
                 </View>
 
@@ -145,6 +150,14 @@ export const TargetList = ({ onOpenCreate }: TargetListProps) => {
           }
         />
       )}
+
+      {/* ✅ Edit modal */}
+      <EditTargetModal
+        visible={!!editTargetId}
+        targetId={editTargetId}
+        onClose={() => setEditTargetId(null)}
+        onOpenChapters={onOpenChapters}
+      />
     </View>
   );
 };
@@ -158,13 +171,11 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: spacing.sm,
   },
-
   headerRight: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
   },
-
   empty: {
     marginHorizontal: spacing.lg,
     borderRadius: radii.lg,
@@ -183,11 +194,8 @@ const styles = StyleSheet.create({
     borderColor: colors.borderSubtle,
     backgroundColor: colors.surfaceElevated,
   },
+  emptyRow: { flexDirection: "row", gap: spacing.sm },
 
-  emptyRow: {
-    flexDirection: "row",
-    gap: spacing.sm,
-  },
   doneMini: {
     minWidth: 150,
     borderRadius: radii.lg,
@@ -200,7 +208,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm,
   },
-
   doneIconWrap: {
     width: 32,
     height: 32,
