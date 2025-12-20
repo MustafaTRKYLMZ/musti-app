@@ -11,7 +11,7 @@ import {
   findNodeHandle,
 } from "react-native";
 import { MText, iconSizes, spacing, radii, useTheme } from "@budget/ui-native";
-import { IconButton, BaseIcon } from "@/components/ui/AppIcon";
+import { IconButton } from "@/components/ui/AppIcon";
 import type {
   ReadingTarget,
   TargetItem,
@@ -20,13 +20,14 @@ import { ItemDots } from "../ui/ItemDots";
 import { pickActiveItem } from "@/utils/pickActiveItem";
 import { useToast } from "../ui/ToastProvider";
 import { TargetItemSummary } from "./TargetItemSummary";
+import { MenuRow } from "../MenuRow";
 
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 const clamp = (x: number, a: number, b: number) => Math.max(a, Math.min(b, x));
 
 type Props = {
   target: ReadingTarget;
-
+  disableOpen?: boolean;
   onOpen: (t: ReadingTarget, item: TargetItem, openPage: number) => void;
   onDelete: (t: ReadingTarget) => void;
 
@@ -34,7 +35,6 @@ type Props = {
   onRestart?: (t: ReadingTarget) => void;
   onBeforeOpen?: (targetId: string, itemId: string) => Promise<void> | void;
 
-  // ✅ new
   onEditTarget?: (t: ReadingTarget) => void;
 };
 
@@ -61,6 +61,7 @@ export const TargetCard = ({
   onRestart,
   onBeforeOpen,
   onEditTarget,
+  disableOpen,
 }: Props) => {
   const { colors } = useTheme();
   const { showToast } = useToast();
@@ -68,13 +69,13 @@ export const TargetCard = ({
   const activeItem = useMemo(() => pickActiveItem(target), [target]);
   const [previewIndex, setPreviewIndex] = useState(0);
 
-  // --- popover menu state (PlanCard style) ---
   const [menuVisible, setMenuVisible] = useState(false);
   const [menuPos, setMenuPos] = useState<{ x: number; y: number }>({
     x: 0,
     y: 0,
   });
   const menuAnchorRef = useRef<View | null>(null);
+  const isDoneTarget = target.status === "done";
 
   const openMenu = () => {
     const handle = findNodeHandle(menuAnchorRef.current);
@@ -105,13 +106,30 @@ export const TargetCard = ({
     closeMenu();
     onEditTarget?.(target);
   };
+  const handleReStart = () => {
+    closeMenu();
+    showToast({
+      title: "Restart target?",
+      message: target.title,
+      actions: [
+        { label: "Cancel", onPress: () => {} },
+        {
+          label: "Restart",
+          onPress: () => {
+            onRestart?.(target);
+          },
+          destructive: false,
+        },
+      ],
+      duration: 6000,
+    });
+  };
 
   useEffect(() => {
     const idx = activeItem
       ? target.items.findIndex((i) => i.id === activeItem.id)
       : -1;
     setPreviewIndex(idx >= 0 ? idx : 0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [target.id]);
 
   const displayItem = useMemo(() => {
@@ -307,27 +325,30 @@ export const TargetCard = ({
                 },
               ]}
             >
-              {!!onEditTarget && (
-                <TouchableOpacity style={styles.menuItem} onPress={handleEdit}>
-                  <BaseIcon
-                    name="create-outline"
-                    size={iconSizes.md}
-                    color={colors.textPrimary}
-                  />
-                  <MText style={{ fontWeight: "800" }}>Edit</MText>
-                </TouchableOpacity>
+              {!!onRestart && isDoneTarget && (
+                <MenuRow
+                  icon="refresh-outline"
+                  label="Restart"
+                  color={colors.textPrimary}
+                  onPress={handleReStart}
+                />
               )}
 
-              <TouchableOpacity style={styles.menuItem} onPress={confirmDelete}>
-                <BaseIcon
-                  name="trash-outline"
-                  size={iconSizes.md}
-                  color={colors.danger}
+              {!!onEditTarget && !isDoneTarget && (
+                <MenuRow
+                  icon="create-outline"
+                  label="Edit"
+                  color={colors.textPrimary}
+                  onPress={handleEdit}
                 />
-                <MText style={{ fontWeight: "800", color: colors.danger }}>
-                  Delete
-                </MText>
-              </TouchableOpacity>
+              )}
+
+              <MenuRow
+                icon="trash-outline"
+                label="Delete"
+                color={colors.danger}
+                onPress={confirmDelete}
+              />
             </View>
           </TouchableOpacity>
         </Modal>
@@ -338,10 +359,12 @@ export const TargetCard = ({
   return (
     <>
       <Pressable
-        onPress={handleOpen}
+        onPress={disableOpen ? undefined : handleOpen}
+        disabled={!!disableOpen}
         style={[
           styles.card,
           { borderColor: colors.borderSubtle, backgroundColor: colors.surface },
+          disableOpen && { opacity: 0.92 },
         ]}
       >
         <View style={styles.topRow}>
@@ -451,27 +474,30 @@ export const TargetCard = ({
               },
             ]}
           >
-            {!!onEditTarget && (
-              <TouchableOpacity style={styles.menuItem} onPress={handleEdit}>
-                <BaseIcon
-                  name="create-outline"
-                  size={iconSizes.md}
-                  color={colors.textPrimary}
-                />
-                <MText style={{ fontWeight: "800" }}>Edit</MText>
-              </TouchableOpacity>
+            {!!onRestart && isDoneTarget && (
+              <MenuRow
+                icon="refresh-outline"
+                label="Restart"
+                color={colors.textPrimary}
+                onPress={handleReStart}
+              />
             )}
 
-            <TouchableOpacity style={styles.menuItem} onPress={confirmDelete}>
-              <BaseIcon
-                name="trash-outline"
-                size={iconSizes.md}
-                color={colors.danger}
+            {!!onEditTarget && !isDoneTarget && (
+              <MenuRow
+                icon="create-outline"
+                label="Edit"
+                color={colors.textPrimary}
+                onPress={handleEdit}
               />
-              <MText style={{ fontWeight: "800", color: colors.danger }}>
-                Delete
-              </MText>
-            </TouchableOpacity>
+            )}
+
+            <MenuRow
+              icon="trash-outline"
+              label="Delete"
+              color={colors.danger}
+              onPress={confirmDelete}
+            />
           </View>
         </TouchableOpacity>
       </Modal>

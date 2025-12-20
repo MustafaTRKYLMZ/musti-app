@@ -6,13 +6,17 @@ import type {
   TargetItemStatus,
 } from "@/store/bookshelf/useReadingTargetsStore";
 
-type Props = {
+type TargetItemPagerProps = {
   target: ReadingTarget;
   activeItemId?: string | null;
-  maxDots?: number; // default 7
+  maxDots?: number;
 };
 
-export function TargetItemPager({ target, activeItemId, maxDots = 7 }: Props) {
+export const TargetItemPager = ({
+  target,
+  activeItemId,
+  maxDots = 7,
+}: TargetItemPagerProps) => {
   const { colors } = useTheme();
   const items = target.items ?? [];
   const total = items.length;
@@ -89,7 +93,7 @@ export function TargetItemPager({ target, activeItemId, maxDots = 7 }: Props) {
       </View>
     </View>
   );
-}
+};
 
 function Chip({ label }: { label: string }) {
   const { colors } = useTheme();
