@@ -11,7 +11,6 @@ import {
   useReadingTargetsStore,
   type ReadingTarget,
 } from "@/store/bookshelf/useReadingTargetsStore";
-import { useBooksStore } from "@/store/bookshelf/useBooksStore";
 import { AppSwitcherButton } from "@/components/AppSwitcherButton";
 
 const { colors, spacing, radii } = bookshelfTheme;
