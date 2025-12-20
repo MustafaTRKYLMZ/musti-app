@@ -1,8 +1,15 @@
 // apps/mobile/components/ui/BottomSheetModal.tsx
 import React, { ReactNode } from "react";
-import { Modal, View, TouchableOpacity, StyleSheet } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import {
+  Modal,
+  View,
+  TouchableOpacity,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
 import { MText, colors, spacing, radii, iconSizes } from "@budget/ui-native";
+import { IconButton } from "@/components/ui/AppIcon";
 
 type BottomSheetModalProps = {
   visible: boolean;
@@ -17,55 +24,73 @@ export function BottomSheetModal({
   onClose,
   children,
 }: BottomSheetModalProps) {
+  const isIOS = Platform.OS === "ios";
+
   return (
     <Modal
       visible={visible}
-      transparent
       animationType="fade"
       onRequestClose={onClose}
+      presentationStyle="overFullScreen"
     >
-      {/* BACKDROP */}
-      <TouchableOpacity
-        activeOpacity={1}
-        style={styles.backdrop}
-        onPress={onClose}
-      />
-
-      {/* SHEET */}
-      <View style={styles.sheet}>
-        <View style={styles.handle} />
-
-        <View style={styles.headerRow}>
-          <MText variant="heading4" color="textPrimary" style={styles.title}>
-            {title}
-          </MText>
-
+      <KeyboardAvoidingView
+        style={styles.root}
+        behavior={isIOS ? "padding" : undefined}
+        keyboardVerticalOffset={isIOS ? 40 : 0}
+      >
+        <View style={styles.container}>
+          {/* BACKDROP */}
           <TouchableOpacity
+            activeOpacity={1}
+            style={styles.backdrop}
             onPress={onClose}
-            style={styles.closeButton}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Ionicons name="close" size={iconSizes.lg} color={colors.danger} />
-          </TouchableOpacity>
-        </View>
+          />
 
-        {children}
-      </View>
+          {/* SHEET */}
+          <View style={styles.sheet}>
+            <View style={styles.handle} />
+
+            <View style={styles.headerRow}>
+              <MText
+                variant="heading4"
+                color="textPrimary"
+                style={styles.title}
+              >
+                {title}
+              </MText>
+
+              <IconButton
+                name="close"
+                size={iconSizes.lg}
+                color={colors.danger}
+                onPress={onClose}
+                style={styles.closeButton}
+              />
+            </View>
+
+            {children}
+          </View>
+        </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
+  root: {
     flex: 1,
-    backgroundColor: "rgba(2,6,23,0.65)",
+  },
+  container: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.backdropStrong,
   },
 
   sheet: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
     borderTopLeftRadius: radii.xl,
     borderTopRightRadius: radii.xl,
     backgroundColor: colors.surfaceStrong,
@@ -74,6 +99,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: spacing.xl,
+    maxHeight: "80%",
   },
 
   handle: {

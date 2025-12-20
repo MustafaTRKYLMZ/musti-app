@@ -64,11 +64,10 @@ export function ViewTabs({ active, onChange }: Props) {
 const styles = StyleSheet.create({
   tabsRow: {
     flexDirection: "row",
-    backgroundColor: colors.surface,
-    borderRadius: radii.full,
+    borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
-    padding: spacing.xs,
+    padding: spacing.md,
     marginTop: spacing.sm,
     marginBottom: spacing.sm,
   },

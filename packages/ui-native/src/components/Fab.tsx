@@ -1,20 +1,23 @@
-import React from "react";
+// packages/ui/src/components/FAB.tsx
+import React, { ReactNode } from "react";
 import {
   TouchableOpacity,
   StyleSheet,
   GestureResponderEvent,
   ViewStyle,
+  StyleProp,
 } from "react-native";
-import type { ReactNode } from "react";
-import { colors, spacing, radii } from "../theme";
+import { spacing, radii } from "../theme";
+import { useTheme } from "../theme/ThemeContext";
 
 interface FABProps {
   onPress?: (e: GestureResponderEvent) => void;
   icon: ReactNode;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   placement?: "bottom-right" | "bottom-left";
   offsetBottom?: number;
   offsetHorizontal?: number;
+  backgroundColor?: string;
 }
 
 export const FAB: React.FC<FABProps> = ({
@@ -22,19 +25,30 @@ export const FAB: React.FC<FABProps> = ({
   icon,
   style,
   placement = "bottom-right",
-  offsetBottom = spacing["2xl"] * 3,
+  offsetBottom = spacing["xl"] * 3,
   offsetHorizontal = spacing.xl,
+  backgroundColor,
 }) => {
+  const theme = useTheme();
+  const { colors } = theme;
+
   const positionStyle: ViewStyle =
     placement === "bottom-right"
       ? { right: offsetHorizontal }
       : { left: offsetHorizontal };
 
+  const fabBackgroundColor = backgroundColor ?? colors.primary;
+
   return (
     <TouchableOpacity
       activeOpacity={0.85}
       onPress={onPress}
-      style={[styles.base, { bottom: offsetBottom }, positionStyle, style]}
+      style={[
+        styles.base,
+        { bottom: offsetBottom, backgroundColor: fabBackgroundColor },
+        positionStyle,
+        style,
+      ]}
     >
       {icon}
     </TouchableOpacity>
@@ -47,7 +61,6 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: radii.full,
-    backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#000",

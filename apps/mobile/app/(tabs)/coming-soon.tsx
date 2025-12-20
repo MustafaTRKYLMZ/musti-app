@@ -1,28 +1,29 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { iconSizes } from "@budget/ui-native";
 
 // Ensure the correct path to the ComingSoon component
 import { ComingSoon } from "../../components/ui/ComingSoon";
+import { IconButton } from "@/components/ui/AppIcon";
 
 export default function ComingSoonScreen() {
   const handleBack = () => {
-    router.back();
+    router.replace("/(tabs)/budget");
   };
 
   return (
     <SafeAreaView style={styles.container}>
       {/* HEADER */}
       <View style={styles.headerRow}>
-        <TouchableOpacity
+        <IconButton
+          name="chevron-back"
+          size={iconSizes.md}
+          color={"white"}
           onPress={handleBack}
-          style={styles.backButton}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Ionicons name="chevron-back" size={20} color="#e5e7eb" />
-        </TouchableOpacity>
+        />
+
         <Text style={styles.headerTitle}>Coming soon</Text>
         {/* Spacer to balance layout */}
         <View style={{ width: 32 }} />

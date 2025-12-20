@@ -1,9 +1,9 @@
 // apps/mobile/components/ui/CashflowRow.tsx
 import React from "react";
-import { View, StyleSheet, TouchableOpacity, Pressable } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { View, StyleSheet, Pressable } from "react-native";
 import { LocalizedDateText } from "@budget/core";
 import { MText, colors, spacing, radii } from "@budget/ui-native";
+import { BaseIcon, IconButton } from "@/components/ui/AppIcon";
 
 export interface CashflowRowProps {
   title: string;
@@ -41,33 +41,21 @@ export const CashflowRow: React.FC<CashflowRowProps> = ({
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [
-        localStyles.row,
-        pressed && localStyles.rowPressed,
-      ]}
+      style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
     >
       {/* LEFT */}
-      <View style={localStyles.leftCol}>
+      <View style={styles.leftCol}>
         <MText variant="bodyStrong" color="textPrimary" numberOfLines={1}>
           {title}
         </MText>
 
-        <View style={localStyles.metaRow}>
-          {date ? (
-            <LocalizedDateText
-              date={date}
-              shortMonth
-              style={localStyles.dateText}
-            />
-          ) : null}
+        <View style={styles.metaRow}>
+          {date && (
+            <LocalizedDateText date={date} shortMonth style={styles.dateText} />
+          )}
 
           {statusIconName && (
-            <Ionicons
-              name={statusIconName}
-              size={13}
-              color={statusIconColor}
-              style={{ marginRight: 4 }}
-            />
+            <BaseIcon name={statusIconName} size={13} color={statusIconColor} style={{ marginRight: 4 }} />
           )}
 
           {category && (
@@ -79,26 +67,22 @@ export const CashflowRow: React.FC<CashflowRowProps> = ({
       </View>
 
       {/* RIGHT */}
-      <View style={localStyles.rightCol}>
-        <View style={localStyles.amountRow}>
-          <Ionicons
-            name={arrowIconName}
-            size={16}
-            color={amountColor}
-            style={{ marginRight: 4, marginTop: 1 }}
-          />
+      <View style={styles.rightCol}>
+        <View style={styles.amountRow}>
+          {/* Arrow icon → BaseIcon */}
+          <BaseIcon name={arrowIconName} size={16} color={amountColor} style={{ marginRight: 4, marginTop: 1 }} />
 
           <MText
             variant="bodyStrong"
             color={isIncome ? "success" : "danger"}
-            style={localStyles.amount}
+            style={styles.amount}
           >
             {isExpense && "-"}
             {Math.abs(amount).toFixed(2)} €
           </MText>
 
           {multiplier && multiplier > 1 && (
-            <View style={localStyles.multiplierPill}>
+            <View style={styles.multiplierPill}>
               <MText variant="caption" color="textMuted">
                 ×{multiplier}
               </MText>
@@ -107,20 +91,20 @@ export const CashflowRow: React.FC<CashflowRowProps> = ({
         </View>
 
         {onDelete && (
-          <TouchableOpacity
+          <IconButton
             onPress={onDelete}
-            style={localStyles.iconButton}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Ionicons name="trash-outline" size={18} color={colors.danger} />
-          </TouchableOpacity>
+            name="trash-outline"
+            size={18}
+            color={colors.danger}
+            style={styles.iconButton}
+          />
         )}
       </View>
     </Pressable>
   );
 };
 
-const localStyles = StyleSheet.create({
+const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     paddingVertical: spacing.md,

@@ -1,7 +1,8 @@
-// apps/mobile/components/ui/FlagIcon.tsx
+// components/ui/FlagIcon.tsx
 import React from "react";
-import { View, Image, ImageSourcePropType } from "react-native";
+import { Image, ImageSourcePropType, StyleProp, ViewStyle } from "react-native";
 import { colors } from "@budget/ui-native";
+import { IconButton } from "./AppIcon";
 
 export type LangCode = "en" | "tr";
 
@@ -13,27 +14,32 @@ const FLAG_SOURCES: Record<LangCode, ImageSourcePropType> = {
 interface FlagIconProps {
   code: LangCode;
   size?: number;
+  onPress?: () => void;
+  style?: StyleProp<ViewStyle>;
 }
 
-export function FlagIcon({ code, size = 34 }: FlagIconProps) {
+export function FlagIcon({ code, size = 28, onPress, style }: FlagIconProps) {
   const src = FLAG_SOURCES[code];
 
   return (
-    <View
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        overflow: "hidden",
-        borderWidth: 1,
-        borderColor: colors.borderSubtle,
-      }}
-    >
-      <Image
-        source={src}
-        style={{ width: size, height: size }}
-        resizeMode="cover"
-      />
-    </View>
+    <IconButton
+      onPress={onPress}
+      style={style}
+      padding={0}
+      backgroundColor="transparent"
+      iconNode={
+        <Image
+          source={src}
+          style={{
+            width: size,
+            height: size,
+            borderRadius: size / 2,
+            borderWidth: 1,
+            borderColor: colors.borderSubtle,
+          }}
+          resizeMode="cover"
+        />
+      }
+    />
   );
 }

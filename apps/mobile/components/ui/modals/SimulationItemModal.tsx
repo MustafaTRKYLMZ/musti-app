@@ -1,10 +1,17 @@
 // apps/mobile/components/modals/SimulationItemModal.tsx
+
 import React, { useState, useEffect } from "react";
-import { View, StyleSheet, TouchableOpacity, TextInput } from "react-native";
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  ScrollView,
+} from "react-native";
 import { LocalizedDatePicker } from "@/components/ui/LocalizedDatePicker";
 import { BalanceType, useTranslation } from "@budget/core";
-import { BottomSheetModal } from "./BottomSheetModal";
 import { MText, colors, spacing, radii } from "@budget/ui-native";
+import { BottomSheetModal } from "./BottomSheetModal";
 
 interface Props {
   visible: boolean;
@@ -66,101 +73,110 @@ export function SimulationItemModal({
       title={t("add_simulation_item")}
       onClose={onClose}
     >
-      {/* CONTENT */}
-      <View style={styles.content}>
-        {/* TYPE */}
-        <View style={styles.smallLabelWrapper}>
-          <MText variant="caption" color="textSecondary">
-            {t("type")}
-          </MText>
-        </View>
-        <View style={styles.typeRow}>
-          <TypeChip
-            label={t("expense")}
-            active={type === "Expense"}
-            onPress={() => setType("Expense")}
-          />
-          <TypeChip
-            label={t("income")}
-            active={type === "Income"}
-            onPress={() => setType("Income")}
-          />
-        </View>
-
-        {/* FIXED? */}
-        <View style={styles.field}>
-          <View style={styles.labelWrapper}>
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={styles.scrollContent}
+      >
+        <View style={styles.content}>
+          {/* TYPE */}
+          <View style={styles.smallLabelWrapper}>
             <MText variant="caption" color="textSecondary">
-              {t("fixed")}?
+              {t("type")}
             </MText>
           </View>
+          <View style={styles.typeRow}>
+            <TypeChip
+              label={t("expense")}
+              active={type === "Expense"}
+              onPress={() => setType("Expense")}
+            />
+            <TypeChip
+              label={t("income")}
+              active={type === "Income"}
+              onPress={() => setType("Income")}
+            />
+          </View>
 
-          <View style={styles.segmentRow}>
-            <TouchableOpacity
-              style={[styles.segment, !isFixed && styles.segmentActiveNeutral]}
-              onPress={() => setIsFixed(false)}
-            >
-              <MText
-                variant="bodyStrong"
-                color={!isFixed ? "textInverse" : "textMuted"}
-              >
-                {t("no")}
+          {/* FIXED? */}
+          <View style={styles.field}>
+            <View style={styles.labelWrapper}>
+              <MText variant="caption" color="textSecondary">
+                {t("fixed")}?
               </MText>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.segment, isFixed && styles.segmentActiveNeutral]}
-              onPress={() => setIsFixed(true)}
-            >
-              <MText
-                variant="bodyStrong"
-                color={isFixed ? "textInverse" : "textMuted"}
+            </View>
+
+            <View style={styles.segmentRow}>
+              <TouchableOpacity
+                style={[
+                  styles.segment,
+                  !isFixed && styles.segmentActiveNeutral,
+                ]}
+                onPress={() => setIsFixed(false)}
               >
-                {t("yes")} ({t("recurring")})
-              </MText>
-            </TouchableOpacity>
+                <MText
+                  variant="bodyStrong"
+                  color={!isFixed ? "textInverse" : "textMuted"}
+                >
+                  {t("no")}
+                </MText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.segment, isFixed && styles.segmentActiveNeutral]}
+                onPress={() => setIsFixed(true)}
+              >
+                <MText
+                  variant="bodyStrong"
+                  color={isFixed ? "textInverse" : "textMuted"}
+                >
+                  {t("yes")} ({t("recurring")})
+                </MText>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* ITEM */}
+          <View style={styles.smallLabelWrapper}>
+            <MText variant="caption" color="textSecondary">
+              {t("item")}
+            </MText>
+          </View>
+          <TextInput
+            placeholder={t("new_sofa")}
+            placeholderTextColor={colors.textMuted}
+            value={item}
+            onChangeText={setItem}
+            style={styles.input}
+            returnKeyType="next"
+          />
+
+          {/* AMOUNT */}
+          <View style={styles.smallLabelWrapper}>
+            <MText variant="caption" color="textSecondary">
+              {t("amount")}
+            </MText>
+          </View>
+          <TextInput
+            placeholder="e.g. 1200"
+            placeholderTextColor={colors.textMuted}
+            value={amount}
+            onChangeText={setAmount}
+            keyboardType="numeric"
+            style={styles.input}
+            returnKeyType="done"
+          />
+
+          {/* DATE */}
+          <View style={{ marginTop: spacing.sm }}>
+            <LocalizedDatePicker
+              value={date}
+              onChange={setDate}
+              label={t("date")}
+            />
           </View>
         </View>
+      </ScrollView>
 
-        {/* ITEM */}
-        <View style={styles.smallLabelWrapper}>
-          <MText variant="caption" color="textSecondary">
-            {t("item")}
-          </MText>
-        </View>
-        <TextInput
-          placeholder={t("new_sofa")}
-          placeholderTextColor={colors.textMuted}
-          value={item}
-          onChangeText={setItem}
-          style={styles.input}
-        />
-
-        {/* AMOUNT */}
-        <View style={styles.smallLabelWrapper}>
-          <MText variant="caption" color="textSecondary">
-            {t("amount")}
-          </MText>
-        </View>
-        <TextInput
-          placeholder="e.g. 1200"
-          placeholderTextColor={colors.textMuted}
-          value={amount}
-          onChangeText={setAmount}
-          keyboardType="numeric"
-          style={styles.input}
-        />
-
-        {/* DATE */}
-        <View style={{ marginTop: spacing.sm }}>
-          <LocalizedDatePicker
-            value={date}
-            onChange={setDate}
-            label={t("date")}
-          />
-        </View>
-      </View>
-
-      {/* BUTTONS */}
+      {/* FOOTER  */}
       <View style={styles.footerRow}>
         <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
           <MText variant="bodyStrong" color="textSecondary">
@@ -198,6 +214,10 @@ function TypeChip({ label, active, onPress }: TypeChipProps) {
 }
 
 const styles = StyleSheet.create({
+  scrollContent: {
+    paddingBottom: spacing.lg,
+  },
+
   content: {
     marginTop: spacing.xs,
   },

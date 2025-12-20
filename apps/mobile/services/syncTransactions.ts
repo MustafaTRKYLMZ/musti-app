@@ -2,7 +2,7 @@
 
 import { LocalTransaction } from "@budget/core";
 import { apiConfig } from "../constants/apiConfig";
-import { useTransactionsStore } from "../store/useTransactionsStore";
+import { useTransactionsStore } from "../store/budget/transactions/useTransactionsStore";
 // adjust import path if needed
 
 const BASE_URL = apiConfig.baseUrl;
@@ -79,10 +79,6 @@ export async function syncTransactions(): Promise<void> {
       transactions: mergedWithSyncStatus,
       lastSyncAt: now,
     });
-
-    console.log(
-      `[syncTransactions] Done. Pushed ${dirty.length} dirty item(s), pulled ${serverChanges.length} change(s).`
-    );
   } catch (err) {
     console.log("[syncTransactions] error:", err);
     // On error we do not modify local state; dirty items remain dirty.

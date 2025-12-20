@@ -1,0 +1,168 @@
+// apps/mobile/components/pdf/PdfModal.tsx
+import React, { useState } from "react";
+import {
+  Modal,
+  View,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+} from "react-native";
+import * as DocumentPicker from "expo-document-picker";
+import * as FileSystem from "expo-file-system/legacy";
+import { MText, spacing, radii, useTheme } from "@budget/ui-native";
+import { getPdfsDirectory } from "@/utils/getPdfsDirectory";
+
+interface AddPdfModalProps {
+  visible: boolean;
+  onClose: () => void;
+  onPdfImported?: (doc: { uri: string; name: string }) => void;
+}
+
+export const AddPdfModal: React.FC<AddPdfModalProps> = ({
+  visible,
+  onClose,
+  onPdfImported,
+}) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const theme = useTheme();
+  const { colors } = theme;
+
+  const handlePickPdf = async () => {
+    try {
+      setIsLoading(true);
+
+      const result = await DocumentPicker.getDocumentAsync({
+        type: "application/pdf",
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+
+      if (result.canceled) return;
+
+      const asset = result.assets[0];
+      const safeName =
+        asset.name?.replace(/\s+/g, "_") || `pdf-${Date.now()}.pdf`;
+
+      const pdfDir = await getPdfsDirectory();
+      const destPath = pdfDir + `${Date.now()}-${safeName}`;
+
+      await FileSystem.copyAsync({
+        from: asset.uri,
+        to: destPath,
+      });
+
+      onPdfImported?.({
+        uri: destPath,
+        name: safeName,
+      });
+    } catch (e) {
+      console.warn("PDF import error:", e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+      <View
+        style={[
+          styles.backdrop,
+          {
+            backgroundColor: colors.backdropStrong,
+          },
+        ]}
+      >
+        <View
+          style={[
+            styles.modalContent,
+            {
+              backgroundColor: colors.surface,
+              borderTopColor: colors.borderSubtle,
+              shadowColor: colors.shadowStrong,
+            },
+          ]}
+        >
+          <MText variant="heading2" color="textPrimary" style={styles.title}>
+            Add PDF
+          </MText>
+
+          <MText
+            variant="body"
+            color="textSecondary"
+            style={styles.description}
+          >
+            Select a PDF from your device and save it into your bookshelf.
+          </MText>
+
+          <TouchableOpacity
+            onPress={handlePickPdf}
+            style={[styles.primaryButton, { backgroundColor: colors.primary }]}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator color={colors.textInverse} />
+            ) : (
+              <MText
+                variant="bodyStrong"
+                color="textInverse"
+                style={styles.primaryButtonText}
+              >
+                Pick PDF
+              </MText>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <MText variant="body" color="textPrimary">
+              Close
+            </MText>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
+const styles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    borderTopLeftRadius: radii.xl,
+    borderTopRightRadius: radii.xl,
+    padding: spacing.lg,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: -4 },
+    marginBottom: spacing["6xl"],
+  },
+  title: {
+    marginBottom: spacing.sm,
+  },
+  description: {
+    marginBottom: spacing.lg,
+  },
+  primaryButton: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.lg,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  primaryButtonText: {
+    fontWeight: "600",
+  },
+  closeButton: {
+    marginTop: spacing.lg,
+    alignSelf: "flex-end",
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+  },
+});

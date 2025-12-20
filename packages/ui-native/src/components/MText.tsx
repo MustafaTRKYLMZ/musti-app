@@ -1,6 +1,7 @@
 import React from "react";
-import { Text, TextProps, TextStyle } from "react-native";
-import { colors, typography } from "../theme";
+import { Text, TextProps, TextStyle, StyleProp } from "react-native";
+import { typography, colors as defaultColors } from "../theme";
+import { useTheme } from "../theme/ThemeContext";
 
 export type TextVariant =
   | "heading1"
@@ -11,12 +12,13 @@ export type TextVariant =
   | "bodyStrong"
   | "caption";
 
-type ColorKey = keyof typeof colors;
+// type comes from default colors, but all themes share the same keys
+type ColorKey = keyof typeof defaultColors;
 
 interface MTextProps extends TextProps {
   variant?: TextVariant;
   color?: ColorKey;
-  style?: TextStyle | TextStyle[];
+  style?: StyleProp<TextStyle>;
 }
 
 export const MText: React.FC<MTextProps> = ({
@@ -26,10 +28,13 @@ export const MText: React.FC<MTextProps> = ({
   children,
   ...rest
 }) => {
+  const theme = useTheme?.();
+  const palette = theme?.colors ?? defaultColors;
+
   return (
     <Text
       {...rest}
-      style={[typography[variant], { color: colors[color] }, style]}
+      style={[typography[variant], { color: palette[color] }, style]}
     >
       {children}
     </Text>
