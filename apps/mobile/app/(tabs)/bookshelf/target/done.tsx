@@ -12,6 +12,7 @@ import {
   type ReadingTarget,
 } from "@/store/bookshelf/useReadingTargetsStore";
 import { AppSwitcherButton } from "@/components/AppSwitcherButton";
+import { useToast } from "@/components/ui/ToastProvider";
 
 const { colors, spacing, radii } = bookshelfTheme;
 
@@ -44,10 +45,9 @@ export default function DoneTargetsScreen() {
   const targets = useReadingTargetsStore((s) => s.targets);
   const deleteTarget = useReadingTargetsStore((s) => s.deleteTarget);
 
-  // ✅ v2 store APIs
   const restartItem = useReadingTargetsStore((s) => s.restartItem);
-  //   const markTargetActive = useReadingTargetsStore((s) => s.markTargetActive);
 
+  const { showToast } = useToast();
   useEffect(() => {
     if (!hydrated) hydrate();
   }, [hydrated, hydrate]);
@@ -61,27 +61,26 @@ export default function DoneTargetsScreen() {
       );
   }, [targets]);
 
-  const openBook = (bookUri: string, bookName: string, jumpPage: number) => {
-    router.push({
-      pathname: "/(tabs)/bookshelf/pdf/viewer",
-      params: {
-        uri: encodeURIComponent(bookUri),
-        name: encodeURIComponent(bookName),
-        jumpPage: String(Math.max(1, jumpPage || 1)),
-      },
-    });
-  };
-
   const handleRestart = async (t: ReadingTarget) => {
-    // group restart (senin store'da nasıl yaptığını biliyorum)
-    // await markTargetActive(t.id);
     for (const it of t.items) {
       await restartItem(t.id, it.id);
     }
-
-    router.push({
-      pathname: "/(tabs)/bookshelf/target/target-viewer",
-      params: { targetId: t.id },
+    showToast({
+      title: "Target restarted",
+      message: "Start reading now?",
+      actions: [
+        { label: "Later", onPress: () => {} },
+        {
+          label: "Read now",
+          onPress: () => {
+            router.push({
+              pathname: "/(tabs)/bookshelf/target/target-viewer",
+              params: { targetId: t.id },
+            });
+          },
+        },
+      ],
+      duration: 6000,
     });
   };
 
@@ -114,9 +113,8 @@ export default function DoneTargetsScreen() {
             renderItem={({ item }) => (
               <TargetCard
                 target={item}
-                onOpen={(t, it, openPage) =>
-                  openBook(it.bookUri, it.bookName, openPage)
-                }
+                disableOpen
+                onOpen={() => {}}
                 onDelete={(t) => deleteTarget(t.id)}
                 onAutoDoneItem={(targetId, itemId) =>
                   markItemDone(targetId, itemId)

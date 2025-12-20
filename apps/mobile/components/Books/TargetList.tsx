@@ -74,7 +74,7 @@ export const TargetList = ({
         }}
         onDelete={(t) => deleteTarget(t.id)}
         onAutoDoneItem={(targetId, itemId) => markItemDone(targetId, itemId)}
-        onEditTarget={(t) => setEditTargetId(t.id)} // ✅ edit modal aç
+        onEditTarget={(t) => setEditTargetId(t.id)}
       />
     );
   };
@@ -86,7 +86,7 @@ export const TargetList = ({
 
         <View style={styles.headerRight}>
           <IconButton
-            name="add"
+            name="add-circle-outline"
             size={iconSizes.lg}
             color={colors.textPrimary}
             onPress={onOpenCreate}
