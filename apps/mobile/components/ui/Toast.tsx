@@ -109,7 +109,9 @@ export const Toast = ({
                           borderColor: colors.danger,
                           backgroundColor: colors.danger + "1A",
                         }
-                      : { backgroundColor: colors.surfaceElevated },
+                      : {
+                          backgroundColor: colors.surface,
+                        },
                   ]}
                 >
                   <MText
