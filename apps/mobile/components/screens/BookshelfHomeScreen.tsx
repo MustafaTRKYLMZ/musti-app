@@ -1,12 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
-import {
-  View,
-  StyleSheet,
-  FlatList,
-  Alert,
-  ScrollView,
-  Pressable,
-} from "react-native";
+import { View, StyleSheet, Alert, ScrollView } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import dayjs from "dayjs";
@@ -20,10 +13,13 @@ import { AddPdfModal } from "@/components/ui/pdf/AddPdfModal";
 import { useBooksStore } from "@/store/bookshelf/useBooksStore";
 import { useReadingStatsStore } from "@/store/bookshelf/useReadingStatsStore";
 import { useReadingPlanStore } from "@/store/bookshelf/useReadingPlanStore";
+import { useReadingTargetsStore } from "@/store/bookshelf/useReadingTargetsStore";
+import { pickActiveItem } from "@/utils/pickActiveItem";
+
 import { ReadingPlanModal } from "@/components/ui/modals/CreatePlanModal";
 import { AppScreen } from "@/components/AppScreen";
 import { BookshelfHeader } from "@/components/Books/BookshelfHeader";
-import { bookshelfTheme, iconSizes, MText } from "@budget/ui-native";
+import { bookshelfTheme, iconSizes } from "@budget/ui-native";
 import { IconButton } from "@/components/ui/AppIcon";
 import { AppSwitcherButton } from "@/components/AppSwitcherButton";
 import { LastReadBook } from "@/components/Books/LastReadBook";
@@ -70,17 +66,30 @@ export default function BookshelfHomeScreen() {
   >(null);
 
   const progressMap = useBooksStore((s) => s.items);
-  const readingStats = useReadingStatsStore((s) => s.stats);
-  //stores
+
+  // ✅ stats v3
+  const byBookDate = useReadingStatsStore((s) => s.byBookDate);
+
+  // plans
   const plans = useReadingPlanStore((s) => s.plans);
   const deletePlan = useReadingPlanStore((s) => s.deletePlan);
   const ensureTodayPlan = useReadingPlanStore((s) => s.ensureTodayPlan);
   const renameBookInPlan = useReadingPlanStore((s) => s.renameBookInPlan);
 
+  // targets
+  const hydrateTargets = useReadingTargetsStore((s) => s.hydrate);
+  const targetsHydrated = useReadingTargetsStore((s) => s.hydrated);
+  const targets = useReadingTargetsStore((s) => s.targets);
+
+  useEffect(() => {
+    if (!targetsHydrated) hydrateTargets();
+  }, [targetsHydrated, hydrateTargets]);
+
   const params = useLocalSearchParams<{
     openCreateTarget?: string;
     targetBookUri?: string;
   }>();
+
   useEffect(() => {
     if (params.openCreateTarget !== "1") return;
 
@@ -88,10 +97,7 @@ export default function BookshelfHomeScreen() {
       ? decodeURIComponent(params.targetBookUri)
       : null;
 
-    // open the modal
     setTargetModalVisible(true);
-
-    // keep another state to set the selected book inside the modal:
     if (bookUri) setCreateTargetInitialBookUri(bookUri);
   }, [params.openCreateTarget, params.targetBookUri]);
 
@@ -99,6 +105,88 @@ export default function BookshelfHomeScreen() {
 
   // ✅ prevents chip press from opening plan when user pressed 3-dot
   const suppressNextPlanOpenRef = React.useRef(false);
+
+  // ✅ plan daily targets by bookUri (MAX if multiple)
+  const planTargetByBookUri = useMemo(() => {
+    const map: Record<string, number> = {};
+
+    for (const plan of plans ?? []) {
+      for (const it of plan.items ?? []) {
+        const uri = it.bookUri;
+        const t = Number(it.pagesPerDay ?? 0) || 0;
+        if (!uri || t <= 0) continue;
+
+        map[uri] = Math.max(map[uri] ?? 0, t);
+      }
+    }
+
+    return map;
+  }, [plans]);
+
+  // ✅ target (range) targets by bookUri (MAX if multiple targets)
+  // target pages = endPage - startPage (total range)
+  const targetTargetByBookUri = useMemo(() => {
+    const map: Record<string, number> = {};
+    if (!targetsHydrated) return map;
+
+    for (const t of targets ?? []) {
+      const active = pickActiveItem(t);
+      if (!active?.bookUri) continue;
+
+      const start = Math.max(1, Math.floor(active.startPage ?? 1));
+      const end = Math.max(1, Math.floor(active.endPage ?? start));
+      const total = Math.max(0, end - start);
+
+      if (total <= 0) continue;
+      map[active.bookUri] = Math.max(map[active.bookUri] ?? 0, total);
+    }
+
+    return map;
+  }, [targetsHydrated, targets]);
+
+  // ✅ final target by bookUri (prefer showing something meaningful)
+  // We take MAX(planDailyTarget, targetRangeTarget)
+  const todayTargetByBookUri = useMemo(() => {
+    const out: Record<string, number> = {};
+    const allUris = new Set<string>([
+      ...Object.keys(planTargetByBookUri),
+      ...Object.keys(targetTargetByBookUri),
+    ]);
+
+    for (const uri of allUris) {
+      out[uri] = Math.max(
+        planTargetByBookUri[uri] ?? 0,
+        targetTargetByBookUri[uri] ?? 0
+      );
+    }
+    return out;
+  }, [planTargetByBookUri, targetTargetByBookUri]);
+
+  // ✅ Shape adapter for BookCard UI (LastReadBook/BookList)
+  // key: `${bookUri}::${date}` -> { pagesTotal, targetPages }
+  const readingStatsForCards = useMemo(() => {
+    const out: Record<string, { pagesTotal: number; targetPages: number }> = {};
+
+    // pagesTotal from stats
+    for (const [key, stat] of Object.entries(byBookDate ?? {})) {
+      out[key] = {
+        pagesTotal: stat?.pagesTotal ?? 0,
+        targetPages: 0,
+      };
+    }
+
+    // targetPages for today (bookUri -> `${bookUri}::${today}`)
+    for (const [bookUri, targetPages] of Object.entries(todayTargetByBookUri)) {
+      const k = `${bookUri}::${today}`;
+      const cur = out[k];
+      out[k] = {
+        pagesTotal: cur?.pagesTotal ?? 0,
+        targetPages: Number(targetPages ?? 0) || 0,
+      };
+    }
+
+    return out;
+  }, [byBookDate, todayTargetByBookUri, today]);
 
   const loadBooks = useCallback(async () => {
     const all = await listLocalPdfs();
@@ -246,6 +334,13 @@ export default function BookshelfHomeScreen() {
       headerRight={
         <View style={styles.headerActions}>
           <IconButton
+            name="stats-chart-outline"
+            size={iconSizes.lg}
+            color={bColors.textPrimary}
+            onPress={() => router.push("/(tabs)/bookshelf/stats")}
+          />
+
+          <IconButton
             name="notifications-circle-outline"
             size={iconSizes.lg}
             color={bColors.textPrimary}
@@ -273,7 +368,7 @@ export default function BookshelfHomeScreen() {
         >
           <BookshelfTabs value={selectedTab} onChange={setSelectedTab} />
 
-          {/* PLANS */}
+          {/* PLANS / TARGETS */}
           {selectedTab === "plans" ? (
             <PlanList
               setPlanModalVisible={setPlanModalVisible}
@@ -306,6 +401,7 @@ export default function BookshelfHomeScreen() {
 
           {/* LAST READ */}
           <LastReadBook
+            readingStats={readingStatsForCards}
             lastReadBooks={lastReadBooks.map((book) => ({
               uri: book.uri,
               name: book.name,
@@ -323,16 +419,11 @@ export default function BookshelfHomeScreen() {
                 },
               ])
             )}
-            readingStats={Object.fromEntries(
-              Object.entries(readingStats).map(([key, stat]) => [
-                key,
-                { ...stat, targetPages: stat.targetPages ?? 0 },
-              ])
-            )}
           />
 
           {/* ALL BOOKS */}
           <BookList
+            readingStats={readingStatsForCards}
             setModalVisible={setModalVisible}
             gridRows={gridRows.map((row) =>
               row.map((book) => ({
@@ -352,12 +443,6 @@ export default function BookshelfHomeScreen() {
                 },
               ])
             )}
-            readingStats={Object.fromEntries(
-              Object.entries(readingStats).map(([key, stat]) => [
-                key,
-                { ...stat, targetPages: stat.targetPages ?? 0 },
-              ])
-            )}
           />
         </ScrollView>
 
@@ -375,6 +460,7 @@ export default function BookshelfHomeScreen() {
           onClose={() => setPlanModalVisible(false)}
           books={books}
         />
+
         <CreateTargetModal
           visible={targetModalVisible}
           onClose={() => setTargetModalVisible(false)}

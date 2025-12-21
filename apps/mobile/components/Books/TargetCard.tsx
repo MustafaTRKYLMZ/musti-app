@@ -9,9 +9,10 @@ import {
   TouchableOpacity,
   UIManager,
   findNodeHandle,
+  Dimensions,
 } from "react-native";
 import { MText, iconSizes, spacing, radii, useTheme } from "@budget/ui-native";
-import { IconButton } from "@/components/ui/AppIcon";
+import { IconButton, BaseIcon } from "@/components/ui/AppIcon";
 import type {
   ReadingTarget,
   TargetItem,
@@ -27,6 +28,10 @@ const clamp = (x: number, a: number, b: number) => Math.max(a, Math.min(b, x));
 
 type Props = {
   target: ReadingTarget;
+
+  // ✅ already computed in TargetList
+  todayPages?: number;
+
   disableOpen?: boolean;
   onOpen: (t: ReadingTarget, item: TargetItem, openPage: number) => void;
   onDelete: (t: ReadingTarget) => void;
@@ -62,6 +67,7 @@ export const TargetCard = ({
   onBeforeOpen,
   onEditTarget,
   disableOpen,
+  todayPages,
 }: Props) => {
   const { colors } = useTheme();
   const { showToast } = useToast();
@@ -77,12 +83,23 @@ export const TargetCard = ({
   const menuAnchorRef = useRef<View | null>(null);
   const isDoneTarget = target.status === "done";
 
+  // ✅ keep popover inside screen
+  const MENU_W = 180;
+  const SAFE_PAD = 8;
+
   const openMenu = () => {
     const handle = findNodeHandle(menuAnchorRef.current);
     if (!handle) return;
 
     UIManager.measure(handle, (_x, _y, width, height, pageX, pageY) => {
-      setMenuPos({ x: pageX + width - 180, y: pageY + height + 8 });
+      const windowW = Dimensions.get("window").width;
+
+      let x = pageX + width - MENU_W;
+      x = Math.max(SAFE_PAD, Math.min(x, windowW - MENU_W - SAFE_PAD));
+
+      const y = pageY + height + 8;
+
+      setMenuPos({ x, y });
       setMenuVisible(true);
     });
   };
@@ -106,6 +123,7 @@ export const TargetCard = ({
     closeMenu();
     onEditTarget?.(target);
   };
+
   const handleReStart = () => {
     closeMenu();
     showToast({
@@ -115,9 +133,7 @@ export const TargetCard = ({
         { label: "Cancel", onPress: () => {} },
         {
           label: "Restart",
-          onPress: () => {
-            onRestart?.(target);
-          },
+          onPress: () => onRestart?.(target),
           destructive: false,
         },
       ],
@@ -130,7 +146,7 @@ export const TargetCard = ({
       ? target.items.findIndex((i) => i.id === activeItem.id)
       : -1;
     setPreviewIndex(idx >= 0 ? idx : 0);
-  }, [target.id]);
+  }, [target.id]); // intentionally only on target change
 
   const displayItem = useMemo(() => {
     if (!target.items.length) return null;
@@ -260,6 +276,10 @@ export const TargetCard = ({
     onOpen(target, displayItem, openPage);
   };
 
+  const todayPagesSafe = Number.isFinite(todayPages as number)
+    ? Math.max(0, Math.floor(todayPages as number))
+    : 0;
+
   if (!target.items.length || !displayItem) {
     return (
       <>
@@ -302,7 +322,6 @@ export const TargetCard = ({
           </MText>
         </View>
 
-        {/* ✅ popover menu */}
         <Modal
           visible={menuVisible}
           transparent
@@ -438,6 +457,19 @@ export const TargetCard = ({
           </MText>
         </View>
 
+        {/* ✅ Today stats: dots’un hemen üstü */}
+        <View style={styles.todayRow}>
+          {/* if calendar-outline not available, change to time-outline */}
+          <BaseIcon
+            name="calendar-outline"
+            size={12}
+            color={colors.textSecondary}
+          />
+          <MText variant="caption" color="textSecondary">
+            Today: {todayPagesSafe} pages
+          </MText>
+        </View>
+
         <View style={styles.dotContainer} {...panResponder.panHandlers}>
           <ItemDots
             items={target.items}
@@ -451,7 +483,6 @@ export const TargetCard = ({
         </View>
       </Pressable>
 
-      {/* ✅ popover menu */}
       <Modal
         visible={menuVisible}
         transparent
@@ -520,8 +551,6 @@ const styles = StyleSheet.create({
   topRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   title: { fontWeight: "900" },
 
-  dotContainer: { padding: spacing.xs },
-
   barWrap: {
     marginTop: spacing.md,
     height: 8,
@@ -537,7 +566,18 @@ const styles = StyleSheet.create({
   },
   progressText: { fontWeight: "800" },
 
-  // popover
+  // ✅ today row right above dots
+  todayRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+    opacity: 0.8,
+  },
+
+  dotContainer: { padding: spacing.xs },
+
   menuOverlay: { flex: 1, backgroundColor: "transparent" },
   popover: {
     position: "absolute",

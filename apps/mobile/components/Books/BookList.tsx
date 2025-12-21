@@ -32,8 +32,11 @@ type BookListProps = {
     file: { uri: string; name: string; lastOpened: number },
     newName: string
   ) => void;
+
   progressMap: { [uri: string]: { lastPage: number; totalPages: number } };
-  readingStats: { [key: string]: { pagesRead: number; targetPages: number } };
+
+  // ✅ UPDATED
+  readingStats: { [key: string]: { pagesTotal: number; targetPages: number } };
 };
 
 export const BookList: FC<BookListProps> = ({
@@ -62,17 +65,20 @@ export const BookList: FC<BookListProps> = ({
             {gridRows.map((row, rowIndex) => (
               <ShelfWithPlank
                 key={rowIndex}
-                containerStyle={[
+                containerStyle={StyleSheet.flatten([
                   styles.gridRowContainer,
                   { paddingBottom: SHELF_PLANK_HEIGHT - 12 },
-                ]}
+                ])}
               >
-                {/* Books */}
                 <View style={styles.gridRow}>
                   {row.map((item) => {
                     const progress = progressMap[item.uri];
-                    const statKey = `${item.uri}:${today}`;
+
+                    const statKey = `${item.uri}::${today}`;
                     const todayStat = readingStats[statKey];
+
+                    const todayPages = todayStat?.pagesTotal ?? 0;
+                    const todayTargetPages = todayStat?.targetPages ?? 0;
 
                     return (
                       <View
@@ -88,8 +94,8 @@ export const BookList: FC<BookListProps> = ({
                           onDelete={() => handleDeletePdf(item)}
                           lastPage={progress?.lastPage}
                           totalPages={progress?.totalPages}
-                          todayPages={todayStat?.pagesRead}
-                          todayTargetPages={todayStat?.targetPages}
+                          todayPages={todayPages}
+                          todayTargetPages={todayTargetPages}
                           onRename={(newName) => renameBook(item, newName)}
                           variant="grid"
                         />

@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { View, StyleSheet, Pressable, FlatList } from "react-native";
 import { useRouter } from "expo-router";
+import dayjs from "dayjs";
 import {
   MText,
   bookshelfTheme,
@@ -13,8 +14,10 @@ import {
   useReadingTargetsStore,
   type ReadingTarget,
 } from "@/store/bookshelf/useReadingTargetsStore";
+import { useReadingStatsStore } from "@/store/bookshelf/useReadingStatsStore";
 import { TargetCard } from "./TargetCard";
 import { EditTargetModal } from "@/components/ui/modals/EditTargetModal";
+import { DoneTargetsShortcut } from "./DoneTargetsShortcut";
 
 const { colors } = bookshelfTheme;
 
@@ -22,6 +25,9 @@ type TargetListProps = {
   onOpenCreate: () => void;
   onOpenChapters: (bookUri: string, bookName: string) => void;
 };
+
+const makeTargetKey = (targetId: string, date: string) =>
+  `${targetId}::${date}`;
 
 export const TargetList = ({
   onOpenCreate,
@@ -38,6 +44,9 @@ export const TargetList = ({
   const markItemDone = useReadingTargetsStore((s) => s.markItemDone);
   const setActiveItem = useReadingTargetsStore((s) => s.setActiveItem);
 
+  // ✅ NEW: target-level stats store
+  const byTargetDate = useReadingStatsStore((s) => s.byTargetDate);
+
   useEffect(() => {
     if (!hydrated) hydrate();
   }, [hydrated, hydrate]);
@@ -48,21 +57,43 @@ export const TargetList = ({
       .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
   }, [targets]);
 
-  const doneAll = useMemo(
-    () =>
-      targets
-        .filter((t) => t.status === "done")
-        .sort(
-          (a, b) =>
-            (b.doneAt ?? b.createdAt ?? 0) - (a.doneAt ?? a.createdAt ?? 0)
-        ),
-    [targets]
+  const doneAll = useMemo(() => {
+    return targets
+      .filter((t) => t.status === "done")
+      .sort(
+        (a, b) =>
+          (b.doneAt ?? b.createdAt ?? 0) - (a.doneAt ?? a.createdAt ?? 0)
+      );
+  }, [targets]);
+
+  // ✅ local date (Amsterdam-safe)
+  const today = useMemo(() => dayjs().format("YYYY-MM-DD"), []);
+
+  /**
+   * ✅ Target card "Today"
+   * - ONLY this target's reading
+   * - ONLY mode:"target"
+   */
+  const getTodayTargetPagesForTarget = useCallback(
+    (target: ReadingTarget) => {
+      if (!target?.id) return 0;
+
+      const key = makeTargetKey(target.id, today);
+      const stat = byTargetDate?.[key];
+
+      const n = stat?.pagesByMode?.target ?? 0;
+      return Math.max(0, Math.floor(n));
+    },
+    [byTargetDate, today]
   );
 
   const renderTarget = ({ item }: { item: ReadingTarget }) => {
+    const todayPages = getTodayTargetPagesForTarget(item);
+
     return (
       <TargetCard
         target={item}
+        todayPages={todayPages}
         onBeforeOpen={async (targetId, itemId) => {
           await setActiveItem(targetId, itemId);
         }}
@@ -102,6 +133,10 @@ export const TargetList = ({
               <MText style={{ fontWeight: "800" }}>Create one</MText>
             </Pressable>
           </View>
+          <DoneTargetsShortcut
+            count={doneAll.length}
+            onPress={() => router.push("/(tabs)/bookshelf/target/done")}
+          />
         </View>
       ) : (
         <FlatList
@@ -117,41 +152,15 @@ export const TargetList = ({
           renderItem={renderTarget}
           ListFooterComponent={
             doneAll.length > 0 ? (
-              <Pressable
+              <DoneTargetsShortcut
+                count={doneAll.length}
                 onPress={() => router.push("/(tabs)/bookshelf/target/done")}
-                style={[styles.doneMini, { marginLeft: spacing.sm }]}
-              >
-                <View style={styles.doneIconWrap}>
-                  <IconButton
-                    name="checkmark"
-                    size={iconSizes.md}
-                    color={colors.textPrimary}
-                    onPress={() => router.push("/(tabs)/bookshelf/target/done")}
-                  />
-                </View>
-
-                <View
-                  style={{ flex: 1, flexDirection: "row", gap: spacing.sm }}
-                >
-                  <MText style={{ fontWeight: "900" }}>Done</MText>
-                  <MText style={{ opacity: 0.7, marginTop: 2 }}>
-                    {doneAll.length}
-                  </MText>
-                </View>
-
-                <IconButton
-                  name="chevron-forward"
-                  size={iconSizes.md}
-                  color={colors.textPrimary}
-                  onPress={() => router.push("/(tabs)/bookshelf/target/done")}
-                />
-              </Pressable>
+              />
             ) : null
           }
         />
       )}
 
-      {/* ✅ Edit modal */}
       <EditTargetModal
         visible={!!editTargetId}
         targetId={editTargetId}
@@ -195,27 +204,4 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceElevated,
   },
   emptyRow: { flexDirection: "row", gap: spacing.sm },
-
-  doneMini: {
-    minWidth: 150,
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    backgroundColor: colors.surfaceElevated,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  doneIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    backgroundColor: colors.surface,
-    alignItems: "center",
-    justifyContent: "center",
-  },
 });

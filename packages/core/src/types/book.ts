@@ -15,3 +15,4 @@ export interface Book {
   updatedAt: string;
   archived?: boolean;
 }
+

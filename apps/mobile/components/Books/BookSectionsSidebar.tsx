@@ -1,17 +1,18 @@
-// apps/mobile/components/Books/BookSectionsSidebar.tsx
-
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { View, StyleSheet, Pressable, Dimensions } from "react-native";
 import { spacing, useTheme } from "@budget/ui-native";
-import {
-  useBookSectionsStore,
-  type BookSection,
-} from "@/store/bookshelf/useBookSectionsStore";
+
+import { useBookSectionsStore } from "@/store/bookshelf/useBookSectionsStore";
 import { useBooksStore } from "@/store/bookshelf/useBooksStore";
+import { useReadingEventsStore } from "@/store/bookshelf/useReadingEventsStore";
+
 import { SectionHeader } from "./SectionHeader";
 import { AddSectionForm } from "./AddSectionForm";
 import { SectionList } from "./SectionList";
 import { Divider } from "../ui/Divider";
+import { clampPage } from "@/utils/number";
+import { buildEffectiveRanges } from "@/utils/buildEffectiveRanges";
+import { BookSection } from "@budget/core";
 
 type Props = {
   visible: boolean;
@@ -36,19 +37,45 @@ export function BookSectionsSidebar({
   const removeSectionFromStore = useBookSectionsStore((s) => s.removeSection);
   const updateSection = useBookSectionsStore((s) => s.updateSection);
 
+  const setSectionResolver = useReadingEventsStore((s) => s.setSectionResolver);
+
+  const totalPages = useBooksStore((s) =>
+    bookUri ? s.items[bookUri]?.totalPages ?? null : null
+  );
+
   const sectionsData: BookSection[] = bookUri ? byBook[bookUri] ?? [] : [];
-  // const sections = sectionsData.sort((a, b) => a.startPage - b.startPage);
-  const sections = [...sectionsData].sort((a, b) => a.startPage - b.startPage);
+
+  const sections = useMemo(
+    () => [...sectionsData].sort((a, b) => a.startPage - b.startPage),
+    [sectionsData]
+  );
+
+  // FIXED: previously, sections with a null endPage would match all subsequent pages in the resolver
+  useEffect(() => {
+    setSectionResolver(({ bookUri: uri, page }) => {
+      if (!uri) return undefined;
+
+      const list: BookSection[] = (byBook?.[uri] ?? []) as BookSection[];
+      if (!list.length) return undefined;
+
+      const p = clampPage(page);
+
+      const ranges = buildEffectiveRanges(list, totalPages);
+
+      const hit = ranges.find((r) => p >= r.start && p <= r.end);
+      if (!hit) return undefined;
+
+      return { id: hit.id, title: hit.title };
+    });
+
+    return () => setSectionResolver(undefined);
+  }, [setSectionResolver, byBook, totalPages]);
 
   const [title, setTitle] = useState("");
   const [startPage, setStartPage] = useState("");
   const [pageError, setPageError] = useState<string | null>(null);
   const [endPage, setEndPage] = useState("");
   const [endPageError, setEndPageError] = useState<string | null>(null);
-
-  const totalPages = useBooksStore((s) =>
-    bookUri ? s.items[bookUri]?.totalPages ?? null : null
-  );
 
   if (!visible) return null;
 
@@ -65,6 +92,7 @@ export function BookSectionsSidebar({
     }
     setEndPageError(null);
   };
+
   const handleChangeEndPage = (value: string) => {
     setEndPage(value);
     setEndPageError(null);
@@ -82,6 +110,7 @@ export function BookSectionsSidebar({
     const page = Number(startPage);
     const end = endPage.trim() ? Number(endPage) : null;
     if (!title.trim() || !page || page < 1 || !bookUri) return;
+
     if (end != null) {
       if (Number.isNaN(end) || end < page) {
         setEndPageError("End page must be >= start page.");
@@ -92,6 +121,7 @@ export function BookSectionsSidebar({
         return;
       }
     }
+
     if (totalPages && page > totalPages) {
       setPageError(`This book has only ${totalPages} pages.`);
       return;
@@ -167,6 +197,7 @@ export function BookSectionsSidebar({
         />
 
         <Divider />
+
         <SectionList
           sections={sections}
           onDeleteSection={handleDeleteSection}

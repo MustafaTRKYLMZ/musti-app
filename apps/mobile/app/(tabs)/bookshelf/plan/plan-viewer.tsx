@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef, useMemo } from "react";
 import { View, StyleSheet, Animated } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { MText, spacing, radii, iconSizes, useTheme } from "@budget/ui-native";
+import dayjs from "dayjs";
 
 import { PdfReader } from "@/components/ui/pdf/PdfReader";
 import { useReadingPlanStore } from "@/store/bookshelf/useReadingPlanStore";
@@ -22,6 +23,8 @@ export default function PlanViewerScreen() {
   const planId = params.planId ? String(params.planId) : undefined;
   const uri = params.uri ? decodeURIComponent(String(params.uri)) : undefined;
   const name = params.name ? decodeURIComponent(String(params.name)) : "PDF";
+
+  const today = dayjs().format("YYYY-MM-DD");
 
   const plans = useReadingPlanStore((s) => s.plans);
   const addPagesFromSession = useReadingPlanStore((s) => s.addPagesFromSession);
@@ -263,6 +266,7 @@ export default function PlanViewerScreen() {
         onPressMenu={() => setSectionsOpen(true)}
         currentPage={currentPage}
         totalPages={totalPages ?? undefined}
+        readingContext={{ mode: "plan", date: today, bookUri: uri }}
       />
 
       <BookSectionsSidebar

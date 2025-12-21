@@ -109,10 +109,10 @@ export const PlanCard: FC<PlanCardProps> = ({
   const safeTotal = Math.max(totalPagesInPlan || 1, 1);
   const pct01 = totalCompleted / safeTotal;
 
-  // ✅ Icon her zaman yeşil (pozitif)
+  // icon always positive
   const iconColor = colors.success;
 
-  // ✅ Progress sarı -> yeşil (ama iconu etkilemez)
+  // progress yellow -> green
   const progressColor = useMemo(
     () => getProgressColor(pct01, colors),
     [pct01, colors]
