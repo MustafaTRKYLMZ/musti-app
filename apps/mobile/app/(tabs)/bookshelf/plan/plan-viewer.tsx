@@ -260,7 +260,7 @@ export default function PlanViewerScreen() {
         handleClose={handleClose}
         source={source}
         initialPage={initialPage}
-        handleLoadComplete={handleLoadComplete as any}
+        handleLoadComplete={handleLoadComplete}
         handlePageChanged={handlePageChanged}
         pdfRef={pdfRef}
         onPressMenu={() => setSectionsOpen(true)}

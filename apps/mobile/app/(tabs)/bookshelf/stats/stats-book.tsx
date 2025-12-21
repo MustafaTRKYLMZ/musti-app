@@ -31,6 +31,8 @@ import { formatBookNameFromUri } from "@/utils/formatBookName";
 const clamp0 = (n: number) => Math.max(0, Math.floor(Number(n) || 0));
 const makeBookKey = (bookUri: string, date: string) => `${bookUri}::${date}`;
 
+const DEFAULT_EVENTS_DISPLAY_LIMIT = 12; // Number of events shown by default before "show all" is required
+
 const modeLabel: Record<ReadingMode, string> = {
   target: "Target",
   plan: "Plan",
@@ -192,9 +194,7 @@ export default function StatsBookScreen() {
   const getBookWeekTotal = useReadingStatsStore((s) => s.getBookWeekTotal);
   const getBookMonthTotal = useReadingStatsStore((s) => s.getBookMonthTotal);
 
-  const events = useReadingEventsStore(
-    (s: any) => s.events ?? []
-  ) as ReadingEvent[];
+  const events = useReadingEventsStore((s) => s.events ?? []);
 
   if (!bookUri) {
     return (
@@ -284,7 +284,7 @@ export default function StatsBookScreen() {
 
   const last30Days: DayRow[] = useMemo(() => {
     const rows: DayRow[] = [];
-    for (let i = 1; i < 30; i++) {
+    for (let i = 0; i < 30; i++) {
       const d = dayjs(today).subtract(i, "day").format("YYYY-MM-DD");
       const k = makeBookKey(bookUri, d);
       const s = byBookDate?.[k];
@@ -340,7 +340,7 @@ export default function StatsBookScreen() {
   const showAllToday = !!showAllDates[today];
   const todayShownEvents = showAllToday
     ? todayEvents
-    : todayEvents.slice(0, 12);
+    : todayEvents.slice(0, DEFAULT_EVENTS_DISPLAY_LIMIT);
 
   const title = bookName ?? "Book stats";
 
@@ -807,7 +807,7 @@ export default function StatsBookScreen() {
                   )
                 : dayEventsAll;
 
-              const shownEvents = showAll ? dayEvents : dayEvents.slice(0, 12);
+              const shownEvents = showAll ? dayEvents : dayEvents.slice(0, DEFAULT_EVENTS_DISPLAY_LIMIT);
 
               const onPressTopSection = () => {
                 if (!topSection) return;

@@ -44,7 +44,7 @@ type PdfReaderProps = {
   source: { uri: string } | number;
   initialPage: number;
 
-  handleLoadComplete: (numberOfPages: number, filePath: string) => void;
+  handleLoadComplete: (numberOfPages: number, filePath?: string) => void;
   handlePageChanged: (page: number, numberOfPages: number) => void;
 
   pdfRef?: React.RefObject<PdfRef | null>;
@@ -60,12 +60,25 @@ type PdfReaderProps = {
 
     targetId?: string;
 
-    // NOTE: kept for compatibility, but we don't use these anymore (Option A).
+    /**
+     * @deprecated Kept for backward compatibility; not used in Option A.
+     * Prefer using {@link readingContext.targetId} together with the
+     * resolver-based sections. New code should avoid passing this prop.
+     */
     sectionId?: string;
+    /**
+     * @deprecated Kept for backward compatibility; not used in Option A.
+     * Prefer resolver-based metadata derived from {@link readingContext.targetId}.
+     * New code should avoid passing this prop.
+     */
     sectionTitle?: string;
   };
 
-  // NOTE: kept for compatibility, not used in Option A (resolver fills sections).
+  /**
+   * @deprecated Kept for backward compatibility; not used in Option A
+   * because the resolver is responsible for providing sections.
+   * Callers should rely on the resolver instead of passing sections here.
+   */
   sections?: BookSection[];
 
   enableStatsTracking?: boolean;
@@ -77,6 +90,10 @@ type StripPrefs = {
   hidden: boolean;
   pos?: StripPos;
 };
+
+// Constants for stats tracking
+const DEDUPE_THRESHOLD_MS = 800; // Time window to deduplicate rapid page change events
+const TRACKING_PAUSE_BUFFER_MS = 120; // Buffer to prevent tracking programmatic page changes that may trigger multiple pageChanged events
 
 export const PdfReader: FC<PdfReaderProps> = ({
   isFullscreen,
@@ -113,7 +130,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
   const [zoomHintVisible, setZoomHintVisible] = useState(false);
   const hideZoomTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const trackingEnabledRef = useRef(true);
+  const isPausedForProgrammaticJump = useRef(false);
 
   const lastSeenPageRef = useRef<number | null>(null);
   const maxVisitedRef = useRef<number | null>(null);
@@ -233,11 +250,10 @@ export const PdfReader: FC<PdfReaderProps> = ({
   const pauseTrackingForNextTick = () => {
     flushSession();
 
-    trackingEnabledRef.current = false;
-    // ✅ 0ms yerine ufak bir buffer: programmatic jump sonrası ekstra pageChanged'ler olabiliyor
+    isPausedForProgrammaticJump.current = true;
     setTimeout(() => {
-      trackingEnabledRef.current = true;
-    }, 120);
+      isPausedForProgrammaticJump.current = false;
+    }, TRACKING_PAUSE_BUFFER_MS);
   };
 
   const handlePressPageThumb = (page: number) => {
@@ -320,7 +336,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
     sessionStartPageRef.current = null;
     sessionStartAtRef.current = null;
 
-    trackingEnabledRef.current = true;
+    isPausedForProgrammaticJump.current = false;
   }, [initialPage, storageKey, flushSession]);
 
   const toggleMinimized = () => {
@@ -367,7 +383,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
       lastEvent.page === page &&
       (lastEvent.bookUri ?? "") === (readingContext.bookUri ?? "") &&
       (lastEvent.targetId ?? "") === (readingContext.targetId ?? "") &&
-      now - lastEvent.at < 800
+      now - lastEvent.at < DEDUPE_THRESHOLD_MS
     ) {
       return;
     }
@@ -385,7 +401,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
     // IMPORTANT FIX:
     // Previously you kept old maxVisited/maxCounted (Math.max(prevVisited, page)),
     // which caused logs like 2->30 after a jump. We must RESET maxes on jumps.
-    if (!trackingEnabledRef.current) {
+    if (isPausedForProgrammaticJump.current) {
       lastSeenPageRef.current = page;
 
       // ✅ reset maxes to the jumped page (new chunk)

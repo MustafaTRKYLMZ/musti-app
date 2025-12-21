@@ -98,7 +98,7 @@ export function BookSectionsSidebar({
     [sectionsData]
   );
 
-  // ✅ FIXED resolver: endPage null no longer swallows all pages
+  // FIXED: previously, sections with a null endPage would match all subsequent pages in the resolver
   useEffect(() => {
     setSectionResolver(({ bookUri: uri, page }) => {
       if (!uri) return undefined;
