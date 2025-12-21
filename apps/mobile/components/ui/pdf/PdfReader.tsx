@@ -1,4 +1,11 @@
-import React, { FC, useState, useRef, useEffect, useMemo } from "react";
+import React, {
+  FC,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useCallback,
+} from "react";
 import { View, StyleSheet } from "react-native";
 import Pdf, { PdfRef } from "react-native-pdf";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -19,6 +26,13 @@ import {
   StripPos,
 } from "@/components/Books/FloatingPageStrip";
 
+import {
+  useReadingStatsStore,
+  type ReadingMode,
+} from "@/store/bookshelf/useReadingStatsStore";
+import { useReadingEventsStore } from "@/store/bookshelf/useReadingEventsStore";
+import { BookSection } from "@/store/bookshelf/useBookSectionsStore";
+
 const { colors: bookshelfColors } = bookshelfTheme;
 
 type PdfReaderProps = {
@@ -26,14 +40,35 @@ type PdfReaderProps = {
   name: string;
   setIsFullscreen: (value: boolean) => void;
   handleClose: () => void;
+
   source: { uri: string } | number;
   initialPage: number;
+
   handleLoadComplete: (numberOfPages: number, filePath: string) => void;
   handlePageChanged: (page: number, numberOfPages: number) => void;
+
   pdfRef?: React.RefObject<PdfRef | null>;
   onPressMenu?: () => void;
+
   currentPage?: number;
   totalPages?: number;
+
+  readingContext?: {
+    mode: ReadingMode;
+    date: string;
+    bookUri?: string;
+
+    targetId?: string;
+
+    // NOTE: kept for compatibility, but we don't use these anymore (Option A).
+    sectionId?: string;
+    sectionTitle?: string;
+  };
+
+  // NOTE: kept for compatibility, not used in Option A (resolver fills sections).
+  sections?: BookSection[];
+
+  enableStatsTracking?: boolean;
 };
 
 type StripPrefs = {
@@ -56,15 +91,36 @@ export const PdfReader: FC<PdfReaderProps> = ({
   onPressMenu,
   currentPage,
   totalPages,
+  readingContext,
+  enableStatsTracking = true,
+  sections,
 }) => {
-  const theme = useTheme();
-  const { colors } = theme;
+  const { colors } = useTheme();
+
+  // ✅ aggregate stats
+  const addPages = useReadingStatsStore((s) => s.addPages);
+  const lastEvent = useReadingStatsStore((s) => s.lastEvent);
+  const setLastEvent = useReadingStatsStore((s) => s.setLastEvent);
+
+  // ✅ detailed sessions
+  const addEvent = useReadingEventsStore((s) => s.addEvent);
+
+  // ✅ session refs (for detailed logging)
+  const sessionStartPageRef = useRef<number | null>(null);
+  const sessionStartAtRef = useRef<number | null>(null);
 
   const [scale, setScale] = useState(1);
   const [zoomHintVisible, setZoomHintVisible] = useState(false);
   const hideZoomTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // ✅ Strip prefs (persist)
+  const trackingEnabledRef = useRef(true);
+
+  const lastSeenPageRef = useRef<number | null>(null);
+  const maxVisitedRef = useRef<number | null>(null);
+  const maxCountedRef = useRef<number | null>(null);
+
+  const JUMP_THRESHOLD = 2;
+
   const [stripMode, setStripMode] = useState<StripMode>("vertical");
   const [stripMinimized, setStripMinimized] = useState(false);
   const [stripHidden, setStripHidden] = useState(false);
@@ -75,9 +131,10 @@ export const PdfReader: FC<PdfReaderProps> = ({
 
   const scheduleHideZoomHint = () => {
     if (hideZoomTimeoutRef.current) clearTimeout(hideZoomTimeoutRef.current);
-    hideZoomTimeoutRef.current = setTimeout(() => {
-      setZoomHintVisible(false);
-    }, 1200);
+    hideZoomTimeoutRef.current = setTimeout(
+      () => setZoomHintVisible(false),
+      1200
+    );
   };
 
   const showZoomHint = () => {
@@ -100,9 +157,93 @@ export const PdfReader: FC<PdfReaderProps> = ({
     showZoomHint();
   };
 
+  // -------------------------
+  // ✅ Session helpers
+  // -------------------------
+  const ensureSessionStarted = useCallback(
+    (page: number) => {
+      if (!enableStatsTracking) return;
+      if (!readingContext?.date) return;
+      if (!readingContext?.bookUri) return;
+
+      // session start
+      if (sessionStartPageRef.current == null) {
+        sessionStartPageRef.current = page;
+        sessionStartAtRef.current = Date.now();
+      }
+
+      // safety: if baselines somehow null, initialize
+      if (lastSeenPageRef.current == null) lastSeenPageRef.current = page;
+      if (maxVisitedRef.current == null) maxVisitedRef.current = page;
+      if (maxCountedRef.current == null) maxCountedRef.current = page;
+    },
+    [enableStatsTracking, readingContext?.date, readingContext?.bookUri]
+  );
+
+  const flushSession = useCallback(() => {
+    if (!enableStatsTracking) return;
+    if (!readingContext?.date) return;
+    if (!readingContext?.bookUri) return;
+
+    const start = sessionStartPageRef.current;
+    const startAt = sessionStartAtRef.current;
+    const end = maxVisitedRef.current;
+
+    // cleanup if incomplete
+    if (start == null || startAt == null || end == null) {
+      sessionStartPageRef.current = null;
+      sessionStartAtRef.current = null;
+      return;
+    }
+
+    // ✅ Option A:
+    // - Only log forward unique progress (end > start)
+    // - Do NOT attach sectionId/sectionTitle here
+    //   Store resolver (set from sidebar) will fill section based on pageTo.
+    if (end > start) {
+      addEvent({
+        date: readingContext.date,
+        at: Date.now(),
+        mode: readingContext.mode, // ✅ mode ayrımı
+        bookUri: readingContext.bookUri,
+        targetId: readingContext.targetId,
+        pageFrom: start,
+        pageTo: end,
+      });
+    }
+
+    sessionStartPageRef.current = null;
+    sessionStartAtRef.current = null;
+  }, [
+    addEvent,
+    enableStatsTracking,
+    readingContext?.bookUri,
+    readingContext?.date,
+    readingContext?.mode,
+    readingContext?.targetId,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      flushSession();
+      if (hideZoomTimeoutRef.current) clearTimeout(hideZoomTimeoutRef.current);
+    };
+  }, [flushSession]);
+
+  const pauseTrackingForNextTick = () => {
+    flushSession();
+
+    trackingEnabledRef.current = false;
+    // ✅ 0ms yerine ufak bir buffer: programmatic jump sonrası ekstra pageChanged'ler olabiliyor
+    setTimeout(() => {
+      trackingEnabledRef.current = true;
+    }, 120);
+  };
+
   const handlePressPageThumb = (page: number) => {
     if (!pdfRef?.current) return;
     if (page <= 0) return;
+    pauseTrackingForNextTick();
     pdfRef.current.setPage(page);
   };
 
@@ -155,7 +296,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
       } catch (e) {
         console.log("strip prefs load error", e);
       } finally {
-        if (alive) setStripPrefsReady(true); // ✅ kritik
+        if (alive) setStripPrefsReady(true);
       }
     })();
 
@@ -164,11 +305,23 @@ export const PdfReader: FC<PdfReaderProps> = ({
     };
   }, [storageKey]);
 
+  // ✅ Reset tracking baselines when doc / initialPage changes
   useEffect(() => {
-    return () => {
-      if (hideZoomTimeoutRef.current) clearTimeout(hideZoomTimeoutRef.current);
-    };
-  }, []);
+    // önce eski session’ı kapat
+    flushSession();
+
+    const start = Math.max(1, Math.floor(initialPage ?? 1));
+
+    lastSeenPageRef.current = start;
+    maxVisitedRef.current = start;
+    maxCountedRef.current = start;
+
+    // yeni session başlangıcı: ilk valid pageChanged’de ensureSessionStarted çalışacak
+    sessionStartPageRef.current = null;
+    sessionStartAtRef.current = null;
+
+    trackingEnabledRef.current = true;
+  }, [initialPage, storageKey, flushSession]);
 
   const toggleMinimized = () => {
     setStripMinimized((v) => {
@@ -192,6 +345,109 @@ export const PdfReader: FC<PdfReaderProps> = ({
       saveStripPrefs({ mode: nm });
       return nm;
     });
+  };
+
+  const handlePageChangedInternal = (page: number, numberOfPages: number) => {
+    // keep existing behavior
+    handlePageChanged(page, numberOfPages);
+
+    // stats + events tracking
+    if (!enableStatsTracking) return;
+    if (!readingContext?.date) return;
+
+    ensureSessionStarted(page);
+
+    const now = Date.now();
+
+    // ✅ dedupe noisy duplicate events (include targetId!)
+    if (
+      lastEvent &&
+      lastEvent.date === readingContext.date &&
+      lastEvent.mode === readingContext.mode &&
+      lastEvent.page === page &&
+      (lastEvent.bookUri ?? "") === (readingContext.bookUri ?? "") &&
+      (lastEvent.targetId ?? "") === (readingContext.targetId ?? "") &&
+      now - lastEvent.at < 800
+    ) {
+      return;
+    }
+
+    setLastEvent({
+      date: readingContext.date,
+      mode: readingContext.mode,
+      page,
+      bookUri: readingContext.bookUri,
+      targetId: readingContext.targetId,
+      at: now,
+    });
+
+    // ✅ If tracking paused for a programmatic jump, resync baselines
+    // IMPORTANT FIX:
+    // Previously you kept old maxVisited/maxCounted (Math.max(prevVisited, page)),
+    // which caused logs like 2->30 after a jump. We must RESET maxes on jumps.
+    if (!trackingEnabledRef.current) {
+      lastSeenPageRef.current = page;
+
+      // ✅ reset maxes to the jumped page (new chunk)
+      maxVisitedRef.current = page;
+      maxCountedRef.current = page;
+
+      // ✅ new session chunk from this page
+      sessionStartPageRef.current = page;
+      sessionStartAtRef.current = now;
+
+      return;
+    }
+
+    const lastSeen = lastSeenPageRef.current;
+    if (lastSeen == null) {
+      lastSeenPageRef.current = page;
+      maxVisitedRef.current = page;
+      maxCountedRef.current = page;
+      return;
+    }
+
+    const step = page - lastSeen;
+
+    // Teleport detection: big forward/back jumps should NOT count skipped pages.
+    // ✅ jump = close chunk + start new chunk (and RESET maxes)
+    if (Math.abs(step) > JUMP_THRESHOLD) {
+      flushSession();
+
+      lastSeenPageRef.current = page;
+
+      // ✅ reset: otherwise old maxVisited makes fake ranges in logs
+      maxVisitedRef.current = page;
+      maxCountedRef.current = page;
+
+      sessionStartPageRef.current = page;
+      sessionStartAtRef.current = now;
+
+      return;
+    }
+
+    // Update last seen
+    lastSeenPageRef.current = page;
+
+    // Only consider forward movement for "maxVisited"
+    const currentMax = maxVisitedRef.current ?? page;
+    const nextMax = Math.max(currentMax, page);
+    maxVisitedRef.current = nextMax;
+
+    const countedMax = maxCountedRef.current ?? nextMax;
+
+    // Count only the NEW increase in maxVisited (prevents zigzag inflation)
+    const inc = nextMax - countedMax;
+    if (inc > 0) {
+      addPages({
+        date: readingContext.date,
+        pages: inc,
+        mode: readingContext.mode,
+        bookUri: readingContext.bookUri,
+        targetId: readingContext.targetId,
+      });
+      maxCountedRef.current = nextMax;
+    }
   };
 
   return (
@@ -239,7 +495,10 @@ export const PdfReader: FC<PdfReaderProps> = ({
               <IconButton
                 name="close-outline"
                 size={iconSizes.xl}
-                onPress={handleClose}
+                onPress={() => {
+                  flushSession();
+                  handleClose();
+                }}
                 style={styles.iconButton}
                 accessibilityLabel="Close reader"
               />
@@ -255,13 +514,11 @@ export const PdfReader: FC<PdfReaderProps> = ({
               onPress={handleZoomOut}
               accessibilityLabel="Zoom out"
             />
-
             <IconButton
               name="add-outline"
               onPress={handleZoomIn}
               accessibilityLabel="Zoom in"
             />
-
             {onPressMenu && (
               <IconButton
                 name="menu"
@@ -316,7 +573,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
           fitPolicy={2}
           onLoadComplete={handleLoadComplete}
           onError={(error) => console.log("PDF error:", error)}
-          onPageChanged={handlePageChanged}
+          onPageChanged={handlePageChangedInternal}
           onScaleChanged={(newScale: number) =>
             handleInternalScaleChanged(newScale)
           }

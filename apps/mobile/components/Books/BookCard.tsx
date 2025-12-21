@@ -1,5 +1,5 @@
 // apps/mobile/components/ui/Books/BookCard.tsx
-import React, { FC, useRef, useState, useEffect } from "react";
+import React, { FC, useRef, useState, useEffect, useMemo } from "react";
 import {
   TouchableOpacity,
   View,
@@ -21,8 +21,9 @@ import {
   useTheme,
   Card,
 } from "@budget/ui-native";
-import { IconButton } from "@/components/ui/AppIcon";
+import { IconButton, BaseIcon } from "@/components/ui/AppIcon";
 import type { LocalPdfFile } from "@/utils/getPdfsDirectory";
+import { Dimensions } from "react-native";
 
 type BookCardProps = {
   file: LocalPdfFile;
@@ -31,8 +32,10 @@ type BookCardProps = {
   onRename?: (newName: string) => void;
   lastPage?: number;
   totalPages?: number;
+
   todayPages?: number;
   todayTargetPages?: number;
+
   variant?: "row" | "grid";
 };
 
@@ -83,6 +86,9 @@ export const BookCard: FC<BookCardProps> = ({
 
   const [renameVisible, setRenameVisible] = useState(false);
   const [tempName, setTempName] = useState(file.name);
+
+  // ✅ stats modal
+  const [statsVisible, setStatsVisible] = useState(false);
 
   const progress =
     totalPages && totalPages > 0 && lastPage && lastPage > 0
@@ -140,15 +146,29 @@ export const BookCard: FC<BookCardProps> = ({
     opacity: appearAnim,
   };
 
+  const POPOVER_W = 160;
+  const EDGE = 8;
+
+  const clamp = (v: number, min: number, max: number) =>
+    Math.max(min, Math.min(max, v));
+
   const openMenu = () => {
     const handle = findNodeHandle(menuIconRef.current);
     if (!handle) return;
 
+    const screenW = Dimensions.get("window").width;
+
     UIManager.measure(handle, (_x, _y, width, height, pageX, pageY) => {
-      setMenuPos({
-        x: pageX + width - 140,
-        y: pageY + height + 8,
-      });
+      // default: iconun sağından popover aç
+      const desiredX = pageX + width - POPOVER_W;
+
+      // ✅ clamp: ekran dışına taşmasın
+      const x = clamp(desiredX, EDGE, screenW - POPOVER_W - EDGE);
+
+      // y için de ufak güvenlik payı
+      const y = Math.max(EDGE, pageY + height + 8);
+
+      setMenuPos({ x, y });
       setMenuVisible(true);
     });
   };
@@ -183,6 +203,33 @@ export const BookCard: FC<BookCardProps> = ({
     setMenuVisible(false);
     onDelete();
   };
+
+  const openStatsFromMenu = () => {
+    setMenuVisible(false);
+    setStatsVisible(true);
+  };
+
+  // ✅ stats strings
+  const safeTodayPages = Math.max(0, Number(todayPages ?? 0) || 0);
+  const safeTodayTarget = Math.max(0, Number(todayTargetPages ?? 0) || 0);
+
+  const showTodayHint = safeTodayPages > 0 || safeTodayTarget > 0;
+
+  const todayLine = useMemo(() => {
+    return `${safeTodayPages}`;
+  }, [safeTodayPages]);
+
+  const goalLine = useMemo(() => {
+    if (safeTodayTarget <= 0) return null;
+    return `Goal: ${safeTodayTarget}`;
+  }, [safeTodayTarget]);
+
+  const lastPosLine = useMemo(() => {
+    const lp = Math.max(0, Number(lastPage ?? 0) || 0);
+    const tp = Math.max(0, Number(totalPages ?? 0) || 0);
+    if (tp > 0) return `${lp} / ${tp}`;
+    return lp > 0 ? String(lp) : "—";
+  }, [lastPage, totalPages]);
 
   return (
     <>
@@ -250,8 +297,12 @@ export const BookCard: FC<BookCardProps> = ({
               </Svg>
             </View>
 
-            {/* Menu icon (same position in both variants) */}
-            <View style={styles.menuIconWrapper} ref={menuIconRef}>
+            {/* ✅ ONLY ellipsis in the corner (same place) */}
+            <View
+              style={styles.menuIconWrapper}
+              ref={menuIconRef}
+              collapsable={false}
+            >
               <IconButton
                 name="ellipsis-vertical"
                 size={iconSizes.md}
@@ -271,6 +322,39 @@ export const BookCard: FC<BookCardProps> = ({
               >
                 {file.name}
               </MText>
+
+              {/* ✅ Today hint with small icon (12px) */}
+              {showTodayHint && (
+                <View style={styles.todayBlock}>
+                  <View style={styles.todayRow}>
+                    <BaseIcon
+                      family="ion"
+                      name="flame-outline"
+                      size={12}
+                      color={colors.textSecondary}
+                    />
+                    <MText
+                      variant="caption"
+                      color="textSecondary"
+                      numberOfLines={1}
+                      style={styles.todayText}
+                    >
+                      Today: {todayLine}
+                    </MText>
+                  </View>
+
+                  {!!goalLine && (
+                    <MText
+                      variant="caption"
+                      color="textSecondary"
+                      numberOfLines={1}
+                      style={styles.goalText}
+                    >
+                      {goalLine}
+                    </MText>
+                  )}
+                </View>
+              )}
             </View>
 
             {/* Progress */}
@@ -338,8 +422,30 @@ export const BookCard: FC<BookCardProps> = ({
               },
             ]}
           >
+            {/* ✅ Stats entry inside the menu */}
+            <TouchableOpacity
+              style={styles.menuItemRow}
+              onPress={openStatsFromMenu}
+            >
+              <BaseIcon
+                family="ion"
+                name="stats-chart-outline"
+                size={16}
+                color={colors.textPrimary}
+              />
+              <MText variant="body" color="textPrimary">
+                Stats
+              </MText>
+            </TouchableOpacity>
+
             {onRename && (
-              <TouchableOpacity style={styles.menuItem} onPress={openRename}>
+              <TouchableOpacity style={styles.menuItemRow} onPress={openRename}>
+                <BaseIcon
+                  family="ion"
+                  name="create-outline"
+                  size={16}
+                  color={colors.textPrimary}
+                />
                 <MText variant="body" color="textPrimary">
                   Rename
                 </MText>
@@ -347,14 +453,118 @@ export const BookCard: FC<BookCardProps> = ({
             )}
 
             <TouchableOpacity
-              style={styles.menuItem}
+              style={styles.menuItemRow}
               onPress={handleDeleteFromMenu}
             >
+              <BaseIcon
+                family="ion"
+                name="trash-outline"
+                size={16}
+                color={colors.danger}
+              />
               <MText variant="body" color="danger">
                 Delete
               </MText>
             </TouchableOpacity>
           </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ✅ Stats modal */}
+      <Modal
+        visible={statsVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setStatsVisible(false)}
+      >
+        <TouchableOpacity
+          style={[
+            styles.statsOverlay,
+            { backgroundColor: colors.backdropStrong },
+          ]}
+          activeOpacity={1}
+          onPress={() => setStatsVisible(false)}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={() => {}}
+            style={[
+              styles.statsBox,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.borderSubtle,
+              },
+            ]}
+          >
+            <View style={styles.statsHeaderRow}>
+              <MText
+                variant="bodyStrong"
+                color="textPrimary"
+                numberOfLines={1}
+                style={{ flex: 1 }}
+              >
+                {file.name}
+              </MText>
+              <IconButton
+                name="close-outline"
+                size={iconSizes.lg}
+                color={colors.textPrimary}
+                onPress={() => setStatsVisible(false)}
+              />
+            </View>
+
+            <View style={{ height: spacing.sm }} />
+
+            <View style={styles.statsRow}>
+              <MText variant="body" color="textSecondary">
+                Today
+              </MText>
+              <MText variant="body" color="textPrimary">
+                {todayLine}
+              </MText>
+            </View>
+
+            {goalLine && (
+              <View style={styles.statsRow}>
+                <MText variant="body" color="textSecondary">
+                  Goal
+                </MText>
+                <MText variant="body" color="textPrimary">
+                  {safeTodayTarget} pages
+                </MText>
+              </View>
+            )}
+
+            <View style={styles.statsRow}>
+              <MText variant="body" color="textSecondary">
+                Last position
+              </MText>
+              <MText variant="body" color="textPrimary">
+                {lastPosLine}
+              </MText>
+            </View>
+
+            <View style={styles.statsRow}>
+              <MText variant="body" color="textSecondary">
+                Total progress
+              </MText>
+              <MText variant="body" color="textPrimary">
+                {totalPages && totalPages > 0
+                  ? `${Math.round(progress * 100)}%`
+                  : "—"}
+              </MText>
+            </View>
+
+            <View style={{ height: spacing.md }} />
+
+            <MText
+              variant="caption"
+              color="textSecondary"
+              style={{ opacity: 0.9 }}
+            >
+              More details will be on the Stats screen (next step).
+            </MText>
+          </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
 
@@ -521,6 +731,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
+  // today row (with 12 icon)
+  todayRow: {
+    marginTop: 2,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  todayText: {
+    textAlign: "center",
+    opacity: 0.92,
+  },
+
   cardHint: {
     marginTop: spacing.xs,
   },
@@ -551,16 +773,53 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     borderRadius: radii.lg,
     borderWidth: 1,
-    width: 140,
+    width: 160,
     elevation: 6,
     shadowColor: "#000",
     shadowOpacity: 0.15,
     shadowRadius: 8,
   },
-  menuItem: {
+  menuItemRow: {
     paddingVertical: spacing.sm,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
   },
 
+  // stats modal
+  statsOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: spacing.lg,
+  },
+  statsBox: {
+    width: "100%",
+    borderRadius: radii.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+  },
+  statsHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  statsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: spacing.xs,
+  },
+  todayBlock: {
+    marginTop: 2,
+    alignItems: "center",
+  },
+  goalText: {
+    marginTop: 1,
+    opacity: 0.9,
+    textAlign: "center",
+  },
+  // rename
   renameOverlay: {
     flex: 1,
     justifyContent: "center",

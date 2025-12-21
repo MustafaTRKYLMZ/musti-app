@@ -3,6 +3,7 @@ import { View, StyleSheet } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { MText, spacing, iconSizes, useTheme } from "@budget/ui-native";
 import { PdfRef } from "react-native-pdf";
+import dayjs from "dayjs";
 
 import { PdfReader } from "@/components/ui/pdf/PdfReader";
 import { IconButton } from "@/components/ui/AppIcon";
@@ -17,6 +18,8 @@ export default function TargetViewerScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { showToast } = useToast();
+
+  const today = dayjs().format("YYYY-MM-DD");
 
   const params = useLocalSearchParams<{ targetId?: string }>();
   const targetId = params.targetId ? String(params.targetId) : undefined;
@@ -148,7 +151,6 @@ export default function TargetViewerScreen() {
     );
   }
 
-  // If no active item, effect will close; render minimal meanwhile
   if (!displayItem || !uri) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -196,13 +198,20 @@ export default function TargetViewerScreen() {
         handleClose={handleClose}
         source={source}
         initialPage={initialPage}
-        handleLoadComplete={handleLoadComplete}
+        handleLoadComplete={handleLoadComplete as any}
         handlePageChanged={handlePageChanged}
         pdfRef={pdfRef}
         onPressMenu={() => setSectionsOpen(true)}
         currentPage={currentPage}
         totalPages={totalPages ?? undefined}
+        readingContext={{
+          mode: "target",
+          date: today,
+          bookUri: uri,
+          targetId: target.id,
+        }}
       />
+
       <BookSectionsSidebar
         visible={sectionsOpen}
         onClose={() => setSectionsOpen(false)}

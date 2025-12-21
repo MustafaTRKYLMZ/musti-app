@@ -6,6 +6,7 @@ import { SHELF_PLANK_HEIGHT } from "./ShelfPlankWrapper";
 import { ShelfWithPlank } from "./ShelfWithPlank";
 
 const { colors } = bookshelfTheme;
+const today = new Date().toISOString().split("T")[0];
 
 type LastReadBookProps = {
   lastReadBooks: Array<{
@@ -27,11 +28,12 @@ type LastReadBookProps = {
     file: { uri: string; name: string; lastOpened: number },
     newName: string
   ) => void;
-  progressMap: { [uri: string]: { lastPage: number; totalPages: number } };
-  readingStats: { [key: string]: { pagesRead: number; targetPages: number } };
-};
 
-const today = new Date().toISOString().split("T")[0];
+  progressMap: { [uri: string]: { lastPage: number; totalPages: number } };
+
+  // ✅ UPDATED
+  readingStats: { [key: string]: { pagesTotal: number; targetPages: number } };
+};
 
 export const LastReadBook: FC<LastReadBookProps> = ({
   lastReadBooks,
@@ -75,8 +77,12 @@ export const LastReadBook: FC<LastReadBookProps> = ({
               ]}
               renderItem={({ item }) => {
                 const progress = progressMap[item.uri];
-                const statKey = `${item.uri}:${today}`;
+
+                const statKey = `${item.uri}::${today}`;
                 const todayStat = readingStats[statKey];
+
+                const todayPages = todayStat?.pagesTotal ?? 0;
+                const todayTargetPages = todayStat?.targetPages ?? 0;
 
                 return (
                   <View
@@ -91,8 +97,8 @@ export const LastReadBook: FC<LastReadBookProps> = ({
                       onDelete={() => handleDeletePdf(item)}
                       lastPage={progress?.lastPage}
                       totalPages={progress?.totalPages}
-                      todayPages={todayStat?.pagesRead}
-                      todayTargetPages={todayStat?.targetPages}
+                      todayPages={todayPages}
+                      todayTargetPages={todayTargetPages}
                       onRename={(newName) => renameBook(item, newName)}
                       variant="row"
                     />

@@ -31,13 +31,17 @@ const bookshelfColorsBase = {
   primaryDark: "#7F1D1D",
   primaryLight: "#F97373",
 
-  background: "#2C1810",
-  backgroundSecondary: "#4B2A16",
-  backgroundBackdrop: "rgba(22, 12, 6, 0.85)",
-  backgroundHover: "#5A3721",
+  // ✅ zemin – daha koyu, ama hâlâ kullanılabilir
+  background: "#D2B48C",          // tan / warm parchment
+  backgroundSecondary: "#C4A679",
+  backgroundHover: "#D9B891",
 
-  surface: "#D9B891",
-  surfaceElevated: "#E5C9A8",
+  backgroundBackdrop: "rgba(22, 12, 6, 0.78)",
+
+  // ✅ kart yüzeyleri
+  surface: "#E5C9A8",
+  surfaceElevated: "#EAD4B6",
+  surfaceStrong: "#D9B891",
 
   textPrimary: "#2F241B",
   textSecondary: "#5A4B3C",
@@ -49,10 +53,10 @@ const bookshelfColorsBase = {
   warning: "#FACC15",
 
   borderSubtle: "rgba(120, 68, 30, 0.35)",
-  surfaceStrong: "#E5C9A8",
   backdropStrong: "rgba(15, 10, 5, 0.75)",
-  shadowStrong: "rgba(0,0,0,0.45)",
+  shadowStrong: "rgba(0,0,0,0.4)",
 } as const;
+
 
 const bookshelfColors: ThemeColors = {
   ...bookshelfColorsBase,

@@ -1,14 +1,15 @@
-import { bookshelfTheme, MText, radii, spacing } from "@budget/ui-native";
-import { router } from "expo-router";
+import React, { FC, useMemo } from "react";
 import { View, FlatList, StyleSheet } from "react-native";
+import { useRouter } from "expo-router";
+import { bookshelfTheme, MText, radii, spacing } from "@budget/ui-native";
 import { ShelfHeader } from "../ShelfHeader";
-import { FC } from "react";
 import { PlanCard, PlanInfo } from "@/components/Books/PlanCard";
 
 const { colors } = bookshelfTheme;
 
 type PlanListProps = {
   setPlanModalVisible: (visible: boolean) => void;
+
   plans: Array<{
     id: string;
     name: string;
@@ -18,6 +19,7 @@ type PlanListProps = {
     }>;
     totalReadToday: number;
   }>;
+
   suppressNextPlanOpenRef: React.MutableRefObject<boolean>;
   openPlanDirect: (planId: string) => void;
   handleDeletePlan: (planId: string) => void;
@@ -30,6 +32,10 @@ export const PlanList: FC<PlanListProps> = ({
   openPlanDirect,
   handleDeletePlan,
 }) => {
+  const router = useRouter();
+
+  const today = useMemo(() => new Date().toISOString().split("T")[0], []);
+
   return (
     <View style={styles.shelfSection}>
       <ShelfHeader title="Plans" handleOpen={() => setPlanModalVisible(true)} />
@@ -74,7 +80,6 @@ export const PlanList: FC<PlanListProps> = ({
                       openPlanDirect(item.id);
                     }}
                     onEditPlan={() => {
-                      // menu ile karta basma çakışmasın diye kısa süre baskıla
                       suppressNextPlanOpenRef.current = true;
                       setTimeout(
                         () => (suppressNextPlanOpenRef.current = false),
@@ -94,7 +99,6 @@ export const PlanList: FC<PlanListProps> = ({
                       );
                       handleDeletePlan(item.id);
                     }}
-                    // ✅ horizontal list için marginleri sıfırla
                     wrapperStyle={{
                       marginHorizontal: 0,
                       marginBottom: 0,
@@ -133,7 +137,6 @@ const styles = StyleSheet.create({
     paddingRight: spacing.lg,
   },
 
-  // ✅ CurrentPlanCard'ı yatay listede düzgün ölçekte tut
   cardItem: {
     width: 300,
     marginRight: spacing.sm,

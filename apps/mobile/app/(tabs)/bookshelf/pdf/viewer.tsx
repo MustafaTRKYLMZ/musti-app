@@ -6,7 +6,6 @@ import dayjs from "dayjs";
 
 import { PdfReader } from "@/components/ui/pdf/PdfReader";
 import { useBooksStore } from "@/store/bookshelf/useBooksStore";
-import { useReadingStatsStore } from "@/store/bookshelf/useReadingStatsStore";
 import { BookSectionsSidebar } from "@/components/Books/BookSectionsSidebar";
 import { PdfRef } from "react-native-pdf";
 
@@ -21,6 +20,7 @@ export default function PdfViewerScreen() {
     returnTo?: string;
     returnBookUri?: string;
   }>();
+
   const returnTo = params.returnTo as string | undefined;
   const returnBookUri = params.returnBookUri
     ? decodeURIComponent(params.returnBookUri)
@@ -35,6 +35,8 @@ export default function PdfViewerScreen() {
     ? (jumpPageParam as number)
     : null;
 
+  const today = dayjs().format("YYYY-MM-DD");
+
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [initialPage, setInitialPage] = useState(1);
   const [sectionsOpen, setSectionsOpen] = useState(false);
@@ -48,15 +50,6 @@ export default function PdfViewerScreen() {
   const setProgress = useBooksStore((s) => s.setProgress);
   const currentProgress = uri ? progressMap[uri] : undefined;
 
-  const addPages = useReadingStatsStore((s) => s.addPages);
-  const today = dayjs().format("YYYY-MM-DD");
-
-  const [sessionStartPage, setSessionStartPage] = useState<number | null>(null);
-  const [maxPageVisited, setMaxPageVisited] = useState<number | null>(null);
-  const [sessionLastPage, setSessionLastPage] = useState<number | null>(null);
-  const [sessionTotalPages, setSessionTotalPages] = useState<number | null>(
-    currentProgress?.totalPages ?? null
-  );
   const openedSectionsOnceRef = useRef(false);
   const appliedJumpOnceRef = useRef(false);
 
@@ -70,17 +63,13 @@ export default function PdfViewerScreen() {
   useEffect(() => {
     if (!uri) return;
 
-    if (currentProgress?.lastPage && currentProgress.lastPage > 0) {
-      setInitialPage(currentProgress.lastPage);
-      setSessionStartPage(currentProgress.lastPage);
-      setSessionLastPage(currentProgress.lastPage);
-      setMaxPageVisited(currentProgress.lastPage);
-    } else {
-      setInitialPage(1);
-      setSessionStartPage(1);
-      setSessionLastPage(1);
-      setMaxPageVisited(1);
-    }
+    const last =
+      currentProgress?.lastPage && currentProgress.lastPage > 0
+        ? currentProgress.lastPage
+        : 1;
+
+    setInitialPage(last);
+    setCurrentPage(last);
   }, [uri, currentProgress]);
 
   if (!uri) {
@@ -97,7 +86,7 @@ export default function PdfViewerScreen() {
 
   const handleLoadComplete = (pages: number) => {
     setTotalPages(pages);
-    setSessionTotalPages(pages);
+
     setProgress({
       uri,
       name,
@@ -105,11 +94,9 @@ export default function PdfViewerScreen() {
       totalPages: pages,
     });
 
-    // ✅ apply jumpPage once after load
     if (jumpPage && !appliedJumpOnceRef.current) {
       appliedJumpOnceRef.current = true;
       const safe = Math.max(1, Math.min(pages, jumpPage));
-      // next tick (ref hazır olsun)
       setTimeout(() => {
         pdfRef.current?.setPage(safe);
       }, 0);
@@ -118,40 +105,17 @@ export default function PdfViewerScreen() {
 
   const handlePageChanged = (page: number, total: number) => {
     setCurrentPage(page);
-    setSessionTotalPages(total);
-    setSessionLastPage(page);
-    setMaxPageVisited((prev) => {
-      if (prev == null) return page;
-      return Math.max(prev, page);
-    });
+    setTotalPages(total);
   };
 
   const handleClose = () => {
-    if (!uri) {
-      router.replace("/(tabs)/bookshelf");
-      return;
-    }
-
-    const start = sessionStartPage ?? 1;
-    const end =
-      maxPageVisited ?? sessionLastPage ?? sessionStartPage ?? initialPage ?? 1;
-
-    const pagesDelta = Math.max(0, end - start);
-
     setProgress({
       uri,
       name,
-      lastPage: sessionLastPage ?? 1,
-      totalPages: sessionTotalPages ?? currentProgress?.totalPages ?? undefined,
+      lastPage: currentPage ?? 1,
+      totalPages: totalPages ?? currentProgress?.totalPages ?? undefined,
     });
 
-    if (pagesDelta > 0) {
-      addPages({
-        bookUri: uri,
-        date: today,
-        pages: pagesDelta,
-      });
-    }
     if (returnTo === "createTarget") {
       router.replace({
         pathname: "/(tabs)/bookshelf",
@@ -166,15 +130,6 @@ export default function PdfViewerScreen() {
     router.replace("/(tabs)/bookshelf");
   };
 
-  const handleOpenSections = () => setSectionsOpen(true);
-  const handleCloseSections = () => setSectionsOpen(false);
-
-  const handleJumpToPage = (page: number) => {
-    if (!pdfRef.current) return;
-    if (page <= 0) return;
-    pdfRef.current.setPage(page);
-  };
-
   return (
     <>
       <PdfReader
@@ -184,19 +139,24 @@ export default function PdfViewerScreen() {
         handleClose={handleClose}
         source={source}
         initialPage={initialPage}
-        handleLoadComplete={handleLoadComplete}
+        handleLoadComplete={handleLoadComplete as any}
         handlePageChanged={handlePageChanged}
         pdfRef={pdfRef}
-        onPressMenu={handleOpenSections}
+        onPressMenu={() => setSectionsOpen(true)}
         currentPage={currentPage}
         totalPages={totalPages ?? undefined}
+        readingContext={{ mode: "normal", date: today, bookUri: uri }}
       />
 
       <BookSectionsSidebar
         visible={sectionsOpen}
-        onClose={handleCloseSections}
+        onClose={() => setSectionsOpen(false)}
         bookUri={uri}
-        onJumpToPage={handleJumpToPage}
+        onJumpToPage={(page) => {
+          if (!pdfRef.current) return;
+          if (page <= 0) return;
+          pdfRef.current.setPage(page);
+        }}
       />
     </>
   );
