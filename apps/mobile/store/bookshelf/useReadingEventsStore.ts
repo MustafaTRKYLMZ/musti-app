@@ -2,8 +2,8 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { ReadingMode } from "@budget/core";
 
-export type ReadingMode = "normal" | "plan" | "target";
 
 export type ReadingEvent = {
   id: string;

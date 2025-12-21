@@ -21,57 +21,17 @@ import {
 } from "@budget/ui-native";
 
 import { listLocalPdfs, type LocalPdfFile } from "@/utils/getPdfsDirectory";
-import {
-  useReadingStatsStore,
-  type ReadingMode,
-} from "@/store/bookshelf/useReadingStatsStore";
+import { useReadingStatsStore } from "@/store/bookshelf/useReadingStatsStore";
+import { toNonNegativeInt } from "@/utils/toNonNegativeInt";
+import { formatModeParts } from "@/utils/formatModeParts";
+import { guessNameFromUri } from "@/utils/guessNameFromUri";
+import { ReadingMode } from "@budget/core";
 
 type BookRow = {
   bookUri: string;
   bookName: string;
   pagesTotal: number;
   pagesByMode: Record<ReadingMode, number>;
-};
-
-const clamp0 = (n: number) => Math.max(0, Math.floor(Number(n) || 0));
-
-const guessNameFromUri = (uri: string) => {
-  try {
-    const last = uri.split("/").pop() || uri;
-    return decodeURIComponent(last);
-  } catch {
-    return uri;
-  }
-};
-
-const formatModeParts = (pagesByMode: Record<ReadingMode, number>) => {
-  const parts: Array<{
-    mode: ReadingMode;
-    value: number;
-    icon: string;
-    label: string;
-  }> = [
-    {
-      mode: "target",
-      value: clamp0(pagesByMode?.target ?? 0),
-      icon: "locate-outline",
-      label: "Target",
-    },
-    {
-      mode: "plan",
-      value: clamp0(pagesByMode?.plan ?? 0),
-      icon: "calendar-outline",
-      label: "Plan",
-    },
-    {
-      mode: "normal",
-      value: clamp0(pagesByMode?.normal ?? 0),
-      icon: "book-outline",
-      label: "Normal",
-    },
-  ];
-
-  return parts.filter((p) => p.value > 0);
 };
 
 export default function StatsScreen() {
@@ -130,7 +90,7 @@ export default function StatsScreen() {
   // TODAY summary
   // =========================
   const todayGlobal = byDate?.[today];
-  const todayTotal = clamp0(todayGlobal?.pagesTotal ?? 0);
+  const todayTotal = toNonNegativeInt(todayGlobal?.pagesTotal ?? 0);
 
   const todayModeParts = useMemo(() => {
     return formatModeParts(
@@ -157,7 +117,7 @@ export default function StatsScreen() {
       rows.push({
         bookUri,
         bookName: name,
-        pagesTotal: clamp0(stat.pagesTotal ?? 0),
+        pagesTotal: toNonNegativeInt(stat.pagesTotal ?? 0),
         pagesByMode: (stat.pagesByMode ?? {
           normal: 0,
           plan: 0,
@@ -174,11 +134,11 @@ export default function StatsScreen() {
   // WEEK + MONTH totals
   // =========================
   const weekTotal = useMemo(
-    () => clamp0(getWeekTotal(today)),
+    () => toNonNegativeInt(getWeekTotal(today)),
     [getWeekTotal, today]
   );
   const monthTotal = useMemo(
-    () => clamp0(getMonthTotal(today)),
+    () => toNonNegativeInt(getMonthTotal(today)),
     [getMonthTotal, today]
   );
 
@@ -187,7 +147,7 @@ export default function StatsScreen() {
     const rows: Array<{ bookUri: string; bookName: string; pages: number }> =
       [];
     for (const b of books) {
-      const pages = clamp0(getBookWeekTotal(b.uri, today));
+      const pages = toNonNegativeInt(getBookWeekTotal(b.uri, today));
       if (pages <= 0) continue;
       rows.push({ bookUri: b.uri, bookName: b.name, pages });
     }
@@ -199,7 +159,7 @@ export default function StatsScreen() {
     const rows: Array<{ bookUri: string; bookName: string; pages: number }> =
       [];
     for (const b of books) {
-      const pages = clamp0(getBookMonthTotal(b.uri, today));
+      const pages = toNonNegativeInt(getBookMonthTotal(b.uri, today));
       if (pages <= 0) continue;
       rows.push({ bookUri: b.uri, bookName: b.name, pages });
     }

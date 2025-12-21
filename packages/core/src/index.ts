@@ -20,14 +20,17 @@ export * from "./types/transaction";
 export * from "./types/simulation";
 export * from "./types/balance";
 export * from "./types/scope";
-export * from "./types/cashflowLike";
 export * from "./types/fixedPlan";
 export * from "./types/store";
 export * from "./types/cashflowLike";
 export * from "./types/book";
 export * from "./types/bookProgress";
-export * from "./types/reading";
 export * from "./types/readingPlan";
+//types - stats
+export * from "./types/stats/addPagesInput";
+export * from "./types/stats/dailyReadingStat";
+export * from "./types/stats/lastEvent";
+export * from "./types/stats/readingMode";
 
 // books
 export * from "./books/readingPlanUtils";

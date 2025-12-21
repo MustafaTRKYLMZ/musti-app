@@ -1,59 +1,20 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
-export type ReadingMode = "normal" | "plan" | "target";
-
-export type DailyReadingStat = {
-  id: string; // date OR `${bookUri}::${date}` OR `${targetId}::${date}`
-  date: string; // YYYY-MM-DD
-
-  bookUri?: string; // book-level records
-  targetId?: string; // target-level records
-
-  pagesTotal: number;
-  pagesByMode: Record<ReadingMode, number>;
-
-  updatedAt: string; // ISO
-};
-
-type AddPagesInput = {
-  date: string; // YYYY-MM-DD
-  pages: number;
-  mode: ReadingMode;
-
-  bookUri?: string; // optional -> byBookDate updated too
-  targetId?: string; // optional -> byTargetDate updated too (meaningful esp. mode==="target")
-};
-
-type LastEvent = {
-  date: string;
-  mode: ReadingMode;
-  page: number;
-
-  bookUri?: string;
-  targetId?: string;
-
-  at: number; // ms
-};
-
+import { toNonNegativeInt } from "@/utils/toNonNegativeInt";
+import { addDays } from "@/utils/addDays";
+import { dateLTE } from "@/utils/dateLTE";
+import { emptyByMode } from "@/utils/emptyByMode";
+import { makeBookKey } from "@/utils/makeBookKey";
+import { makeTargetKey } from "@/utils/makeTargetKey";
+import { DailyReadingStat,LastEvent,AddPagesInput, ReadingMode} from "@budget/core";
 interface ReadingStatsState {
-  // global daily stats (date -> stat)
   byDate: Record<string, DailyReadingStat>;
-
-  // book-level daily stats (`${bookUri}::${date}` -> stat)
   byBookDate: Record<string, DailyReadingStat>;
-
-  // target-level daily stats (`${targetId}::${date}` -> stat)
   byTargetDate: Record<string, DailyReadingStat>;
-
-  // dedupe guard for noisy pageChanged
   lastEvent?: LastEvent;
-
   addPages: (input: AddPagesInput) => void;
   setLastEvent: (e: LastEvent | undefined) => void;
-
-  // selectors
   getForDate: (date: string) => DailyReadingStat | undefined;
   getForBookDate: (bookUri: string, date: string) => DailyReadingStat | undefined;
   getForTargetDate: (targetId: string, date: string) => DailyReadingStat | undefined;
@@ -72,43 +33,12 @@ interface ReadingStatsState {
   getTargetWeekTotal: (targetId: string, todayDate: string) => number;
   getTargetMonthTotal: (targetId: string, todayDate: string) => number;
 
-  // book-only extras
   getBookAllTimeTotal: (bookUri: string) => number;
   getBookBestDay: (bookUri: string) => { date: string; pages: number } | undefined;
   getBookStreak: (bookUri: string, todayDate: string) => number;
 
   reset: () => void;
 }
-
-const emptyByMode = (): Record<ReadingMode, number> => ({
-  normal: 0,
-  plan: 0,
-  target: 0,
-});
-
-// YYYY-MM-DD utilities (no dayjs in store)
-const toDateParts = (d: string) => {
-  const [y, m, day] = d.split("-").map((x) => Number(x));
-  return { y, m, day };
-};
-
-const addDays = (date: string, delta: number) => {
-  const { y, m, day } = toDateParts(date);
-  const dt = new Date(Date.UTC(y, m - 1, day));
-  dt.setUTCDate(dt.getUTCDate() + delta);
-  const yy = dt.getUTCFullYear();
-  const mm = String(dt.getUTCMonth() + 1).padStart(2, "0");
-  const dd = String(dt.getUTCDate()).padStart(2, "0");
-  return `${yy}-${mm}-${dd}`;
-};
-
-const dateLTE = (a: string, b: string) => a <= b;
-
-const makeBookKey = (bookUri: string, date: string) => `${bookUri}::${date}`;
-const makeTargetKey = (targetId: string, date: string) => `${targetId}::${date}`;
-
-const clamp0 = (n: number) => Math.max(0, Math.floor(Number(n) || 0));
-
 export const useReadingStatsStore = create<ReadingStatsState>()(
   persist(
     (set, get) => ({
@@ -139,7 +69,7 @@ export const useReadingStatsStore = create<ReadingStatsState>()(
               id: date,
               date,
               pagesTotal: pages,
-              pagesByMode: { ...emptyByMode(), [mode]: pages },
+              pagesByMode: { ...emptyByMode(), [mode]: pages } as Record<ReadingMode, number>,
               updatedAt: nowIso,
             };
 
@@ -184,7 +114,7 @@ export const useReadingStatsStore = create<ReadingStatsState>()(
                 ...currentTarget,
                 pagesTotal: (currentTarget.pagesTotal ?? 0) + pages,
                 pagesByMode: {
-                  ...(currentTarget.pagesByMode ?? emptyByMode()),
+                  ...(currentTarget.pagesByMode ?? emptyByMode() as Record<ReadingMode, number>),
                   [mode]: (currentTarget.pagesByMode?.[mode] ?? 0) + pages,
                 },
                 updatedAt: nowIso,
@@ -355,7 +285,7 @@ export const useReadingStatsStore = create<ReadingStatsState>()(
           if (s.bookUri !== bookUri) continue;
           sum += s.pagesTotal ?? 0;
         }
-        return clamp0(sum);
+        return toNonNegativeInt(sum);
       },
 
       getBookBestDay: (bookUri) => {
@@ -368,7 +298,7 @@ export const useReadingStatsStore = create<ReadingStatsState>()(
           if (!s?.bookUri) continue;
           if (s.bookUri !== bookUri) continue;
 
-          const pages = clamp0(s.pagesTotal ?? 0);
+          const pages = toNonNegativeInt(s.pagesTotal ?? 0);
           if (pages <= 0) continue;
 
           if (pages > bestPages) {
@@ -408,11 +338,6 @@ export const useReadingStatsStore = create<ReadingStatsState>()(
         }),
     }),
     {
-      // NOTE: Storage key was changed from "reading-stats" to "reading-stats-v4".
-      // This is an intentional breaking change that will cause existing users to
-      // lose previously stored reading statistics. The underlying data/schema
-      // has changed in a way that makes automatic migration unsafe/non-trivial,
-      // so we prefer to start fresh rather than risk corrupt or inconsistent data.
       name: "reading-stats-v4",
       storage: createJSONStorage(() => AsyncStorage),
     }

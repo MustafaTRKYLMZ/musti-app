@@ -26,12 +26,10 @@ import {
   StripPos,
 } from "@/components/Books/FloatingPageStrip";
 
-import {
-  useReadingStatsStore,
-  type ReadingMode,
-} from "@/store/bookshelf/useReadingStatsStore";
+import { useReadingStatsStore } from "@/store/bookshelf/useReadingStatsStore";
 import { useReadingEventsStore } from "@/store/bookshelf/useReadingEventsStore";
 import { BookSection } from "@/store/bookshelf/useBookSectionsStore";
+import { ReadingMode } from "@budget/core";
 
 const { colors: bookshelfColors } = bookshelfTheme;
 

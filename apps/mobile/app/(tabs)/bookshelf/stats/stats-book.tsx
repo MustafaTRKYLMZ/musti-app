@@ -21,17 +21,14 @@ import {
   Card,
 } from "@budget/ui-native";
 
-import {
-  useReadingStatsStore,
-  type ReadingMode,
-} from "@/store/bookshelf/useReadingStatsStore";
+import { useReadingStatsStore } from "@/store/bookshelf/useReadingStatsStore";
 import { useReadingEventsStore } from "@/store/bookshelf/useReadingEventsStore";
 import { formatBookNameFromUri } from "@/utils/formatBookName";
+import { ReadingMode } from "@budget/core";
+import { toNonNegativeInt } from "@/utils/toNonNegativeInt";
+import { makeBookKey } from "@/utils/makeBookKey";
 
-const clamp0 = (n: number) => Math.max(0, Math.floor(Number(n) || 0));
-const makeBookKey = (bookUri: string, date: string) => `${bookUri}::${date}`;
-
-const DEFAULT_EVENTS_DISPLAY_LIMIT = 12; // Number of events shown by default before "show all" is required
+const DEFAULT_EVENTS_DISPLAY_LIMIT = 12;
 
 const modeLabel: Record<ReadingMode, string> = {
   target: "Target",
@@ -54,19 +51,19 @@ const formatModeParts = (pagesByMode: Record<ReadingMode, number>) => {
   }> = [
     {
       mode: "target",
-      value: clamp0(pagesByMode?.target ?? 0),
+      value: toNonNegativeInt(pagesByMode?.target ?? 0),
       icon: "locate-outline",
       label: "Target",
     },
     {
       mode: "plan",
-      value: clamp0(pagesByMode?.plan ?? 0),
+      value: toNonNegativeInt(pagesByMode?.plan ?? 0),
       icon: "calendar-outline",
       label: "Plan",
     },
     {
       mode: "normal",
-      value: clamp0(pagesByMode?.normal ?? 0),
+      value: toNonNegativeInt(pagesByMode?.normal ?? 0),
       icon: "book-outline",
       label: "Normal",
     },
@@ -96,8 +93,8 @@ type ReadingEvent = {
 type Range = { a: number; b: number }; // a <= b
 
 const normalizeRange = (from: number, to: number): Range => {
-  const a = clamp0(Math.min(from, to));
-  const b = clamp0(Math.max(from, to));
+  const a = toNonNegativeInt(Math.min(from, to));
+  const b = toNonNegativeInt(Math.max(from, to));
   return { a, b };
 };
 
@@ -194,7 +191,7 @@ export default function StatsBookScreen() {
   const getBookWeekTotal = useReadingStatsStore((s) => s.getBookWeekTotal);
   const getBookMonthTotal = useReadingStatsStore((s) => s.getBookMonthTotal);
 
-  const events = useReadingEventsStore((s) => s.events ?? []);
+  const events = useReadingEventsStore((s) => s.events ?? []) as ReadingEvent[];
 
   if (!bookUri) {
     return (
@@ -221,7 +218,7 @@ export default function StatsBookScreen() {
   const todayKey = makeBookKey(bookUri, today);
   const todayStat = byBookDate?.[todayKey];
 
-  const todayTotal = clamp0(todayStat?.pagesTotal ?? 0);
+  const todayTotal = toNonNegativeInt(todayStat?.pagesTotal ?? 0);
   const todayModeParts = useMemo(() => {
     return formatModeParts(
       (todayStat?.pagesByMode ?? { normal: 0, plan: 0, target: 0 }) as Record<
@@ -232,14 +229,15 @@ export default function StatsBookScreen() {
   }, [todayStat]);
 
   const weekTotal = useMemo(
-    () => clamp0(getBookWeekTotal(bookUri, today)),
+    () => toNonNegativeInt(getBookWeekTotal(bookUri, today)),
     [getBookWeekTotal, bookUri, today]
   );
   const monthTotal = useMemo(
-    () => clamp0(getBookMonthTotal(bookUri, today)),
+    () => toNonNegativeInt(getBookMonthTotal(bookUri, today)),
     [getBookMonthTotal, bookUri, today]
   );
 
+  // Keep eventsByDate including today (needed for Today card details).
   const eventsByDate = useMemo(() => {
     const from = dayjs(today).subtract(29, "day").format("YYYY-MM-DD");
     const map: Record<string, ReadingEvent[]> = {};
@@ -261,6 +259,7 @@ export default function StatsBookScreen() {
     return map;
   }, [events, bookUri, today]);
 
+  // ---- Today (top card) ----
   const todayEventsAll = useMemo(
     () => eventsByDate[today] ?? [],
     [eventsByDate, today]
@@ -282,13 +281,14 @@ export default function StatsBookScreen() {
     return rows.slice(0, 4);
   }, [todayEventsAll]);
 
+  // ✅ Last 30 days list: EXCLUDE TODAY (yesterday -> 30 days ago)
   const last30Days: DayRow[] = useMemo(() => {
     const rows: DayRow[] = [];
-    for (let i = 0; i < 30; i++) {
+    for (let i = 1; i <= 30; i++) {
       const d = dayjs(today).subtract(i, "day").format("YYYY-MM-DD");
       const k = makeBookKey(bookUri, d);
       const s = byBookDate?.[k];
-      const pagesTotal = clamp0(s?.pagesTotal ?? 0);
+      const pagesTotal = toNonNegativeInt(s?.pagesTotal ?? 0);
       if (pagesTotal <= 0) continue;
 
       rows.push({
@@ -314,7 +314,6 @@ export default function StatsBookScreen() {
     setShowAllDates((prev) => ({ ...prev, [date]: !prev[date] }));
   }, []);
 
-  // ✅ per-day selected section filter (also used for today)
   const [sectionFilterByDate, setSectionFilterByDate] = useState<
     Record<string, string | null>
   >({});
@@ -505,7 +504,6 @@ export default function StatsBookScreen() {
                 })}
               </View>
 
-              {/* ✅ Today "filtered" pill replaces top/normal view when active */}
               {selectedTodayLabel ? (
                 <View style={{ marginTop: spacing.xs }}>
                   <Pressable onPress={() => clearSectionFilter(today)}>
@@ -607,7 +605,7 @@ export default function StatsBookScreen() {
                   Showing {todayShownEvents.length} / {todayEvents.length}
                 </MText>
 
-                {todayEvents.length > 12 ? (
+                {todayEvents.length > DEFAULT_EVENTS_DISPLAY_LIMIT ? (
                   <Pressable onPress={() => toggleShowAll(today)}>
                     <View style={styles.showAllBtn}>
                       <BaseIcon
@@ -627,8 +625,8 @@ export default function StatsBookScreen() {
 
               {todayShownEvents.map((e, idx) => {
                 const t = dayjs(e.at).format("HH:mm");
-                const from = clamp0(e.pageFrom);
-                const to = clamp0(e.pageTo);
+                const from = toNonNegativeInt(e.pageFrom);
+                const to = toNonNegativeInt(e.pageTo);
                 const delta = rangeCount(from, to);
                 const section = getSectionLabel(e);
 
@@ -760,10 +758,10 @@ export default function StatsBookScreen() {
           </Card>
         </View>
 
-        {/* Last 30 days list (excluding today) */}
+        {/* Last 30 days list (EXCLUDING today) */}
         <View style={styles.sectionHeader}>
           <MText variant="bodyStrong" color="textPrimary">
-            Last 30 days · daily
+            Last 30 days · daily (excluding today)
           </MText>
           <MText variant="caption" color="textSecondary">
             {last30Days.length}
@@ -807,7 +805,9 @@ export default function StatsBookScreen() {
                   )
                 : dayEventsAll;
 
-              const shownEvents = showAll ? dayEvents : dayEvents.slice(0, DEFAULT_EVENTS_DISPLAY_LIMIT);
+              const shownEvents = showAll
+                ? dayEvents
+                : dayEvents.slice(0, DEFAULT_EVENTS_DISPLAY_LIMIT);
 
               const onPressTopSection = () => {
                 if (!topSection) return;
@@ -874,7 +874,6 @@ export default function StatsBookScreen() {
                     </View>
                   ) : null}
 
-                  {/* ✅ either show Top section (no filter) OR show Filtered pill (when active) */}
                   {!filterActive && topSection ? (
                     <Pressable
                       onPress={onPressTopSection}
@@ -1020,7 +1019,7 @@ export default function StatsBookScreen() {
                           Showing {shownEvents.length} / {dayEvents.length}
                         </MText>
 
-                        {dayEvents.length > 12 ? (
+                        {dayEvents.length > DEFAULT_EVENTS_DISPLAY_LIMIT ? (
                           <Pressable onPress={() => toggleShowAll(item.date)}>
                             <View style={styles.showAllBtn}>
                               <BaseIcon
@@ -1042,8 +1041,8 @@ export default function StatsBookScreen() {
 
                       {shownEvents.map((e, idx) => {
                         const t = dayjs(e.at).format("HH:mm");
-                        const from = clamp0(e.pageFrom);
-                        const to = clamp0(e.pageTo);
+                        const from = e.pageFrom;
+                        const to = toNonNegativeInt(e.pageTo);
                         const delta = rangeCount(from, to);
                         const section = getSectionLabel(e);
 
