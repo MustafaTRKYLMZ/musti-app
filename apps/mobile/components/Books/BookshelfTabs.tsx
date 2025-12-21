@@ -61,6 +61,6 @@ const styles = StyleSheet.create({
   },
   activeText: {
     opacity: 1,
-    color: colors.textInverse,
+    color: colors.textPrimary,
   },
 });
