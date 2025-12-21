@@ -2,37 +2,24 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createId } from "@/utils/id";
-
-export type BookSection = {
-  id: string;
-  title: string;
-  startPage: number;
-  endPage?: number | null;
-  color?: string | null;
-};
-
-const clampInt = (n: any) => {
-  const v = Math.floor(Number(n) || 0);
-  return Math.max(1, Math.min(999999, v));
-};
+import { BookSection } from "@budget/core";
+import { clampPage } from "@/utils/number";
 
 function normalizeSections(input: BookSection[]): BookSection[] {
   const arr = (input || [])
     .filter(Boolean)
     .map((s) => {
-      const start = clampInt(s.startPage ?? 1);
+      const start = clampPage(s.startPage ?? 1);
       const endRaw =
         s.endPage == null || Number.isNaN(Number(s.endPage))
           ? null
-          : clampInt(s.endPage);
+          : clampPage(s.endPage);
       const title = (s.title || "").trim() || "Untitled";
       return { ...s, title, startPage: start, endPage: endRaw };
     })
     .sort((a, b) => a.startPage - b.startPage);
 
-  // Make order stable when startPage values collide (if you do not want multiple chapters on the same page)
-  // Note: we do not change the fact that sections can share the same startPage.
-  return arr;
+    return arr;
 }
 
 /**
@@ -45,17 +32,17 @@ export function resolveEndPages(
   totalPages?: number | null
 ): Required<BookSection>[] {
   const sections = normalizeSections(sectionsInput);
-  const tp = totalPages ? clampInt(totalPages) : 999999;
+  const tp = totalPages ? clampPage(totalPages) : 999999;
 
   return sections.map((sec, idx) => {
-    const start = clampInt(sec.startPage);
+    const start = clampPage(sec.startPage);
     let end =
-      sec.endPage == null ? null : clampInt(sec.endPage);
+      sec.endPage == null ? null : clampPage(sec.endPage);
 
     if (end == null) {
       const next = sections[idx + 1];
       if (next?.startPage) {
-        end = Math.max(start, clampInt(next.startPage) - 1);
+        end = Math.max(start, clampPage(next.startPage) - 1);
       } else {
         end = tp;
       }
@@ -74,8 +61,6 @@ export function resolveEndPages(
 
 export type BookSectionsState = {
   byBook: Record<string, BookSection[]>;
-
-  // mevcut API
   setSectionsForBook: (bookUri: string, sections: BookSection[]) => void;
   addSection: (bookUri: string, section: Omit<BookSection, "id">) => void;
   updateSection: (bookUri: string, id: string, patch: Partial<BookSection>) => void;
@@ -83,7 +68,6 @@ export type BookSectionsState = {
   reorderSections: (bookUri: string, orderedIds: string[]) => void;
   renameBookSections: (oldUri: string, newUri: string) => void;
 
-  // ✅ yeni yardımcılar
   normalizeBookSections: (bookUri: string) => void;
   getResolvedSections: (bookUri: string, totalPages?: number | null) => Required<BookSection>[];
 };
@@ -107,9 +91,9 @@ export const useBookSectionsStore = create<BookSectionsState>()(
           const newSection: BookSection = {
             id: createId("section"),
             title: (sectionInput.title || "").trim() || "Untitled",
-            startPage: clampInt(sectionInput.startPage ?? 1),
+            startPage: clampPage(sectionInput.startPage ?? 1),
             endPage:
-              sectionInput.endPage == null ? null : clampInt(sectionInput.endPage),
+              sectionInput.endPage == null ? null : clampPage(sectionInput.endPage),
             color: sectionInput.color ?? null,
           };
 
@@ -131,14 +115,14 @@ export const useBookSectionsStore = create<BookSectionsState>()(
               patch.title != null ? (patch.title || "").trim() || "Untitled" : sec.title;
 
             const startPage =
-              patch.startPage != null ? clampInt(patch.startPage) : sec.startPage;
+              patch.startPage != null ? clampPage(patch.startPage) : sec.startPage;
 
             const endPage =
               patch.endPage === undefined
                 ? sec.endPage
                 : patch.endPage == null
                 ? null
-                : clampInt(patch.endPage);
+                : clampPage(patch.endPage);
 
             const color = patch.color === undefined ? sec.color : patch.color;
 

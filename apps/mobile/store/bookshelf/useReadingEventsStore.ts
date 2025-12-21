@@ -1,28 +1,10 @@
-// store/bookshelf/useReadingEventsStore.ts
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { ReadingMode } from "@budget/core";
+import { ReadingMode, ReadingEvent } from "@budget/core";
 
 
-export type ReadingEvent = {
-  id: string;
 
-  date: string; // YYYY-MM-DD
-  at: number; // ms
-
-  mode: ReadingMode;
-
-  bookUri: string;
-
-  targetId?: string;
-
-  pageFrom: number;
-  pageTo: number;
-
-  sectionId?: string;
-  sectionTitle?: string;
-};
 
 type AddEventInput = Omit<ReadingEvent, "id">;
 
@@ -36,17 +18,11 @@ export type ResolveSectionForPage = (args: {
 
 type ReadingEventsState = {
   events: ReadingEvent[];
-
-  /**
-   * Optional resolver to auto-attach section info based on page.
-   * You set this once from a place that knows book sections (PdfViewer / Sidebar).
-   */
   resolveSectionForPage?: ResolveSectionForPage;
   setSectionResolver: (fn?: ResolveSectionForPage) => void;
 
   addEvent: (e: AddEventInput) => void;
 
-  // helpers
   getEventsForBookDate: (bookUri: string, date: string) => ReadingEvent[];
   getEventsForBookRange: (
     bookUri: string,
@@ -68,11 +44,7 @@ const clampInt = (n: any, fallback: number) => {
   return Number.isFinite(x) ? x : fallback;
 };
 
-/**
- * Normalize pages:
- * - accepts reversed ranges
- * - min page is 1
- */
+
 const normalizePages = (pageFrom: any, pageTo: any) => {
   const a0 = Math.max(1, clampInt(pageFrom, 1));
   const b0 = Math.max(1, clampInt(pageTo, a0));

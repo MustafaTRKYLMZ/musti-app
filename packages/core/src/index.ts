@@ -1,4 +1,3 @@
-
 export * from "./i18n";
 export { useTranslation } from "./i18n/useTranslation";
 export * from "./theme";
@@ -15,7 +14,7 @@ export * from "./transactions/balance/computeBalanceOnDate";
 //simulation
 export * from "./simulation/balance/computeBalanceOnDateWithSimulation";
 export * from "./simulation/balance/computeSimulationDeltaOnDate";
-//types 
+//types
 export * from "./types/transaction";
 export * from "./types/simulation";
 export * from "./types/balance";
@@ -31,6 +30,10 @@ export * from "./types/stats/addPagesInput";
 export * from "./types/stats/dailyReadingStat";
 export * from "./types/stats/lastEvent";
 export * from "./types/stats/readingMode";
+export * from "./types/stats/dayRow";
+export * from "./types/stats/readingEvent";
+export * from "./types/stats/PageRange";
+export * from "./types/bookSection";
 
 // books
 export * from "./books/readingPlanUtils";

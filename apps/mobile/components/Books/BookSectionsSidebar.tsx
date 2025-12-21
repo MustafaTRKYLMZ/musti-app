@@ -2,10 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { View, StyleSheet, Pressable, Dimensions } from "react-native";
 import { spacing, useTheme } from "@budget/ui-native";
 
-import {
-  useBookSectionsStore,
-  type BookSection,
-} from "@/store/bookshelf/useBookSectionsStore";
+import { useBookSectionsStore } from "@/store/bookshelf/useBookSectionsStore";
 import { useBooksStore } from "@/store/bookshelf/useBooksStore";
 import { useReadingEventsStore } from "@/store/bookshelf/useReadingEventsStore";
 
@@ -13,6 +10,9 @@ import { SectionHeader } from "./SectionHeader";
 import { AddSectionForm } from "./AddSectionForm";
 import { SectionList } from "./SectionList";
 import { Divider } from "../ui/Divider";
+import { clampPage } from "@/utils/number";
+import { buildEffectiveRanges } from "@/utils/buildEffectiveRanges";
+import { BookSection } from "@budget/core";
 
 type Props = {
   visible: boolean;
@@ -23,54 +23,6 @@ type Props = {
 
 const { width } = Dimensions.get("window");
 const SIDEBAR_WIDTH = Math.min(width * 0.7, 340);
-
-const clampInt = (n: any, fallback: number) => {
-  const x = Math.floor(Number(n));
-  return Number.isFinite(x) ? x : fallback;
-};
-
-const clampPage = (n: any) => Math.max(1, clampInt(n, 1));
-
-/**
- * Build "effective" ranges:
- * - start = section.startPage
- * - end = section.endPage if exists
- * - else end = nextSection.startPage - 1
- * - else end = totalPages (if known) or Infinity
- */
-const buildEffectiveRanges = (
-  sections: BookSection[],
-  totalPages: number | null
-) => {
-  const sorted = [...sections].sort((a, b) => a.startPage - b.startPage);
-
-  const ranges = sorted.map((s, idx) => {
-    const start = clampPage(s.startPage);
-
-    const next = sorted[idx + 1];
-    const nextStart = next ? clampPage(next.startPage) : null;
-
-    let end: number;
-    if (s.endPage != null) {
-      end = Math.max(start, clampInt(s.endPage, start));
-    } else if (nextStart != null) {
-      end = Math.max(start, nextStart - 1);
-    } else if (typeof totalPages === "number" && totalPages > 0) {
-      end = Math.max(start, totalPages);
-    } else {
-      end = Number.POSITIVE_INFINITY;
-    }
-
-    return {
-      id: s.id,
-      title: s.title,
-      start,
-      end,
-    };
-  });
-
-  return ranges;
-};
 
 export function BookSectionsSidebar({
   visible,
