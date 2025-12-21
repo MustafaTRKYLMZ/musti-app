@@ -60,6 +60,9 @@ type ReadingEventsState = {
 const mkId = () => `${Date.now()}_${Math.random().toString(16).slice(2)}`;
 const dateLTE = (a: string, b: string) => a <= b;
 
+// Maximum number of events to store in persistent storage to prevent storage bloat
+const MAX_STORED_EVENTS = 2000;
+
 const clampInt = (n: any, fallback: number) => {
   const x = Math.floor(Number(n));
   return Number.isFinite(x) ? x : fallback;
@@ -124,8 +127,7 @@ export const useReadingEventsStore = create<ReadingEventsState>()(
         // keep it bounded (prevents storage bloat)
         set((state) => {
           const merged = [next, ...(state.events ?? [])];
-          const MAX = 2000;
-          return { events: merged.slice(0, MAX) };
+          return { events: merged.slice(0, MAX_STORED_EVENTS) };
         });
       },
 

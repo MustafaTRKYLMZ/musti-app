@@ -45,9 +45,7 @@ export const TargetList = ({
   const setActiveItem = useReadingTargetsStore((s) => s.setActiveItem);
 
   // ✅ NEW: target-level stats store
-  const byTargetDate = useReadingStatsStore((s) => (s as any).byTargetDate) as
-    | Record<string, any>
-    | undefined;
+  const byTargetDate = useReadingStatsStore((s) => s.byTargetDate);
 
   useEffect(() => {
     if (!hydrated) hydrate();

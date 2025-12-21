@@ -34,8 +34,6 @@ export const PlanList: FC<PlanListProps> = ({
 }) => {
   const router = useRouter();
 
-  const today = useMemo(() => new Date().toISOString().split("T")[0], []);
-
   return (
     <View style={styles.shelfSection}>
       <ShelfHeader title="Plans" handleOpen={() => setPlanModalVisible(true)} />

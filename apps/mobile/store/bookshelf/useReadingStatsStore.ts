@@ -408,6 +408,11 @@ export const useReadingStatsStore = create<ReadingStatsState>()(
         }),
     }),
     {
+      // NOTE: Storage key was changed from "reading-stats" to "reading-stats-v4".
+      // This is an intentional breaking change that will cause existing users to
+      // lose previously stored reading statistics. The underlying data/schema
+      // has changed in a way that makes automatic migration unsafe/non-trivial,
+      // so we prefer to start fresh rather than risk corrupt or inconsistent data.
       name: "reading-stats-v4",
       storage: createJSONStorage(() => AsyncStorage),
     }
