@@ -6,7 +6,7 @@ import React, {
   useState,
   useCallback,
 } from "react";
-import { View, StyleSheet } from "react-native";
+import { View, StyleSheet, Pressable } from "react-native";
 import Pdf, { PdfRef } from "react-native-pdf";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { TapGestureHandler, State } from "react-native-gesture-handler";
@@ -78,21 +78,265 @@ type StripPrefs = {
 
 type ReadingScrollMode = "horizontal-paged" | "vertical-scroll";
 
+type CropKey = "none" | "trim" | "tight";
+type CropInsets = { l: number; r: number; t: number; b: number };
+
 type ReaderPrefs = StripPrefs & {
   scrollMode: ReadingScrollMode;
   zoomPresetIndex: number;
+  cropKey: CropKey;
 };
 
 const clamp = (v: number, min: number, max: number) =>
   Math.max(min, Math.min(max, v));
 
-// “Punto” hissi veren preset zoom’lar
 const ZOOM_PRESETS = [1, 1.15, 1.3, 1.5, 1.75, 2.0, 2.25, 2.5] as const;
+
+const CROP_PRESETS: Record<CropKey, CropInsets> = {
+  none: { l: 0, r: 0, t: 0, b: 0 },
+  trim: { l: 0.04, r: 0.04, t: 0.06, b: 0.06 },
+  tight: { l: 0.07, r: 0.07, t: 0.1, b: 0.1 },
+};
 
 // Constants for stats tracking
 const DEDUPE_THRESHOLD_MS = 800;
 const TRACKING_PAUSE_BUFFER_MS = 120;
 const JUMP_THRESHOLD = 2;
+
+// Prefs write debounce
+const PREFS_DEBOUNCE_MS = 250;
+const PREFS_VERSION = "v2";
+
+/* -------------------------- Settings Panel -------------------------- */
+
+type SettingsPanelProps = {
+  open: boolean;
+  onClose: () => void;
+
+  scrollMode: ReadingScrollMode;
+  setScrollMode: (m: ReadingScrollMode) => void;
+
+  cropKey: CropKey;
+  setCropKey: (k: CropKey) => void;
+
+  zoomPresetIndex: number;
+  setZoomPresetIndex: (i: number) => void;
+
+  onPersist: (patch: Partial<ReaderPrefs>) => void;
+};
+
+const SettingsPanel: FC<SettingsPanelProps> = ({
+  open,
+  onClose,
+  scrollMode,
+  setScrollMode,
+  cropKey,
+  setCropKey,
+  zoomPresetIndex,
+  setZoomPresetIndex,
+  onPersist,
+}) => {
+  if (!open) return null;
+
+  const setScroll = (m: ReadingScrollMode) => {
+    setScrollMode(m);
+    onPersist({ scrollMode: m });
+  };
+
+  const setCrop = (k: CropKey) => {
+    setCropKey(k);
+    onPersist({ cropKey: k });
+  };
+
+  const cycleCrop = () => {
+    const next: CropKey =
+      cropKey === "none" ? "trim" : cropKey === "trim" ? "tight" : "none";
+    setCropKey(next);
+    onPersist({ cropKey: next });
+  };
+
+  const setZoom = (idx: number) => {
+    const next = clamp(idx, 0, ZOOM_PRESETS.length - 1);
+    setZoomPresetIndex(next);
+    onPersist({ zoomPresetIndex: next });
+  };
+
+  const zoomPct = Math.round((ZOOM_PRESETS[zoomPresetIndex] ?? 1) * 100);
+
+  return (
+    <View style={panelStyles.overlay}>
+      <View style={panelStyles.backdrop} onTouchEnd={onClose} />
+
+      <View style={panelStyles.sheet}>
+        <View style={panelStyles.headerRow}>
+          <MText variant="heading3" color="textPrimary">
+            Reading settings
+          </MText>
+          <IconButton name="close-outline" onPress={onClose} />
+        </View>
+
+        {/* Zoom preset */}
+        <View style={panelStyles.section}>
+          <MText variant="caption" color="textSecondary">
+            Text size
+          </MText>
+          <View style={panelStyles.zoomRow}>
+            <IconButton
+              name="remove-outline"
+              onPress={() => setZoom(zoomPresetIndex - 1)}
+              accessibilityLabel="Smaller text"
+            />
+            <MText
+              variant="body"
+              color="textPrimary"
+              style={{ minWidth: 72, textAlign: "center" }}
+            >
+              {zoomPct}%
+            </MText>
+            <IconButton
+              name="add-outline"
+              onPress={() => setZoom(zoomPresetIndex + 1)}
+              accessibilityLabel="Larger text"
+            />
+          </View>
+        </View>
+
+        {/* Scroll mode */}
+        <View style={panelStyles.section}>
+          <MText variant="caption" color="textSecondary">
+            Scrolling
+          </MText>
+
+          <View style={panelStyles.row}>
+            <IconButton
+              name={
+                scrollMode === "vertical-scroll"
+                  ? "radio-button-on"
+                  : "radio-button-off"
+              }
+              onPress={() => setScroll("vertical-scroll")}
+              accessibilityLabel="Vertical scrolling"
+            />
+            <MText variant="body" color="textPrimary">
+              Vertical (continuous)
+            </MText>
+          </View>
+
+          <View style={panelStyles.row}>
+            <IconButton
+              name={
+                scrollMode === "horizontal-paged"
+                  ? "radio-button-on"
+                  : "radio-button-off"
+              }
+              onPress={() => setScroll("horizontal-paged")}
+              accessibilityLabel="Horizontal paging"
+            />
+            <MText variant="body" color="textPrimary">
+              Horizontal (paged)
+            </MText>
+          </View>
+        </View>
+
+        {/* ✅ Crop moved here (icon now actually toggles) */}
+        <View style={panelStyles.section}>
+          <View style={panelStyles.row}>
+            <IconButton
+              name="crop-outline"
+              onPress={cycleCrop}
+              accessibilityLabel="Toggle margin trim"
+            />
+            <MText variant="caption" color="textSecondary">
+              Trim margins
+            </MText>
+          </View>
+
+          <View style={panelStyles.row}>
+            <IconButton
+              name={cropKey === "none" ? "radio-button-on" : "radio-button-off"}
+              onPress={() => setCrop("none")}
+              accessibilityLabel="Margins off"
+            />
+            <MText variant="body" color="textPrimary">
+              Off
+            </MText>
+          </View>
+
+          <View style={panelStyles.row}>
+            <IconButton
+              name={cropKey === "trim" ? "radio-button-on" : "radio-button-off"}
+              onPress={() => setCrop("trim")}
+              accessibilityLabel="Margins trim"
+            />
+            <MText variant="body" color="textPrimary">
+              Trim
+            </MText>
+          </View>
+
+          <View style={panelStyles.row}>
+            <IconButton
+              name={
+                cropKey === "tight" ? "radio-button-on" : "radio-button-off"
+              }
+              onPress={() => setCrop("tight")}
+              accessibilityLabel="Margins tight"
+            />
+            <MText variant="body" color="textPrimary">
+              Tight
+            </MText>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+};
+
+const panelStyles = StyleSheet.create({
+  overlay: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    zIndex: 999,
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.35)",
+  },
+  sheet: {
+    position: "absolute",
+    left: spacing.md,
+    right: spacing.md,
+    bottom: spacing.md,
+    borderRadius: 16,
+    padding: spacing.lg,
+    backgroundColor: "#fff",
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: spacing.md,
+  },
+  section: {
+    marginTop: spacing.md,
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  zoomRow: {
+    marginTop: spacing.sm,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+});
+
+/* -------------------------- Main PdfReader -------------------------- */
 
 export const PdfReader: FC<PdfReaderProps> = ({
   isFullscreen,
@@ -132,10 +376,17 @@ export const PdfReader: FC<PdfReaderProps> = ({
   const maxVisitedRef = useRef<number | null>(null);
   const maxCountedRef = useRef<number | null>(null);
 
-  // ✅ Reader prefs
+  // ✅ Reader prefs (book-specific)
   const [scrollMode, setScrollMode] =
     useState<ReadingScrollMode>("vertical-scroll");
   const [zoomPresetIndex, setZoomPresetIndex] = useState(0);
+  const [cropKey, setCropKey] = useState<CropKey>("trim");
+
+  // ✅ Settings panel
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // ✅ Viewer size (for crop transform)
+  const [viewerSize, setViewerSize] = useState({ w: 0, h: 0 });
 
   // ✅ Strip prefs
   const [stripMode, setStripMode] = useState<StripMode>("vertical");
@@ -144,8 +395,25 @@ export const PdfReader: FC<PdfReaderProps> = ({
   const [stripPos, setStripPos] = useState<StripPos | undefined>(undefined);
   const [prefsReady, setPrefsReady] = useState(false);
 
-  const scale = ZOOM_PRESETS[zoomPresetIndex] ?? 1;
-  const zoomPercent = Math.round(scale * 100);
+  // ✅ stable book-level id (best-effort)
+  const bookPrefsId = useMemo(() => {
+    if (readingContext?.bookUri) return `book:${readingContext.bookUri}`;
+    if (typeof source === "object" && source?.uri) return `pdf:${source.uri}`;
+    return `res:${String(source)}`;
+  }, [readingContext?.bookUri, source]);
+
+  const storageKey = useMemo(() => {
+    return `pdf_reader_prefs_${PREFS_VERSION}:${bookPrefsId}`;
+  }, [bookPrefsId]);
+
+  const cropLabel =
+    cropKey === "none" ? "Off" : cropKey === "trim" ? "Trim" : "Tight";
+
+  // “Punto” scale (user intent)
+  const userScale = ZOOM_PRESETS[zoomPresetIndex] ?? 1;
+  const zoomPercent = Math.round(userScale * 100);
+
+  const crop = CROP_PRESETS[cropKey];
 
   const scheduleHideZoomHint = () => {
     if (hideZoomTimeoutRef.current) clearTimeout(hideZoomTimeoutRef.current);
@@ -160,14 +428,15 @@ export const PdfReader: FC<PdfReaderProps> = ({
     scheduleHideZoomHint();
   };
 
-  const storageKey = useMemo(() => {
-    const id = typeof source === "object" ? source.uri : String(source);
-    return `pdf_strip_v1:${id}`;
-  }, [source]);
+  // -------------------------
+  // ✅ Debounced prefs writer (prevents AsyncStorage spam)
+  // -------------------------
+  const pendingPrefsRef = useRef<ReaderPrefs | null>(null);
+  const prefsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const saveReaderPrefs = async (patch: Partial<ReaderPrefs>) => {
-    try {
-      const payload: ReaderPrefs = {
+  const buildPrefsPayload = useCallback(
+    (patch: Partial<ReaderPrefs>): ReaderPrefs => {
+      return {
         // strip
         mode: patch.mode ?? stripMode,
         minimized: patch.minimized ?? stripMinimized,
@@ -180,14 +449,61 @@ export const PdfReader: FC<PdfReaderProps> = ({
           typeof patch.zoomPresetIndex === "number"
             ? patch.zoomPresetIndex
             : zoomPresetIndex,
+        cropKey: patch.cropKey ?? cropKey,
       };
+    },
+    [
+      cropKey,
+      scrollMode,
+      stripHidden,
+      stripMinimized,
+      stripMode,
+      stripPos,
+      zoomPresetIndex,
+    ]
+  );
+
+  const flushPrefsWrite = useCallback(async () => {
+    if (prefsTimerRef.current) {
+      clearTimeout(prefsTimerRef.current);
+      prefsTimerRef.current = null;
+    }
+    const payload = pendingPrefsRef.current;
+    pendingPrefsRef.current = null;
+    if (!payload) return;
+
+    try {
       await AsyncStorage.setItem(storageKey, JSON.stringify(payload));
     } catch (e) {
       console.log("reader prefs save error", e);
     }
-  };
+  }, [storageKey]);
 
-  // ✅ Load prefs once per PDF
+  const saveReaderPrefsDebounced = useCallback(
+    (patch: Partial<ReaderPrefs>) => {
+      const base = pendingPrefsRef.current ?? buildPrefsPayload({});
+      const next = { ...base, ...buildPrefsPayload(patch) };
+      pendingPrefsRef.current = next;
+
+      if (prefsTimerRef.current) clearTimeout(prefsTimerRef.current);
+      prefsTimerRef.current = setTimeout(() => {
+        flushPrefsWrite();
+      }, PREFS_DEBOUNCE_MS);
+    },
+    [buildPrefsPayload, flushPrefsWrite]
+  );
+
+  // On storageKey change/unmount: flush pending write
+  useEffect(() => {
+    return () => {
+      flushPrefsWrite();
+      if (hideZoomTimeoutRef.current) clearTimeout(hideZoomTimeoutRef.current);
+    };
+  }, [flushPrefsWrite]);
+
+  // -------------------------
+  // ✅ Load prefs once per BOOK
+  // -------------------------
   useEffect(() => {
     let alive = true;
 
@@ -224,6 +540,13 @@ export const PdfReader: FC<PdfReaderProps> = ({
             setZoomPresetIndex(
               clamp(data.zoomPresetIndex, 0, ZOOM_PRESETS.length - 1)
             );
+          }
+          if (
+            data.cropKey === "none" ||
+            data.cropKey === "trim" ||
+            data.cropKey === "tight"
+          ) {
+            setCropKey(data.cropKey);
           }
         }
       } catch (e) {
@@ -297,15 +620,9 @@ export const PdfReader: FC<PdfReaderProps> = ({
     readingContext?.targetId,
   ]);
 
-  useEffect(() => {
-    return () => {
-      flushSession();
-      if (hideZoomTimeoutRef.current) clearTimeout(hideZoomTimeoutRef.current);
-    };
-  }, [flushSession]);
-
   const pauseTrackingForNextTick = () => {
     flushSession();
+
     isPausedForProgrammaticJump.current = true;
     setTimeout(() => {
       isPausedForProgrammaticJump.current = false;
@@ -340,7 +657,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
   const toggleMinimized = () => {
     setStripMinimized((v) => {
       const nv = !v;
-      saveReaderPrefs({ minimized: nv });
+      saveReaderPrefsDebounced({ minimized: nv });
       return nv;
     });
   };
@@ -348,7 +665,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
   const toggleHidden = () => {
     setStripHidden((v) => {
       const nv = !v;
-      saveReaderPrefs({ hidden: nv });
+      saveReaderPrefsDebounced({ hidden: nv });
       return nv;
     });
   };
@@ -356,7 +673,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
   const toggleMode = () => {
     setStripMode((m) => {
       const nm: StripMode = m === "vertical" ? "horizontal" : "vertical";
-      saveReaderPrefs({ mode: nm });
+      saveReaderPrefsDebounced({ mode: nm });
       return nm;
     });
   };
@@ -367,7 +684,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
   const applyZoomIndex = (idx: number) => {
     const next = clamp(idx, 0, ZOOM_PRESETS.length - 1);
     setZoomPresetIndex(next);
-    saveReaderPrefs({ zoomPresetIndex: next });
+    saveReaderPrefsDebounced({ zoomPresetIndex: next });
     showZoomHint();
   };
 
@@ -375,7 +692,6 @@ export const PdfReader: FC<PdfReaderProps> = ({
   const handleAplus = () => applyZoomIndex(zoomPresetIndex + 1);
 
   const handleDoubleTapZoom = () => {
-    // 1.0 → ... → 2.0 → 1.0 (okuma hissi için pratik)
     const next = zoomPresetIndex >= 5 ? 0 : zoomPresetIndex + 1;
     applyZoomIndex(next);
   };
@@ -387,13 +703,39 @@ export const PdfReader: FC<PdfReaderProps> = ({
     setScrollMode((m) => {
       const nm: ReadingScrollMode =
         m === "vertical-scroll" ? "horizontal-paged" : "vertical-scroll";
-      saveReaderPrefs({ scrollMode: nm });
+      saveReaderPrefsDebounced({ scrollMode: nm });
       return nm;
     });
   };
 
   const pdfHorizontal = scrollMode === "horizontal-paged";
   const pdfEnablePaging = scrollMode === "horizontal-paged";
+
+  // -------------------------
+  // ✅ Crop transform (visual trim)
+  // -------------------------
+  const cropTransform = useMemo(() => {
+    const W = viewerSize.w;
+    const H = viewerSize.h;
+    if (W <= 0 || H <= 0) {
+      return { cropScale: 1, tx: 0, ty: 0 };
+    }
+
+    const visibleW = W * (1 - crop.l - crop.r);
+    const visibleH = H * (1 - crop.t - crop.b);
+
+    const cropScale = Math.max(
+      W / Math.max(1, visibleW),
+      H / Math.max(1, visibleH)
+    );
+
+    const tx = -W * (crop.l - crop.r) * 0.5 * cropScale;
+    const ty = -H * (crop.t - crop.b) * 0.5 * cropScale;
+
+    return { cropScale, tx, ty };
+  }, [viewerSize.w, viewerSize.h, crop.l, crop.r, crop.t, crop.b]);
+
+  const visualScale = userScale * cropTransform.cropScale;
 
   // -------------------------
   // ✅ Page changed
@@ -458,6 +800,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
 
       sessionStartPageRef.current = page;
       sessionStartAtRef.current = now;
+
       return;
     }
 
@@ -482,6 +825,15 @@ export const PdfReader: FC<PdfReaderProps> = ({
     }
   };
 
+  // -------------------------
+  // ✅ Close handler: flush prefs + session (no data loss)
+  // -------------------------
+  const handleCloseInternal = async () => {
+    flushSession();
+    await flushPrefsWrite();
+    handleClose();
+  };
+
   return (
     <View
       style={[
@@ -503,7 +855,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
                 shadowOpacity: 0.12,
                 shadowRadius: 8,
                 shadowOffset: { width: 0, height: 3 },
-                paddingTop: isFullscreen ? 0 : spacing["2xl"],
+                paddingTop: spacing["2xl"],
               },
             ]}
           >
@@ -524,20 +876,18 @@ export const PdfReader: FC<PdfReaderProps> = ({
                 style={styles.iconButton}
                 accessibilityLabel="Enter fullscreen"
               />
+
               <IconButton
                 name="close-outline"
                 size={iconSizes.xl}
-                onPress={() => {
-                  flushSession();
-                  handleClose();
-                }}
+                onPress={handleCloseInternal}
                 style={styles.iconButton}
                 accessibilityLabel="Close reader"
               />
             </View>
           </View>
 
-          {/* ✅ Reader controls: A-/A+ + mode toggle + menu */}
+          {/* Controls: A-/A+ + scroll toggle + margin badge + settings + menu */}
           <View
             style={[styles.menuButton, { backgroundColor: colors.surface }]}
           >
@@ -553,7 +903,6 @@ export const PdfReader: FC<PdfReaderProps> = ({
             />
 
             <IconButton
-              // icon set’inize göre gerekirse değiştirin
               name={
                 scrollMode === "vertical-scroll"
                   ? "swap-vertical"
@@ -567,6 +916,29 @@ export const PdfReader: FC<PdfReaderProps> = ({
               }
             />
 
+            {/* ✅ no crop icon; show status badge instead */}
+            <Pressable
+              onPress={() => setSettingsOpen(true)}
+              style={[
+                styles.badge,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.borderSubtle,
+                },
+              ]}
+              accessibilityLabel="Open margin settings"
+            >
+              <MText variant="caption" color="textSecondary">
+                Margins: {cropLabel}
+              </MText>
+            </Pressable>
+
+            <IconButton
+              name="options-outline"
+              onPress={() => setSettingsOpen(true)}
+              accessibilityLabel="Reader settings"
+            />
+
             {onPressMenu && (
               <IconButton
                 name="menu"
@@ -578,7 +950,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
         </View>
       )}
 
-      {/* Fullscreen button */}
+      {/* Fullscreen exit button */}
       {isFullscreen && (
         <View style={styles.fullscreenOverlay}>
           <IconButton
@@ -593,12 +965,16 @@ export const PdfReader: FC<PdfReaderProps> = ({
         </View>
       )}
 
-      {/* PDF (double tap zoom wrapper) */}
+      {/* PDF (double tap zoom wrapper + visual crop) */}
       <View
         style={[
           styles.viewer,
           { backgroundColor: isFullscreen ? "#000" : colors.background },
         ]}
+        onLayout={(e) => {
+          const { width, height } = e.nativeEvent.layout;
+          setViewerSize({ w: width, h: height });
+        }}
       >
         <TapGestureHandler
           numberOfTaps={2}
@@ -609,7 +985,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
             }
           }}
         >
-          <View style={{ flex: 1 }}>
+          <View style={styles.cropClip}>
             <Pdf
               ref={pdfRef}
               source={source}
@@ -619,37 +995,25 @@ export const PdfReader: FC<PdfReaderProps> = ({
                   backgroundColor: isFullscreen ? "#000" : colors.background,
                   width: "100%",
                   height: "100%",
+                  transform: [
+                    { translateX: cropTransform.tx * userScale },
+                    { translateY: cropTransform.ty * userScale },
+                    { scale: visualScale },
+                  ],
                 },
               ]}
-              // ✅ user-selectable reading direction
               horizontal={pdfHorizontal}
               enablePaging={pdfEnablePaging}
               page={initialPage}
-              scale={scale}
-              minScale={ZOOM_PRESETS[0]}
-              maxScale={ZOOM_PRESETS[ZOOM_PRESETS.length - 1]}
-              // ❗ we handle double tap ourselves
+              // IMPORTANT: zoom handled visually via transform
+              scale={1}
+              minScale={1}
+              maxScale={1}
               enableDoubleTapZoom={false}
               fitPolicy={2}
               onLoadComplete={handleLoadComplete}
               onError={(error) => console.log("PDF error:", error)}
               onPageChanged={handlePageChangedInternal}
-              onScaleChanged={(newScale: number) => {
-                // Kullanıcı pinch yaptıysa en yakın preset’e yuvarla (stabil “punto” hissi)
-                const nearest = ZOOM_PRESETS.reduce(
-                  (best, z, i) => {
-                    const d = Math.abs(z - newScale);
-                    return d < best.d ? { i, d } : best;
-                  },
-                  { i: zoomPresetIndex, d: Infinity }
-                ).i;
-
-                if (nearest !== zoomPresetIndex) {
-                  setZoomPresetIndex(nearest);
-                  saveReaderPrefs({ zoomPresetIndex: nearest });
-                }
-                showZoomHint();
-              }}
             />
           </View>
         </TapGestureHandler>
@@ -677,7 +1041,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
         </View>
       )}
 
-      {/* ✅ Persisted Floating Page Strip */}
+      {/* Persisted Floating Page Strip */}
       {prefsReady &&
         !isFullscreen &&
         typeof totalPages === "number" &&
@@ -689,7 +1053,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
             initialPos={stripPos}
             onPosChange={(p) => {
               setStripPos(p);
-              saveReaderPrefs({ pos: p });
+              saveReaderPrefsDebounced({ pos: p });
             }}
             onToggleMinimized={toggleMinimized}
             onToggleHidden={toggleHidden}
@@ -704,6 +1068,28 @@ export const PdfReader: FC<PdfReaderProps> = ({
             />
           </FloatingPageStrip>
         )}
+
+      {/* ✅ Settings panel (crop moved here) */}
+      <SettingsPanel
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        scrollMode={scrollMode}
+        setScrollMode={(m) => {
+          flushSession();
+          pauseTrackingForNextTick();
+          setScrollMode(m);
+        }}
+        cropKey={cropKey}
+        setCropKey={(k) => setCropKey(k)}
+        zoomPresetIndex={zoomPresetIndex}
+        setZoomPresetIndex={(i) => {
+          setZoomPresetIndex(i);
+          showZoomHint();
+        }}
+        onPersist={(patch) => {
+          saveReaderPrefsDebounced(patch);
+        }}
+      />
     </View>
   );
 };
@@ -732,9 +1118,13 @@ const styles = StyleSheet.create({
     marginLeft: spacing.sm,
   },
 
-  viewer: {
+  viewer: { flex: 1 },
+
+  cropClip: {
     flex: 1,
+    overflow: "hidden",
   },
+
   pdf: {
     flex: 1,
     width: "100%",
@@ -755,6 +1145,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xs,
     gap: spacing.sm,
+  },
+
+  badge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.full,
+    borderWidth: StyleSheet.hairlineWidth,
   },
 
   pageBadgeContainer: {
