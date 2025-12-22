@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { MText, spacing, radii, iconSizes, useTheme } from "@budget/ui-native";
 import dayjs from "dayjs";
 
-import { PdfReader } from "@/components/ui/pdf/PdfReader";
+import { PdfReader } from "@/components/Books/PdfReader";
 import { useReadingPlanStore } from "@/store/bookshelf/useReadingPlanStore";
 import { IconButton, BaseIcon } from "@/components/ui/AppIcon";
 import { BookSectionsSidebar } from "@/components/Books/BookSectionsSidebar";

@@ -1,4 +1,5 @@
 import { StripMode, StripPos } from "@/components/Books/FloatingPageStrip";
+import { ReadingMode } from "@budget/core";
 
 export type ReadingScrollMode = "horizontal-paged" | "vertical-scroll";
 
@@ -21,3 +22,12 @@ export type StripPrefs = {
     cropKey: CropKey;
   };
   
+
+  export type ReadingContext= {
+     mode: ReadingMode;
+        date: string;
+        bookUri?: string;
+        targetId?: string;
+        sectionId?: string;
+        sectionTitle?: string;
+  };

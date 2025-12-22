@@ -5,7 +5,7 @@ import { MText, spacing, iconSizes, useTheme } from "@budget/ui-native";
 import { PdfRef } from "react-native-pdf";
 import dayjs from "dayjs";
 
-import { PdfReader } from "@/components/ui/pdf/PdfReader";
+import { PdfReader } from "@/components/Books/PdfReader";
 import { IconButton } from "@/components/ui/AppIcon";
 import { BookSectionsSidebar } from "@/components/Books/BookSectionsSidebar";
 
