@@ -9,7 +9,8 @@ import React, {
 import { View, StyleSheet, Pressable } from "react-native";
 import Pdf, { PdfRef } from "react-native-pdf";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { TapGestureHandler, State } from "react-native-gesture-handler";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { runOnJS } from "react-native-reanimated";
 
 import {
   MText,
@@ -30,6 +31,18 @@ import {
 import { useReadingStatsStore } from "@/store/bookshelf/useReadingStatsStore";
 import { useReadingEventsStore } from "@/store/bookshelf/useReadingEventsStore";
 import { BookSection, ReadingMode } from "@budget/core";
+import { CropKey, ReaderPrefs, ReadingScrollMode } from "./types";
+import { clampBetween } from "@/utils/number";
+import {
+  CROP_PRESETS,
+  DEDUPE_THRESHOLD_MS,
+  JUMP_THRESHOLD,
+  PREFS_DEBOUNCE_MS,
+  PREFS_VERSION,
+  TRACKING_PAUSE_BUFFER_MS,
+  ZOOM_PRESETS,
+} from "@/constants/readerPresets";
+import { ReaderSettingsPanel } from "./ReaderSettingsPanel";
 
 const { colors: bookshelfColors } = bookshelfTheme;
 
@@ -68,273 +81,6 @@ type PdfReaderProps = {
 
   enableStatsTracking?: boolean;
 };
-
-type StripPrefs = {
-  mode: StripMode;
-  minimized: boolean;
-  hidden: boolean;
-  pos?: StripPos;
-};
-
-type ReadingScrollMode = "horizontal-paged" | "vertical-scroll";
-
-type CropKey = "none" | "trim" | "tight";
-type CropInsets = { l: number; r: number; t: number; b: number };
-
-type ReaderPrefs = StripPrefs & {
-  scrollMode: ReadingScrollMode;
-  zoomPresetIndex: number;
-  cropKey: CropKey;
-};
-
-const clamp = (v: number, min: number, max: number) =>
-  Math.max(min, Math.min(max, v));
-
-const ZOOM_PRESETS = [1, 1.15, 1.3, 1.5, 1.75, 2.0, 2.25, 2.5] as const;
-
-const CROP_PRESETS: Record<CropKey, CropInsets> = {
-  none: { l: 0, r: 0, t: 0, b: 0 },
-  trim: { l: 0.04, r: 0.04, t: 0.06, b: 0.06 },
-  tight: { l: 0.07, r: 0.07, t: 0.1, b: 0.1 },
-};
-
-// Constants for stats tracking
-const DEDUPE_THRESHOLD_MS = 800;
-const TRACKING_PAUSE_BUFFER_MS = 120;
-const JUMP_THRESHOLD = 2;
-
-// Prefs write debounce
-const PREFS_DEBOUNCE_MS = 250;
-const PREFS_VERSION = "v2";
-
-/* -------------------------- Settings Panel -------------------------- */
-
-type SettingsPanelProps = {
-  open: boolean;
-  onClose: () => void;
-
-  scrollMode: ReadingScrollMode;
-  setScrollMode: (m: ReadingScrollMode) => void;
-
-  cropKey: CropKey;
-  setCropKey: (k: CropKey) => void;
-
-  zoomPresetIndex: number;
-  setZoomPresetIndex: (i: number) => void;
-
-  onPersist: (patch: Partial<ReaderPrefs>) => void;
-};
-
-const SettingsPanel: FC<SettingsPanelProps> = ({
-  open,
-  onClose,
-  scrollMode,
-  setScrollMode,
-  cropKey,
-  setCropKey,
-  zoomPresetIndex,
-  setZoomPresetIndex,
-  onPersist,
-}) => {
-  if (!open) return null;
-
-  const setScroll = (m: ReadingScrollMode) => {
-    setScrollMode(m);
-    onPersist({ scrollMode: m });
-  };
-
-  const setCrop = (k: CropKey) => {
-    setCropKey(k);
-    onPersist({ cropKey: k });
-  };
-
-  const cycleCrop = () => {
-    const next: CropKey =
-      cropKey === "none" ? "trim" : cropKey === "trim" ? "tight" : "none";
-    setCropKey(next);
-    onPersist({ cropKey: next });
-  };
-
-  const setZoom = (idx: number) => {
-    const next = clamp(idx, 0, ZOOM_PRESETS.length - 1);
-    setZoomPresetIndex(next);
-    onPersist({ zoomPresetIndex: next });
-  };
-
-  const zoomPct = Math.round((ZOOM_PRESETS[zoomPresetIndex] ?? 1) * 100);
-
-  return (
-    <View style={panelStyles.overlay}>
-      <View style={panelStyles.backdrop} onTouchEnd={onClose} />
-
-      <View style={panelStyles.sheet}>
-        <View style={panelStyles.headerRow}>
-          <MText variant="heading3" color="textPrimary">
-            Reading settings
-          </MText>
-          <IconButton name="close-outline" onPress={onClose} />
-        </View>
-
-        {/* Zoom preset */}
-        <View style={panelStyles.section}>
-          <MText variant="caption" color="textSecondary">
-            Text size
-          </MText>
-          <View style={panelStyles.zoomRow}>
-            <IconButton
-              name="remove-outline"
-              onPress={() => setZoom(zoomPresetIndex - 1)}
-              accessibilityLabel="Smaller text"
-            />
-            <MText
-              variant="body"
-              color="textPrimary"
-              style={{ minWidth: 72, textAlign: "center" }}
-            >
-              {zoomPct}%
-            </MText>
-            <IconButton
-              name="add-outline"
-              onPress={() => setZoom(zoomPresetIndex + 1)}
-              accessibilityLabel="Larger text"
-            />
-          </View>
-        </View>
-
-        {/* Scroll mode */}
-        <View style={panelStyles.section}>
-          <MText variant="caption" color="textSecondary">
-            Scrolling
-          </MText>
-
-          <View style={panelStyles.row}>
-            <IconButton
-              name={
-                scrollMode === "vertical-scroll"
-                  ? "radio-button-on"
-                  : "radio-button-off"
-              }
-              onPress={() => setScroll("vertical-scroll")}
-              accessibilityLabel="Vertical scrolling"
-            />
-            <MText variant="body" color="textPrimary">
-              Vertical (continuous)
-            </MText>
-          </View>
-
-          <View style={panelStyles.row}>
-            <IconButton
-              name={
-                scrollMode === "horizontal-paged"
-                  ? "radio-button-on"
-                  : "radio-button-off"
-              }
-              onPress={() => setScroll("horizontal-paged")}
-              accessibilityLabel="Horizontal paging"
-            />
-            <MText variant="body" color="textPrimary">
-              Horizontal (paged)
-            </MText>
-          </View>
-        </View>
-
-        {/* ✅ Crop moved here (icon now actually toggles) */}
-        <View style={panelStyles.section}>
-          <View style={panelStyles.row}>
-            <IconButton
-              name="crop-outline"
-              onPress={cycleCrop}
-              accessibilityLabel="Toggle margin trim"
-            />
-            <MText variant="caption" color="textSecondary">
-              Trim margins
-            </MText>
-          </View>
-
-          <View style={panelStyles.row}>
-            <IconButton
-              name={cropKey === "none" ? "radio-button-on" : "radio-button-off"}
-              onPress={() => setCrop("none")}
-              accessibilityLabel="Margins off"
-            />
-            <MText variant="body" color="textPrimary">
-              Off
-            </MText>
-          </View>
-
-          <View style={panelStyles.row}>
-            <IconButton
-              name={cropKey === "trim" ? "radio-button-on" : "radio-button-off"}
-              onPress={() => setCrop("trim")}
-              accessibilityLabel="Margins trim"
-            />
-            <MText variant="body" color="textPrimary">
-              Trim
-            </MText>
-          </View>
-
-          <View style={panelStyles.row}>
-            <IconButton
-              name={
-                cropKey === "tight" ? "radio-button-on" : "radio-button-off"
-              }
-              onPress={() => setCrop("tight")}
-              accessibilityLabel="Margins tight"
-            />
-            <MText variant="body" color="textPrimary">
-              Tight
-            </MText>
-          </View>
-        </View>
-      </View>
-    </View>
-  );
-};
-
-const panelStyles = StyleSheet.create({
-  overlay: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-    zIndex: 999,
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.35)",
-  },
-  sheet: {
-    position: "absolute",
-    left: spacing.md,
-    right: spacing.md,
-    bottom: spacing.md,
-    borderRadius: 16,
-    padding: spacing.lg,
-    backgroundColor: "#fff",
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: spacing.md,
-  },
-  section: {
-    marginTop: spacing.md,
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  zoomRow: {
-    marginTop: spacing.sm,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-});
 
 /* -------------------------- Main PdfReader -------------------------- */
 
@@ -536,11 +282,12 @@ export const PdfReader: FC<PdfReaderProps> = ({
           ) {
             setScrollMode(data.scrollMode);
           }
-          if (typeof data.zoomPresetIndex === "number") {
-            setZoomPresetIndex(
-              clamp(data.zoomPresetIndex, 0, ZOOM_PRESETS.length - 1)
-            );
-          }
+
+          // NOTE: clampBetween handles unknown/NaN/float safely
+          setZoomPresetIndex(
+            clampBetween(data.zoomPresetIndex, 0, ZOOM_PRESETS.length - 1, 0)
+          );
+
           if (
             data.cropKey === "none" ||
             data.cropKey === "trim" ||
@@ -682,7 +429,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
   // ✅ UI actions: reader
   // -------------------------
   const applyZoomIndex = (idx: number) => {
-    const next = clamp(idx, 0, ZOOM_PRESETS.length - 1);
+    const next = clampBetween(idx, 0, ZOOM_PRESETS.length - 1, 0);
     setZoomPresetIndex(next);
     saveReaderPrefsDebounced({ zoomPresetIndex: next });
     showZoomHint();
@@ -691,10 +438,10 @@ export const PdfReader: FC<PdfReaderProps> = ({
   const handleAminus = () => applyZoomIndex(zoomPresetIndex - 1);
   const handleAplus = () => applyZoomIndex(zoomPresetIndex + 1);
 
-  const handleDoubleTapZoom = () => {
+  const handleDoubleTapZoom = useCallback(() => {
     const next = zoomPresetIndex >= 5 ? 0 : zoomPresetIndex + 1;
     applyZoomIndex(next);
-  };
+  }, [zoomPresetIndex, applyZoomIndex]);
 
   const toggleScrollMode = () => {
     flushSession();
@@ -708,8 +455,26 @@ export const PdfReader: FC<PdfReaderProps> = ({
     });
   };
 
+  const cycleCrop = useCallback(() => {
+    const next: CropKey =
+      cropKey === "none" ? "trim" : cropKey === "trim" ? "tight" : "none";
+    setCropKey(next);
+    saveReaderPrefsDebounced({ cropKey: next });
+  }, [cropKey, saveReaderPrefsDebounced]);
+
   const pdfHorizontal = scrollMode === "horizontal-paged";
   const pdfEnablePaging = scrollMode === "horizontal-paged";
+
+  // ✅ NEW: Gesture API (TapGestureHandler deprecated)
+  const doubleTapGesture = useMemo(() => {
+    return Gesture.Tap()
+      .numberOfTaps(2)
+      .maxDelay(250)
+      .onEnd(() => {
+        // Gesture callbacks may run on the UI thread; ensure JS state updates safely.
+        runOnJS(handleDoubleTapZoom)();
+      });
+  }, [handleDoubleTapZoom]);
 
   // -------------------------
   // ✅ Crop transform (visual trim)
@@ -887,7 +652,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
             </View>
           </View>
 
-          {/* Controls: A-/A+ + scroll toggle + margin badge + settings + menu */}
+          {/* Controls: A-/A+ + scroll toggle + crop icon + crop badge + settings + menu */}
           <View
             style={[styles.menuButton, { backgroundColor: colors.surface }]}
           >
@@ -916,9 +681,16 @@ export const PdfReader: FC<PdfReaderProps> = ({
               }
             />
 
-            {/* ✅ no crop icon; show status badge instead */}
+            {/* ✅ crop on header bar */}
+            <IconButton
+              name="crop-outline"
+              onPress={cycleCrop}
+              accessibilityLabel={`Trim margins: ${cropLabel}`}
+            />
+
+            {/* optional: show current crop mode as a small badge; tap cycles too */}
             <Pressable
-              onPress={() => setSettingsOpen(true)}
+              onPress={cycleCrop}
               style={[
                 styles.badge,
                 {
@@ -926,10 +698,10 @@ export const PdfReader: FC<PdfReaderProps> = ({
                   borderColor: colors.borderSubtle,
                 },
               ]}
-              accessibilityLabel="Open margin settings"
+              accessibilityLabel="Toggle margin trim"
             >
               <MText variant="caption" color="textSecondary">
-                Margins: {cropLabel}
+                {cropLabel}
               </MText>
             </Pressable>
 
@@ -976,15 +748,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
           setViewerSize({ w: width, h: height });
         }}
       >
-        <TapGestureHandler
-          numberOfTaps={2}
-          maxDelayMs={250}
-          onHandlerStateChange={(e) => {
-            if (e.nativeEvent.state === State.ACTIVE) {
-              handleDoubleTapZoom();
-            }
-          }}
-        >
+        <GestureDetector gesture={doubleTapGesture}>
           <View style={styles.cropClip}>
             <Pdf
               ref={pdfRef}
@@ -1016,7 +780,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
               onPageChanged={handlePageChangedInternal}
             />
           </View>
-        </TapGestureHandler>
+        </GestureDetector>
       </View>
 
       {/* Page badge */}
@@ -1069,8 +833,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
           </FloatingPageStrip>
         )}
 
-      {/* ✅ Settings panel (crop moved here) */}
-      <SettingsPanel
+      <ReaderSettingsPanel
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
         scrollMode={scrollMode}
@@ -1079,13 +842,13 @@ export const PdfReader: FC<PdfReaderProps> = ({
           pauseTrackingForNextTick();
           setScrollMode(m);
         }}
-        cropKey={cropKey}
-        setCropKey={(k) => setCropKey(k)}
         zoomPresetIndex={zoomPresetIndex}
         setZoomPresetIndex={(i) => {
           setZoomPresetIndex(i);
           showZoomHint();
         }}
+        cropKey={cropKey}
+        setCropKey={setCropKey}
         onPersist={(patch) => {
           saveReaderPrefsDebounced(patch);
         }}
