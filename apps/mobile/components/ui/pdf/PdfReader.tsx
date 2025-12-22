@@ -28,8 +28,7 @@ import {
 
 import { useReadingStatsStore } from "@/store/bookshelf/useReadingStatsStore";
 import { useReadingEventsStore } from "@/store/bookshelf/useReadingEventsStore";
-import { BookSection } from "@/store/bookshelf/useBookSectionsStore";
-import { ReadingMode } from "@budget/core";
+import { BookSection, ReadingMode } from "@budget/core";
 
 const { colors: bookshelfColors } = bookshelfTheme;
 
