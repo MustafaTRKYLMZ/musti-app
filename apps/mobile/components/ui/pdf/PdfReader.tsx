@@ -9,6 +9,7 @@ import React, {
 import { View, StyleSheet } from "react-native";
 import Pdf, { PdfRef } from "react-native-pdf";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { TapGestureHandler, State } from "react-native-gesture-handler";
 
 import {
   MText,
@@ -54,28 +55,15 @@ type PdfReaderProps = {
     mode: ReadingMode;
     date: string;
     bookUri?: string;
-
     targetId?: string;
 
-    /**
-     * @deprecated Kept for backward compatibility; not used in Option A.
-     * Prefer using {@link readingContext.targetId} together with the
-     * resolver-based sections. New code should avoid passing this prop.
-     */
+    /** @deprecated */
     sectionId?: string;
-    /**
-     * @deprecated Kept for backward compatibility; not used in Option A.
-     * Prefer resolver-based metadata derived from {@link readingContext.targetId}.
-     * New code should avoid passing this prop.
-     */
+    /** @deprecated */
     sectionTitle?: string;
   };
 
-  /**
-   * @deprecated Kept for backward compatibility; not used in Option A
-   * because the resolver is responsible for providing sections.
-   * Callers should rely on the resolver instead of passing sections here.
-   */
+  /** @deprecated */
   sections?: BookSection[];
 
   enableStatsTracking?: boolean;
@@ -88,9 +76,23 @@ type StripPrefs = {
   pos?: StripPos;
 };
 
+type ReadingScrollMode = "horizontal-paged" | "vertical-scroll";
+
+type ReaderPrefs = StripPrefs & {
+  scrollMode: ReadingScrollMode;
+  zoomPresetIndex: number;
+};
+
+const clamp = (v: number, min: number, max: number) =>
+  Math.max(min, Math.min(max, v));
+
+// “Punto” hissi veren preset zoom’lar
+const ZOOM_PRESETS = [1, 1.15, 1.3, 1.5, 1.75, 2.0, 2.25, 2.5] as const;
+
 // Constants for stats tracking
-const DEDUPE_THRESHOLD_MS = 800; // Time window to deduplicate rapid page change events
-const TRACKING_PAUSE_BUFFER_MS = 120; // Buffer to prevent tracking programmatic page changes that may trigger multiple pageChanged events
+const DEDUPE_THRESHOLD_MS = 800;
+const TRACKING_PAUSE_BUFFER_MS = 120;
+const JUMP_THRESHOLD = 2;
 
 export const PdfReader: FC<PdfReaderProps> = ({
   isFullscreen,
@@ -107,7 +109,6 @@ export const PdfReader: FC<PdfReaderProps> = ({
   totalPages,
   readingContext,
   enableStatsTracking = true,
-  sections,
 }) => {
   const { colors } = useTheme();
 
@@ -123,24 +124,27 @@ export const PdfReader: FC<PdfReaderProps> = ({
   const sessionStartPageRef = useRef<number | null>(null);
   const sessionStartAtRef = useRef<number | null>(null);
 
-  const [scale, setScale] = useState(1);
   const [zoomHintVisible, setZoomHintVisible] = useState(false);
   const hideZoomTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isPausedForProgrammaticJump = useRef(false);
-
   const lastSeenPageRef = useRef<number | null>(null);
   const maxVisitedRef = useRef<number | null>(null);
   const maxCountedRef = useRef<number | null>(null);
 
-  const JUMP_THRESHOLD = 2;
+  // ✅ Reader prefs
+  const [scrollMode, setScrollMode] =
+    useState<ReadingScrollMode>("vertical-scroll");
+  const [zoomPresetIndex, setZoomPresetIndex] = useState(0);
 
+  // ✅ Strip prefs
   const [stripMode, setStripMode] = useState<StripMode>("vertical");
   const [stripMinimized, setStripMinimized] = useState(false);
   const [stripHidden, setStripHidden] = useState(false);
   const [stripPos, setStripPos] = useState<StripPos | undefined>(undefined);
-  const [stripPrefsReady, setStripPrefsReady] = useState(false);
+  const [prefsReady, setPrefsReady] = useState(false);
 
+  const scale = ZOOM_PRESETS[zoomPresetIndex] ?? 1;
   const zoomPercent = Math.round(scale * 100);
 
   const scheduleHideZoomHint = () => {
@@ -156,20 +160,83 @@ export const PdfReader: FC<PdfReaderProps> = ({
     scheduleHideZoomHint();
   };
 
-  const handleZoomOut = () => {
-    setScale((prev) => Math.max(1, Number((prev - 0.2).toFixed(2))));
-    showZoomHint();
+  const storageKey = useMemo(() => {
+    const id = typeof source === "object" ? source.uri : String(source);
+    return `pdf_strip_v1:${id}`;
+  }, [source]);
+
+  const saveReaderPrefs = async (patch: Partial<ReaderPrefs>) => {
+    try {
+      const payload: ReaderPrefs = {
+        // strip
+        mode: patch.mode ?? stripMode,
+        minimized: patch.minimized ?? stripMinimized,
+        hidden: patch.hidden ?? stripHidden,
+        pos: patch.pos ?? stripPos,
+
+        // reader
+        scrollMode: patch.scrollMode ?? scrollMode,
+        zoomPresetIndex:
+          typeof patch.zoomPresetIndex === "number"
+            ? patch.zoomPresetIndex
+            : zoomPresetIndex,
+      };
+      await AsyncStorage.setItem(storageKey, JSON.stringify(payload));
+    } catch (e) {
+      console.log("reader prefs save error", e);
+    }
   };
 
-  const handleZoomIn = () => {
-    setScale((prev) => Math.min(5, Number((prev + 0.2).toFixed(2))));
-    showZoomHint();
-  };
+  // ✅ Load prefs once per PDF
+  useEffect(() => {
+    let alive = true;
 
-  const handleInternalScaleChanged = (newScale: number) => {
-    setScale(newScale);
-    showZoomHint();
-  };
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(storageKey);
+        if (!alive) return;
+
+        if (raw) {
+          const data = JSON.parse(raw) as Partial<ReaderPrefs>;
+
+          // strip
+          if (data.mode === "vertical" || data.mode === "horizontal")
+            setStripMode(data.mode);
+          if (typeof data.minimized === "boolean")
+            setStripMinimized(data.minimized);
+          if (typeof data.hidden === "boolean") setStripHidden(data.hidden);
+          if (
+            data.pos &&
+            typeof data.pos.x === "number" &&
+            typeof data.pos.y === "number"
+          ) {
+            setStripPos({ x: data.pos.x, y: data.pos.y });
+          }
+
+          // reader
+          if (
+            data.scrollMode === "horizontal-paged" ||
+            data.scrollMode === "vertical-scroll"
+          ) {
+            setScrollMode(data.scrollMode);
+          }
+          if (typeof data.zoomPresetIndex === "number") {
+            setZoomPresetIndex(
+              clamp(data.zoomPresetIndex, 0, ZOOM_PRESETS.length - 1)
+            );
+          }
+        }
+      } catch (e) {
+        console.log("reader prefs load error", e);
+      } finally {
+        if (alive) setPrefsReady(true);
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [storageKey]);
 
   // -------------------------
   // ✅ Session helpers
@@ -180,13 +247,11 @@ export const PdfReader: FC<PdfReaderProps> = ({
       if (!readingContext?.date) return;
       if (!readingContext?.bookUri) return;
 
-      // session start
       if (sessionStartPageRef.current == null) {
         sessionStartPageRef.current = page;
         sessionStartAtRef.current = Date.now();
       }
 
-      // safety: if baselines somehow null, initialize
       if (lastSeenPageRef.current == null) lastSeenPageRef.current = page;
       if (maxVisitedRef.current == null) maxVisitedRef.current = page;
       if (maxCountedRef.current == null) maxCountedRef.current = page;
@@ -203,22 +268,17 @@ export const PdfReader: FC<PdfReaderProps> = ({
     const startAt = sessionStartAtRef.current;
     const end = maxVisitedRef.current;
 
-    // cleanup if incomplete
     if (start == null || startAt == null || end == null) {
       sessionStartPageRef.current = null;
       sessionStartAtRef.current = null;
       return;
     }
 
-    // ✅ Option A:
-    // - Only log forward unique progress (end > start)
-    // - Do NOT attach sectionId/sectionTitle here
-    //   Store resolver (set from sidebar) will fill section based on pageTo.
     if (end > start) {
       addEvent({
         date: readingContext.date,
         at: Date.now(),
-        mode: readingContext.mode, // ✅ mode ayrımı
+        mode: readingContext.mode,
         bookUri: readingContext.bookUri,
         targetId: readingContext.targetId,
         pageFrom: start,
@@ -246,7 +306,6 @@ export const PdfReader: FC<PdfReaderProps> = ({
 
   const pauseTrackingForNextTick = () => {
     flushSession();
-
     isPausedForProgrammaticJump.current = true;
     setTimeout(() => {
       isPausedForProgrammaticJump.current = false;
@@ -260,86 +319,28 @@ export const PdfReader: FC<PdfReaderProps> = ({
     pdfRef.current.setPage(page);
   };
 
-  const storageKey = useMemo(() => {
-    const id = typeof source === "object" ? source.uri : String(source);
-    return `pdf_strip_v1:${id}`;
-  }, [source]);
-
-  const saveStripPrefs = async (patch: Partial<StripPrefs>) => {
-    try {
-      const payload: StripPrefs = {
-        mode: patch.mode ?? stripMode,
-        minimized: patch.minimized ?? stripMinimized,
-        hidden: patch.hidden ?? stripHidden,
-        pos: patch.pos ?? stripPos,
-      };
-      await AsyncStorage.setItem(storageKey, JSON.stringify(payload));
-    } catch (e) {
-      console.log("strip prefs save error", e);
-    }
-  };
-
-  // ✅ Load prefs once per PDF
-  useEffect(() => {
-    let alive = true;
-
-    (async () => {
-      try {
-        const raw = await AsyncStorage.getItem(storageKey);
-        if (!alive) return;
-
-        if (raw) {
-          const data = JSON.parse(raw) as Partial<StripPrefs>;
-
-          if (data.mode === "vertical" || data.mode === "horizontal") {
-            setStripMode(data.mode);
-          }
-          if (typeof data.minimized === "boolean")
-            setStripMinimized(data.minimized);
-          if (typeof data.hidden === "boolean") setStripHidden(data.hidden);
-
-          if (
-            data.pos &&
-            typeof data.pos.x === "number" &&
-            typeof data.pos.y === "number"
-          ) {
-            setStripPos({ x: data.pos.x, y: data.pos.y });
-          }
-        }
-      } catch (e) {
-        console.log("strip prefs load error", e);
-      } finally {
-        if (alive) setStripPrefsReady(true);
-      }
-    })();
-
-    return () => {
-      alive = false;
-    };
-  }, [storageKey]);
-
   // ✅ Reset tracking baselines when doc / initialPage changes
   useEffect(() => {
-    // önce eski session’ı kapat
     flushSession();
 
     const start = Math.max(1, Math.floor(initialPage ?? 1));
-
     lastSeenPageRef.current = start;
     maxVisitedRef.current = start;
     maxCountedRef.current = start;
 
-    // yeni session başlangıcı: ilk valid pageChanged’de ensureSessionStarted çalışacak
     sessionStartPageRef.current = null;
     sessionStartAtRef.current = null;
 
     isPausedForProgrammaticJump.current = false;
   }, [initialPage, storageKey, flushSession]);
 
+  // -------------------------
+  // ✅ UI actions: strip
+  // -------------------------
   const toggleMinimized = () => {
     setStripMinimized((v) => {
       const nv = !v;
-      saveStripPrefs({ minimized: nv });
+      saveReaderPrefs({ minimized: nv });
       return nv;
     });
   };
@@ -347,7 +348,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
   const toggleHidden = () => {
     setStripHidden((v) => {
       const nv = !v;
-      saveStripPrefs({ hidden: nv });
+      saveReaderPrefs({ hidden: nv });
       return nv;
     });
   };
@@ -355,16 +356,51 @@ export const PdfReader: FC<PdfReaderProps> = ({
   const toggleMode = () => {
     setStripMode((m) => {
       const nm: StripMode = m === "vertical" ? "horizontal" : "vertical";
-      saveStripPrefs({ mode: nm });
+      saveReaderPrefs({ mode: nm });
       return nm;
     });
   };
 
+  // -------------------------
+  // ✅ UI actions: reader
+  // -------------------------
+  const applyZoomIndex = (idx: number) => {
+    const next = clamp(idx, 0, ZOOM_PRESETS.length - 1);
+    setZoomPresetIndex(next);
+    saveReaderPrefs({ zoomPresetIndex: next });
+    showZoomHint();
+  };
+
+  const handleAminus = () => applyZoomIndex(zoomPresetIndex - 1);
+  const handleAplus = () => applyZoomIndex(zoomPresetIndex + 1);
+
+  const handleDoubleTapZoom = () => {
+    // 1.0 → ... → 2.0 → 1.0 (okuma hissi için pratik)
+    const next = zoomPresetIndex >= 5 ? 0 : zoomPresetIndex + 1;
+    applyZoomIndex(next);
+  };
+
+  const toggleScrollMode = () => {
+    flushSession();
+    pauseTrackingForNextTick();
+
+    setScrollMode((m) => {
+      const nm: ReadingScrollMode =
+        m === "vertical-scroll" ? "horizontal-paged" : "vertical-scroll";
+      saveReaderPrefs({ scrollMode: nm });
+      return nm;
+    });
+  };
+
+  const pdfHorizontal = scrollMode === "horizontal-paged";
+  const pdfEnablePaging = scrollMode === "horizontal-paged";
+
+  // -------------------------
+  // ✅ Page changed
+  // -------------------------
   const handlePageChangedInternal = (page: number, numberOfPages: number) => {
-    // keep existing behavior
     handlePageChanged(page, numberOfPages);
 
-    // stats + events tracking
     if (!enableStatsTracking) return;
     if (!readingContext?.date) return;
 
@@ -372,7 +408,6 @@ export const PdfReader: FC<PdfReaderProps> = ({
 
     const now = Date.now();
 
-    // ✅ dedupe noisy duplicate events (include targetId!)
     if (
       lastEvent &&
       lastEvent.date === readingContext.date &&
@@ -394,21 +429,13 @@ export const PdfReader: FC<PdfReaderProps> = ({
       at: now,
     });
 
-    // ✅ If tracking paused for a programmatic jump, resync baselines
-    // IMPORTANT FIX:
-    // Previously you kept old maxVisited/maxCounted (Math.max(prevVisited, page)),
-    // which caused logs like 2->30 after a jump. We must RESET maxes on jumps.
     if (isPausedForProgrammaticJump.current) {
       lastSeenPageRef.current = page;
-
-      // ✅ reset maxes to the jumped page (new chunk)
       maxVisitedRef.current = page;
       maxCountedRef.current = page;
 
-      // ✅ new session chunk from this page
       sessionStartPageRef.current = page;
       sessionStartAtRef.current = now;
-
       return;
     }
 
@@ -422,35 +449,27 @@ export const PdfReader: FC<PdfReaderProps> = ({
 
     const step = page - lastSeen;
 
-    // Teleport detection: big forward/back jumps should NOT count skipped pages.
-    // ✅ jump = close chunk + start new chunk (and RESET maxes)
     if (Math.abs(step) > JUMP_THRESHOLD) {
       flushSession();
 
       lastSeenPageRef.current = page;
-
-      // ✅ reset: otherwise old maxVisited makes fake ranges in logs
       maxVisitedRef.current = page;
       maxCountedRef.current = page;
 
       sessionStartPageRef.current = page;
       sessionStartAtRef.current = now;
-
       return;
     }
 
-    // Update last seen
     lastSeenPageRef.current = page;
 
-    // Only consider forward movement for "maxVisited"
     const currentMax = maxVisitedRef.current ?? page;
     const nextMax = Math.max(currentMax, page);
     maxVisitedRef.current = nextMax;
 
     const countedMax = maxCountedRef.current ?? nextMax;
-
-    // Count only the NEW increase in maxVisited (prevents zigzag inflation)
     const inc = nextMax - countedMax;
+
     if (inc > 0) {
       addPages({
         date: readingContext.date,
@@ -518,20 +537,36 @@ export const PdfReader: FC<PdfReaderProps> = ({
             </View>
           </View>
 
-          {/* Zoom + menu bar */}
+          {/* ✅ Reader controls: A-/A+ + mode toggle + menu */}
           <View
             style={[styles.menuButton, { backgroundColor: colors.surface }]}
           >
             <IconButton
               name="remove-outline"
-              onPress={handleZoomOut}
-              accessibilityLabel="Zoom out"
+              onPress={handleAminus}
+              accessibilityLabel="Smaller text"
             />
             <IconButton
               name="add-outline"
-              onPress={handleZoomIn}
-              accessibilityLabel="Zoom in"
+              onPress={handleAplus}
+              accessibilityLabel="Larger text"
             />
+
+            <IconButton
+              // icon set’inize göre gerekirse değiştirin
+              name={
+                scrollMode === "vertical-scroll"
+                  ? "swap-vertical"
+                  : "swap-horizontal"
+              }
+              onPress={toggleScrollMode}
+              accessibilityLabel={
+                scrollMode === "vertical-scroll"
+                  ? "Switch to horizontal paging"
+                  : "Switch to vertical scrolling"
+              }
+            />
+
             {onPressMenu && (
               <IconButton
                 name="menu"
@@ -558,39 +593,66 @@ export const PdfReader: FC<PdfReaderProps> = ({
         </View>
       )}
 
-      {/* PDF */}
+      {/* PDF (double tap zoom wrapper) */}
       <View
         style={[
           styles.viewer,
           { backgroundColor: isFullscreen ? "#000" : colors.background },
         ]}
       >
-        <Pdf
-          ref={pdfRef}
-          source={source}
-          style={[
-            styles.pdf,
-            {
-              backgroundColor: isFullscreen ? "#000" : colors.background,
-              width: "100%",
-              height: "100%",
-            },
-          ]}
-          horizontal
-          enablePaging
-          page={initialPage}
-          scale={scale}
-          minScale={1}
-          maxScale={5}
-          enableDoubleTapZoom
-          fitPolicy={2}
-          onLoadComplete={handleLoadComplete}
-          onError={(error) => console.log("PDF error:", error)}
-          onPageChanged={handlePageChangedInternal}
-          onScaleChanged={(newScale: number) =>
-            handleInternalScaleChanged(newScale)
-          }
-        />
+        <TapGestureHandler
+          numberOfTaps={2}
+          maxDelayMs={250}
+          onHandlerStateChange={(e) => {
+            if (e.nativeEvent.state === State.ACTIVE) {
+              handleDoubleTapZoom();
+            }
+          }}
+        >
+          <View style={{ flex: 1 }}>
+            <Pdf
+              ref={pdfRef}
+              source={source}
+              style={[
+                styles.pdf,
+                {
+                  backgroundColor: isFullscreen ? "#000" : colors.background,
+                  width: "100%",
+                  height: "100%",
+                },
+              ]}
+              // ✅ user-selectable reading direction
+              horizontal={pdfHorizontal}
+              enablePaging={pdfEnablePaging}
+              page={initialPage}
+              scale={scale}
+              minScale={ZOOM_PRESETS[0]}
+              maxScale={ZOOM_PRESETS[ZOOM_PRESETS.length - 1]}
+              // ❗ we handle double tap ourselves
+              enableDoubleTapZoom={false}
+              fitPolicy={2}
+              onLoadComplete={handleLoadComplete}
+              onError={(error) => console.log("PDF error:", error)}
+              onPageChanged={handlePageChangedInternal}
+              onScaleChanged={(newScale: number) => {
+                // Kullanıcı pinch yaptıysa en yakın preset’e yuvarla (stabil “punto” hissi)
+                const nearest = ZOOM_PRESETS.reduce(
+                  (best, z, i) => {
+                    const d = Math.abs(z - newScale);
+                    return d < best.d ? { i, d } : best;
+                  },
+                  { i: zoomPresetIndex, d: Infinity }
+                ).i;
+
+                if (nearest !== zoomPresetIndex) {
+                  setZoomPresetIndex(nearest);
+                  saveReaderPrefs({ zoomPresetIndex: nearest });
+                }
+                showZoomHint();
+              }}
+            />
+          </View>
+        </TapGestureHandler>
       </View>
 
       {/* Page badge */}
@@ -616,7 +678,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
       )}
 
       {/* ✅ Persisted Floating Page Strip */}
-      {stripPrefsReady &&
+      {prefsReady &&
         !isFullscreen &&
         typeof totalPages === "number" &&
         totalPages > 1 && (
@@ -627,7 +689,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
             initialPos={stripPos}
             onPosChange={(p) => {
               setStripPos(p);
-              saveStripPrefs({ pos: p });
+              saveReaderPrefs({ pos: p });
             }}
             onToggleMinimized={toggleMinimized}
             onToggleHidden={toggleHidden}
