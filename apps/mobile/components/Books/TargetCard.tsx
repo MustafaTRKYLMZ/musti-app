@@ -19,6 +19,7 @@ import { useToast } from "../ui/ToastProvider";
 import { TargetItemSummary } from "./TargetItemSummary";
 import { MenuRow } from "../MenuRow";
 import type { ReadingTarget, TargetItem } from "@budget/core";
+import { RemainingTimeBadge } from "../ui/pdf/RemainingTimeBadge";
 
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 const clamp = (x: number, a: number, b: number) => Math.max(a, Math.min(b, x));
@@ -26,7 +27,6 @@ const clamp = (x: number, a: number, b: number) => Math.max(a, Math.min(b, x));
 type Props = {
   target: ReadingTarget;
 
-  // ✅ already computed in TargetList
   todayPages?: number;
   todayMinutes?: number;
 
@@ -145,7 +145,6 @@ export const TargetCard = ({
       ? target.items.findIndex((i) => i.id === activeItem.id)
       : -1;
     setPreviewIndex(idx >= 0 ? idx : 0);
-    // intentionally only on target change
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [target.id]);
 
@@ -324,7 +323,6 @@ export const TargetCard = ({
             No items yet
           </MText>
 
-          {/* ✅ still show today line */}
           <View style={styles.todayRow}>
             <BaseIcon
               name="time-outline"
@@ -476,7 +474,15 @@ export const TargetCard = ({
           </MText>
         </View>
 
-        {/* ✅ Today stats: dots’un hemen üstü */}
+        {/* ✅ Remaining time inside target range */}
+        <View style={{ marginTop: spacing.xs }}>
+          <RemainingTimeBadge
+            paceKey={displayItem.bookUri ?? null}
+            remainingPages={remainingPages}
+          />
+        </View>
+
+        {/* ✅ Today stats */}
         <View style={styles.todayRow}>
           <BaseIcon
             name="time-outline"
@@ -584,7 +590,6 @@ const styles = StyleSheet.create({
   },
   progressText: { fontWeight: "800" },
 
-  // ✅ today row right above dots
   todayRow: {
     flexDirection: "row",
     alignItems: "center",

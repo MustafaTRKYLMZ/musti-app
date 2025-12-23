@@ -189,6 +189,10 @@ export default function TargetViewerScreen() {
     }
   };
 
+  // ✅ NEW: remaining pages inside target range
+  const endPage = Math.max(1, Math.floor(displayItem.endPage ?? 1));
+  const remainingPagesTarget = Math.max(0, endPage - currentPage);
+
   return (
     <>
       <PdfReader
@@ -210,6 +214,7 @@ export default function TargetViewerScreen() {
           bookUri: uri,
           targetId: target.id,
         }}
+        timeLeftRemainingPages={remainingPagesTarget}
       />
 
       <BookSectionsSidebar

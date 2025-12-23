@@ -20,6 +20,7 @@ import {
 } from "@budget/ui-native";
 import { BaseIcon, IconButton } from "@/components/ui/AppIcon";
 import { ProgressPill, getProgressColor } from "@/components/ui/ProgressPill";
+import { RemainingTimeBadge } from "../ui/pdf/RemainingTimeBadge";
 
 export type PlanInfo = {
   name: string;
@@ -31,8 +32,8 @@ export type PlanInfo = {
   remainingInItem?: number;
   suggestedBookName?: string;
 
-  // ✅ NEW
-  todayMinutes?: number; // minutes today (plan mode)
+  // ✅ minutes today (plan mode)
+  todayMinutes?: number;
 };
 
 type PlanCardProps = {
@@ -72,6 +73,7 @@ export const PlanCard: FC<PlanCardProps> = ({
     totalCompleted,
     totalPagesInPlan,
     currentBookName,
+    currentBookUri,
     remainingInItem,
     suggestedBookName,
     todayMinutes,
@@ -110,7 +112,6 @@ export const PlanCard: FC<PlanCardProps> = ({
     onDeletePlan();
   };
 
-  // ✅ Allow opening even if completed (sana daha uygun)
   const handleCardPress = () => {
     onPress();
   };
@@ -136,6 +137,15 @@ export const PlanCard: FC<PlanCardProps> = ({
           : ""
       }`
     : "Plan is in progress.";
+
+  // ✅ remaining pages for TODAY's plan (whole plan progress)
+  const remainingPagesToday =
+    totalPagesInPlan > 0
+      ? Math.max(0, totalPagesInPlan - (totalCompleted ?? 0))
+      : null;
+
+  // ✅ paceKey should be book-specific; use current reading book when available
+  const paceKey = currentBookUri ?? null;
 
   return (
     <>
@@ -192,6 +202,14 @@ export const PlanCard: FC<PlanCardProps> = ({
                 <MText variant="caption" color="textSecondary">
                   {progressText}
                 </MText>
+              </View>
+
+              {/* ✅ Remaining time for TODAY (plan) */}
+              <View style={{ marginTop: spacing.xs }}>
+                <RemainingTimeBadge
+                  paceKey={paceKey}
+                  remainingPages={remainingPagesToday}
+                />
               </View>
             </View>
           </View>

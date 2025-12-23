@@ -1,4 +1,11 @@
-import React, { FC, useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  FC,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useMemo,
+} from "react";
 import { View, StyleSheet } from "react-native";
 import { PdfRef } from "react-native-pdf";
 import { spacing, useTheme, iconSizes } from "@budget/ui-native";
@@ -18,10 +25,13 @@ import type { CropKey } from "@/components/ui/pdf/types";
 import { ZOOM_PRESETS } from "@/constants/readerPresets";
 import { useReadingPace } from "@/hooks/useReadingPace";
 import { useReadingTracking } from "@/hooks/useReadingTracking";
-import { useCropTransform } from "@/hooks/useCropTransform";
-import { useReaderPrefs } from "@/hooks/useReaderPrefs";
-import { PdfViewport } from "../ui/pdf/PdfViewport";
-import { ReaderHeaderBar } from "../ui/pdf/ReaderHeaderBar";
+
+import { formatDurationShort } from "@/utils/formatDuration";
+import { clampBetween } from "@/utils/number";
+import { useCropTransform } from "@/hooks/ useCropTransform";
+import { useReaderPrefs } from "@/hooks/ useReaderPrefs";
+import { PdfViewport } from "../ui/pdf/ PdfViewport";
+import { ReaderHeaderBar } from "../ui/pdf/ ReaderHeaderBar";
 
 type PdfReaderProps = {
   isFullscreen: boolean;
@@ -52,10 +62,24 @@ type PdfReaderProps = {
 
   sections?: BookSection[];
   enableStatsTracking?: boolean;
+
+  /**
+   * ✅ NEW (non-breaking):
+   * If provided, PdfReader will show time-left based on these remaining pages
+   * instead of (totalPages - currentPage).
+   *
+   * Use this for:
+   * - plan mode: remaining pages for TODAY (target - todayRead)
+   * - target mode: remaining pages in target range (endPage - cursor/current)
+   */
+  timeLeftRemainingPages?: number | null;
 };
 
 const clampIndex = (n: number, min: number, max: number) =>
   Math.max(min, Math.min(max, n));
+
+const MIN_VALID_PPM = 0.2;
+const MAX_VALID_PPM = 12;
 
 export const PdfReader: FC<PdfReaderProps> = ({
   isFullscreen,
@@ -72,6 +96,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
   totalPages,
   readingContext,
   enableStatsTracking = true,
+  timeLeftRemainingPages = null,
 }) => {
   const { colors } = useTheme();
 
@@ -83,12 +108,44 @@ export const PdfReader: FC<PdfReaderProps> = ({
     readingContext?.bookUri ??
     (typeof source === "object" ? source.uri : String(source));
 
-  // reading pace + time-left
+  // reading pace (ppm + sample ingestion)
   const pace = useReadingPace({
     paceKey: paceKey ?? null,
+    // keep optional; we compute time-left ourselves to support plan/target
     currentPage,
     totalPages,
   });
+
+  // ✅ mode-aware time left
+  const timeLeftLabel = useMemo(() => {
+    // Determine remaining pages:
+    // - if override is provided (plan/target), use it
+    // - else fallback to "book remaining" (normal)
+    let remainingPages: number | null = null;
+
+    if (
+      typeof timeLeftRemainingPages === "number" &&
+      Number.isFinite(timeLeftRemainingPages)
+    ) {
+      remainingPages = Math.max(0, Math.floor(timeLeftRemainingPages));
+    } else if (
+      typeof currentPage === "number" &&
+      typeof totalPages === "number" &&
+      Number.isFinite(currentPage) &&
+      Number.isFinite(totalPages) &&
+      totalPages > 0
+    ) {
+      remainingPages = Math.max(0, Math.floor(totalPages - currentPage));
+    }
+
+    if (remainingPages == null || remainingPages <= 0) return null;
+
+    const safePpm = clampBetween(pace.ppm, MIN_VALID_PPM, MAX_VALID_PPM);
+    const minutes = remainingPages / safePpm;
+    const ms = minutes * 60_000;
+
+    return formatDurationShort(ms);
+  }, [timeLeftRemainingPages, currentPage, totalPages, pace.ppm]);
 
   // crop + zoom transforms
   const { setViewerSize, userScale, visualScale, cropTransform } =
@@ -135,12 +192,16 @@ export const PdfReader: FC<PdfReaderProps> = ({
   useEffect(() => {
     const startPage = Math.max(1, Math.floor(initialPage ?? 1));
 
-    // reset old session/baselines
     tracking.resetBaselines(startPage);
 
-    // ✅ START a session even if page never changes (so minutes won't be 0)
+    // ✅ START a session even if page never changes
     tracking.ensureStarted(startPage);
-  }, [initialPage, prefs.storageKey, tracking.resetBaselines, tracking.ensureStarted]);
+  }, [
+    initialPage,
+    prefs.storageKey,
+    tracking.resetBaselines,
+    tracking.ensureStarted,
+  ]);
 
   // zoom actions
   const applyZoomIndex = useCallback(
@@ -264,7 +325,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
         zoomHintVisible={zoomHintVisible}
         zoomPercent={zoomPercent}
         cropLabel={cropLabel}
-        timeLeftLabel={pace.timeLeftLabel}
+        timeLeftLabel={timeLeftLabel}
         isFullscreen={isFullscreen}
       />
 

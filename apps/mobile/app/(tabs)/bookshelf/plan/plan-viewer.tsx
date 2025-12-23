@@ -229,6 +229,12 @@ export default function PlanViewerScreen() {
       ? Math.min(todayPagesForThisBook, targetForToday)
       : todayPagesForThisBook;
 
+  // ✅ NEW: plan-remaining pages for today
+  const remainingPagesToday =
+    targetForToday > 0
+      ? Math.max(0, targetForToday - todayPagesForThisBook)
+      : null;
+
   const bannerStyle = {
     transform: [
       {
@@ -267,6 +273,7 @@ export default function PlanViewerScreen() {
         currentPage={currentPage}
         totalPages={totalPages ?? undefined}
         readingContext={{ mode: "plan", date: today, bookUri: uri }}
+        timeLeftRemainingPages={remainingPagesToday}
       />
 
       <BookSectionsSidebar
