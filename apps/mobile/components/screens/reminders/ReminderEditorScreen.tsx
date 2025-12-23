@@ -21,6 +21,9 @@ import type {
 } from "@/store/reminders/types";
 import { AppScreen } from "@/components/AppScreen";
 import { BaseIcon, IconButton, IconTile } from "@/components/ui/AppIcon";
+import { BookPickerModal } from "@/components/Books/reminders/BookPickerModal";
+import { PlanPickerModal } from "@/components/Books/reminders/PlanPickerModal";
+import { TargetPickerModal } from "@/components/Books/reminders/TargetPickerModal";
 
 type Props = {
   owner: ReminderOwner;
@@ -42,7 +45,6 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
   const theme = useTheme();
   const { colors } = theme;
 
-  // ---- Design tokens  ----
   const cardBg = colors.surface;
   const innerBg = colors.surfaceElevated;
   const border = colors.borderSubtle;
@@ -77,10 +79,48 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
   const [title, setTitle] = useState(initial.title);
   const [body, setBody] = useState(initial.body);
   const [enabled, setEnabled] = useState(initial.enabled);
+
   const [targetType, setTargetType] = useState<ReminderTarget["type"]>(
     initial.target.type
   );
 
+  // --- Book selection ---
+  const initialBookName =
+    initial.target.type === "book"
+      ? (initial.target as any).bookName ?? ""
+      : "";
+  const initialBookUri =
+    initial.target.type === "book" ? (initial.target as any).bookUri ?? "" : "";
+
+  const [bookName, setBookName] = useState(initialBookName);
+  const [bookUri, setBookUri] = useState(initialBookUri);
+  const [bookPickerOpen, setBookPickerOpen] = useState(false);
+
+  // --- Plan selection (needs planId in target type) ---
+  const initialPlanId =
+    initial.target.type === "plan" ? (initial.target as any).planId ?? "" : "";
+  const [planId, setPlanId] = useState(initialPlanId);
+  const [planTitle, setPlanTitle] = useState(
+    initial.target.type === "plan"
+      ? (initial.target as any).planTitle ?? ""
+      : ""
+  );
+  const [planPickerOpen, setPlanPickerOpen] = useState(false);
+
+  // --- Target selection (needs targetId in target type) ---
+  const initialTargetId =
+    initial.target.type === "target"
+      ? (initial.target as any).targetId ?? ""
+      : "";
+  const [targetId, setTargetId] = useState(initialTargetId);
+  const [targetTitle, setTargetTitle] = useState(
+    initial.target.type === "target"
+      ? (initial.target as any).targetTitle ?? ""
+      : ""
+  );
+  const [targetPickerOpen, setTargetPickerOpen] = useState(false);
+
+  // ---- schedule ----
   const [scheduleType, setScheduleType] = useState<ReminderSchedule["type"]>(
     initial.schedule.type
   );
@@ -121,13 +161,27 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
     return { type: "once", timestamp: d.getTime() };
   }, [scheduleType, hour, minute, weekday, onceDate]);
 
+  // ✅ Target mapping (needs your ReminderTarget union updated)
   const target: ReminderTarget = useMemo(() => {
-    if (targetType === "plan") return { type: "plan" };
-    if (targetType === "book")
-      return { type: "book", bookUri: "", bookName: "" };
+    if (targetType === "plan") {
+      return { type: "plan", planId: (planId ?? "").trim(), planTitle };
+    }
+
+    if (targetType === "book") {
+      return {
+        type: "book",
+        bookUri: (bookUri ?? "").trim(),
+        bookName: (bookName ?? "").trim(),
+      };
+    }
+
+    if (targetType === "target") {
+      return { type: "target", targetId: (targetId ?? "").trim(), targetTitle };
+    }
+
     if (targetType === "weeklyReport") return { type: "weeklyReport" };
     return { type: "general" };
-  }, [targetType]);
+  }, [targetType, planId, planTitle, bookUri, bookName, targetId, targetTitle]);
 
   const onTimeChange = (_e: DateTimePickerEvent, date?: Date) => {
     if (Platform.OS !== "ios") setShowTime(false);
@@ -143,6 +197,10 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
   };
 
   const save = () => {
+    if (targetType === "book" && (!bookUri || !bookName)) return;
+    if (targetType === "plan" && !planId) return;
+    if (targetType === "target" && !targetId) return;
+
     if (mode === "new") {
       addReminder({
         owner,
@@ -232,6 +290,18 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
     if (router.canGoBack?.()) router.back();
     else router.replace(basePath);
   };
+
+  const chosenBookLabel = bookName && bookUri ? bookName : "Choose book";
+  const chosenPlanLabel = planTitle
+    ? planTitle
+    : planId
+    ? planId
+    : "Choose plan";
+  const chosenTargetLabel = targetTitle
+    ? targetTitle
+    : targetId
+    ? targetId
+    : "Choose target";
 
   return (
     <AppScreen
@@ -387,6 +457,11 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
               onPress={() => setTargetType("book")}
             />
             <Chip
+              active={targetType === "target"}
+              label="Target"
+              onPress={() => setTargetType("target")}
+            />
+            <Chip
               active={targetType === "weeklyReport"}
               label="Haftalık Rapor"
               onPress={() => setTargetType("weeklyReport")}
@@ -394,9 +469,58 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
           </View>
 
           {targetType === "book" ? (
-            <MText style={{ marginTop: spacing.sm, color: text2 }}>
-              Choose book (bookUri/bookName) We will add next step.
-            </MText>
+            <View style={{ marginTop: spacing.md }}>
+              <RowAction
+                label="Book"
+                value={chosenBookLabel}
+                icon="book-outline"
+                onPress={() => setBookPickerOpen(true)}
+              />
+              {bookName && bookUri ? (
+                <MText
+                  style={{ marginTop: spacing.sm, color: text2, opacity: 0.85 }}
+                  numberOfLines={1}
+                >
+                  {bookUri}
+                </MText>
+              ) : (
+                <MText style={{ marginTop: spacing.sm, color: text2 }}>
+                  Select a book from your library.
+                </MText>
+              )}
+            </View>
+          ) : null}
+
+          {targetType === "plan" ? (
+            <View style={{ marginTop: spacing.md }}>
+              <RowAction
+                label="Plan"
+                value={chosenPlanLabel}
+                icon="calendar-outline"
+                onPress={() => setPlanPickerOpen(true)}
+              />
+              {!planId ? (
+                <MText style={{ marginTop: spacing.sm, color: text2 }}>
+                  Select a plan to open when tapping the notification.
+                </MText>
+              ) : null}
+            </View>
+          ) : null}
+
+          {targetType === "target" ? (
+            <View style={{ marginTop: spacing.md }}>
+              <RowAction
+                label="Target"
+                value={chosenTargetLabel}
+                icon="flag-outline"
+                onPress={() => setTargetPickerOpen(true)}
+              />
+              {!targetId ? (
+                <MText style={{ marginTop: spacing.sm, color: text2 }}>
+                  Select a target to open when tapping the notification.
+                </MText>
+              ) : null}
+            </View>
           ) : null}
         </View>
 
@@ -516,7 +640,7 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
               onPress={save}
               size={iconSizes.lg}
               backgroundColor={primaryBg}
-              iconBackgroundColor="rgba(255,255,255,0.16)" // istersen kaldır
+              iconBackgroundColor="rgba(255,255,255,0.16)"
               color={textInverse}
               labelColor={textInverse}
               style={[styles.actionTile, { borderColor: "transparent" }]}
@@ -524,6 +648,40 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
           </View>
         </View>
       </ScrollView>
+
+      {/* Modals */}
+      <BookPickerModal
+        visible={bookPickerOpen}
+        onClose={() => setBookPickerOpen(false)}
+        selectedUri={bookUri}
+        onPick={(b) => {
+          setBookUri(b.uri);
+          setBookName(b.name);
+          setBookPickerOpen(false);
+        }}
+      />
+
+      <PlanPickerModal
+        visible={planPickerOpen}
+        onClose={() => setPlanPickerOpen(false)}
+        selectedId={planId}
+        onPick={(p) => {
+          setPlanId(p.id);
+          setPlanTitle(p.title);
+          setPlanPickerOpen(false);
+        }}
+      />
+
+      <TargetPickerModal
+        visible={targetPickerOpen}
+        onClose={() => setTargetPickerOpen(false)}
+        selectedId={targetId}
+        onPick={(t) => {
+          setTargetId(t.id);
+          setTargetTitle(t.title);
+          setTargetPickerOpen(false);
+        }}
+      />
     </AppScreen>
   );
 }
@@ -607,48 +765,11 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
 
-  primaryBtn: {
-    paddingVertical: spacing.md,
-    borderRadius: radii.lg,
-    alignItems: "center",
-  },
-  dangerBtn: {
-    paddingVertical: spacing.md,
-    borderRadius: radii.lg,
-    alignItems: "center",
-    borderWidth: 1,
-  },
   actionsRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: spacing.md,
-  },
-
-  actionBtnOutline: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.lg,
-    borderWidth: 1,
-  },
-  actionBtnPrimary: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.lg,
-  },
-  tileOutline: {
-    borderWidth: 1,
-    borderRadius: radii.lg,
-    backgroundColor: "transparent",
-  },
-  tilePrimary: {
-    borderRadius: radii.lg,
   },
   actionsRight: {
     flexDirection: "row",

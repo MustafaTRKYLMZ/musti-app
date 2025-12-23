@@ -6,5 +6,14 @@ export type DailyReminderConfig = {
   minute: number;
   title: string;
   body: string;
-  kind?: string; 
+  kind?: string;
 };
+
+export type ReminderLink =
+  | { kind: "normal"; bookUri: string; bookName?: string }
+  | { kind: "plan"; planId: string; bookUri?: string; bookName?: string }
+  | { kind: "target"; targetId: string };
+
+export type NotificationPayload =
+  | { v: 1; link: ReminderLink }
+  | { v: 1; kind: "generic" }; // fallback
