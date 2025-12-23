@@ -140,7 +140,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
 
     // ✅ START a session even if page never changes (so minutes won't be 0)
     tracking.ensureStarted(startPage);
-  }, [initialPage, prefs.storageKey, tracking.resetBaselines]);
+  }, [initialPage, prefs.storageKey, tracking.resetBaselines, tracking.ensureStarted]);
 
   // zoom actions
   const applyZoomIndex = useCallback(
