@@ -25,11 +25,9 @@ import {
 } from "@budget/ui-native";
 import { IconButton, BaseIcon, IconTile } from "@/components/ui/AppIcon";
 import { listLocalPdfs, type LocalPdfFile } from "@/utils/getPdfsDirectory";
-import {
-  useReadingPlanStore,
-  type PlanItemConfig,
-} from "@/store/bookshelf/useReadingPlanStore";
+import { useReadingPlanStore } from "@/store/bookshelf/useReadingPlanStore";
 import { PlanBottomActionButtons } from "@/components/Books/PlanBottomActionButtons";
+import { PlanItemConfig } from "@budget/core";
 const { colors } = bookshelfTheme;
 
 type EntryState = Record<string, string>; // pages/day as string

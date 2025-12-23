@@ -3,9 +3,6 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ReadingMode, ReadingEvent } from "@budget/core";
 
-
-
-
 type AddEventInput = Omit<ReadingEvent, "id">;
 
 export type ResolvedSection = { id: string; title?: string } | undefined;
@@ -36,7 +33,6 @@ type ReadingEventsState = {
 const mkId = () => `${Date.now()}_${Math.random().toString(16).slice(2)}`;
 const dateLTE = (a: string, b: string) => a <= b;
 
-// Maximum number of events to store in persistent storage to prevent storage bloat
 const MAX_STORED_EVENTS = 2000;
 
 const clampInt = (n: any, fallback: number) => {
@@ -44,13 +40,20 @@ const clampInt = (n: any, fallback: number) => {
   return Number.isFinite(x) ? x : fallback;
 };
 
-
 const normalizePages = (pageFrom: any, pageTo: any) => {
   const a0 = Math.max(1, clampInt(pageFrom, 1));
   const b0 = Math.max(1, clampInt(pageTo, a0));
   const from = Math.min(a0, b0);
   const to = Math.max(a0, b0);
   return { from, to };
+};
+
+const normalizeDurationMs = (v: any) => {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return undefined;
+  if (n <= 0) return undefined;
+  // hard cap: 6 hours (avoid corrupted huge values)
+  return Math.min(Math.floor(n), 6 * 60 * 60 * 1000);
 };
 
 export const useReadingEventsStore = create<ReadingEventsState>()(
@@ -74,7 +77,6 @@ export const useReadingEventsStore = create<ReadingEventsState>()(
         if (!sectionId && !sectionTitle) {
           const resolver = get().resolveSectionForPage;
           if (resolver) {
-            // Prefer resolving by "to" page (usually the current page after reading)
             const res = resolver({
               bookUri: e.bookUri,
               page: to,
@@ -87,16 +89,18 @@ export const useReadingEventsStore = create<ReadingEventsState>()(
           }
         }
 
+        const durationMs = normalizeDurationMs((e as any).durationMs);
+
         const next: ReadingEvent = {
           ...e,
           pageFrom: from,
           pageTo: to,
           sectionId,
           sectionTitle,
+          durationMs,
           id: mkId(),
         };
 
-        // keep it bounded (prevents storage bloat)
         set((state) => {
           const merged = [next, ...(state.events ?? [])];
           return { events: merged.slice(0, MAX_STORED_EVENTS) };

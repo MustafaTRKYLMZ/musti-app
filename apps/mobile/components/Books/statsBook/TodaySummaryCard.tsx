@@ -10,10 +10,23 @@ type Props = {
   today: string;
   todayTotal: number;
   modeParts: ModePart[];
+
+  /** ✅ NEW */
+  todayMinutes?: number;
 };
 
-export function TodaySummaryCard({ today, todayTotal, modeParts }: Props) {
+export function TodaySummaryCard({
+  today,
+  todayTotal,
+  modeParts,
+  todayMinutes,
+}: Props) {
   const { colors } = useTheme();
+
+  const minsSafe =
+    typeof todayMinutes === "number" && Number.isFinite(todayMinutes)
+      ? Math.max(0, Math.floor(todayMinutes))
+      : 0;
 
   return (
     <Card
@@ -27,12 +40,14 @@ export function TodaySummaryCard({ today, todayTotal, modeParts }: Props) {
         <MText variant="bodyStrong" color="textPrimary">
           Today
         </MText>
+
         <MText
           variant="caption"
           color="textSecondary"
           style={{ marginLeft: "auto" }}
         >
           {today}
+          {minsSafe > 0 ? ` · ${minsSafe} min` : ""}
         </MText>
       </View>
 
@@ -41,7 +56,7 @@ export function TodaySummaryCard({ today, todayTotal, modeParts }: Props) {
         color="textPrimary"
         style={{ marginTop: spacing.xs, fontWeight: "900" }}
       >
-        {todayTotal} pages
+        {todayTotal} pages{minsSafe > 0 ? ` · ${minsSafe} min` : ""}
       </MText>
 
       {modeParts.length > 0 ? (

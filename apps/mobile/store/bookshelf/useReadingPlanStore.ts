@@ -1,35 +1,8 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { AddPagesFromSessionInput, PlanBookProgress, PlanItemConfig, ReadingPlan } from "@budget/core";
 
-export type PlanItemConfig = {
-  bookUri: string;
-  bookName: string;
-  pagesPerDay: number;
-};
-
-export type PlanBookProgress = {
-  bookUri: string;
-  currentPageInBook: number; // 1-based
-  pagesReadToday: number;
-  bookTotalPages?: number;
-};
-
-export type ReadingPlan = {
-  id: string;
-  name: string;
-  items: PlanItemConfig[];
-  perBook: Record<string, PlanBookProgress>;
-  dayKey: string; // "YYYY-MM-DD"
-  totalReadToday: number;
-};
-
-type AddPagesFromSessionInput = {
-  planId: string;
-  bookUri: string;
-  pages: number;
-  bookTotalPages?: number;
-};
 
 type ReadingPlanState = {
   plans: ReadingPlan[];
@@ -84,6 +57,11 @@ export const useReadingPlanStore = create<ReadingPlanState>()(
           perBook,
           dayKey,
           totalReadToday: 0,
+          currentIndex: 0,
+          currentPageInItem: 0,
+          isCompleted: false,
+          updatedAt: "",
+          createdAt: ""
         };
 
         set((state) => ({

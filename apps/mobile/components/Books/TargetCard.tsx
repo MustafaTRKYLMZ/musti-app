@@ -13,15 +13,12 @@ import {
 } from "react-native";
 import { MText, iconSizes, spacing, radii, useTheme } from "@budget/ui-native";
 import { IconButton, BaseIcon } from "@/components/ui/AppIcon";
-import type {
-  ReadingTarget,
-  TargetItem,
-} from "@/store/bookshelf/useReadingTargetsStore";
 import { ItemDots } from "../ui/ItemDots";
 import { pickActiveItem } from "@/utils/pickActiveItem";
 import { useToast } from "../ui/ToastProvider";
 import { TargetItemSummary } from "./TargetItemSummary";
 import { MenuRow } from "../MenuRow";
+import type { ReadingTarget, TargetItem } from "@budget/core";
 
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 const clamp = (x: number, a: number, b: number) => Math.max(a, Math.min(b, x));
@@ -31,6 +28,7 @@ type Props = {
 
   // ✅ already computed in TargetList
   todayPages?: number;
+  todayMinutes?: number;
 
   disableOpen?: boolean;
   onOpen: (t: ReadingTarget, item: TargetItem, openPage: number) => void;
@@ -68,6 +66,7 @@ export const TargetCard = ({
   onEditTarget,
   disableOpen,
   todayPages,
+  todayMinutes,
 }: Props) => {
   const { colors } = useTheme();
   const { showToast } = useToast();
@@ -146,7 +145,9 @@ export const TargetCard = ({
       ? target.items.findIndex((i) => i.id === activeItem.id)
       : -1;
     setPreviewIndex(idx >= 0 ? idx : 0);
-  }, [target.id]); // intentionally only on target change
+    // intentionally only on target change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target.id]);
 
   const displayItem = useMemo(() => {
     if (!target.items.length) return null;
@@ -255,10 +256,6 @@ export const TargetCard = ({
     prevRef.current = curr;
   }, [target.id, displayItem, clampedCurrent, rangeEnd, onAutoDoneItem]);
 
-  const statusActive = colors.success;
-  const statusPending = colors.primaryLight;
-  const statusDone = colors.textMuted;
-
   const handleOpen = async () => {
     if (!displayItem) return;
 
@@ -279,6 +276,12 @@ export const TargetCard = ({
   const todayPagesSafe = Number.isFinite(todayPages as number)
     ? Math.max(0, Math.floor(todayPages as number))
     : 0;
+
+  const todayMinutesSafe = Number.isFinite(todayMinutes as number)
+    ? Math.max(0, Math.floor(todayMinutes as number))
+    : 0;
+
+  const todayLabel = `Today: ${todayPagesSafe} pages · ${todayMinutesSafe} min`;
 
   if (!target.items.length || !displayItem) {
     return (
@@ -320,6 +323,18 @@ export const TargetCard = ({
           >
             No items yet
           </MText>
+
+          {/* ✅ still show today line */}
+          <View style={styles.todayRow}>
+            <BaseIcon
+              name="time-outline"
+              size={12}
+              color={colors.textSecondary}
+            />
+            <MText variant="caption" color="textSecondary">
+              {todayLabel}
+            </MText>
+          </View>
         </View>
 
         <Modal
@@ -374,6 +389,10 @@ export const TargetCard = ({
       </>
     );
   }
+
+  const statusActive = colors.success;
+  const statusPending = colors.primaryLight;
+  const statusDone = colors.textMuted;
 
   return (
     <>
@@ -459,14 +478,13 @@ export const TargetCard = ({
 
         {/* ✅ Today stats: dots’un hemen üstü */}
         <View style={styles.todayRow}>
-          {/* if calendar-outline not available, change to time-outline */}
           <BaseIcon
-            name="calendar-outline"
+            name="time-outline"
             size={12}
             color={colors.textSecondary}
           />
           <MText variant="caption" color="textSecondary">
-            Today: {todayPagesSafe} pages
+            {todayLabel}
           </MText>
         </View>
 
@@ -573,7 +591,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     marginTop: spacing.sm,
     marginBottom: spacing.xs,
-    opacity: 0.8,
+    opacity: 0.85,
   },
 
   dotContainer: { padding: spacing.xs },
@@ -590,11 +608,5 @@ const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowOpacity: 0.15,
     shadowRadius: 8,
-  },
-  menuItem: {
-    paddingVertical: spacing.sm,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
   },
 });

@@ -15,10 +15,25 @@ type Ctx = {
   targetId?: string;
 };
 
-export function useReadingTracking(enable: boolean, ctx?: Ctx) {
+export type PaceSample = {
+  pagesRead: number;
+  msSpent: number;
+};
+
+export type TrackingOptions = {
+  /** Called when a session flush happens and we have a valid sample */
+  onPaceSample?: (sample: PaceSample) => void;
+};
+
+export function useReadingTracking(
+  enable: boolean,
+  ctx?: Ctx,
+  options?: TrackingOptions
+) {
   const addPages = useReadingStatsStore((s) => s.addPages);
   const lastEvent = useReadingStatsStore((s) => s.lastEvent);
   const setLastEvent = useReadingStatsStore((s) => s.setLastEvent);
+
   const addEvent = useReadingEventsStore((s) => s.addEvent);
 
   const sessionStartPageRef = useRef<number | null>(null);
@@ -32,7 +47,7 @@ export function useReadingTracking(enable: boolean, ctx?: Ctx) {
   const ensureStarted = useCallback(
     (page: number) => {
       if (!enable) return;
-      if (!ctx?.date || !ctx?.bookUri) return;
+      if (!ctx?.date || !ctx?.bookUri || !ctx?.mode) return;
 
       if (sessionStartPageRef.current == null) {
         sessionStartPageRef.current = page;
@@ -43,12 +58,12 @@ export function useReadingTracking(enable: boolean, ctx?: Ctx) {
       if (maxVisitedRef.current == null) maxVisitedRef.current = page;
       if (maxCountedRef.current == null) maxCountedRef.current = page;
     },
-    [enable, ctx?.date, ctx?.bookUri]
+    [enable, ctx?.date, ctx?.bookUri, ctx?.mode]
   );
 
   const flushSession = useCallback(() => {
     if (!enable) return;
-    if (!ctx?.date || !ctx?.bookUri) return;
+    if (!ctx?.date || !ctx?.bookUri || !ctx?.mode) return;
 
     const start = sessionStartPageRef.current;
     const startAt = sessionStartAtRef.current;
@@ -60,21 +75,34 @@ export function useReadingTracking(enable: boolean, ctx?: Ctx) {
       return;
     }
 
+    const now = Date.now();
+    const durationMs = Math.max(0, now - startAt);
+
+    // ✅ event only if moved forward
     if (end > start) {
       addEvent({
         date: ctx.date,
-        at: Date.now(),
-        mode: ctx.mode!,
+        at: now,
+        mode: ctx.mode,
         bookUri: ctx.bookUri,
         targetId: ctx.targetId,
         pageFrom: start,
         pageTo: end,
+        durationMs, 
+      });
+    }
+
+    // ✅ pace sample: allow even if only 1 page (end>=start), but require some time
+    if (options?.onPaceSample && end >= start && durationMs >= 6_000) {
+      options.onPaceSample({
+        pagesRead: Math.max(1, end - start),
+        msSpent: durationMs,
       });
     }
 
     sessionStartPageRef.current = null;
     sessionStartAtRef.current = null;
-  }, [enable, ctx?.date, ctx?.bookUri, ctx?.mode, ctx?.targetId, addEvent]);
+  }, [enable, ctx?.date, ctx?.bookUri, ctx?.mode, ctx?.targetId, addEvent, options]);
 
   const pauseTrackingForNextTick = useCallback(() => {
     flushSession();
@@ -84,28 +112,30 @@ export function useReadingTracking(enable: boolean, ctx?: Ctx) {
     }, TRACKING_PAUSE_BUFFER_MS);
   }, [flushSession]);
 
-  const resetBaselines = useCallback((startPage: number) => {
-    flushSession();
+  const resetBaselines = useCallback(
+    (startPage: number) => {
+      flushSession();
 
-    lastSeenPageRef.current = startPage;
-    maxVisitedRef.current = startPage;
-    maxCountedRef.current = startPage;
+      lastSeenPageRef.current = startPage;
+      maxVisitedRef.current = startPage;
+      maxCountedRef.current = startPage;
 
-    sessionStartPageRef.current = null;
-    sessionStartAtRef.current = null;
+      sessionStartPageRef.current = null;
+      sessionStartAtRef.current = null;
 
-    isPausedForProgrammaticJump.current = false;
-  }, [flushSession]);
+      isPausedForProgrammaticJump.current = false;
+    },
+    [flushSession]
+  );
 
   const onPageChangedInternal = useCallback(
     (page: number) => {
       if (!enable) return;
-      if (!ctx?.date) return;
+      if (!ctx?.date || !ctx?.mode) return;
 
       ensureStarted(page);
       const now = Date.now();
 
-      // dedupe
       if (
         lastEvent &&
         lastEvent.date === ctx.date &&
@@ -120,18 +150,18 @@ export function useReadingTracking(enable: boolean, ctx?: Ctx) {
 
       setLastEvent({
         date: ctx.date,
-        mode: ctx.mode!,
+        mode: ctx.mode,
         page,
         bookUri: ctx.bookUri,
         targetId: ctx.targetId,
         at: now,
       });
 
-      // programmatic jump: reset chunk
       if (isPausedForProgrammaticJump.current) {
         lastSeenPageRef.current = page;
         maxVisitedRef.current = page;
         maxCountedRef.current = page;
+
         sessionStartPageRef.current = page;
         sessionStartAtRef.current = now;
         return;
@@ -147,14 +177,16 @@ export function useReadingTracking(enable: boolean, ctx?: Ctx) {
 
       const step = page - lastSeen;
 
-      // teleport
       if (Math.abs(step) > JUMP_THRESHOLD) {
         flushSession();
+
         lastSeenPageRef.current = page;
         maxVisitedRef.current = page;
         maxCountedRef.current = page;
+
         sessionStartPageRef.current = page;
         sessionStartAtRef.current = now;
+
         return;
       }
 
@@ -171,7 +203,7 @@ export function useReadingTracking(enable: boolean, ctx?: Ctx) {
         addPages({
           date: ctx.date,
           pages: inc,
-          mode: ctx.mode!,
+          mode: ctx.mode,
           bookUri: ctx.bookUri,
           targetId: ctx.targetId,
         });
@@ -181,7 +213,6 @@ export function useReadingTracking(enable: boolean, ctx?: Ctx) {
     [enable, ctx, ensureStarted, lastEvent, setLastEvent, flushSession, addPages]
   );
 
-  // unmount flush
   useEffect(() => {
     return () => {
       flushSession();
@@ -193,6 +224,6 @@ export function useReadingTracking(enable: boolean, ctx?: Ctx) {
     pauseTrackingForNextTick,
     resetBaselines,
     onPageChangedInternal,
-    isPausedForProgrammaticJump, 
+    ensureStarted, 
   };
 }

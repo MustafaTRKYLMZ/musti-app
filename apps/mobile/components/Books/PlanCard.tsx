@@ -1,4 +1,4 @@
-import React, { FC, useRef, useState, useMemo } from "react";
+import React, { FC, useMemo, useRef, useState } from "react";
 import {
   TouchableOpacity,
   View,
@@ -8,6 +8,7 @@ import {
   findNodeHandle,
   StyleProp,
   ViewStyle,
+  Dimensions,
 } from "react-native";
 import {
   MText,
@@ -23,12 +24,15 @@ import { ProgressPill, getProgressColor } from "@/components/ui/ProgressPill";
 export type PlanInfo = {
   name: string;
   isCompleted: boolean;
-  totalCompleted: number;
-  totalPagesInPlan: number;
+  totalCompleted: number; // pages today
+  totalPagesInPlan: number; // pages target today
   currentBookName?: string;
   currentBookUri?: string;
   remainingInItem?: number;
   suggestedBookName?: string;
+
+  // ✅ NEW
+  todayMinutes?: number; // minutes today (plan mode)
 };
 
 type PlanCardProps = {
@@ -40,6 +44,8 @@ type PlanCardProps = {
   cardStyle?: StyleProp<ViewStyle>;
 };
 
+const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
+
 export const PlanCard: FC<PlanCardProps> = ({
   currentPlanInfo,
   onPress,
@@ -48,15 +54,15 @@ export const PlanCard: FC<PlanCardProps> = ({
   wrapperStyle,
   cardStyle,
 }) => {
-  const theme = useTheme();
-  const { colors } = theme;
+  const { colors } = useTheme();
 
   const [menuVisible, setMenuVisible] = useState(false);
   const [menuPos, setMenuPos] = useState<{ x: number; y: number }>({
     x: 0,
     y: 0,
   });
-  const menuIconRef = useRef<View | null>(null);
+
+  const menuAnchorRef = useRef<View | null>(null);
 
   if (!currentPlanInfo) return null;
 
@@ -68,28 +74,31 @@ export const PlanCard: FC<PlanCardProps> = ({
     currentBookName,
     remainingInItem,
     suggestedBookName,
+    todayMinutes,
   } = currentPlanInfo;
 
-  const progressText = `${totalCompleted} / ${totalPagesInPlan} pages`;
+  const safeTotal = Math.max(totalPagesInPlan || 1, 1);
+  const pct01 = clamp01((totalCompleted || 0) / safeTotal);
 
-  const subtitle = isCompleted
-    ? suggestedBookName
-      ? `Today's plan is done. To keep reading, continue with "${suggestedBookName}".`
-      : "Today's plan is done."
-    : currentBookName
-    ? `Now: ${currentBookName}${
-        typeof remainingInItem === "number"
-          ? ` (${remainingInItem} pages left in this step)`
-          : ""
-      }`
-    : "Plan is in progress.";
+  const progressColor = useMemo(
+    () => getProgressColor(pct01, colors),
+    [pct01, colors]
+  );
 
   const openMenu = () => {
-    const handle = findNodeHandle(menuIconRef.current);
+    const handle = findNodeHandle(menuAnchorRef.current);
     if (!handle) return;
 
     UIManager.measure(handle, (_x, _y, width, height, pageX, pageY) => {
-      setMenuPos({ x: pageX + width - 160, y: pageY + height + 8 });
+      const windowW = Dimensions.get("window").width;
+      const MENU_W = 160;
+      const SAFE_PAD = 8;
+
+      let x = pageX + width - MENU_W;
+      x = Math.max(SAFE_PAD, Math.min(x, windowW - MENU_W - SAFE_PAD));
+      const y = pageY + height + 8;
+
+      setMenuPos({ x, y });
       setMenuVisible(true);
     });
   };
@@ -97,26 +106,36 @@ export const PlanCard: FC<PlanCardProps> = ({
   const closeMenu = () => setMenuVisible(false);
 
   const handleDeletePlan = () => {
-    setMenuVisible(false);
+    closeMenu();
     onDeletePlan();
   };
 
+  // ✅ Allow opening even if completed (sana daha uygun)
   const handleCardPress = () => {
-    if (isCompleted) return;
     onPress();
   };
 
-  const safeTotal = Math.max(totalPagesInPlan || 1, 1);
-  const pct01 = totalCompleted / safeTotal;
+  const progressText = useMemo(() => {
+    const pagesPart = `${totalCompleted ?? 0} / ${totalPagesInPlan ?? 0} pages`;
+    const mins =
+      typeof todayMinutes === "number" && Number.isFinite(todayMinutes)
+        ? Math.max(0, Math.round(todayMinutes))
+        : 0;
 
-  // icon always positive
-  const iconColor = colors.success;
+    return `${pagesPart} · ${mins} min`;
+  }, [totalCompleted, totalPagesInPlan, todayMinutes]);
 
-  // progress yellow -> green
-  const progressColor = useMemo(
-    () => getProgressColor(pct01, colors),
-    [pct01, colors]
-  );
+  const subtitle = isCompleted
+    ? suggestedBookName
+      ? `Today's plan is done. Continue with "${suggestedBookName}".`
+      : "Today's plan is done."
+    : currentBookName
+    ? `Now: ${currentBookName}${
+        typeof remainingInItem === "number"
+          ? ` (${remainingInItem} pages left)`
+          : ""
+      }`
+    : "Plan is in progress.";
 
   return (
     <>
@@ -139,7 +158,7 @@ export const PlanCard: FC<PlanCardProps> = ({
               <BaseIcon
                 name={isCompleted ? "checkmark-done-outline" : "time-outline"}
                 size={iconSizes.lg}
-                color={iconColor}
+                color={colors.success}
               />
             </View>
 
@@ -178,12 +197,13 @@ export const PlanCard: FC<PlanCardProps> = ({
           </View>
 
           <View style={styles.rightSection}>
-            <IconButton
-              ref={menuIconRef}
-              name="ellipsis-vertical"
-              size={iconSizes.md}
-              onPress={openMenu}
-            />
+            <View ref={menuAnchorRef} collapsable={false}>
+              <IconButton
+                name="ellipsis-vertical"
+                size={iconSizes.md}
+                onPress={openMenu}
+              />
+            </View>
           </View>
         </Card>
       </TouchableOpacity>
@@ -210,19 +230,17 @@ export const PlanCard: FC<PlanCardProps> = ({
               },
             ]}
           >
-            {!isCompleted && (
-              <TouchableOpacity
-                style={styles.menuItem}
-                onPress={() => {
-                  closeMenu();
-                  onPress();
-                }}
-              >
-                <MText variant="body" color="textPrimary">
-                  Open plan
-                </MText>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                closeMenu();
+                onPress();
+              }}
+            >
+              <MText variant="body" color="textPrimary">
+                Open plan
+              </MText>
+            </TouchableOpacity>
 
             {!!onEditPlan && (
               <TouchableOpacity

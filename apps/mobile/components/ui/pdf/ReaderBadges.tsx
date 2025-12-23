@@ -16,7 +16,10 @@ type Props = {
 
   zoomHintVisible: boolean;
   zoomPercent: number;
+
   cropLabel?: string;
+  timeLeftLabel?: string | null;
+
   isFullscreen?: boolean;
 };
 
@@ -26,17 +29,17 @@ export const ReaderBadges: FC<Props> = ({
   zoomHintVisible,
   zoomPercent,
   cropLabel,
+  timeLeftLabel,
   isFullscreen = false,
 }) => {
   const { colors } = useTheme();
 
   const showPage =
     typeof currentPage === "number" && typeof totalPages === "number";
-  const showCrop = typeof cropLabel === "string" && cropLabel.length > 0;
 
   return (
     <>
-      {/* Page badge */}
+      {/* Page badge + time left */}
       {showPage && (
         <View style={styles.pageBadgeContainer} pointerEvents="none">
           <View
@@ -52,15 +55,25 @@ export const ReaderBadges: FC<Props> = ({
               {currentPage} / {totalPages}
             </MText>
 
-            {showCrop && (
+            {timeLeftLabel ? (
               <MText
                 variant="caption"
                 color="textSecondary"
                 style={{ marginLeft: spacing.sm }}
               >
-                • {cropLabel}
+                · {timeLeftLabel}
               </MText>
-            )}
+            ) : null}
+
+            {cropLabel ? (
+              <MText
+                variant="caption"
+                color="textSecondary"
+                style={{ marginLeft: spacing.sm }}
+              >
+                · {cropLabel}
+              </MText>
+            ) : null}
           </View>
         </View>
       )}

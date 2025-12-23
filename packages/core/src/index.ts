@@ -32,12 +32,20 @@ export * from "./types/stats/lastEvent";
 export * from "./types/stats/readingMode";
 export * from "./types/stats/dayRow";
 export * from "./types/stats/readingEvent";
-export * from "./types/stats/PageRange";
+export * from "./types/stats/pageRange";
 export * from "./types/bookSection";
-
+//types - target
+export * from "./types/targetItem";
+export * from "./types/readingTarget";
+// types - plan
+export * from "./types/plan/planItemConfig";
+export * from "./types/plan/planBookProgress";
+export * from "./types/plan/readingPlan";
 // books
 export * from "./books/readingPlanUtils";
 export * from "./books/plan";
 
 // backup
 export * from "./types/backup";
+
+export * from "./types/addPagesFromSessionInput";

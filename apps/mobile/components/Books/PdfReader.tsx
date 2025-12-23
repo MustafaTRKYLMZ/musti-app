@@ -8,19 +8,20 @@ import {
   FloatingPageStrip,
   StripMode,
 } from "@/components/Books/FloatingPageStrip";
-import { PageStrip } from "../ui/pdf/PageStrip";
-import { ReaderSettingsPanel } from "../ui/pdf/ReaderSettingsPanel";
+import { PageStrip } from "@/components/ui/pdf/PageStrip";
+import { ReaderSettingsPanel } from "@/components/ui/pdf/ReaderSettingsPanel";
+import { ReaderBadges } from "@/components/ui/pdf/ReaderBadges";
 
-import type { BookSection } from "@budget/core";
-import type { CropKey, ReadingContext } from "../ui/pdf/types";
+import type { BookSection, ReadingMode } from "@budget/core";
+import type { CropKey } from "@/components/ui/pdf/types";
 
 import { ZOOM_PRESETS } from "@/constants/readerPresets";
+import { useReadingPace } from "@/hooks/useReadingPace";
+import { useReadingTracking } from "@/hooks/useReadingTracking";
 import { useCropTransform } from "@/hooks/ useCropTransform";
 import { useReaderPrefs } from "@/hooks/ useReaderPrefs";
-import { useReadingTracking } from "@/hooks/useReadingTracking";
 import { PdfViewport } from "../ui/pdf/ PdfViewport";
 import { ReaderHeaderBar } from "../ui/pdf/ ReaderHeaderBar";
-import { ReaderBadges } from "../ui/pdf/ReaderBadges";
 
 type PdfReaderProps = {
   isFullscreen: boolean;
@@ -40,7 +41,14 @@ type PdfReaderProps = {
   currentPage?: number;
   totalPages?: number;
 
-  readingContext?: ReadingContext;
+  readingContext?: {
+    mode: ReadingMode;
+    date: string;
+    bookUri?: string;
+    targetId?: string;
+    sectionId?: string;
+    sectionTitle?: string;
+  };
 
   sections?: BookSection[];
   enableStatsTracking?: boolean;
@@ -70,6 +78,18 @@ export const PdfReader: FC<PdfReaderProps> = ({
   // prefs (book-specific)
   const prefs = useReaderPrefs({ source, bookUri: readingContext?.bookUri });
 
+  // pace key (book-specific)
+  const paceKey =
+    readingContext?.bookUri ??
+    (typeof source === "object" ? source.uri : String(source));
+
+  // reading pace + time-left
+  const pace = useReadingPace({
+    paceKey: paceKey ?? null,
+    currentPage,
+    totalPages,
+  });
+
   // crop + zoom transforms
   const { setViewerSize, userScale, visualScale, cropTransform } =
     useCropTransform(prefs.cropKey, prefs.zoomPresetIndex);
@@ -77,7 +97,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
   // settings
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  // zoom hint (badge)
+  // zoom hint
   const [zoomHintVisible, setZoomHintVisible] = useState(false);
   const hideZoomTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -104,12 +124,22 @@ export const PdfReader: FC<PdfReaderProps> = ({
 
   const zoomPercent = Math.round(userScale * 100);
 
-  // tracking
-  const tracking = useReadingTracking(enableStatsTracking, readingContext);
+  // ✅ tracking (pace sampling burada)
+  const tracking = useReadingTracking(enableStatsTracking, readingContext, {
+    onPaceSample: (s) => {
+      pace.addSample(s.pagesRead, s.msSpent);
+    },
+  });
 
-  // reset tracking baselines when doc/initial changes
+  // ✅ reset tracking baselines when doc/initial changes
   useEffect(() => {
-    tracking.resetBaselines(Math.max(1, Math.floor(initialPage ?? 1)));
+    const startPage = Math.max(1, Math.floor(initialPage ?? 1));
+
+    // reset old session/baselines
+    tracking.resetBaselines(startPage);
+
+    // ✅ START a session even if page never changes (so minutes won't be 0)
+    tracking.ensureStarted(startPage);
   }, [initialPage, prefs.storageKey, tracking]);
 
   // zoom actions
@@ -131,7 +161,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
     applyZoomIndex(next);
   }, [prefs.zoomPresetIndex, applyZoomIndex]);
 
-  const toggleScrollMode = useCallback(() => {
+  const toggleScrollMode = () => {
     tracking.flushSession();
     tracking.pauseTrackingForNextTick();
 
@@ -141,7 +171,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
       prefs.savePrefsDebounced({ scrollMode: nm });
       return nm;
     });
-  }, [prefs, tracking]);
+  };
 
   const cycleCrop = useCallback(() => {
     const next: CropKey =
@@ -150,7 +180,6 @@ export const PdfReader: FC<PdfReaderProps> = ({
         : prefs.cropKey === "trim"
         ? "tight"
         : "none";
-
     prefs.setCropKey(next);
     prefs.savePrefsDebounced({ cropKey: next });
   }, [prefs]);
@@ -229,13 +258,13 @@ export const PdfReader: FC<PdfReaderProps> = ({
         onDoubleTap={handleDoubleTapZoom}
       />
 
-      {/* ✅ Badges (page + zoom) */}
       <ReaderBadges
         currentPage={currentPage}
         totalPages={totalPages}
         zoomHintVisible={zoomHintVisible}
         zoomPercent={zoomPercent}
         cropLabel={cropLabel}
+        timeLeftLabel={pace.timeLeftLabel}
         isFullscreen={isFullscreen}
       />
 

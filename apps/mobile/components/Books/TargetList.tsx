@@ -10,14 +10,15 @@ import {
   iconSizes,
 } from "@budget/ui-native";
 import { IconButton } from "@/components/ui/AppIcon";
-import {
-  useReadingTargetsStore,
-  type ReadingTarget,
-} from "@/store/bookshelf/useReadingTargetsStore";
+
+import { useReadingTargetsStore } from "@/store/bookshelf/useReadingTargetsStore";
 import { useReadingStatsStore } from "@/store/bookshelf/useReadingStatsStore";
+import { useReadingEventsStore } from "@/store/bookshelf/useReadingEventsStore";
+
 import { TargetCard } from "./TargetCard";
 import { EditTargetModal } from "@/components/ui/modals/EditTargetModal";
 import { DoneTargetsShortcut } from "./DoneTargetsShortcut";
+import type { ReadingTarget, ReadingEvent, ReadingMode } from "@budget/core";
 
 const { colors } = bookshelfTheme;
 
@@ -28,6 +29,17 @@ type TargetListProps = {
 
 const makeTargetKey = (targetId: string, date: string) =>
   `${targetId}::${date}`;
+
+const sumMinutesFromEvents = (events: ReadingEvent[]) => {
+  // durationMs optional olabilir
+  const totalMs = (events ?? []).reduce((acc, e) => {
+    const ms = (e as any)?.durationMs;
+    if (typeof ms === "number" && Number.isFinite(ms) && ms > 0)
+      return acc + ms;
+    return acc;
+  }, 0);
+  return Math.max(0, Math.round(totalMs / 60000));
+};
 
 export const TargetList = ({
   onOpenCreate,
@@ -44,12 +56,18 @@ export const TargetList = ({
   const markItemDone = useReadingTargetsStore((s) => s.markItemDone);
   const setActiveItem = useReadingTargetsStore((s) => s.setActiveItem);
 
-  // ✅ NEW: target-level stats store
+  // pages: target-level stats store (senin mevcut mantığın)
   const byTargetDate = useReadingStatsStore((s) => s.byTargetDate);
+
+  // minutes: events store (durationMs üzerinden)
+  const events = useReadingEventsStore((s) => s.events);
 
   useEffect(() => {
     if (!hydrated) hydrate();
   }, [hydrated, hydrate]);
+
+  // ✅ local date (Amsterdam-safe)
+  const today = useMemo(() => dayjs().format("YYYY-MM-DD"), []);
 
   const active = useMemo(() => {
     return targets
@@ -66,34 +84,53 @@ export const TargetList = ({
       );
   }, [targets]);
 
-  // ✅ local date (Amsterdam-safe)
-  const today = useMemo(() => dayjs().format("YYYY-MM-DD"), []);
-
   /**
-   * ✅ Target card "Today"
+   * ✅ Target card "Today pages"
    * - ONLY this target's reading
    * - ONLY mode:"target"
    */
   const getTodayTargetPagesForTarget = useCallback(
     (target: ReadingTarget) => {
       if (!target?.id) return 0;
-
       const key = makeTargetKey(target.id, today);
       const stat = byTargetDate?.[key];
 
       const n = stat?.pagesByMode?.target ?? 0;
-      return Math.max(0, Math.floor(n));
+      return Math.max(0, Math.floor(Number(n) || 0));
     },
     [byTargetDate, today]
   );
 
+  /**
+   * ✅ Target card "Today minutes"
+   * - events filtered by date + mode:"target" + targetId
+   */
+  const getTodayTargetMinutesForTarget = useCallback(
+    (target: ReadingTarget) => {
+      if (!target?.id) return 0;
+
+      const relevant = (events ?? []).filter((e) => {
+        if (!e) return false;
+        if (e.date !== today) return false;
+        if ((e.mode as ReadingMode) !== "target") return false;
+        if ((e.targetId ?? "") !== target.id) return false;
+        return true;
+      });
+
+      return sumMinutesFromEvents(relevant);
+    },
+    [events, today]
+  );
+
   const renderTarget = ({ item }: { item: ReadingTarget }) => {
     const todayPages = getTodayTargetPagesForTarget(item);
+    const todayMinutes = getTodayTargetMinutesForTarget(item);
 
     return (
       <TargetCard
         target={item}
         todayPages={todayPages}
+        todayMinutes={todayMinutes}
         onBeforeOpen={async (targetId, itemId) => {
           await setActiveItem(targetId, itemId);
         }}
@@ -133,6 +170,7 @@ export const TargetList = ({
               <MText style={{ fontWeight: "800" }}>Create one</MText>
             </Pressable>
           </View>
+
           <DoneTargetsShortcut
             count={doneAll.length}
             onPress={() => router.push("/(tabs)/bookshelf/target/done")}

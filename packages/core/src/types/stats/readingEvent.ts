@@ -1,19 +1,21 @@
 import { ReadingMode } from "./readingMode";
 
 export type ReadingEvent = {
-    id: string;
+  id: string;
 
-    date: string; 
-    at: number; 
-    mode: ReadingMode;
-    
-    bookUri: string;
+  date: string; // YYYY-MM-DD
+  at: number; // ms timestamp
+  mode: ReadingMode;
 
-    targetId?: string;
+  bookUri: string;
 
-    pageFrom: number;
-    pageTo: number;
+  targetId?: string;
 
-    sectionId?: string;
-    sectionTitle?: string;
-  };
+  pageFrom: number;
+  pageTo: number;
+
+  sectionId?: string;
+  sectionTitle?: string;
+
+  durationMs?: number;
+};
