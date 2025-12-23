@@ -81,14 +81,14 @@ export function useReadingTracking(
     // ✅ event only if moved forward
     if (end > start) {
       addEvent({
-        date: ctx.date,
+        date: ctx!.date,
         at: now,
-        mode: ctx.mode,
-        bookUri: ctx.bookUri,
-        targetId: ctx.targetId,
+        mode: ctx!.mode,
+        bookUri: ctx!.bookUri,
+        targetId: ctx!.targetId,
         pageFrom: start,
         pageTo: end,
-        durationMs, 
+        durationMs,
       });
     }
 
@@ -138,22 +138,22 @@ export function useReadingTracking(
 
       if (
         lastEvent &&
-        lastEvent.date === ctx.date &&
-        lastEvent.mode === ctx.mode &&
+        lastEvent.date === ctx!.date &&
+        lastEvent.mode === ctx!.mode &&
         lastEvent.page === page &&
-        (lastEvent.bookUri ?? "") === (ctx.bookUri ?? "") &&
-        (lastEvent.targetId ?? "") === (ctx.targetId ?? "") &&
+        (lastEvent.bookUri ?? "") === (ctx!.bookUri ?? "") &&
+        (lastEvent.targetId ?? "") === (ctx!.targetId ?? "") &&
         now - lastEvent.at < DEDUPE_THRESHOLD_MS
       ) {
         return;
       }
 
       setLastEvent({
-        date: ctx.date,
-        mode: ctx.mode,
+        date: ctx!.date,
+        mode: ctx!.mode,
         page,
-        bookUri: ctx.bookUri,
-        targetId: ctx.targetId,
+        bookUri: ctx!.bookUri,
+        targetId: ctx!.targetId,
         at: now,
       });
 
@@ -201,11 +201,11 @@ export function useReadingTracking(
 
       if (inc > 0) {
         addPages({
-          date: ctx.date,
+          date: ctx!.date,
           pages: inc,
-          mode: ctx.mode,
-          bookUri: ctx.bookUri,
-          targetId: ctx.targetId,
+          mode: ctx!.mode,
+          bookUri: ctx!.bookUri,
+          targetId: ctx!.targetId,
         });
         maxCountedRef.current = nextMax;
       }
@@ -224,6 +224,6 @@ export function useReadingTracking(
     pauseTrackingForNextTick,
     resetBaselines,
     onPageChangedInternal,
-    ensureStarted, 
+    ensureStarted,
   };
 }

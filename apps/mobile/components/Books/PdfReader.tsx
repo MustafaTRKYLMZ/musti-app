@@ -18,10 +18,10 @@ import type { CropKey } from "@/components/ui/pdf/types";
 import { ZOOM_PRESETS } from "@/constants/readerPresets";
 import { useReadingPace } from "@/hooks/useReadingPace";
 import { useReadingTracking } from "@/hooks/useReadingTracking";
-import { useCropTransform } from "@/hooks/ useCropTransform";
-import { useReaderPrefs } from "@/hooks/ useReaderPrefs";
-import { PdfViewport } from "../ui/pdf/ PdfViewport";
-import { ReaderHeaderBar } from "../ui/pdf/ ReaderHeaderBar";
+import { useCropTransform } from "@/hooks/useCropTransform";
+import { useReaderPrefs } from "@/hooks/useReaderPrefs";
+import { PdfViewport } from "../ui/pdf/PdfViewport";
+import { ReaderHeaderBar } from "../ui/pdf/ReaderHeaderBar";
 
 type PdfReaderProps = {
   isFullscreen: boolean;
@@ -140,7 +140,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
 
     // ✅ START a session even if page never changes (so minutes won't be 0)
     tracking.ensureStarted(startPage);
-  }, [initialPage, prefs.storageKey, tracking]);
+  }, [initialPage, prefs.storageKey, tracking.resetBaselines]);
 
   // zoom actions
   const applyZoomIndex = useCallback(
