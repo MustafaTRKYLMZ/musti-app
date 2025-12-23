@@ -119,59 +119,59 @@ export const ReaderSettingsPanel: FC<ReaderSettingsPanelProps> = ({
               Horizontal (paged)
             </MText>
           </View>
-          {/* Crop / margin trim */}
-          <View style={panelStyles.section}>
-            <MText variant="caption" color="textSecondary">
-              Margins
-            </MText>
-            <View style={panelStyles.margins}>
-              <View style={panelStyles.row}>
-                <IconButton
-                  name={
-                    cropKey === "none" ? "radio-button-on" : "radio-button-off"
-                  }
-                  onPress={() => {
-                    setCropKey("none");
-                    onPersist({ cropKey: "none" });
-                  }}
-                  accessibilityLabel="Margins off"
-                />
-                <MText variant="body" color="textPrimary">
-                  Off
-                </MText>
-              </View>
+        </View>
+        {/* Crop / margin trim */}
+        <View style={panelStyles.section}>
+          <MText variant="caption" color="textSecondary">
+            Margins
+          </MText>
+          <View style={panelStyles.margins}>
+            <View style={panelStyles.row}>
+              <IconButton
+                name={
+                  cropKey === "none" ? "radio-button-on" : "radio-button-off"
+                }
+                onPress={() => {
+                  setCropKey("none");
+                  onPersist({ cropKey: "none" });
+                }}
+                accessibilityLabel="Margins off"
+              />
+              <MText variant="body" color="textPrimary">
+                Off
+              </MText>
+            </View>
 
-              <View style={panelStyles.row}>
-                <IconButton
-                  name={
-                    cropKey === "trim" ? "radio-button-on" : "radio-button-off"
-                  }
-                  onPress={() => {
-                    setCropKey("trim");
-                    onPersist({ cropKey: "trim" });
-                  }}
-                  accessibilityLabel="Margins trim"
-                />
-                <MText variant="body" color="textPrimary">
-                  Trim
-                </MText>
-              </View>
+            <View style={panelStyles.row}>
+              <IconButton
+                name={
+                  cropKey === "trim" ? "radio-button-on" : "radio-button-off"
+                }
+                onPress={() => {
+                  setCropKey("trim");
+                  onPersist({ cropKey: "trim" });
+                }}
+                accessibilityLabel="Margins trim"
+              />
+              <MText variant="body" color="textPrimary">
+                Trim
+              </MText>
+            </View>
 
-              <View style={panelStyles.row}>
-                <IconButton
-                  name={
-                    cropKey === "tight" ? "radio-button-on" : "radio-button-off"
-                  }
-                  onPress={() => {
-                    setCropKey("tight");
-                    onPersist({ cropKey: "tight" });
-                  }}
-                  accessibilityLabel="Margins tight"
-                />
-                <MText variant="body" color="textPrimary">
-                  Tight
-                </MText>
-              </View>
+            <View style={panelStyles.row}>
+              <IconButton
+                name={
+                  cropKey === "tight" ? "radio-button-on" : "radio-button-off"
+                }
+                onPress={() => {
+                  setCropKey("tight");
+                  onPersist({ cropKey: "tight" });
+                }}
+                accessibilityLabel="Margins tight"
+              />
+              <MText variant="body" color="textPrimary">
+                Tight
+              </MText>
             </View>
           </View>
         </View>

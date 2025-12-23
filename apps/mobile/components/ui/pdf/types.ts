@@ -23,11 +23,11 @@ export type StripPrefs = {
   };
   
 
-  export type ReadingContext= {
-     mode: ReadingMode;
-        date: string;
-        bookUri?: string;
-        targetId?: string;
-        sectionId?: string;
-        sectionTitle?: string;
+  export type ReadingContext = {
+    mode: ReadingMode;
+    date: string;
+    bookUri?: string;
+    targetId?: string;
+    sectionId?: string;
+    sectionTitle?: string;
   };
