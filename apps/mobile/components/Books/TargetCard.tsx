@@ -13,15 +13,13 @@ import {
 } from "react-native";
 import { MText, iconSizes, spacing, radii, useTheme } from "@budget/ui-native";
 import { IconButton, BaseIcon } from "@/components/ui/AppIcon";
-import type {
-  ReadingTarget,
-  TargetItem,
-} from "@/store/bookshelf/useReadingTargetsStore";
 import { ItemDots } from "../ui/ItemDots";
 import { pickActiveItem } from "@/utils/pickActiveItem";
 import { useToast } from "../ui/ToastProvider";
 import { TargetItemSummary } from "./TargetItemSummary";
 import { MenuRow } from "../MenuRow";
+import type { ReadingTarget, TargetItem } from "@budget/core";
+import { RemainingTimeBadge } from "../ui/pdf/RemainingTimeBadge";
 
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 const clamp = (x: number, a: number, b: number) => Math.max(a, Math.min(b, x));
@@ -31,6 +29,7 @@ type Props = {
 
   // ✅ already computed in TargetList
   todayPages?: number;
+  todayMinutes?: number;
 
   disableOpen?: boolean;
   onOpen: (t: ReadingTarget, item: TargetItem, openPage: number) => void;
@@ -68,6 +67,7 @@ export const TargetCard = ({
   onEditTarget,
   disableOpen,
   todayPages,
+  todayMinutes,
 }: Props) => {
   const { colors } = useTheme();
   const { showToast } = useToast();
@@ -83,7 +83,6 @@ export const TargetCard = ({
   const menuAnchorRef = useRef<View | null>(null);
   const isDoneTarget = target.status === "done";
 
-  // ✅ keep popover inside screen
   const MENU_W = 180;
   const SAFE_PAD = 8;
 
@@ -146,7 +145,8 @@ export const TargetCard = ({
       ? target.items.findIndex((i) => i.id === activeItem.id)
       : -1;
     setPreviewIndex(idx >= 0 ? idx : 0);
-  }, [target.id]); // intentionally only on target change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target.id]);
 
   const displayItem = useMemo(() => {
     if (!target.items.length) return null;
@@ -255,10 +255,6 @@ export const TargetCard = ({
     prevRef.current = curr;
   }, [target.id, displayItem, clampedCurrent, rangeEnd, onAutoDoneItem]);
 
-  const statusActive = colors.success;
-  const statusPending = colors.primaryLight;
-  const statusDone = colors.textMuted;
-
   const handleOpen = async () => {
     if (!displayItem) return;
 
@@ -280,6 +276,12 @@ export const TargetCard = ({
     ? Math.max(0, Math.floor(todayPages as number))
     : 0;
 
+  const todayMinutesSafe = Number.isFinite(todayMinutes as number)
+    ? Math.max(0, Math.floor(todayMinutes as number))
+    : 0;
+
+  const todayLabel = `Today: ${todayPagesSafe} pages · ${todayMinutesSafe} min`;
+
   if (!target.items.length || !displayItem) {
     return (
       <>
@@ -293,7 +295,7 @@ export const TargetCard = ({
             },
           ]}
         >
-          <View style={styles.targetCardHeader}>
+          <View style={styles.headerRow}>
             <MText
               numberOfLines={1}
               style={[styles.title, { color: colors.textPrimary }]}
@@ -320,6 +322,17 @@ export const TargetCard = ({
           >
             No items yet
           </MText>
+
+          <View style={styles.todayRow}>
+            <BaseIcon
+              name="time-outline"
+              size={12}
+              color={colors.textSecondary}
+            />
+            <MText variant="caption" color="textSecondary">
+              {todayLabel}
+            </MText>
+          </View>
         </View>
 
         <Modal
@@ -375,6 +388,10 @@ export const TargetCard = ({
     );
   }
 
+  const statusActive = colors.success;
+  const statusPending = colors.primaryLight;
+  const statusDone = colors.textMuted;
+
   return (
     <>
       <Pressable
@@ -386,28 +403,19 @@ export const TargetCard = ({
           disableOpen && { opacity: 0.92 },
         ]}
       >
-        <View style={styles.topRow}>
+        {/* Header */}
+        <View style={styles.headerRow}>
           <View style={{ flex: 1 }}>
-            <View style={styles.targetCardHeader}>
-              <MText
-                numberOfLines={1}
-                style={[styles.title, { color: colors.textPrimary }]}
-              >
-                {target.title}
-              </MText>
-
-              <View ref={menuAnchorRef} collapsable={false}>
-                <IconButton
-                  name="ellipsis-vertical"
-                  size={iconSizes.lg}
-                  color={colors.textPrimary}
-                  onPress={openMenu}
-                />
-              </View>
-            </View>
+            <MText
+              numberOfLines={1}
+              style={[styles.title, { color: colors.textPrimary }]}
+            >
+              {target.title}
+            </MText>
 
             <Animated.View
               style={{
+                marginTop: spacing.xs,
                 opacity: anim,
                 transform: [
                   {
@@ -422,8 +430,22 @@ export const TargetCard = ({
               <TargetItemSummary item={displayItem} />
             </Animated.View>
           </View>
+
+          <View
+            ref={menuAnchorRef}
+            collapsable={false}
+            style={{ marginLeft: spacing.sm }}
+          >
+            <IconButton
+              name="ellipsis-vertical"
+              size={iconSizes.lg}
+              color={colors.textPrimary}
+              onPress={openMenu}
+            />
+          </View>
         </View>
 
+        {/* Progress bar */}
         <View
           style={[
             styles.barWrap,
@@ -438,38 +460,48 @@ export const TargetCard = ({
           />
         </View>
 
-        <View style={styles.bottomRow}>
-          <MText
-            style={[
-              styles.progressText,
-              { color: colors.textPrimary, opacity: 0.75 },
-            ]}
-          >
-            {donePages} / {total}
-          </MText>
-          <MText
-            style={[
-              styles.progressText,
-              { color: colors.textPrimary, opacity: 0.75 },
-            ]}
-          >
-            Remaining: {remainingPages}
-          </MText>
+        {/* Stats row */}
+        <View style={styles.statsRow}>
+          <View style={styles.statsLeft}>
+            <MText
+              style={[
+                styles.statText,
+                { color: colors.textPrimary, opacity: 0.78 },
+              ]}
+            >
+              {donePages} / {total}
+            </MText>
+            <MText
+              style={[
+                styles.statText,
+                { color: colors.textPrimary, opacity: 0.78 },
+              ]}
+            >
+              Remaining: {remainingPages}
+            </MText>
+          </View>
+
+          <View style={styles.statsRight}>
+            <RemainingTimeBadge
+              paceKey={displayItem.bookUri ?? null}
+              remainingPages={remainingPages}
+            />
+          </View>
         </View>
 
-        {/* ✅ Today stats: dots’un hemen üstü */}
+        {/* Today line (lighter) */}
         <View style={styles.todayRow}>
-          {/* if calendar-outline not available, change to time-outline */}
           <BaseIcon
-            name="calendar-outline"
+            name="time-outline"
             size={12}
             color={colors.textSecondary}
           />
           <MText variant="caption" color="textSecondary">
-            Today: {todayPagesSafe} pages
+            {todayLabel}
           </MText>
         </View>
 
+        {/* Dots */}
         <View style={styles.dotContainer} {...panResponder.panHandlers}>
           <ItemDots
             items={target.items}
@@ -483,6 +515,7 @@ export const TargetCard = ({
         </View>
       </Pressable>
 
+      {/* Menu */}
       <Modal
         visible={menuVisible}
         transparent
@@ -543,13 +576,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: spacing.md,
   },
-  targetCardHeader: {
+
+  headerRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
   },
-  topRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  title: { fontWeight: "900" },
+
+  title: {
+    fontWeight: "900",
+    fontSize: 16,
+    letterSpacing: 0.1,
+  },
 
   barWrap: {
     marginTop: spacing.md,
@@ -559,24 +597,41 @@ const styles = StyleSheet.create({
   },
   barFill: { height: "100%" },
 
-  bottomRow: {
+  statsRow: {
     marginTop: spacing.sm,
     flexDirection: "row",
+    alignItems: "center",
     justifyContent: "space-between",
+    gap: spacing.sm,
   },
-  progressText: { fontWeight: "800" },
+  statsLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    flexWrap: "wrap",
+    flex: 1,
+  },
+  statsRight: {
+    alignItems: "flex-end",
+    justifyContent: "center",
+  },
+  statText: {
+    fontWeight: "800",
+  },
 
-  // ✅ today row right above dots
   todayRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
     marginTop: spacing.sm,
-    marginBottom: spacing.xs,
-    opacity: 0.8,
+    opacity: 0.75,
   },
 
-  dotContainer: { padding: spacing.xs },
+  dotContainer: {
+    marginTop: spacing.sm,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.xs,
+  },
 
   menuOverlay: { flex: 1, backgroundColor: "transparent" },
   popover: {
@@ -590,11 +645,5 @@ const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowOpacity: 0.15,
     shadowRadius: 8,
-  },
-  menuItem: {
-    paddingVertical: spacing.sm,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
   },
 });

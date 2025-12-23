@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { MText, spacing, radii, iconSizes, useTheme } from "@budget/ui-native";
 import dayjs from "dayjs";
 
-import { PdfReader } from "@/components/ui/pdf/PdfReader";
+import { PdfReader } from "@/components/Books/PdfReader";
 import { useReadingPlanStore } from "@/store/bookshelf/useReadingPlanStore";
 import { IconButton, BaseIcon } from "@/components/ui/AppIcon";
 import { BookSectionsSidebar } from "@/components/Books/BookSectionsSidebar";
@@ -229,6 +229,12 @@ export default function PlanViewerScreen() {
       ? Math.min(todayPagesForThisBook, targetForToday)
       : todayPagesForThisBook;
 
+  // ✅ NEW: plan-remaining pages for today
+  const remainingPagesToday =
+    targetForToday > 0
+      ? Math.max(0, targetForToday - todayPagesForThisBook)
+      : null;
+
   const bannerStyle = {
     transform: [
       {
@@ -267,6 +273,7 @@ export default function PlanViewerScreen() {
         currentPage={currentPage}
         totalPages={totalPages ?? undefined}
         readingContext={{ mode: "plan", date: today, bookUri: uri }}
+        timeLeftRemainingPages={remainingPagesToday}
       />
 
       <BookSectionsSidebar

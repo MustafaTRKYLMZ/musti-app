@@ -1,236 +1,248 @@
-import React, { useMemo, useState, useCallback } from "react";
-import { View, StyleSheet, ScrollView } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useMemo } from "react";
+import { ScrollView, StyleSheet, View, FlatList } from "react-native";
 import dayjs from "dayjs";
+import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { AppScreen } from "@/components/AppScreen";
-import { IconButton } from "@/components/ui/AppIcon";
-import { spacing, iconSizes, useTheme } from "@budget/ui-native";
+import { IconButton, BaseIcon } from "@/components/ui/AppIcon";
+import {
+  spacing,
+  iconSizes,
+  useTheme,
+  MText,
+  Card,
+  radii,
+} from "@budget/ui-native";
 
 import { useReadingStatsStore } from "@/store/bookshelf/useReadingStatsStore";
 import { useReadingEventsStore } from "@/store/bookshelf/useReadingEventsStore";
-import { formatBookNameFromUri } from "@/utils/formatBookName";
 import { toNonNegativeInt } from "@/utils/toNonNegativeInt";
-import { makeBookKey } from "@/utils/makeBookKey";
+import { addDays } from "@/utils/addDays";
 
-import type {
-  DayRow,
-  PageRange,
-  ReadingEvent,
-  ReadingMode,
-} from "@budget/core";
+import { TodaySummaryCard } from "@/components/Books/statsBook/TodaySummaryCard";
+import { PeriodCard } from "@/components/Books/statsBook/PeriodCard";
 
-import { TodayCard } from "@/components/Books/statsBook/TodayCard";
-import { StatsKpiRow } from "@/components/Books/statsBook/StatsKpiRow";
-import { Last30DaysHeader } from "@/components/Books/statsBook/Last30DaysHeader";
-import { Last30DaysList } from "@/components/Books/statsBook/Last30DaysList";
-import { EmptyStateCard } from "@/components/Books/statsBook/EmptyStateCard";
+import { ReadingMode } from "@budget/core";
 import { formatModeParts } from "@/utils/formatModeParts";
-import {
-  getSectionLabel,
-  normalizeRange,
-  sumMergedRanges,
-} from "@/utils/statsBookUtils";
+import { guessNameFromUri } from "@/utils/guessNameFromUri";
+import { useLocalBooks } from "@/hooks/useLocalBooks";
 
-const DEFAULT_EVENTS_DISPLAY_LIMIT = 12;
+type DayRow = {
+  date: string;
+  pages: number;
+  minutes: number;
+};
+
+const msToMinutes = (ms: number) => Math.round(Math.max(0, ms) / 60000);
+
+const sumMinutesForBookOnDate = (
+  events: any[] | undefined,
+  bookUri: string,
+  date: string
+) => {
+  if (!events?.length || !bookUri || !date) return 0;
+  let totalMs = 0;
+
+  for (const e of events) {
+    if (!e) continue;
+    if (e.date !== date) continue;
+    if (e.bookUri !== bookUri) continue;
+
+    const ms =
+      typeof e.durationMs === "number" && Number.isFinite(e.durationMs)
+        ? Math.max(0, e.durationMs)
+        : 0;
+
+    totalMs += ms;
+  }
+
+  return msToMinutes(totalMs);
+};
 
 export default function StatsBookScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const params = useLocalSearchParams();
 
-  const params = useLocalSearchParams<{ uri?: string; name?: string }>();
-
-  const bookUri = useMemo(() => {
-    if (!params?.uri) return undefined;
+  const uri = useMemo(() => {
+    const raw = typeof params?.uri === "string" ? params.uri : "";
     try {
-      return decodeURIComponent(String(params.uri));
+      return decodeURIComponent(raw);
     } catch {
-      return String(params.uri);
+      return raw;
     }
   }, [params?.uri]);
 
-  const bookName = useMemo(() => {
-    if (params?.name) {
-      try {
-        return decodeURIComponent(String(params.name));
-      } catch {
-        return String(params.name);
-      }
-    }
-    if (bookUri) return formatBookNameFromUri(bookUri);
-    return "Book";
-  }, [params?.name, bookUri]);
-
   const today = useMemo(() => dayjs().format("YYYY-MM-DD"), []);
-  const title = bookName ?? "Book stats";
 
-  const byBookDate = useReadingStatsStore((s) => s.byBookDate);
+  const { books } = useLocalBooks();
+  const bookName = useMemo(() => {
+    const local = books.find((b) => b.uri === uri)?.name;
+    return local ?? guessNameFromUri(uri);
+  }, [books, uri]);
+
+  const getForBookDate = useReadingStatsStore((s) => s.getForBookDate);
   const getBookWeekTotal = useReadingStatsStore((s) => s.getBookWeekTotal);
   const getBookMonthTotal = useReadingStatsStore((s) => s.getBookMonthTotal);
 
-  const events = useReadingEventsStore((s) => s.events ?? []) as ReadingEvent[];
+  // ✅ these exist in your store code you pasted
+  const getBookRange = useReadingStatsStore((s) => s.getBookRange);
+  const getBookBestDay = useReadingStatsStore((s) => s.getBookBestDay);
+  const getBookStreak = useReadingStatsStore((s) => s.getBookStreak);
 
-  // ------- guards -------
-  if (!bookUri) {
-    return (
-      <AppScreen
-        title="Book stats"
-        headerLeft={
-          <IconButton
-            name="chevron-back"
-            size={iconSizes.lg}
-            color={colors.textPrimary}
-            onPress={() => router.back()}
-          />
-        }
-      >
-        <View style={[styles.center, { backgroundColor: colors.background }]} />
-      </AppScreen>
-    );
-  }
+  const events = useReadingEventsStore((s) => s.events);
 
-  // ------- stats -------
-  const todayKey = makeBookKey(bookUri, today);
-  const todayStat = byBookDate?.[todayKey];
-  const todayTotal = toNonNegativeInt(todayStat?.pagesTotal ?? 0);
+  const weekFrom = useMemo(() => addDays(today, -6), [today]);
+  const monthFrom = useMemo(() => addDays(today, -29), [today]);
 
-  const weekTotal = useMemo(
-    () => toNonNegativeInt(getBookWeekTotal(bookUri, today)),
-    [getBookWeekTotal, bookUri, today]
-  );
+  // Today book stat (pages)
+  const todayBook = useMemo(() => {
+    if (!uri) return undefined;
+    return getForBookDate(uri, today);
+  }, [uri, today, getForBookDate]);
 
-  const monthTotal = useMemo(
-    () => toNonNegativeInt(getBookMonthTotal(bookUri, today)),
-    [getBookMonthTotal, bookUri, today]
-  );
-
-  // Keep eventsByDate including today (TodayCard needs it)
-  const eventsByDate = useMemo(() => {
-    const from = dayjs(today).subtract(29, "day").format("YYYY-MM-DD");
-    const map: Record<string, ReadingEvent[]> = {};
-
-    for (const e of events) {
-      if (!e) continue;
-      if (e.bookUri !== bookUri) continue;
-      if (!e.date) continue;
-      if (e.date < from || e.date > today) continue;
-
-      if (!map[e.date]) map[e.date] = [];
-      map[e.date].push(e);
-    }
-
-    for (const d of Object.keys(map)) {
-      map[d].sort((a, b) => (b.at ?? 0) - (a.at ?? 0));
-    }
-
-    return map;
-  }, [events, bookUri, today]);
-
-  // ✅ Last 30 days list: EXCLUDE TODAY (yesterday -> 30 days ago)
-  const last30Days: DayRow[] = useMemo(() => {
-    const rows: DayRow[] = [];
-    for (let i = 1; i <= 30; i++) {
-      const d = dayjs(today).subtract(i, "day").format("YYYY-MM-DD");
-      const k = makeBookKey(bookUri, d);
-      const s = byBookDate?.[k];
-      const pagesTotal = toNonNegativeInt(s?.pagesTotal ?? 0);
-      if (pagesTotal <= 0) continue;
-
-      rows.push({
-        date: d,
-        pagesTotal,
-        pagesByMode: (s?.pagesByMode ?? {
-          normal: 0,
-          plan: 0,
-          target: 0,
-        }) as any,
-      });
-    }
-    return rows;
-  }, [byBookDate, bookUri, today]);
-
-  const [openDates, setOpenDates] = useState<Record<string, boolean>>({});
-  const [showAllDates, setShowAllDates] = useState<Record<string, boolean>>({});
-  const [sectionFilterByDate, setSectionFilterByDate] = useState<
-    Record<string, string | null>
-  >({});
-
-  const toggleDate = useCallback((date: string) => {
-    setOpenDates((prev) => ({ ...prev, [date]: !prev[date] }));
-  }, []);
-
-  const openDate = useCallback((date: string) => {
-    setOpenDates((prev) => ({ ...prev, [date]: true }));
-  }, []);
-
-  const toggleShowAll = useCallback((date: string) => {
-    setShowAllDates((prev) => ({ ...prev, [date]: !prev[date] }));
-  }, []);
-
-  const toggleSectionFilter = useCallback((date: string, label: string) => {
-    setSectionFilterByDate((prev) => {
-      const current = prev[date] ?? null;
-      return { ...prev, [date]: current === label ? null : label };
-    });
-  }, []);
-
-  const clearSectionFilter = useCallback((date: string) => {
-    setSectionFilterByDate((prev) => ({ ...prev, [date]: null }));
-  }, []);
-
-  // ---- Today derived state (StatsBookScreen içinde) ----
-  const todayEventsAll = useMemo(
-    () => eventsByDate[today] ?? [],
-    [eventsByDate, today]
-  );
-
-  const selectedTodayLabel = sectionFilterByDate[today] ?? null;
-
-  const todayEventsFiltered = useMemo(() => {
-    if (!selectedTodayLabel) return todayEventsAll;
-    return todayEventsAll.filter(
-      (e) => getSectionLabel(e) === selectedTodayLabel
-    );
-  }, [todayEventsAll, selectedTodayLabel]);
-
-  const isTodayOpen = !!openDates[today];
-  const showAllToday = !!showAllDates[today];
-
-  const todayEventsShown = useMemo(() => {
-    if (showAllToday) return todayEventsFiltered;
-    return todayEventsFiltered.slice(0, DEFAULT_EVENTS_DISPLAY_LIMIT);
-  }, [todayEventsFiltered, showAllToday]);
-
-  const todaySectionsTop = useMemo(() => {
-    if (!todayEventsAll.length) return [];
-    const groups: Record<string, PageRange[]> = {};
-    for (const e of todayEventsAll) {
-      const key = getSectionLabel(e);
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(normalizeRange(e.pageFrom, e.pageTo));
-    }
-
-    const rows = Object.entries(groups)
-      .map(([label, ranges]) => ({ label, pages: sumMergedRanges(ranges) }))
-      .filter((r) => r.pages > 0)
-      .sort((a, b) => b.pages - a.pages)
-      .slice(0, 4);
-
-    return rows;
-  }, [todayEventsAll]);
+  const todayPages = toNonNegativeInt(todayBook?.pagesTotal ?? 0);
 
   const todayModeParts = useMemo(() => {
     return formatModeParts(
-      (todayStat?.pagesByMode ?? { normal: 0, plan: 0, target: 0 }) as Record<
+      (todayBook?.pagesByMode ?? { normal: 0, plan: 0, target: 0 }) as Record<
         ReadingMode,
         number
       >
     );
-  }, [todayStat]);
+  }, [todayBook]);
+
+  const todayMinutes = useMemo(() => {
+    if (!uri) return 0;
+    return sumMinutesForBookOnDate(events as any[], uri, today);
+  }, [events, today, uri]);
+
+  // Totals
+  const weekTotalPages = useMemo(() => {
+    if (!uri) return 0;
+    return toNonNegativeInt(getBookWeekTotal(uri, today));
+  }, [uri, today, getBookWeekTotal]);
+
+  const monthTotalPages = useMemo(() => {
+    if (!uri) return 0;
+    return toNonNegativeInt(getBookMonthTotal(uri, today));
+  }, [uri, today, getBookMonthTotal]);
+
+  // ✅ build day rows (7 days)
+  const weekRows: DayRow[] = useMemo(() => {
+    if (!uri) return [];
+    const stats = getBookRange(uri, weekFrom, today) ?? [];
+
+    // Map stats by date for quick fill
+    const byDate: Record<string, number> = {};
+    for (const s of stats) {
+      if (!s?.date) continue;
+      byDate[s.date] = toNonNegativeInt(s.pagesTotal ?? 0);
+    }
+
+    const rows: DayRow[] = [];
+    for (let i = 0; i < 7; i++) {
+      const d = addDays(today, -i);
+      const pages = byDate[d] ?? 0;
+      const minutes = sumMinutesForBookOnDate(events as any[], uri, d);
+      rows.push({ date: d, pages, minutes });
+    }
+
+    // show newest first (today -> older)
+    return rows;
+  }, [uri, weekFrom, today, getBookRange, events]);
+
+  const weekTotalMinutes = useMemo(() => {
+    let sum = 0;
+    for (const r of weekRows) sum += r.minutes;
+    return sum;
+  }, [weekRows]);
+
+  // ✅ month rows (30 days) from stats + minutes (we’ll use top days to keep UI light)
+  const monthRows: DayRow[] = useMemo(() => {
+    if (!uri) return [];
+    const stats = getBookRange(uri, monthFrom, today) ?? [];
+
+    const rows: DayRow[] = [];
+    for (const s of stats) {
+      const d = s.date;
+      if (!d) continue;
+      const pages = toNonNegativeInt(s.pagesTotal ?? 0);
+      const minutes = sumMinutesForBookOnDate(events as any[], uri, d);
+      rows.push({ date: d, pages, minutes });
+    }
+
+    // stats only includes days with pages; fine for "top days"
+    rows.sort((a, b) => b.pages - a.pages);
+    return rows;
+  }, [uri, monthFrom, today, getBookRange, events]);
+
+  const monthTotalMinutes = useMemo(() => {
+    // true month minutes should include even days with 0 pages; but OK because no session => 0 anyway.
+    // We can compute exact later if you want by iterating 30 days like week.
+    let sum = 0;
+    for (const r of monthRows) sum += r.minutes;
+    return sum;
+  }, [monthRows]);
+
+  // best day + streak
+  const bestDay = useMemo(() => {
+    if (!uri) return undefined;
+    return getBookBestDay(uri);
+  }, [uri, getBookBestDay]);
+
+  const streak = useMemo(() => {
+    if (!uri) return 0;
+    return getBookStreak(uri, today);
+  }, [uri, today, getBookStreak]);
+
+  const renderDayRow = ({ item }: { item: DayRow }) => (
+    <View
+      style={[
+        styles.dayRow,
+        { backgroundColor: colors.surface, borderColor: colors.borderSubtle },
+      ]}
+    >
+      <MText variant="bodyStrong" color="textPrimary" style={{ width: 92 }}>
+        {item.date}
+      </MText>
+
+      <View
+        style={{
+          flex: 1,
+          flexDirection: "row",
+          justifyContent: "flex-end",
+          gap: spacing.md,
+        }}
+      >
+        <View style={styles.kv}>
+          <BaseIcon
+            name="book-outline"
+            size={14}
+            color={colors.textSecondary}
+          />
+          <MText variant="caption" color="textSecondary">
+            {item.pages} p
+          </MText>
+        </View>
+
+        <View style={styles.kv}>
+          <BaseIcon
+            name="time-outline"
+            size={14}
+            color={colors.textSecondary}
+          />
+          <MText variant="caption" color="textSecondary">
+            {item.minutes} min
+          </MText>
+        </View>
+      </View>
+    </View>
+  );
 
   return (
     <AppScreen
-      title={title}
+      title={bookName}
       headerLeft={
         <IconButton
           name="chevron-back"
@@ -245,53 +257,105 @@ export default function StatsBookScreen() {
         contentContainerStyle={{ paddingBottom: spacing["3xl"] }}
         showsVerticalScrollIndicator={false}
       >
-        {/* ✅ extracted: Today */}
-        <TodayCard
+        <TodaySummaryCard
           today={today}
-          todayTotal={todayTotal}
+          todayTotal={todayPages}
           modeParts={todayModeParts}
-          sectionsTop={todaySectionsTop}
-          selectedSectionLabel={selectedTodayLabel}
-          eventsAllCount={todayEventsAll.length}
-          eventsFilteredCount={todayEventsFiltered.length}
-          shownEventsCount={todayEventsShown.length}
-          eventsShown={todayEventsShown}
-          isOpen={isTodayOpen}
-          showAll={showAllToday}
-          onToggleOpen={() => toggleDate(today)}
-          onToggleShowAll={() => toggleShowAll(today)}
-          onSelectSection={(label) => {
-            openDate(today);
-            toggleSectionFilter(today, label);
-          }}
-          onClearSectionFilter={() => clearSectionFilter(today)}
-          eventsDisplayLimit={DEFAULT_EVENTS_DISPLAY_LIMIT}
+          todayMinutes={todayMinutes}
         />
 
-        {/* ✅ extracted: KPI row */}
-        <StatsKpiRow weekTotal={weekTotal} monthTotal={monthTotal} />
+        {/* ✅ Small highlights */}
+        <Card
+          style={[
+            styles.highlights,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.borderSubtle,
+            },
+          ]}
+        >
+          <View style={styles.highlightItem}>
+            <BaseIcon
+              name="flame-outline"
+              size={16}
+              color={colors.textSecondary}
+            />
+            <MText variant="body" color="textSecondary">
+              Streak
+            </MText>
+            <MText
+              variant="bodyStrong"
+              color="textPrimary"
+              style={{ marginLeft: "auto" }}
+            >
+              {streak} day{streak === 1 ? "" : "s"}
+            </MText>
+          </View>
 
-        {/* ✅ extracted: Header */}
-        <Last30DaysHeader count={last30Days.length} />
+          <View style={styles.highlightItem}>
+            <BaseIcon
+              name="trophy-outline"
+              size={16}
+              color={colors.textSecondary}
+            />
+            <MText variant="body" color="textSecondary">
+              Best day
+            </MText>
+            <MText
+              variant="bodyStrong"
+              color="textPrimary"
+              style={{ marginLeft: "auto" }}
+            >
+              {bestDay ? `${bestDay.pages} pages · ${bestDay.date}` : "—"}
+            </MText>
+          </View>
+        </Card>
 
-        {/* ✅ extracted: Empty/List */}
-        {last30Days.length === 0 ? (
-          <EmptyStateCard message="No reading found for this book in the last 30 days (excluding today)." />
-        ) : (
-          <Last30DaysList
-            rows={last30Days}
-            eventsByDate={eventsByDate}
-            openDates={openDates}
-            showAllDates={showAllDates}
-            sectionFilterByDate={sectionFilterByDate}
-            defaultEventsDisplayLimit={DEFAULT_EVENTS_DISPLAY_LIMIT}
-            toggleDate={toggleDate}
-            toggleShowAll={toggleShowAll}
-            toggleSectionFilter={toggleSectionFilter}
-            clearSectionFilter={clearSectionFilter}
-            openDate={openDate}
+        <PeriodCard
+          icon="time-outline"
+          title="Last 7 days"
+          total={weekTotalPages}
+          subtitle={`Pages in ${weekFrom} → ${today} · ${weekTotalMinutes} min`}
+          topTitle="Daily breakdown"
+          topCount={weekRows.length}
+        >
+          <FlatList
+            data={weekRows}
+            keyExtractor={(x) => x.date}
+            renderItem={renderDayRow}
+            scrollEnabled={false}
+            contentContainerStyle={{ marginTop: spacing.sm, gap: spacing.xs }}
           />
-        )}
+        </PeriodCard>
+
+        <PeriodCard
+          icon="calendar-outline"
+          title="Last 30 days"
+          total={monthTotalPages}
+          subtitle={`Pages in ${monthFrom} → ${today} · ${monthTotalMinutes} min`}
+          topTitle="Top days"
+          topCount={Math.min(10, monthRows.length)}
+        >
+          {monthRows.length === 0 ? (
+            <MText
+              variant="caption"
+              color="textSecondary"
+              style={{ marginTop: spacing.sm }}
+            >
+              No reading found in the last 30 days.
+            </MText>
+          ) : (
+            <FlatList
+              data={monthRows.slice(0, 10)}
+              keyExtractor={(x) => x.date}
+              renderItem={renderDayRow}
+              scrollEnabled={false}
+              contentContainerStyle={{ marginTop: spacing.sm, gap: spacing.xs }}
+            />
+          )}
+        </PeriodCard>
+
+        <View style={{ height: spacing.lg }} />
       </ScrollView>
     </AppScreen>
   );
@@ -303,7 +367,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
   },
-  center: {
-    flex: 1,
+
+  highlights: {
+    borderWidth: 1,
+    borderRadius: radii.lg,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  highlightItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+  },
+
+  dayRow: {
+    borderWidth: 1,
+    borderRadius: radii.lg,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  kv: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
 });

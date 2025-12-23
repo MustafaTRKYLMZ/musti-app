@@ -5,20 +5,16 @@ import { useRouter } from "expo-router";
 
 import { AppScreen } from "@/components/AppScreen";
 import { IconButton } from "@/components/ui/AppIcon";
-import {
-  spacing,
-  iconSizes,
-  useTheme,
-  Card,
-  MText,
-  radii,
-} from "@budget/ui-native";
+import { spacing, iconSizes, useTheme, MText } from "@budget/ui-native";
 
 import { useReadingStatsStore } from "@/store/bookshelf/useReadingStatsStore";
+import { useReadingEventsStore } from "@/store/bookshelf/useReadingEventsStore";
+
 import { toNonNegativeInt } from "@/utils/toNonNegativeInt";
 import { formatModeParts } from "@/utils/formatModeParts";
 import { guessNameFromUri } from "@/utils/guessNameFromUri";
 import { ReadingMode } from "@budget/core";
+
 import { BookRowCard } from "@/components/Books/statsBook/BookRowCard";
 import { EmptyStateCard } from "@/components/Books/statsBook/EmptyStateCard";
 import { PeriodCard } from "@/components/Books/statsBook/PeriodCard";
@@ -42,6 +38,9 @@ export default function StatsScreen() {
   const getMonthTotal = useReadingStatsStore((s) => s.getMonthTotal);
   const getBookWeekTotal = useReadingStatsStore((s) => s.getBookWeekTotal);
   const getBookMonthTotal = useReadingStatsStore((s) => s.getBookMonthTotal);
+
+  // ✅ events (minutes comes from durationMs)
+  const events = useReadingEventsStore((s) => s.events);
 
   // local pdfs
   const { books } = useLocalBooks();
@@ -75,6 +74,26 @@ export default function StatsScreen() {
       >
     );
   }, [todayGlobal]);
+
+  // ✅ NEW: today minutes (global)
+  const todayMinutes = useMemo(() => {
+    let totalMs = 0;
+
+    for (const e of events ?? []) {
+      if (!e) continue;
+      if (e.date !== today) continue;
+
+      const ms =
+        typeof (e as any).durationMs === "number" &&
+        Number.isFinite((e as any).durationMs)
+          ? Math.max(0, (e as any).durationMs)
+          : 0;
+
+      totalMs += ms;
+    }
+
+    return Math.round(totalMs / 60000);
+  }, [events, today]);
 
   // Today top books (7)
   const todayBooksTop7: BookRow[] = useMemo(() => {
@@ -172,6 +191,7 @@ export default function StatsScreen() {
           today={today}
           todayTotal={todayTotal}
           modeParts={todayModeParts}
+          todayMinutes={todayMinutes} // ✅ NEW
         />
 
         <StatsSectionHeader
@@ -244,7 +264,6 @@ export default function StatsScreen() {
           )}
         </PeriodCard>
 
-        {/* Small bottom spacer */}
         <View style={{ height: spacing.lg }} />
       </ScrollView>
     </AppScreen>

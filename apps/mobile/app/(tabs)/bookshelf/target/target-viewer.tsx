@@ -5,7 +5,7 @@ import { MText, spacing, iconSizes, useTheme } from "@budget/ui-native";
 import { PdfRef } from "react-native-pdf";
 import dayjs from "dayjs";
 
-import { PdfReader } from "@/components/ui/pdf/PdfReader";
+import { PdfReader } from "@/components/Books/PdfReader";
 import { IconButton } from "@/components/ui/AppIcon";
 import { BookSectionsSidebar } from "@/components/Books/BookSectionsSidebar";
 
@@ -189,6 +189,10 @@ export default function TargetViewerScreen() {
     }
   };
 
+  // ✅ NEW: remaining pages inside target range
+  const endPage = Math.max(1, Math.floor(displayItem.endPage ?? 1));
+  const remainingPagesTarget = Math.max(0, endPage - currentPage);
+
   return (
     <>
       <PdfReader
@@ -210,6 +214,7 @@ export default function TargetViewerScreen() {
           bookUri: uri,
           targetId: target.id,
         }}
+        timeLeftRemainingPages={remainingPagesTarget}
       />
 
       <BookSectionsSidebar
