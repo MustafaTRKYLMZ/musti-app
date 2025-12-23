@@ -27,6 +27,7 @@ const clamp = (x: number, a: number, b: number) => Math.max(a, Math.min(b, x));
 type Props = {
   target: ReadingTarget;
 
+  // ✅ already computed in TargetList
   todayPages?: number;
   todayMinutes?: number;
 
@@ -82,7 +83,6 @@ export const TargetCard = ({
   const menuAnchorRef = useRef<View | null>(null);
   const isDoneTarget = target.status === "done";
 
-  // ✅ keep popover inside screen
   const MENU_W = 180;
   const SAFE_PAD = 8;
 
@@ -295,7 +295,7 @@ export const TargetCard = ({
             },
           ]}
         >
-          <View style={styles.targetCardHeader}>
+          <View style={styles.headerRow}>
             <MText
               numberOfLines={1}
               style={[styles.title, { color: colors.textPrimary }]}
@@ -403,28 +403,19 @@ export const TargetCard = ({
           disableOpen && { opacity: 0.92 },
         ]}
       >
-        <View style={styles.topRow}>
+        {/* Header */}
+        <View style={styles.headerRow}>
           <View style={{ flex: 1 }}>
-            <View style={styles.targetCardHeader}>
-              <MText
-                numberOfLines={1}
-                style={[styles.title, { color: colors.textPrimary }]}
-              >
-                {target.title}
-              </MText>
-
-              <View ref={menuAnchorRef} collapsable={false}>
-                <IconButton
-                  name="ellipsis-vertical"
-                  size={iconSizes.lg}
-                  color={colors.textPrimary}
-                  onPress={openMenu}
-                />
-              </View>
-            </View>
+            <MText
+              numberOfLines={1}
+              style={[styles.title, { color: colors.textPrimary }]}
+            >
+              {target.title}
+            </MText>
 
             <Animated.View
               style={{
+                marginTop: spacing.xs,
                 opacity: anim,
                 transform: [
                   {
@@ -439,8 +430,22 @@ export const TargetCard = ({
               <TargetItemSummary item={displayItem} />
             </Animated.View>
           </View>
+
+          <View
+            ref={menuAnchorRef}
+            collapsable={false}
+            style={{ marginLeft: spacing.sm }}
+          >
+            <IconButton
+              name="ellipsis-vertical"
+              size={iconSizes.lg}
+              color={colors.textPrimary}
+              onPress={openMenu}
+            />
+          </View>
         </View>
 
+        {/* Progress bar */}
         <View
           style={[
             styles.barWrap,
@@ -455,34 +460,36 @@ export const TargetCard = ({
           />
         </View>
 
-        <View style={styles.bottomRow}>
-          <MText
-            style={[
-              styles.progressText,
-              { color: colors.textPrimary, opacity: 0.75 },
-            ]}
-          >
-            {donePages} / {total}
-          </MText>
-          <MText
-            style={[
-              styles.progressText,
-              { color: colors.textPrimary, opacity: 0.75 },
-            ]}
-          >
-            Remaining: {remainingPages}
-          </MText>
+        {/* Stats row */}
+        <View style={styles.statsRow}>
+          <View style={styles.statsLeft}>
+            <MText
+              style={[
+                styles.statText,
+                { color: colors.textPrimary, opacity: 0.78 },
+              ]}
+            >
+              {donePages} / {total}
+            </MText>
+            <MText
+              style={[
+                styles.statText,
+                { color: colors.textPrimary, opacity: 0.78 },
+              ]}
+            >
+              Remaining: {remainingPages}
+            </MText>
+          </View>
+
+          <View style={styles.statsRight}>
+            <RemainingTimeBadge
+              paceKey={displayItem.bookUri ?? null}
+              remainingPages={remainingPages}
+            />
+          </View>
         </View>
 
-        {/* ✅ Remaining time inside target range */}
-        <View style={{ marginTop: spacing.xs }}>
-          <RemainingTimeBadge
-            paceKey={displayItem.bookUri ?? null}
-            remainingPages={remainingPages}
-          />
-        </View>
-
-        {/* ✅ Today stats */}
+        {/* Today line (lighter) */}
         <View style={styles.todayRow}>
           <BaseIcon
             name="time-outline"
@@ -494,6 +501,7 @@ export const TargetCard = ({
           </MText>
         </View>
 
+        {/* Dots */}
         <View style={styles.dotContainer} {...panResponder.panHandlers}>
           <ItemDots
             items={target.items}
@@ -507,6 +515,7 @@ export const TargetCard = ({
         </View>
       </Pressable>
 
+      {/* Menu */}
       <Modal
         visible={menuVisible}
         transparent
@@ -567,13 +576,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: spacing.md,
   },
-  targetCardHeader: {
+
+  headerRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
   },
-  topRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  title: { fontWeight: "900" },
+
+  title: {
+    fontWeight: "900",
+    fontSize: 16,
+    letterSpacing: 0.1,
+  },
 
   barWrap: {
     marginTop: spacing.md,
@@ -583,23 +597,41 @@ const styles = StyleSheet.create({
   },
   barFill: { height: "100%" },
 
-  bottomRow: {
+  statsRow: {
     marginTop: spacing.sm,
     flexDirection: "row",
+    alignItems: "center",
     justifyContent: "space-between",
+    gap: spacing.sm,
   },
-  progressText: { fontWeight: "800" },
+  statsLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    flexWrap: "wrap",
+    flex: 1,
+  },
+  statsRight: {
+    alignItems: "flex-end",
+    justifyContent: "center",
+  },
+  statText: {
+    fontWeight: "800",
+  },
 
   todayRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
     marginTop: spacing.sm,
-    marginBottom: spacing.xs,
-    opacity: 0.85,
+    opacity: 0.75,
   },
 
-  dotContainer: { padding: spacing.xs },
+  dotContainer: {
+    marginTop: spacing.sm,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.xs,
+  },
 
   menuOverlay: { flex: 1, backgroundColor: "transparent" },
   popover: {

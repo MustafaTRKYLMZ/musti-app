@@ -31,9 +31,7 @@ export type PlanInfo = {
   currentBookUri?: string;
   remainingInItem?: number;
   suggestedBookName?: string;
-
-  // ✅ minutes today (plan mode)
-  todayMinutes?: number;
+  todayMinutes?: number; // minutes today (plan mode)
 };
 
 type PlanCardProps = {
@@ -112,39 +110,47 @@ export const PlanCard: FC<PlanCardProps> = ({
     onDeletePlan();
   };
 
-  const handleCardPress = () => {
-    onPress();
-  };
+  const handleCardPress = () => onPress();
 
-  const progressText = useMemo(() => {
-    const pagesPart = `${totalCompleted ?? 0} / ${totalPagesInPlan ?? 0} pages`;
-    const mins =
-      typeof todayMinutes === "number" && Number.isFinite(todayMinutes)
-        ? Math.max(0, Math.round(todayMinutes))
-        : 0;
+  const minsSafe =
+    typeof todayMinutes === "number" && Number.isFinite(todayMinutes)
+      ? Math.max(0, Math.round(todayMinutes))
+      : 0;
 
-    return `${pagesPart} · ${mins} min`;
-  }, [totalCompleted, totalPagesInPlan, todayMinutes]);
-
-  const subtitle = isCompleted
-    ? suggestedBookName
-      ? `Today's plan is done. Continue with "${suggestedBookName}".`
-      : "Today's plan is done."
-    : currentBookName
-    ? `Now: ${currentBookName}${
-        typeof remainingInItem === "number"
-          ? ` (${remainingInItem} pages left)`
-          : ""
-      }`
-    : "Plan is in progress.";
-
-  // ✅ remaining pages for TODAY's plan (whole plan progress)
+  // Plan-level remaining
   const remainingPagesToday =
     totalPagesInPlan > 0
       ? Math.max(0, totalPagesInPlan - (totalCompleted ?? 0))
-      : null;
+      : 0;
 
-  // ✅ paceKey should be book-specific; use current reading book when available
+  // Prefer per-item remaining for display (more meaningful)
+  const remainingForDisplay =
+    typeof remainingInItem === "number" && Number.isFinite(remainingInItem)
+      ? Math.max(0, Math.floor(remainingInItem))
+      : remainingPagesToday;
+
+  const subtitle = isCompleted
+    ? suggestedBookName
+      ? `Done. Continue with "${suggestedBookName}".`
+      : "Done for today."
+    : currentBookName
+    ? `Now: ${currentBookName}`
+    : "Plan is in progress.";
+
+  // Single compact meta line
+  const metaLeft = useMemo(() => {
+    const a = `${totalCompleted ?? 0}/${totalPagesInPlan ?? 0} pages`;
+    const b = `${minsSafe} min`;
+    const c = isCompleted ? "0 left" : `${remainingForDisplay} left`;
+    return `${a} · ${b} · ${c}`;
+  }, [
+    totalCompleted,
+    totalPagesInPlan,
+    minsSafe,
+    remainingForDisplay,
+    isCompleted,
+  ]);
+
   const paceKey = currentBookUri ?? null;
 
   return (
@@ -185,27 +191,34 @@ export const PlanCard: FC<PlanCardProps> = ({
               <MText
                 variant="body"
                 color="textSecondary"
-                numberOfLines={2}
+                numberOfLines={1}
                 style={styles.subtitle}
               >
                 {subtitle}
               </MText>
 
-              <View style={styles.progressRow}>
+              {/* Progress pill (alone, clean) */}
+              <View style={styles.pillRow}>
                 <ProgressPill
                   value={totalCompleted}
                   total={totalPagesInPlan}
-                  width={90}
+                  width={110}
                   height={6}
                   fillColor={progressColor}
                 />
-                <MText variant="caption" color="textSecondary">
-                  {progressText}
-                </MText>
               </View>
 
-              {/* ✅ Remaining time for TODAY (plan) */}
-              <View style={{ marginTop: spacing.xs }}>
+              {/* Single meta row: left text + right badge */}
+              <View style={styles.metaRow}>
+                <MText
+                  variant="caption"
+                  color="textSecondary"
+                  numberOfLines={1}
+                  style={styles.metaText}
+                >
+                  {metaLeft}
+                </MText>
+
                 <RemainingTimeBadge
                   paceKey={paceKey}
                   remainingPages={remainingPagesToday}
@@ -318,13 +331,26 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   textBlock: { flex: 1 },
-  title: { marginBottom: spacing.xs / 2 },
-  subtitle: { marginBottom: spacing.xs },
-  progressRow: {
+
+  title: { marginBottom: 2 },
+  subtitle: { marginBottom: spacing.xs, opacity: 0.9 },
+
+  pillRow: {
+    marginTop: spacing.xs,
+    marginBottom: spacing.xs,
+  },
+
+  metaRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.xs,
+    justifyContent: "space-between",
+    gap: spacing.sm,
   },
+  metaText: {
+    flex: 1,
+    opacity: 0.85,
+  },
+
   rightSection: { marginLeft: spacing.sm },
 
   menuOverlay: { flex: 1, backgroundColor: "transparent" },
