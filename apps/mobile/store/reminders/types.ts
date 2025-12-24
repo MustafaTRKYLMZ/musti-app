@@ -5,12 +5,14 @@ export type ReminderSchedule =
   | { type: "weekly"; weekday: number; hour: number; minute: number } // 1-7
   | { type: "once"; timestamp: number };
 
-export type ReminderTarget =
+
+  export type ReminderTarget =
   | { type: "general" }
   | { type: "weeklyReport" }
   | { type: "book"; bookUri: string; bookName: string }
-  | { type: "plan"; planId: string; planTitle?: string }
+  | { type: "plan"; planId: string; planTitle?: string; bookUri?: string; bookName?: string }
   | { type: "target"; targetId: string; targetTitle?: string };
+
 
 export type ReminderItem = {
   id: string;

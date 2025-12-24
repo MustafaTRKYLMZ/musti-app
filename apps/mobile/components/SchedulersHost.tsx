@@ -1,5 +1,4 @@
-import React, { useEffect, useMemo } from "react";
-import dayjs from "dayjs";
+import React, { useEffect, useMemo, useRef } from "react";
 
 import { useRemindersStore } from "@/store/reminders/useRemindersStore";
 import type { ReminderItem } from "@/store/reminders/types";
@@ -10,6 +9,8 @@ import {
 } from "@budget/notifications";
 import type { NotificationPayload } from "@budget/notifications";
 
+/* ------------------------- helpers ------------------------- */
+
 function simpleHash(input: string) {
   let h = 0;
   for (let i = 0; i < input.length; i++) {
@@ -19,29 +20,30 @@ function simpleHash(input: string) {
 }
 
 function buildPayload(rem: ReminderItem): NotificationPayload {
-  const t = rem.target;
+  const t = rem.target as any;
 
-  if (t.type === "book") {
+  if (t?.type === "book") {
     return {
       v: 1,
       link: { kind: "normal", bookUri: t.bookUri, bookName: t.bookName },
     };
   }
 
-  if (t.type === "plan") {
-    return { v: 1, link: { kind: "plan", planId: t.planId } };
+  if (t?.type === "plan") {
+    if (!t.planId) return { v: 1, kind: "generic" };
+    // ✅ only planId; book selection will happen on click
+    return { v: 1, link: { kind: "plan", planId: String(t.planId) } };
   }
 
-  if (t.type === "target") {
-    return { v: 1, link: { kind: "target", targetId: t.targetId } };
+  if (t?.type === "target") {
+    if (!t.targetId) return { v: 1, kind: "generic" };
+    return { v: 1, link: { kind: "target", targetId: String(t.targetId) } };
   }
 
-  // weeklyReport/general -> generic (istersen sonra weeklyReport ekleriz)
   return { v: 1, kind: "generic" };
 }
 
 function computeScheduleHash(rem: ReminderItem) {
-  // schedule + content + target + enabled
   const obj = {
     enabled: rem.enabled,
     title: rem.title,
@@ -54,32 +56,29 @@ function computeScheduleHash(rem: ReminderItem) {
 }
 
 async function ensureOneReminder(rem: ReminderItem) {
-  // disabled -> cancel and clear
   if (!rem.enabled) {
     if (rem.notificationIds?.length) {
       await cancelNotificationIds(rem.notificationIds);
     }
-    return { ids: [], hash: undefined as string | undefined };
+    return { ids: [] as string[], hash: undefined as string | undefined };
   }
 
-  // once in the past -> do not schedule
   if (rem.schedule.type === "once") {
     const ts = rem.schedule.timestamp;
     if (!Number.isFinite(ts) || ts <= Date.now()) {
       if (rem.notificationIds?.length) {
         await cancelNotificationIds(rem.notificationIds);
       }
-      return { ids: [], hash: undefined as string | undefined };
+      return { ids: [] as string[], hash: undefined as string | undefined };
     }
   }
 
   const nextHash = computeScheduleHash(rem);
+
   if (rem.scheduledHash === nextHash && rem.notificationIds?.length) {
-    // already scheduled
     return { ids: rem.notificationIds, hash: rem.scheduledHash };
   }
 
-  // re-schedule: cancel old ids first
   if (rem.notificationIds?.length) {
     await cancelNotificationIds(rem.notificationIds);
   }
@@ -93,10 +92,12 @@ async function ensureOneReminder(rem: ReminderItem) {
     body: rem.body,
     schedule: rem.schedule as any,
     payload,
-  });
+  } as any);
 
   return { ids: [id], hash: nextHash };
 }
+
+/* ------------------------- component ------------------------- */
 
 export function SchedulersHost() {
   const reminders = useRemindersStore((s) => s.reminders);
@@ -104,42 +105,88 @@ export function SchedulersHost() {
   const clearNotificationIds = useRemindersStore((s) => s.clearNotificationIds);
   const setScheduledHash = useRemindersStore((s) => s.setScheduledHash);
 
-  // today değişimine gerek yok ama debugging kolay olsun diye
-  const today = useMemo(() => dayjs().format("YYYY-MM-DD"), []);
+  const schedulingInputsKey = useMemo(() => {
+    const compact = reminders.map((r) => ({
+      id: r.id,
+      enabled: r.enabled,
+      title: r.title,
+      body: r.body,
+      schedule: r.schedule,
+      target: r.target,
+      owner: r.owner,
+      scheduledHash: r.scheduledHash,
+      notificationIds: r.notificationIds,
+    }));
+    return simpleHash(JSON.stringify(compact));
+  }, [reminders]);
+
+  const runningRef = useRef(false);
+  const pendingRef = useRef(false);
 
   useEffect(() => {
     let alive = true;
 
-    (async () => {
-      for (const r of reminders) {
-        if (!alive) return;
+    const run = async () => {
+      if (!alive) return;
 
-        try {
-          const res = await ensureOneReminder(r);
+      if (runningRef.current) {
+        pendingRef.current = true;
+        return;
+      }
+
+      runningRef.current = true;
+      pendingRef.current = false;
+
+      try {
+        await new Promise((r) => setTimeout(r, 0));
+
+        for (const r of reminders) {
           if (!alive) return;
 
-          if (!res.ids.length) {
-            if (r.notificationIds?.length) clearNotificationIds(r.id);
-            setScheduledHash(r.id, res.hash);
-          } else {
-            setNotificationIds(r.id, res.ids);
-            setScheduledHash(r.id, res.hash);
+          const nextHash = computeScheduleHash(r);
+          const alreadyOk =
+            r.enabled &&
+            r.scheduledHash === nextHash &&
+            (r.notificationIds?.length ?? 0) > 0;
+
+          if (alreadyOk) continue;
+
+          try {
+            const res = await ensureOneReminder(r);
+            if (!alive) return;
+
+            if (!res.ids.length) {
+              if (r.notificationIds?.length) clearNotificationIds(r.id);
+              setScheduledHash(r.id, res.hash);
+            } else {
+              setNotificationIds(r.id, res.ids);
+              setScheduledHash(r.id, res.hash);
+            }
+          } catch (e) {
+            console.error("[SchedulersHost] scheduling failed:", r.id, e);
           }
-        } catch {
-          // scheduling fail: keep state as-is (istersen toast/log)
+        }
+      } finally {
+        runningRef.current = false;
+
+        if (pendingRef.current && alive) {
+          pendingRef.current = false;
+          run();
         }
       }
-    })();
+    };
+
+    run();
 
     return () => {
       alive = false;
     };
   }, [
+    schedulingInputsKey,
     reminders,
     setNotificationIds,
     clearNotificationIds,
     setScheduledHash,
-    today,
   ]);
 
   return null;

@@ -598,9 +598,9 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
           {showTime ? (
             <DateTimePicker
               mode="time"
+              is24Hour={true}
               value={new Date(2000, 0, 1, hour, minute)}
               onChange={onTimeChange}
-              minuteInterval={5}
             />
           ) : null}
         </View>
