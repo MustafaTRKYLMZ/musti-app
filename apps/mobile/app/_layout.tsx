@@ -3,39 +3,77 @@ import {
   DefaultTheme,
   ThemeProvider,
 } from "@react-navigation/native";
-import { Stack } from "expo-router";
-import { StatusBar } from "expo-status-bar";
-import "react-native-reanimated";
-import "expo-notifications";
-
+import { Stack, useRouter, useRootNavigationState } from "expo-router";
+import React, { useEffect, useRef } from "react";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { useTransactionsStore } from "../store/budget/transactions/useTransactionsStore";
-import { useSettingsStore } from "../store/budget/useSettingsStore";
-import { useEffect } from "react";
-import { initNotificationsOnce } from "@budget/notifications";
-import { SchedulersHost } from "@/components/SchedulersHost";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ToastProvider } from "@/components/ui/ToastProvider";
+import { SchedulersHost } from "@/components/SchedulersHost";
 
-export const unstable_settings = {
-  anchor: "(tabs)",
-};
+import * as Notifications from "expo-notifications";
+import {
+  routeFromNotificationPayload,
+  type RouteTo,
+} from "@/utils/routeFromPayload";
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const router = useRouter();
 
-  const loadFromStorage = useTransactionsStore((s) => s.loadFromStorage);
-  const loadInitialBalance = useSettingsStore((s) => s.loadInitialBalance);
+  // ✅ nav ready gate
+  const navState = useRootNavigationState();
+  const pendingRouteRef = useRef<RouteTo | null>(null);
 
-  // ✅ Hooks inside component
+  // ✅ if we got a pending route, push it only when nav is ready
   useEffect(() => {
-    initNotificationsOnce();
-  }, []);
+    if (!navState?.key) return;
+    if (!pendingRouteRef.current) return;
+
+    const to = pendingRouteRef.current;
+    pendingRouteRef.current = null;
+
+    router.push(to as any);
+  }, [navState?.key, router]);
 
   useEffect(() => {
-    loadInitialBalance();
-    loadFromStorage();
-  }, [loadInitialBalance, loadFromStorage]);
+    let sub: Notifications.Subscription | null = null;
+
+    const handleResponse = (response: Notifications.NotificationResponse) => {
+      const data = response?.notification?.request?.content?.data as any;
+      const payload = data?.payload;
+
+      if (!payload) return;
+
+      const to = routeFromNotificationPayload(payload);
+
+      // ✅ if nav not ready yet, store it
+      if (!navState?.key) {
+        pendingRouteRef.current = to;
+        return;
+      }
+
+      router.push(to as any);
+    };
+
+    (async () => {
+      const last = await Notifications.getLastNotificationResponseAsync();
+      if (last) handleResponse(last);
+    })();
+
+    sub = Notifications.addNotificationResponseReceivedListener(handleResponse);
+
+    return () => sub?.remove();
+  }, [router, navState?.key]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -44,9 +82,7 @@ export default function RootLayout() {
           <SchedulersHost />
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="launcher" />
           </Stack>
-          <StatusBar style="auto" />
         </ToastProvider>
       </ThemeProvider>
     </GestureHandlerRootView>

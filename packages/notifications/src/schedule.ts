@@ -1,47 +1,91 @@
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import { ANDROID_CHANNEL_ID } from "./channels";
-import type { DailyReminderConfig, NotificationOwner } from "./types";
+import type { NotificationOwner, NotificationPayload } from "./types";
 
-export async function listScheduled() {
-  return Notifications.getAllScheduledNotificationsAsync();
+type Owner = NotificationOwner;
+
+type Schedule =
+  | { type: "daily"; hour: number; minute: number }
+  | { type: "weekly"; weekday: number; hour: number; minute: number } // 1-7
+  | { type: "once"; timestamp: number };
+
+export type CustomReminder = {
+  id: string;
+  owner: Owner;
+  title: string;
+  body: string;
+  schedule: Schedule;
+  payload?: NotificationPayload; // ✅ NEW
+};
+
+export function buildTrigger(
+  schedule: Schedule
+): Notifications.NotificationTriggerInput {
+  if (schedule.type === "once") {
+    return {
+      type: Notifications.SchedulableTriggerInputTypes.DATE,
+      date: new Date(schedule.timestamp),
+    };
+  }
+
+  if (schedule.type === "daily") {
+    if (Platform.OS === "android") {
+      return {
+        type: Notifications.SchedulableTriggerInputTypes.DAILY,
+        hour: schedule.hour,
+        minute: schedule.minute,
+      };
+    }
+
+    return {
+      type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
+      hour: schedule.hour,
+      minute: schedule.minute,
+      repeats: true,
+    };
+  }
+
+  // weekly
+  if (Platform.OS === "android") {
+    return {
+      type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
+      weekday: schedule.weekday,
+      hour: schedule.hour,
+      minute: schedule.minute,
+    };
+  }
+
+  return {
+    type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
+    weekday: schedule.weekday,
+    hour: schedule.hour,
+    minute: schedule.minute,
+    repeats: true,
+  };
 }
 
-export async function cancelScheduledByOwner(owner: NotificationOwner) {
-  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-
-  const toCancel = scheduled
-    .filter((n) => (n.content?.data as any)?.owner === owner)
-    .map((n) => n.identifier);
-
-  await Promise.all(
-    toCancel.map((id) => Notifications.cancelScheduledNotificationAsync(id))
-  );
-}
-
-export async function scheduleDailyReminder(cfg: DailyReminderConfig) {
-  const trigger: Notifications.NotificationTriggerInput =
-    Platform.OS === "android"
-      ? {
-          type: Notifications.SchedulableTriggerInputTypes.DAILY,
-          hour: cfg.hour,
-          minute: cfg.minute,
-        }
-      : {
-          type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
-          hour: cfg.hour,
-          minute: cfg.minute,
-          repeats: true,
-        };
+export async function scheduleCustomReminder(rem: CustomReminder) {
+  const trigger = buildTrigger(rem.schedule);
 
   return Notifications.scheduleNotificationAsync({
     content: {
-      title: cfg.title,
-      body: cfg.body,
+      title: rem.title,
+      body: rem.body,
       sound: "default",
       ...(Platform.OS === "android" ? { channelId: ANDROID_CHANNEL_ID } : null),
-      data: { owner: cfg.owner, kind: cfg.kind ?? "daily" },
+      data: {
+        owner: rem.owner,
+        reminderId: rem.id,
+        payload: rem.payload ?? { v: 1, kind: "generic" },
+      },
     },
     trigger,
   });
+}
+
+export async function cancelNotificationIds(ids: string[]) {
+  await Promise.all(
+    ids.map((id) => Notifications.cancelScheduledNotificationAsync(id))
+  );
 }

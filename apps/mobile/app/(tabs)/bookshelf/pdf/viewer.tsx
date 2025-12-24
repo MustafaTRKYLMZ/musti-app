@@ -20,7 +20,6 @@ export default function PdfViewerScreen() {
     returnTo?: string;
     returnBookUri?: string;
   }>();
-
   const returnTo = params.returnTo as string | undefined;
   const returnBookUri = params.returnBookUri
     ? decodeURIComponent(params.returnBookUri)
