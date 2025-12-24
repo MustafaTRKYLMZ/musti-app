@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { View, Pressable, StyleSheet } from "react-native";
+import { View, Pressable, StyleSheet, Platform } from "react-native";
 import Toast from "react-native-root-toast";
 
 import { ensureNotificationPermission } from "@budget/notifications";
@@ -116,141 +116,147 @@ export function BookshelfNotificationsSection() {
       />
 
       <View style={{ height: spacing.lg }} />
+      {/* test area (only for development) */}
+      {process.env.NODE_ENV === "development" && (
+        <>
+          <MText variant="heading3" style={{ color: colors.textPrimary }}>
+            Debug
+          </MText>
+          <View style={{ height: spacing.sm }} />
+          <MText style={{ color: colors.textSecondary }}>
+            These schedule a notification in 5 seconds. Tap it to test routing.
+          </MText>
 
-      <MText variant="heading3" style={{ color: colors.textPrimary }}>
-        Debug
-      </MText>
-      <View style={{ height: spacing.sm }} />
-      <MText style={{ color: colors.textSecondary }}>
-        These schedule a notification in 5 seconds. Tap it to test routing.
-      </MText>
+          <View style={{ height: spacing.md }} />
 
-      <View style={{ height: spacing.md }} />
+          <Pressable
+            onPress={async () => {
+              const ok = await requirePerm();
+              if (!ok) return;
+              await fireTestNotificationGeneric();
+              Toast.show("Generic test scheduled (5s).", {
+                duration: Toast.durations.SHORT,
+              });
+            }}
+            style={btnStyle}
+          >
+            <MText style={btnText}>Test: Generic (5s)</MText>
+          </Pressable>
 
-      <Pressable
-        onPress={async () => {
-          const ok = await requirePerm();
-          if (!ok) return;
-          await fireTestNotificationGeneric();
-          Toast.show("Generic test scheduled (5s).", {
-            duration: Toast.durations.SHORT,
-          });
-        }}
-        style={btnStyle}
-      >
-        <MText style={btnText}>Test: Generic (5s)</MText>
-      </Pressable>
+          <View style={{ height: spacing.sm }} />
 
-      <View style={{ height: spacing.sm }} />
+          <Pressable
+            onPress={async () => {
+              const ok = await requirePerm();
+              if (!ok) return;
 
-      <Pressable
-        onPress={async () => {
-          const ok = await requirePerm();
-          if (!ok) return;
+              await fireTestLinkReminders("bookshelf");
+              Toast.show("Reminders link test scheduled (5s).", {
+                duration: Toast.durations.SHORT,
+              });
+            }}
+            style={btnStyle}
+          >
+            <MText style={btnText}>Test link: Reminders (5s)</MText>
+          </Pressable>
 
-          await fireTestLinkReminders("bookshelf");
-          Toast.show("Reminders link test scheduled (5s).", {
-            duration: Toast.durations.SHORT,
-          });
-        }}
-        style={btnStyle}
-      >
-        <MText style={btnText}>Test link: Reminders (5s)</MText>
-      </Pressable>
+          <View style={{ height: spacing.sm }} />
 
-      <View style={{ height: spacing.sm }} />
+          <Pressable
+            onPress={async () => {
+              const ok = await requirePerm();
+              if (!ok) return;
 
-      <Pressable
-        onPress={async () => {
-          const ok = await requirePerm();
-          if (!ok) return;
+              if (!firstBook) {
+                Toast.show("No book found (Books store empty).", {
+                  duration: Toast.durations.SHORT,
+                });
+                return;
+              }
 
-          if (!firstBook) {
-            Toast.show("No book found (Books store empty).", {
-              duration: Toast.durations.SHORT,
-            });
-            return;
-          }
+              await fireTestLinkBook(firstBook.uri, firstBook.name);
+              Toast.show("Book link test scheduled (5s).", {
+                duration: Toast.durations.SHORT,
+              });
+            }}
+            style={btnStyle}
+          >
+            <MText style={btnText}>
+              Test link: Book (5s)
+              {firstBook ? ` — ${firstBook.name}` : ""}
+            </MText>
+          </Pressable>
 
-          await fireTestLinkBook(firstBook.uri, firstBook.name);
-          Toast.show("Book link test scheduled (5s).", {
-            duration: Toast.durations.SHORT,
-          });
-        }}
-        style={btnStyle}
-      >
-        <MText style={btnText}>
-          Test link: Book (5s)
-          {firstBook ? ` — ${firstBook.name}` : ""}
-        </MText>
-      </Pressable>
+          <View style={{ height: spacing.sm }} />
 
-      <View style={{ height: spacing.sm }} />
+          <Pressable
+            onPress={async () => {
+              const ok = await requirePerm();
+              if (!ok) return;
 
-      <Pressable
-        onPress={async () => {
-          const ok = await requirePerm();
-          if (!ok) return;
+              if (!firstPlan) {
+                Toast.show("No plan found (Plans store empty).", {
+                  duration: Toast.durations.SHORT,
+                });
+                return;
+              }
 
-          if (!firstPlan) {
-            Toast.show("No plan found (Plans store empty).", {
-              duration: Toast.durations.SHORT,
-            });
-            return;
-          }
+              if (!firstPlanBook) {
+                Toast.show("Plan has no books (plan.items empty).", {
+                  duration: Toast.durations.SHORT,
+                });
+                return;
+              }
 
-          if (!firstPlanBook) {
-            Toast.show("Plan has no books (plan.items empty).", {
-              duration: Toast.durations.SHORT,
-            });
-            return;
-          }
+              await fireTestLinkPlan(
+                String((firstPlan as any).id),
+                firstPlanBook.bookUri,
+                firstPlanBook.bookName
+              );
 
-          await fireTestLinkPlan(
-            String((firstPlan as any).id),
-            firstPlanBook.bookUri,
-            firstPlanBook.bookName
-          );
+              Toast.show("Plan link test scheduled (5s).", {
+                duration: Toast.durations.SHORT,
+              });
+            }}
+            style={btnStyle}
+          >
+            <MText style={btnText}>
+              Test link: Plan (5s)
+              {firstPlan ? ` — ${(firstPlan as any)?.title ?? "Plan"}` : ""}
+            </MText>
+          </Pressable>
 
-          Toast.show("Plan link test scheduled (5s).", {
-            duration: Toast.durations.SHORT,
-          });
-        }}
-        style={btnStyle}
-      >
-        <MText style={btnText}>
-          Test link: Plan (5s)
-          {firstPlan ? ` — ${(firstPlan as any)?.title ?? "Plan"}` : ""}
-        </MText>
-      </Pressable>
+          <View style={{ height: spacing.sm }} />
 
-      <View style={{ height: spacing.sm }} />
+          <Pressable
+            onPress={async () => {
+              const ok = await requirePerm();
+              if (!ok) return;
 
-      <Pressable
-        onPress={async () => {
-          const ok = await requirePerm();
-          if (!ok) return;
+              if (!firstTarget) {
+                Toast.show("No target found (Targets store empty).", {
+                  duration: Toast.durations.SHORT,
+                });
+                return;
+              }
 
-          if (!firstTarget) {
-            Toast.show("No target found (Targets store empty).", {
-              duration: Toast.durations.SHORT,
-            });
-            return;
-          }
-
-          await fireTestLinkTarget(String((firstTarget as any).id));
-          Toast.show("Target link test scheduled (5s).", {
-            duration: Toast.durations.SHORT,
-          });
-        }}
-        style={btnStyle}
-      >
-        <MText style={btnText}>
-          Test link: Target (5s)
-          {firstTarget ? ` — ${(firstTarget as any)?.title ?? "Target"}` : ""}
-        </MText>
-      </Pressable>
-
+              await fireTestLinkTarget(String((firstTarget as any).id));
+              Toast.show("Target link test scheduled (5s).", {
+                duration: Toast.durations.SHORT,
+              });
+            }}
+            style={btnStyle}
+          >
+            <MText style={btnText}>
+              Test link: Target (5s)
+              {firstTarget
+                ? ` — ${(firstTarget as any)?.title ?? "Target"}`
+                : ""}
+            </MText>
+          </Pressable>
+        </>
+      )}
+      {/* */}
       <View style={{ height: spacing.lg }} />
     </View>
   );
