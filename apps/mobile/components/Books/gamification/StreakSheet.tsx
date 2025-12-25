@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { View, StyleSheet, Pressable } from "react-native";
+import { View, StyleSheet, Pressable, ScrollView } from "react-native";
 import dayjs from "dayjs";
 import { MText, bookshelfTheme, iconSizes } from "@budget/ui-native";
 
@@ -72,9 +72,12 @@ export function StreakSheet({ visible, onClose }: Props) {
       leftAction={leftAction}
     >
       {mode === "settings" ? (
-        <GamificationSettingsCard />
+        <GamificationSettingsCard inModal />
       ) : (
-        <View>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
           {/* Summary row */}
           <View style={styles.summaryRow}>
             <CircularProgress
@@ -138,14 +141,16 @@ export function StreakSheet({ visible, onClose }: Props) {
             </View>
 
             <View style={styles.list}>
-              {last7.map((d) => (
-                <View key={d.day} style={styles.listRow}>
-                  <MText style={styles.day}>
-                    {dayjs(d.day).format("ddd, MMM D")}
-                  </MText>
-                  <MText style={styles.pages}>{d.pages}</MText>
-                </View>
-              ))}
+              {last7
+                .map((d) => (
+                  <View key={d.day} style={styles.listRow}>
+                    <MText style={styles.day}>
+                      {dayjs(d.day).format("ddd, MMM D")}
+                    </MText>
+                    <MText style={styles.pages}>{d.pages}</MText>
+                  </View>
+                ))
+                .reverse()}
             </View>
           </View>
 
@@ -156,15 +161,17 @@ export function StreakSheet({ visible, onClose }: Props) {
               Tune streak goal, XP per page, multipliers, bonuses
             </MText>
           </Pressable>
-
-          <View style={{ height: spacing.md }} />
-        </View>
+        </ScrollView>
       )}
     </BottomSheetModal>
   );
 }
 
 const styles = StyleSheet.create({
+  scrollContent: {
+    paddingBottom: spacing["6xl"] ?? spacing.xl, // ✅ bottom safe space
+  },
+
   backBtn: {
     width: 30,
     height: 30,

@@ -33,6 +33,7 @@ import { useReaderPrefs } from "@/hooks/ useReaderPrefs";
 import { PdfViewport } from "../ui/pdf/ PdfViewport";
 import { ReaderHeaderBar } from "../ui/pdf/ ReaderHeaderBar";
 import { useReadingGamificationStore } from "@/store/bookshelf/readingGamification/useReadingGamificationStore";
+import { scheduleMotivationNudgeIfNeeded } from "@/utils/motivation";
 
 type PdfReaderProps = {
   isFullscreen: boolean;
@@ -287,6 +288,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
   const handleCloseInternal = async () => {
     tracking.flushSession();
     await prefs.flushPrefsWrite();
+    scheduleMotivationNudgeIfNeeded().catch(() => {});
     handleClose();
   };
 

@@ -1,10 +1,7 @@
 import { create } from "zustand";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import {
-  DEFAULT_GAMIFICATION_SETTINGS,
-  sanitizeSettings,
-} from "./settings";
-import { GamificationSettings } from "./types";
+import { DEFAULT_GAMIFICATION_SETTINGS, sanitizeSettings } from "./settings";
+import type { GamificationSettings } from "./types";
 
 const STORAGE_KEY = "reading_gamification_settings_v1";
 

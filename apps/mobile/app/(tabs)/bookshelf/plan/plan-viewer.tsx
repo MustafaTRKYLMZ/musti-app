@@ -1,14 +1,16 @@
-import React, { useEffect, useState, useRef, useMemo } from "react";
+// apps/mobile/app/(tabs)/bookshelf/plan/plan-viewer.tsx
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { View, StyleSheet, Animated } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { MText, spacing, radii, iconSizes, useTheme } from "@budget/ui-native";
 import dayjs from "dayjs";
+import { PdfRef } from "react-native-pdf";
 
 import { PdfReader } from "@/components/Books/PdfReader";
 import { useReadingPlanStore } from "@/store/bookshelf/useReadingPlanStore";
 import { IconButton, BaseIcon } from "@/components/ui/AppIcon";
 import { BookSectionsSidebar } from "@/components/Books/BookSectionsSidebar";
-import { PdfRef } from "react-native-pdf";
+import { scheduleMotivationNudgeIfNeeded } from "@/utils/motivation";
 
 export default function PlanViewerScreen() {
   const router = useRouter();
@@ -55,7 +57,7 @@ export default function PlanViewerScreen() {
   const [todayPagesForThisBook, setTodayPagesForThisBook] = useState(0);
   const [hasReachedTarget, setHasReachedTarget] = useState(false);
 
-  const bannerAnim = React.useRef(new Animated.Value(0)).current;
+  const bannerAnim = useRef(new Animated.Value(0)).current;
 
   const items = plan?.items ?? [];
   const currentItemIndex = uri
@@ -185,6 +187,9 @@ export default function PlanViewerScreen() {
   const goToNextBookInPlan = () => {
     flushToPlan(uri);
 
+    // ✅ book change → schedule once
+    scheduleMotivationNudgeIfNeeded().catch(() => {});
+
     const totalItems = items.length;
     let idx = (currentItemIndex + 1) % totalItems;
     let nextItem: (typeof items)[number] | null = null;
@@ -221,6 +226,8 @@ export default function PlanViewerScreen() {
 
   const handleClose = () => {
     flushToPlan(uri);
+    // ✅ close → schedule once
+    scheduleMotivationNudgeIfNeeded().catch(() => {});
     router.replace("/(tabs)/bookshelf");
   };
 
@@ -229,7 +236,6 @@ export default function PlanViewerScreen() {
       ? Math.min(todayPagesForThisBook, targetForToday)
       : todayPagesForThisBook;
 
-  // ✅ NEW: plan-remaining pages for today
   const remainingPagesToday =
     targetForToday > 0
       ? Math.max(0, targetForToday - todayPagesForThisBook)

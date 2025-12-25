@@ -1,203 +1,168 @@
+// apps/mobile/app/(tabs)/bookshelf/target/target-viewer.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { View, StyleSheet } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { MText, spacing, iconSizes, useTheme } from "@budget/ui-native";
-import { PdfRef } from "react-native-pdf";
 import dayjs from "dayjs";
+import { PdfRef } from "react-native-pdf";
+import { MText, spacing, useTheme } from "@budget/ui-native";
 
 import { PdfReader } from "@/components/Books/PdfReader";
-import { IconButton } from "@/components/ui/AppIcon";
 import { BookSectionsSidebar } from "@/components/Books/BookSectionsSidebar";
-
 import { useReadingTargetsStore } from "@/store/bookshelf/useReadingTargetsStore";
-import { pickActiveItem } from "@/utils/pickActiveItem";
-import { findItemById } from "@/utils/findItemById";
-import { useToast } from "@/components/ui/ToastProvider";
+import { scheduleMotivationNudgeIfNeeded } from "@/utils/motivation";
 
 export default function TargetViewerScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const { showToast } = useToast();
+
+  const params = useLocalSearchParams<{
+    targetId?: string;
+    uri?: string;
+    name?: string;
+  }>();
+
+  const targetId = params.targetId ? String(params.targetId) : undefined;
+  const uriFromRoute = params.uri
+    ? decodeURIComponent(String(params.uri))
+    : undefined;
+  const nameFromRoute = params.name
+    ? decodeURIComponent(String(params.name))
+    : undefined;
 
   const today = dayjs().format("YYYY-MM-DD");
 
-  const params = useLocalSearchParams<{ targetId?: string }>();
-  const targetId = params.targetId ? String(params.targetId) : undefined;
-
-  const hydrate = useReadingTargetsStore((s) => s.hydrate);
   const hydrated = useReadingTargetsStore((s) => s.hydrated);
+  const hydrateTargets = useReadingTargetsStore((s) => s.hydrate);
   const targets = useReadingTargetsStore((s) => s.targets);
-
+  const setItemCursor = useReadingTargetsStore((s) => s.setItemCursor);
   const markItemDone = useReadingTargetsStore((s) => s.markItemDone);
-  const setItemCursor = useReadingTargetsStore((s) => (s as any).setItemCursor);
+
+  useEffect(() => {
+    if (!hydrated) hydrateTargets();
+  }, [hydrated, hydrateTargets]);
 
   const target = useMemo(() => {
     if (!targetId) return null;
-    return targets.find((t) => t.id === targetId) ?? null;
+    return (targets ?? []).find((t) => t.id === targetId) ?? null;
   }, [targets, targetId]);
 
-  const displayItem = useMemo(() => pickActiveItem(target), [target]);
+  const activeItem = useMemo(() => {
+    const items = target?.items ?? [];
+    return items.find((it) => it.status === "active") ?? null;
+  }, [target]);
 
-  const uri = displayItem?.bookUri;
-  const name = displayItem?.bookName ?? "PDF";
+  const bookUri = uriFromRoute ?? activeItem?.bookUri ?? null;
+  const effectiveName = nameFromRoute ?? activeItem?.bookName ?? "PDF";
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [sectionsOpen, setSectionsOpen] = useState(false);
+
   const pdfRef = useRef<PdfRef | null>(null);
 
   const [initialPage, setInitialPage] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState<number | null>(null);
 
-  const doneOnceRef = useRef<string | null>(null);
-  const lastCompletedItemIdRef = useRef<string | null>(null);
-
-  // hydrate
+  // ✅ set initial page when active item changes
   useEffect(() => {
-    if (!hydrated) hydrate();
-  }, [hydrated, hydrate]);
-
-  useEffect(() => {
-    if (!displayItem) return;
-
-    const baseline =
-      displayItem.cursorPage ??
-      displayItem.activeFromPage ??
-      displayItem.jumpPage ??
-      displayItem.startPage ??
-      1;
-
-    const start = Math.max(1, Math.floor(baseline));
+    const start = Math.max(
+      1,
+      Number(activeItem?.cursorPage ?? activeItem?.jumpPage ?? 1)
+    );
     setInitialPage(start);
     setCurrentPage(start);
-    setTotalPages(null);
+  }, [activeItem?.id]);
 
-    doneOnceRef.current = null;
-  }, [displayItem?.id]);
-
+  // ✅ schedule only when "book changes" (active item changes), not on every page
+  const didMountRef = useRef(false);
   useEffect(() => {
-    if (!targetId || !target) return;
+    if (!hydrated) return;
+    if (!activeItem?.id) return;
 
-    const completedId = lastCompletedItemIdRef.current;
-    if (!completedId) return;
-
-    if (displayItem?.id === completedId) return;
-
-    const completed = findItemById(target, completedId);
-
-    if (displayItem) {
-      const a = completed?.bookName ?? "Item";
-      const b = displayItem.bookName ?? "Next item";
-      showToast(`${a} completed — continuing with ${b}`, 3000);
-      lastCompletedItemIdRef.current = null;
+    if (!didMountRef.current) {
+      didMountRef.current = true;
       return;
     }
 
-    showToast("Target completed 🎉", 3000);
-    lastCompletedItemIdRef.current = null;
+    // active item changed (user picked another / auto-next after done)
+    scheduleMotivationNudgeIfNeeded().catch(() => {});
+  }, [hydrated, activeItem?.id]);
 
-    const tmr = setTimeout(() => router.back(), 900);
-    return () => clearTimeout(tmr);
-  }, [targetId, target, displayItem, showToast, router]);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    if (!targetId) return;
-    if (!target) return;
-
-    if (!displayItem) {
-      showToast("Target completed 🎉", 1200);
-      const tmr = setTimeout(() => router.back(), 900);
-      return () => clearTimeout(tmr);
-    }
-  }, [hydrated, targetId, target, displayItem, showToast, router]);
-
-  // Guards
   if (!targetId) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <MText variant="body" color="textPrimary">
-          Invalid route params (targetId missing)
-        </MText>
+      <View style={[styles.center, { backgroundColor: colors.background }]}>
+        <MText>Invalid targetId</MText>
       </View>
     );
   }
 
   if (!hydrated) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <MText variant="body" color="textPrimary">
-          Loading…
-        </MText>
+      <View style={[styles.center, { backgroundColor: colors.background }]}>
+        <MText>Loading…</MText>
       </View>
     );
   }
 
   if (!target) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <MText variant="body" color="textPrimary">
-          Target not found.
-        </MText>
-        <View style={{ height: spacing.md }} />
-        <IconButton
-          family="ion"
-          name="chevron-back"
-          size={iconSizes.lg}
-          color={colors.textPrimary}
-          onPress={() => router.back()}
-        />
+      <View style={[styles.center, { backgroundColor: colors.background }]}>
+        <MText>Target not found.</MText>
       </View>
     );
   }
 
-  if (!displayItem || !uri) {
+  if (!activeItem || !bookUri) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <MText variant="body" color="textPrimary" style={{ opacity: 0.8 }}>
-          Finishing…
-        </MText>
+      <View style={[styles.center, { backgroundColor: colors.background }]}>
+        <MText>No active item.</MText>
       </View>
     );
   }
 
-  const source = { uri, cache: true };
-  const handleLoadComplete = (pages: number) => setTotalPages(pages);
+  const source = { uri: bookUri, cache: true };
 
-  const handleClose = () => router.back();
+  const startPage = Math.max(
+    1,
+    Number(activeItem.activeFromPage ?? activeItem.startPage ?? 1)
+  );
+  const endPage = Math.max(startPage, Number(activeItem.endPage ?? startPage));
 
-  const handlePageChanged = async (page: number, total: number) => {
-    setTotalPages(total);
+  const remainingPages =
+    typeof currentPage === "number"
+      ? Math.max(0, endPage - currentPage)
+      : Math.max(0, endPage - (activeItem.cursorPage ?? startPage));
+
+  const handleLoadComplete = (pages: number) => {
+    setTotalPages(pages);
+  };
+
+  // ✅ PdfReader expects (page, numberOfPages)
+  const handlePageChanged = (page: number, _numberOfPages: number) => {
     setCurrentPage(page);
 
-    try {
-      if (typeof setItemCursor === "function") {
-        setItemCursor(targetId, displayItem.id, page);
-      }
-    } catch {
-      showToast("Error updating cursor", 3000);
-    }
+    const clamped = Math.max(startPage, Math.min(endPage, page));
+    void setItemCursor(targetId, activeItem.id, clamped).catch(() => {});
 
-    const end = Math.max(1, Math.floor(displayItem.endPage ?? 1));
-
-    if (page >= end) {
-      if (doneOnceRef.current === displayItem.id) return;
-      doneOnceRef.current = displayItem.id;
-
-      lastCompletedItemIdRef.current = displayItem.id;
-      await markItemDone(targetId, displayItem.id);
+    // ✅ DONE only triggers here; no schedule on page flip unless done
+    if (clamped >= endPage) {
+      void markItemDone(targetId, activeItem.id)
+        .then(() => scheduleMotivationNudgeIfNeeded().catch(() => {}))
+        .catch(() => {});
     }
   };
 
-  // ✅ NEW: remaining pages inside target range
-  const endPage = Math.max(1, Math.floor(displayItem.endPage ?? 1));
-  const remainingPagesTarget = Math.max(0, endPage - currentPage);
+  const handleClose = () => {
+    // ✅ close -> schedule once
+    scheduleMotivationNudgeIfNeeded().catch(() => {});
+    router.replace("/(tabs)/bookshelf");
+  };
 
   return (
     <>
       <PdfReader
         isFullscreen={isFullscreen}
-        name={`${target.title} • ${name}`}
+        name={effectiveName}
         setIsFullscreen={setIsFullscreen}
         handleClose={handleClose}
         source={source}
@@ -211,20 +176,22 @@ export default function TargetViewerScreen() {
         readingContext={{
           mode: "target",
           date: today,
-          bookUri: uri,
-          targetId: target.id,
+          bookUri: bookUri,
+          targetId: targetId,
+          sectionId: activeItem.id,
+          sectionTitle: activeItem.label ?? activeItem.bookName,
         }}
-        timeLeftRemainingPages={remainingPagesTarget}
+        timeLeftRemainingPages={remainingPages}
       />
 
       <BookSectionsSidebar
         visible={sectionsOpen}
         onClose={() => setSectionsOpen(false)}
-        bookUri={uri}
-        onJumpToPage={(p) => {
+        bookUri={bookUri}
+        onJumpToPage={(page) => {
           if (!pdfRef.current) return;
-          if (p <= 0) return;
-          pdfRef.current.setPage(p);
+          if (page <= 0) return;
+          pdfRef.current.setPage(page);
         }}
       />
     </>
@@ -232,10 +199,10 @@ export default function TargetViewerScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  center: {
     flex: 1,
-    justifyContent: "center",
     alignItems: "center",
-    padding: spacing.md,
+    justifyContent: "center",
+    padding: spacing.lg,
   },
 });

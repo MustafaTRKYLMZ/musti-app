@@ -9,8 +9,8 @@ export type DailyTotals = {
 export type StreakState = {
   current: number;
   best: number;
-  lastQualifiedDate: string | null; 
-  freezeTokens: number; 
+  lastQualifiedDate: string | null;
+  freezeTokens: number;
 };
 
 export type XPState = {
@@ -20,41 +20,59 @@ export type XPState = {
   xpForNextLevel: number;
 };
 
+export type LastGain = {
+  at: number; // timestamp
+  dayKey: string; // YYYY-MM-DD
+  xp: number; // gained xp
+  pages: number; // pagesDelta used
+  mode: ReadingMode;
+};
+
+export type GamificationSettings = {
+  // streak + xp
+  qualifyPagesPerDay: number;
+  xpPerPage: number;
+  planMultiplier: number;
+  targetMultiplier: number;
+  planCompleteBonus: number;
+  targetCompleteBonus: number;
+
+  // ✅ motivation nudge
+  motivationEnabled: boolean;
+  motivationOnlyIfNotDone: boolean;
+  motivationScheduleType: "daily" | "weekly";
+  motivationWeekday: number; // 1-7 (Mon-Sun)
+  motivationHour: number; // 0-23
+  motivationMinute: number; // 0-59
+};
+
 export type GamificationState = {
   hydrated: boolean;
 
-  // dayKey -> totals
   daily: Record<string, DailyTotals>;
-
   streak: StreakState;
   xp: XPState;
+
+  // ✅ optional: toast için “son kazanım”
+  lastGain: LastGain | null;
 
   hydrate: () => Promise<void>;
   resetAll: () => Promise<void>;
 
   logReadingProgress: (args: {
     bookUri: string;
-    at: number; // timestamp ms
+    at: number;
     mode: ReadingMode;
 
-    // you can supply either pagesDelta or from/to
     pagesDelta?: number;
     fromPage?: number;
     toPage?: number;
 
     minutesDelta?: number;
-  }) => void;
+  }) => number; // gainedXp döndürmek iyi (toast için)
 
-  onTargetCompleted: (args: { at: number; bookUri: string }) => void;
-  onPlanCompleted: (args: { at: number; bookUri: string }) => void;
+  onTargetCompleted: (args: { at: number; bookUri: string }) => number;
+  onPlanCompleted: (args: { at: number; bookUri: string }) => number;
+
+  clearLastGain: () => void;
 };
-
-
-export type GamificationSettings = {
-    qualifyPagesPerDay: number;   // QUALIFY_PAGES
-    xpPerPage: number;            // baseXpFromPages
-    planMultiplier: number;       // modeMultiplier("plan")
-    targetMultiplier: number;     // modeMultiplier("target")
-    planCompleteBonus: number;    // onPlanCompleted
-    targetCompleteBonus: number;  // onTargetCompleted
-  };

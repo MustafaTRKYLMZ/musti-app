@@ -8,8 +8,11 @@ import { useReadingStatsStore } from "@/store/bookshelf/useReadingStatsStore";
 import { useReadingEventsStore } from "@/store/bookshelf/useReadingEventsStore";
 import type { ReadingMode } from "@budget/core";
 
+// ✅ Gamification: only on flush, never on every page change
+import { useReadingGamificationStore } from "@/store/bookshelf/readingGamification/useReadingGamificationStore";
+
 type Ctx = {
-  date?: string;
+  date?: string; // YYYY-MM-DD
   mode?: ReadingMode;
   bookUri?: string;
   targetId?: string;
@@ -79,13 +82,7 @@ export function useReadingTracking(
     const now = Date.now();
     const durationMs = Math.max(0, now - startAt);
 
-    /**
-     * ✅ BUGFIX:
-     * Previously: event only if moved forward (end > start)
-     * Now: write event if duration > 0 (even if end === start)
-     *
-     * This enables: "0 pages · 5 min"
-     */
+    // ✅ write event even if end === start (0 pages · N minutes)
     if (durationMs > 0) {
       addEvent({
         date: ctx.date,
@@ -99,14 +96,25 @@ export function useReadingTracking(
       });
     }
 
-    /**
-     * ✅ Pace sample fix:
-     * Only produce a pace sample if we actually read pages.
-     * (Avoid Math.max(1, …) which made ppm collapse on same-page reading.)
-     *
-     * Keep the same min-time gate as before (>= 6s).
-     */
+    // ✅ Gamification: ONLY on flush (close / switch / done), not on every page
     const pagesRead = Math.max(0, end - start);
+    const minutesDelta = Math.max(0, Math.round(durationMs / 60_000));
+
+    // Optional tiny-noise gate:
+    // If you want: require at least 1 page OR at least 1 minute.
+    if (pagesRead > 0 || minutesDelta > 0) {
+      useReadingGamificationStore.getState().logReadingProgress({
+        bookUri: ctx.bookUri,
+        at: now,
+        mode: ctx.mode,
+        fromPage: start,
+        toPage: end,
+        pagesDelta: pagesRead,
+        minutesDelta,
+      });
+    }
+
+    // ✅ Pace sample fix: only if actually read pages and session >= 6s
     if (options?.onPaceSample && pagesRead > 0 && durationMs >= 6_000) {
       options.onPaceSample({
         pagesRead,
@@ -114,10 +122,18 @@ export function useReadingTracking(
       });
     }
 
-    // reset session baseline (refs for visited/count stay; caller updates them on next tick/jump)
+    // reset session baseline
     sessionStartPageRef.current = null;
     sessionStartAtRef.current = null;
-  }, [enable, ctx?.date, ctx?.bookUri, ctx?.mode, ctx?.targetId, addEvent, options]);
+  }, [
+    enable,
+    ctx?.date,
+    ctx?.bookUri,
+    ctx?.mode,
+    ctx?.targetId,
+    addEvent,
+    options,
+  ]);
 
   const pauseTrackingForNextTick = useCallback(() => {
     flushSession();
@@ -194,7 +210,7 @@ export function useReadingTracking(
 
       const step = page - lastSeen;
 
-      // big jump => treat as navigation; flush previous session and restart at new page
+      // big jump => treat as navigation; flush previous session and restart
       if (Math.abs(step) > JUMP_THRESHOLD) {
         flushSession();
 
@@ -229,7 +245,15 @@ export function useReadingTracking(
         maxCountedRef.current = nextMax;
       }
     },
-    [enable, ctx, ensureStarted, lastEvent, setLastEvent, flushSession, addPages]
+    [
+      enable,
+      ctx,
+      ensureStarted,
+      lastEvent,
+      setLastEvent,
+      flushSession,
+      addPages,
+    ]
   );
 
   useEffect(() => {

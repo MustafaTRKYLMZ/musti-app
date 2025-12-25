@@ -1,13 +1,15 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { View, StyleSheet, Pressable } from "react-native";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { View, StyleSheet, Pressable, Animated } from "react-native";
 import dayjs from "dayjs";
 import { MText, bookshelfTheme } from "@budget/ui-native";
 
+import { CircularProgress } from "@/components/ui/CircularProgress";
 import { StreakSheet } from "@/components/Books/gamification/StreakSheet";
 
 import { useReadingGamificationStore } from "@/store/bookshelf/readingGamification/useReadingGamificationStore";
 import { useGamificationSettingsStore } from "@/store/bookshelf/readingGamification/useGamificationSettingsStore";
-import { CircularProgress } from "@/components/ui/CircularProgress";
+
+import { useToast } from "@/components/ui/ToastProvider";
 
 const { colors, spacing, radii } = bookshelfTheme;
 
@@ -15,6 +17,7 @@ const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 
 export function StreakCard() {
   const [open, setOpen] = useState(false);
+  const { showToast } = useToast();
 
   useEffect(() => {
     useGamificationSettingsStore.getState().hydrate();
@@ -27,6 +30,7 @@ export function StreakCard() {
   const daily = useReadingGamificationStore((s) => s.daily);
   const streak = useReadingGamificationStore((s) => s.streak);
   const xp = useReadingGamificationStore((s) => s.xp);
+  const lastGain = useReadingGamificationStore((s) => s.lastGain);
 
   const settings = useGamificationSettingsStore((s) => s.settings);
 
@@ -35,70 +39,122 @@ export function StreakCard() {
 
   const goalPages = Math.max(1, Number(settings.qualifyPagesPerDay ?? 10));
   const goalProgress = clamp01(today.pages / goalPages);
+  const goalDone = today.pages >= goalPages;
 
   const xpProgress = clamp01(
     xp.xpForNextLevel > 0 ? xp.xpIntoLevel / xp.xpForNextLevel : 0
   );
 
-  const subtitle =
-    today.pages >= goalPages
-      ? "Today secured ✅ Tap for details"
-      : `Read ${Math.max(
-          0,
-          goalPages - today.pages
-        )} more pages · Tap for details`;
+  const pulse = useRef(new Animated.Value(1)).current;
+  const prevGoalDoneRef = useRef(false);
+
+  useEffect(() => {
+    if (!gHydrated || !sHydrated) return;
+
+    const prev = prevGoalDoneRef.current;
+
+    if (!prev && goalDone) {
+      Animated.sequence([
+        Animated.timing(pulse, {
+          toValue: 1.03,
+          duration: 140,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          toValue: 1.0,
+          duration: 180,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      const now = Date.now();
+      const freshGain =
+        lastGain &&
+        lastGain.dayKey === todayKey &&
+        now - lastGain.at < 2 * 60_000 &&
+        lastGain.xp > 0;
+
+      showToast({
+        title: "Streak secured ✅",
+        message: freshGain
+          ? `You hit ${goalPages} pages today. +${lastGain.xp} XP`
+          : `You hit ${goalPages} pages today.`,
+        duration: 3500,
+      });
+    }
+
+    prevGoalDoneRef.current = goalDone;
+  }, [
+    goalDone,
+    goalPages,
+    gHydrated,
+    sHydrated,
+    lastGain,
+    pulse,
+    showToast,
+    todayKey,
+  ]);
+
+  const subtitle = goalDone
+    ? "Today secured ✅ Tap for details"
+    : `Read ${Math.max(
+        0,
+        goalPages - today.pages
+      )} more pages · Tap for details`;
 
   if (!gHydrated || !sHydrated) return null;
 
   return (
     <>
-      <Pressable style={styles.card} onPress={() => setOpen(true)}>
-        <View style={styles.row}>
-          <CircularProgress
-            size={58}
-            stroke={7}
-            value={goalProgress}
-            labelTop={`${today.pages}/${goalPages}`}
-            labelBottom="today"
-            progressColor={colors.success}
-          />
-
-          <View style={styles.mid}>
-            <MText style={styles.title}>Streak</MText>
-            <MText style={styles.sub} numberOfLines={2}>
-              {subtitle}
-            </MText>
-
-            <View style={{ height: spacing.xs }} />
-
-            <View style={styles.microRow}>
-              <View style={styles.chip}>
-                <MText style={styles.chipText}>
-                  🔥 {streak.current} day{streak.current === 1 ? "" : "s"}
-                </MText>
-              </View>
-
-              <View style={styles.chip}>
-                <MText style={styles.chipText}>🏆 best {streak.best}</MText>
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.right}>
+      <Animated.View style={{ transform: [{ scale: pulse }] }}>
+        <Pressable style={styles.card} onPress={() => setOpen(true)}>
+          <View style={styles.row}>
             <CircularProgress
-              size={46}
-              stroke={6}
-              value={xpProgress}
-              labelTop={`L${xp.level}`}
-              labelBottom="xp"
+              size={58}
+              stroke={7}
+              value={goalProgress}
+              labelTop={`${today.pages}/${goalPages}`}
+              labelBottom="today"
               progressColor={colors.success}
             />
-            <MText style={styles.tap} numberOfLines={1}>
-              Tap
-            </MText>
+
+            <View style={styles.mid}>
+              <MText style={styles.title}>Streak</MText>
+              <MText style={styles.sub} numberOfLines={2}>
+                {subtitle}
+              </MText>
+
+              <View style={{ height: spacing.xs }} />
+
+              <View style={styles.microRow}>
+                <View style={styles.chip}>
+                  <MText style={styles.chipText}>
+                    🔥 {streak.current} day{streak.current === 1 ? "" : "s"}
+                  </MText>
+                </View>
+
+                <View style={styles.chip}>
+                  <MText style={styles.chipText}>🏆 best {streak.best}</MText>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.right}>
+              <CircularProgress
+                size={46}
+                stroke={6}
+                value={xpProgress}
+                labelTop={`L${xp.level}`}
+                labelBottom="xp"
+                progressColor={colors.primary}
+              />
+              <MText style={styles.tap} numberOfLines={1}>
+                Tap
+              </MText>
+            </View>
           </View>
-        </View>
-      </Pressable>
+        </Pressable>
+      </Animated.View>
 
       <StreakSheet visible={open} onClose={() => setOpen(false)} />
     </>

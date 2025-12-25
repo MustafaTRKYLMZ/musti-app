@@ -17,4 +17,4 @@ export type ReminderLink =
 
 export type NotificationPayload =
   | { v: 1; link: ReminderLink }
-  | { v: 1; kind: "generic" }; // fallback (legacy)
+  | { v: 1; kind: "generic"|"motivation" }; 

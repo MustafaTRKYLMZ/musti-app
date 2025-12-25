@@ -1,9 +1,8 @@
 import { create } from "zustand";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import type { DailyTotals, GamificationState, XPState } from "./types";
+import type { DailyTotals, GamificationState, XPState, LastGain } from "./types";
 import { xpForNextLevel } from "@/constants/xp";
 import { ReadingMode } from "@budget/core";
-
 import { useGamificationSettingsStore } from "./useGamificationSettingsStore";
 
 const STORAGE_KEY = "reading_gamification_v1";
@@ -56,9 +55,17 @@ const isYesterday = (dayKey: string, prevDayKey: string) => {
   return diffDays === 1;
 };
 
+type PersistShape = {
+  daily?: Record<string, DailyTotals>;
+  streak?: GamificationState["streak"];
+  xp?: { totalXp?: number };
+  lastGain?: LastGain | null;
+};
+
 export const useReadingGamificationStore = create<GamificationState>((set, get) => ({
   hydrated: false,
   daily: {},
+  lastGain: null,
 
   streak: {
     current: 0,
@@ -76,13 +83,16 @@ export const useReadingGamificationStore = create<GamificationState>((set, get) 
         set({ hydrated: true });
         return;
       }
-      const parsed = JSON.parse(raw) as Partial<GamificationState>;
+
+      const parsed = JSON.parse(raw) as PersistShape;
+
       set((s) => ({
         ...s,
         hydrated: true,
         daily: parsed.daily ?? {},
         streak: parsed.streak ?? s.streak,
         xp: parsed.xp ? recomputeXp(parsed.xp.totalXp ?? 0) : s.xp,
+        lastGain: parsed.lastGain ?? null,
       }));
     } catch {
       set({ hydrated: true });
@@ -94,10 +104,13 @@ export const useReadingGamificationStore = create<GamificationState>((set, get) 
     set({
       hydrated: true,
       daily: {},
+      lastGain: null,
       streak: { current: 0, best: 0, lastQualifiedDate: null, freezeTokens: 1 },
       xp: recomputeXp(0),
     });
   },
+
+  clearLastGain: () => set({ lastGain: null }),
 
   logReadingProgress: (args) => {
     const { at, minutesDelta } = args;
@@ -106,7 +119,7 @@ export const useReadingGamificationStore = create<GamificationState>((set, get) 
 
     const pagesDelta =
       typeof args.pagesDelta === "number"
-        ? args.pagesDelta
+        ? Math.max(0, clampInt(args.pagesDelta))
         : typeof args.fromPage === "number" && typeof args.toPage === "number"
           ? Math.max(0, clampInt(args.toPage - args.fromPage))
           : 0;
@@ -114,7 +127,6 @@ export const useReadingGamificationStore = create<GamificationState>((set, get) 
     const minutes = Math.max(0, clampInt(minutesDelta ?? 0));
     const dayKey = toDayKeyLocal(at);
 
-    // ✅ SETTINGS: single source
     const settings = useGamificationSettingsStore.getState().settings;
 
     const qualifyPages = Math.max(1, clampInt(settings.qualifyPagesPerDay));
@@ -127,6 +139,8 @@ export const useReadingGamificationStore = create<GamificationState>((set, get) 
           ? Number(settings.planMultiplier ?? 1.1)
           : 1.0;
 
+    const gainedXp = Math.round(pagesDelta * xpPerPage * multiplier);
+
     set((state) => {
       const prevDay = state.daily[dayKey];
 
@@ -138,12 +152,9 @@ export const useReadingGamificationStore = create<GamificationState>((set, get) 
       };
 
       const daily = { ...state.daily, [dayKey]: nextDaily };
-
-      // XP
-      const gainedXp = Math.round(pagesDelta * xpPerPage * multiplier);
       const xp = recomputeXp(state.xp.totalXp + gainedXp);
 
-      // Streak update: only when crossing qualify threshold
+      // streak
       let streak = state.streak;
       const crossedToday =
         ensureDaily(prevDay).pages < qualifyPages && nextDaily.pages >= qualifyPages;
@@ -176,56 +187,92 @@ export const useReadingGamificationStore = create<GamificationState>((set, get) 
         }
       }
 
+      const lastGain: LastGain | null =
+        gainedXp > 0
+          ? { at, dayKey, xp: gainedXp, pages: pagesDelta, mode }
+          : state.lastGain;
+
       queueMicrotask(() => {
-        const toSave = { daily, streak, xp: { totalXp: xp.totalXp } };
+        const toSave: PersistShape = {
+          daily,
+          streak,
+          xp: { totalXp: xp.totalXp },
+          lastGain,
+        };
         AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave)).catch(() => {});
       });
 
-      return { daily, streak, xp };
+      return { daily, streak, xp, lastGain };
     });
+
+    return gainedXp;
   },
 
   onTargetCompleted: ({ at, bookUri }) => {
     const settings = useGamificationSettingsStore.getState().settings;
-    const BONUS = Math.max(0, clampInt(settings.targetCompleteBonus ?? 250));
-    if (BONUS <= 0) return;
+    const bonus = Math.max(0, clampInt(settings.targetCompleteBonus ?? 250));
+    if (bonus <= 0) return 0;
+
+    const dayKey = toDayKeyLocal(at);
 
     set((state) => {
-      const xp = recomputeXp(state.xp.totalXp + BONUS);
+      const xp = recomputeXp(state.xp.totalXp + bonus);
+
+      const lastGain: LastGain = {
+        at,
+        dayKey,
+        xp: bonus,
+        pages: 0,
+        mode: "target",
+      };
 
       queueMicrotask(() => {
-        // Eğer ileride "completion history" tutmak istersen burada ekleyebilirsin:
-        // e.g. completions: [...state.completions, { type:"target", at, bookUri }]
-        const toSave = {
+        const toSave: PersistShape = {
           daily: state.daily,
           streak: state.streak,
           xp: { totalXp: xp.totalXp },
+          lastGain,
         };
         AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave)).catch(() => {});
       });
 
-      return { xp };
+      return { xp, lastGain };
     });
+
+    return bonus;
   },
 
   onPlanCompleted: ({ at, bookUri }) => {
     const settings = useGamificationSettingsStore.getState().settings;
-    const BONUS = Math.max(0, clampInt(settings.planCompleteBonus ?? 150));
-    if (BONUS <= 0) return;
+    const bonus = Math.max(0, clampInt(settings.planCompleteBonus ?? 150));
+    if (bonus <= 0) return 0;
+
+    const dayKey = toDayKeyLocal(at);
 
     set((state) => {
-      const xp = recomputeXp(state.xp.totalXp + BONUS);
+      const xp = recomputeXp(state.xp.totalXp + bonus);
+
+      const lastGain: LastGain = {
+        at,
+        dayKey,
+        xp: bonus,
+        pages: 0,
+        mode: "plan",
+      };
 
       queueMicrotask(() => {
-        const toSave = {
+        const toSave: PersistShape = {
           daily: state.daily,
           streak: state.streak,
           xp: { totalXp: xp.totalXp },
+          lastGain,
         };
         AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave)).catch(() => {});
       });
 
-      return { xp };
+      return { xp, lastGain };
     });
+
+    return bonus;
   },
 }));
