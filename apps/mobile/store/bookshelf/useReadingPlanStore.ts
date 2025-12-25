@@ -1,7 +1,13 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { AddPagesFromSessionInput, PlanBookProgress, PlanItemConfig, ReadingPlan } from "@budget/core";
+import {
+  AddPagesFromSessionInput,
+  PlanBookProgress,
+  PlanItemConfig,
+  ReadingPlan,
+} from "@budget/core";
+import { useReadingGamificationStore } from "./readingGamification/useReadingGamificationStore";
 
 
 type ReadingPlanState = {
@@ -19,8 +25,8 @@ type ReadingPlanState = {
 
   // rename pdf across ALL plans (critical for multi-plan)
   renameBookInPlan: (oldUri: string, newUri: string, newName?: string) => void;
-  updatePlan: (input: { planId: string; name: string; items: PlanItemConfig[] }) => void;
 
+  updatePlan: (input: { planId: string; name: string; items: PlanItemConfig[] }) => void;
 };
 
 function makeId() {
@@ -61,7 +67,7 @@ export const useReadingPlanStore = create<ReadingPlanState>()(
           currentPageInItem: 0,
           isCompleted: false,
           updatedAt: "",
-          createdAt: ""
+          createdAt: "",
         };
 
         set((state) => ({
@@ -117,7 +123,17 @@ export const useReadingPlanStore = create<ReadingPlanState>()(
         const startIndex = items.findIndex((it) => it.bookUri === bookUri);
         if (startIndex === -1) return;
 
-        const perBook: Record<string, PlanBookProgress> = { ...(plan.perBook ?? {}) };
+        const perBook: Record<string, PlanBookProgress> = {
+          ...(plan.perBook ?? {}),
+        };
+
+        // ✅ before remaining today (across ALL items)
+        const prevRemainingTotal = (items ?? []).reduce((sum, it) => {
+          const pb = perBook[it.bookUri];
+          const already = pb?.pagesReadToday ?? 0;
+          const target = it.pagesPerDay ?? 0;
+          return sum + Math.max(0, target - already);
+        }, 0);
 
         let remainingPages = pages;
         let totalReadToday = plan.totalReadToday || 0;
@@ -182,6 +198,22 @@ export const useReadingPlanStore = create<ReadingPlanState>()(
         };
 
         set({ plans: nextPlans });
+
+        // ✅ after remaining today
+        const nextRemainingTotal = (items ?? []).reduce((sum, it) => {
+          const pb = perBook[it.bookUri];
+          const already = pb?.pagesReadToday ?? 0;
+          const target = it.pagesPerDay ?? 0;
+          return sum + Math.max(0, target - already);
+        }, 0);
+
+        // ✅ award: when we cross to 0 remaining today
+        if (prevRemainingTotal > 0 && nextRemainingTotal === 0) {
+          useReadingGamificationStore.getState().onPlanCompleted({
+            at: Date.now(),
+            bookUri, // session book; good enough anchor
+          });
+        }
       },
 
       // ✅ rename across ALL plans
@@ -202,11 +234,11 @@ export const useReadingPlanStore = create<ReadingPlanState>()(
             );
 
             const perBook: Record<string, PlanBookProgress> = {};
-            Object.entries(plan.perBook ?? {}).forEach(([bookUri, progress]) => {
-              if (bookUri === oldUri) {
+            Object.entries(plan.perBook ?? {}).forEach(([u, progress]) => {
+              if (u === oldUri) {
                 perBook[newUri] = { ...progress, bookUri: newUri };
               } else {
-                perBook[bookUri] = progress;
+                perBook[u] = progress;
               }
             });
 
@@ -215,50 +247,50 @@ export const useReadingPlanStore = create<ReadingPlanState>()(
 
           return { plans: nextPlans };
         }),
-        updatePlan: ({ planId, name, items }) =>
-          set((state) => {
-            const plans = state.plans ?? [];
-            const idx = plans.findIndex((p) => p.id === planId);
-            if (idx === -1) return {};
-        
-            const plan = plans[idx];
-        
-            // ✅ perBook: var olanı koru, yeni kitapları init et, kaldırılanları drop et
-            const nextPerBook: Record<string, PlanBookProgress> = {};
-        
-            for (const it of items) {
-              const prev = plan.perBook?.[it.bookUri];
-        
-              nextPerBook[it.bookUri] =
-                prev ??
-                ({
-                  bookUri: it.bookUri,
-                  currentPageInBook: 1,
-                  pagesReadToday: 0,
-                  bookTotalPages: undefined,
-                } as PlanBookProgress);
-            }
-        
-            // ✅ totalReadToday: kalan kitapların pagesReadToday toplamı
-            const nextTotalReadToday = Object.values(nextPerBook).reduce(
-              (sum, pb) => sum + (pb.pagesReadToday || 0),
-              0
-            );
-        
-            const nextPlan = {
-              ...plan,
-              name: name?.trim() || plan.name,
-              items,
-              perBook: nextPerBook,
-              totalReadToday: nextTotalReadToday,
-            };
-        
-            const nextPlans = [...plans];
-            nextPlans[idx] = nextPlan;
-        
-            return { plans: nextPlans };
-          }),
-        
+
+      updatePlan: ({ planId, name, items }) =>
+        set((state) => {
+          const plans = state.plans ?? [];
+          const idx = plans.findIndex((p) => p.id === planId);
+          if (idx === -1) return {};
+
+          const plan = plans[idx];
+
+          // ✅ perBook: keep existing, init new, drop removed
+          const nextPerBook: Record<string, PlanBookProgress> = {};
+
+          for (const it of items) {
+            const prev = plan.perBook?.[it.bookUri];
+
+            nextPerBook[it.bookUri] =
+              prev ??
+              ({
+                bookUri: it.bookUri,
+                currentPageInBook: 1,
+                pagesReadToday: 0,
+                bookTotalPages: undefined,
+              } as PlanBookProgress);
+          }
+
+          // ✅ totalReadToday: sum of remaining books
+          const nextTotalReadToday = Object.values(nextPerBook).reduce(
+            (sum, pb) => sum + (pb.pagesReadToday || 0),
+            0
+          );
+
+          const nextPlan = {
+            ...plan,
+            name: name?.trim() || plan.name,
+            items,
+            perBook: nextPerBook,
+            totalReadToday: nextTotalReadToday,
+          };
+
+          const nextPlans = [...plans];
+          nextPlans[idx] = nextPlan;
+
+          return { plans: nextPlans };
+        }),
     }),
     {
       name: "reading-plan-v2",

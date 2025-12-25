@@ -1,5 +1,4 @@
-// apps/mobile/components/ui/BottomSheetModal.tsx
-import React, { ReactNode } from "react";
+import React, { ReactNode, useMemo } from "react";
 import {
   Modal,
   View,
@@ -8,23 +7,105 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { MText, colors, spacing, radii, iconSizes } from "@budget/ui-native";
+import {
+  MText,
+  colors as budgetColors,
+  spacing,
+  radii,
+  iconSizes,
+  bookshelfTheme,
+} from "@budget/ui-native";
 import { IconButton } from "@/components/ui/AppIcon";
+
+type BottomSheetVariant = "budget" | "bookshelf";
 
 type BottomSheetModalProps = {
   visible: boolean;
   title: string;
   onClose: () => void;
   children: ReactNode;
+
+  /** default: "budget" */
+  variant?: BottomSheetVariant;
+
+  /** optional left side header action (e.g. back button) */
+  leftAction?: ReactNode;
 };
+
+function resolveColors(variant: BottomSheetVariant) {
+  return variant === "bookshelf" ? bookshelfTheme.colors : budgetColors;
+}
 
 export function BottomSheetModal({
   visible,
   title,
   onClose,
   children,
+  variant = "budget",
+  leftAction,
 }: BottomSheetModalProps) {
   const isIOS = Platform.OS === "ios";
+  const colors = resolveColors(variant);
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        root: { flex: 1 },
+        container: { flex: 1, justifyContent: "flex-end" },
+
+        backdrop: {
+          ...StyleSheet.absoluteFillObject,
+          backgroundColor: colors.backdropStrong,
+        },
+
+        sheet: {
+          borderTopLeftRadius: radii.xl,
+          borderTopRightRadius: radii.xl,
+          backgroundColor: colors.surfaceStrong,
+          borderTopWidth: 1,
+          borderColor: colors.borderSubtle,
+          paddingHorizontal: spacing.lg,
+          paddingTop: spacing.md,
+          paddingBottom: spacing.xl,
+          maxHeight: "80%",
+        },
+
+        handle: {
+          alignSelf: "center",
+          width: 44,
+          height: 5,
+          borderRadius: radii.full,
+          backgroundColor: colors.borderSubtle,
+          marginBottom: spacing.sm,
+        },
+
+        headerRow: {
+          flexDirection: "row",
+          alignItems: "center",
+          marginBottom: spacing.sm,
+          gap: spacing.sm,
+        },
+
+        leftSlot: {
+          minWidth: 30,
+          alignItems: "center",
+          justifyContent: "center",
+        },
+
+        title: { flex: 1 },
+
+        closeButton: {
+          width: 30,
+          height: 30,
+          borderRadius: radii.full,
+          borderWidth: 1,
+          borderColor: colors.borderSubtle,
+          alignItems: "center",
+          justifyContent: "center",
+        },
+      }),
+    [colors]
+  );
 
   return (
     <Modal
@@ -51,6 +132,8 @@ export function BottomSheetModal({
             <View style={styles.handle} />
 
             <View style={styles.headerRow}>
+              <View style={styles.leftSlot}>{leftAction ?? null}</View>
+
               <MText
                 variant="heading4"
                 color="textPrimary"
@@ -75,59 +158,3 @@ export function BottomSheetModal({
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
-
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.backdropStrong,
-  },
-
-  sheet: {
-    borderTopLeftRadius: radii.xl,
-    borderTopRightRadius: radii.xl,
-    backgroundColor: colors.surfaceStrong,
-    borderTopWidth: 1,
-    borderColor: colors.borderSubtle,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.xl,
-    maxHeight: "80%",
-  },
-
-  handle: {
-    alignSelf: "center",
-    width: 44,
-    height: 5,
-    borderRadius: radii.full,
-    backgroundColor: colors.borderSubtle,
-    marginBottom: spacing.sm,
-  },
-
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: spacing.sm,
-  },
-
-  title: {
-    flex: 1,
-  },
-
-  closeButton: {
-    width: 30,
-    height: 30,
-    borderRadius: radii.full,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});

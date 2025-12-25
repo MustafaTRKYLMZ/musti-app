@@ -32,6 +32,7 @@ import { useCropTransform } from "@/hooks/ useCropTransform";
 import { useReaderPrefs } from "@/hooks/ useReaderPrefs";
 import { PdfViewport } from "../ui/pdf/ PdfViewport";
 import { ReaderHeaderBar } from "../ui/pdf/ ReaderHeaderBar";
+import { useReadingGamificationStore } from "@/store/bookshelf/readingGamification/useReadingGamificationStore";
 
 type PdfReaderProps = {
   isFullscreen: boolean;
@@ -180,11 +181,35 @@ export const PdfReader: FC<PdfReaderProps> = ({
       : "Tight";
 
   const zoomPercent = Math.round(userScale * 100);
+  const logReadingProgress = useReadingGamificationStore(
+    (s) => s.logReadingProgress
+  );
 
   // ✅ tracking (pace sampling burada)
   const tracking = useReadingTracking(enableStatsTracking, readingContext, {
     onPaceSample: (s) => {
+      // ✅ mevcut stats
       pace.addSample(s.pagesRead, s.msSpent);
+
+      // ✅ gamification: tracking'den beslen
+      const pagesDelta = Math.max(0, Math.floor(s.pagesRead ?? 0));
+      if (pagesDelta <= 0) return;
+
+      const minutesDelta = Math.max(0, Math.round((s.msSpent ?? 0) / 60000));
+
+      logReadingProgress({
+        bookUri: readingContext?.bookUri ?? paceKey ?? String(source),
+        at: Date.now(),
+        mode:
+          readingContext?.mode === "plan"
+            ? "plan"
+            : readingContext?.mode === "target"
+            ? "target"
+            : "normal",
+        pagesDelta,
+        minutesDelta,
+      });
+      console.log("pace sample", s);
     },
   });
 
