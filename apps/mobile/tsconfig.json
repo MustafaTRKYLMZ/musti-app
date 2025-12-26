@@ -13,5 +13,5 @@
     "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
-, "../../packages/core/src/i18n/components/LocalizedDateText.tsx", "../../packages/notifications/src/motivation.ts"  ]
+, "../../packages/core/src/i18n/components/LocalizedDateText.tsx"  ]
 }

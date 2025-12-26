@@ -46,12 +46,10 @@ const ensureDaily = (prev?: DailyTotals): DailyTotals =>
   prev ?? { pages: 0, minutes: 0, sessions: 0 };
 
 const isYesterday = (dayKey: string, prevDayKey: string) => {
-  const [y1, m1, d1] = dayKey.split("-").map((x) => parseInt(x, 10));
-  const [y0, m0, d0] = prevDayKey.split("-").map((x) => parseInt(x, 10));
-  if (!y1 || !m1 || !d1 || !y0 || !m0 || !d0) return false;
-  const a = new Date(y1, m1 - 1, d1).getTime();
-  const b = new Date(y0, m0 - 1, d0).getTime();
-  const diffDays = Math.round((a - b) / (24 * 3600 * 1000));
+  const d1 = dayjs(dayKey).startOf("day");
+  const d0 = dayjs(prevDayKey).startOf("day");
+  if (!d1.isValid() || !d0.isValid()) return false;
+  const diffDays = d1.diff(d0, "day");
   return diffDays === 1;
 };
 
@@ -192,15 +190,13 @@ export const useReadingGamificationStore = create<GamificationState>((set, get) 
           ? { at, dayKey, xp: gainedXp, pages: pagesDelta, mode }
           : state.lastGain;
 
-      queueMicrotask(() => {
-        const toSave: PersistShape = {
-          daily,
-          streak,
-          xp: { totalXp: xp.totalXp },
-          lastGain,
-        };
-        AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave)).catch(() => {});
-      });
+      const toSave: PersistShape = {
+        daily,
+        streak,
+        xp: { totalXp: xp.totalXp },
+        lastGain,
+      };
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave)).catch(() => {});
 
       return { daily, streak, xp, lastGain };
     });

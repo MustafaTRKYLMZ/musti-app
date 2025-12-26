@@ -192,25 +192,9 @@ export const PdfReader: FC<PdfReaderProps> = ({
       // ✅ mevcut stats
       pace.addSample(s.pagesRead, s.msSpent);
 
-      // ✅ gamification: tracking'den beslen
-      const pagesDelta = Math.max(0, Math.floor(s.pagesRead ?? 0));
-      if (pagesDelta <= 0) return;
-
-      const minutesDelta = Math.max(0, Math.round((s.msSpent ?? 0) / 60000));
-
-      logReadingProgress({
-        bookUri: readingContext?.bookUri ?? paceKey ?? String(source),
-        at: Date.now(),
-        mode:
-          readingContext?.mode === "plan"
-            ? "plan"
-            : readingContext?.mode === "target"
-            ? "target"
-            : "normal",
-        pagesDelta,
-        minutesDelta,
-      });
-      console.log("pace sample", s);
+      // Gamification logging is handled inside useReadingTracking (flushSession)
+      // to avoid double-counting XP and pages, so we intentionally do not
+      // call logReadingProgress here.
     },
   });
 

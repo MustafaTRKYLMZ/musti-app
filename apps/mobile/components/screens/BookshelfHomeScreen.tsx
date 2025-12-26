@@ -32,7 +32,6 @@ import { useBookshelfTabsStore } from "@/store/bookshelf/useBookshelfTabsStore";
 import { useReadingGamificationStore } from "@/store/bookshelf/readingGamification/useReadingGamificationStore";
 import { StreakCard } from "../Books/gamification/StreakCard";
 import { useGamificationSettingsStore } from "@/store/bookshelf/readingGamification/useGamificationSettingsStore";
-import { scheduleMotivationNudgeIfNeeded } from "@/utils/motivation";
 
 const { colors, spacing, radii } = bookshelfTheme;
 
@@ -60,10 +59,6 @@ export default function BookshelfHomeScreen() {
   useEffect(() => {
     useReadingGamificationStore.getState().hydrate();
     useGamificationSettingsStore.getState().hydrate();
-  }, []);
-  //otomatically schedule motivation nudge on bookshelf open
-  useEffect(() => {
-    scheduleMotivationNudgeIfNeeded();
   }, []);
 
   const router = useRouter();

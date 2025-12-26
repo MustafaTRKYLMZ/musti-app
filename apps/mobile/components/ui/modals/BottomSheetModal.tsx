@@ -104,7 +104,6 @@ export function BottomSheetModal({
                 variant="heading4"
                 color="textPrimary"
                 style={styles.title}
-                numberOfLines={1}
               >
                 {title}
               </MText>

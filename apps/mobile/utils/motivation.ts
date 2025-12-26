@@ -6,12 +6,14 @@ import { scheduleCustomReminder } from "@budget/notifications";
 
 const MOTIVATION_ID = "motivation-nudge-v1";
 
-// bunu scheduleCustomReminder ile aynı ID kullanacak şekilde düşün
+// TODO: Implement proper cancellation logic
+// This function should track and cancel scheduled notification IDs
+// Currently a no-op - needs implementation to prevent old notifications
+// from remaining scheduled when settings change
 export async function cancelMotivationNudge() {
-  // scheduleNotificationAsync ID dönüyor; sen kendi store’unda tutuyorsan oradan sil.
-  // Eğer “tek ID” modeli yapacaksak, en kolayı: daha önce schedule ettiğin expo id’yi saklamak.
-  // Şimdilik minimum: hiçbir şey yapmıyorsan bile güvenli no-op.
-  // Eğer elinde expoId listesi varsa cancelNotificationIds([expoId]) çağır.
+  // Future implementation should:
+  // 1. Track the expo notification ID returned by scheduleCustomReminder
+  // 2. Call cancelNotificationIds([expoId]) to cancel the scheduled notification
 }
 
 export async function scheduleMotivationNudgeIfNeeded() {
