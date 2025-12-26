@@ -1,272 +1,229 @@
-import { useCallback, useEffect, useRef } from "react";
-import {
-  DEDUPE_THRESHOLD_MS,
-  JUMP_THRESHOLD,
-  TRACKING_PAUSE_BUFFER_MS,
-} from "@/constants/readerPresets";
-import { useReadingStatsStore } from "@/store/bookshelf/useReadingStatsStore";
-import { useReadingEventsStore } from "@/store/bookshelf/useReadingEventsStore";
+import { useCallback, useMemo, useRef } from "react";
 import type { ReadingMode } from "@budget/core";
-
-// ✅ Gamification: only on flush, never on every page change
 import { useReadingGamificationStore } from "@/store/bookshelf/readingGamification/useReadingGamificationStore";
+import { useLastGainStore } from "@/hooks/useLastGain";
 
-type Ctx = {
-  date?: string; // YYYY-MM-DD
-  mode?: ReadingMode;
+type ReadingContext = {
+  mode: ReadingMode;
+  date: string;
   bookUri?: string;
   targetId?: string;
+  sectionId?: string;
+  sectionTitle?: string;
 };
 
-export type PaceSample = {
-  pagesRead: number;
+type PaceSample = { pagesRead: number; msSpent: number };
+
+type Options = {
+  onPaceSample?: (s: PaceSample) => void;
+};
+
+type FlushResult = {
+  pagesDelta: number;
+  minutesDelta: number;
+  fromPage: number;
+  toPage: number;
   msSpent: number;
+  gainedXp: number;
 };
 
-export type TrackingOptions = {
-  /** Called when a session flush happens and we have a valid sample */
-  onPaceSample?: (sample: PaceSample) => void;
-};
+const clampInt = (n: number) => (Number.isFinite(n) ? Math.floor(n) : 0);
 
 export function useReadingTracking(
-  enable: boolean,
-  ctx?: Ctx,
-  options?: TrackingOptions
+  enabled: boolean,
+  readingContext: ReadingContext | undefined,
+  opts: Options = {}
 ) {
-  const addPages = useReadingStatsStore((s) => s.addPages);
-  const lastEvent = useReadingStatsStore((s) => s.lastEvent);
-  const setLastEvent = useReadingStatsStore((s) => s.setLastEvent);
+  const ctxRef = useRef(readingContext);
+  ctxRef.current = readingContext;
 
-  const addEvent = useReadingEventsStore((s) => s.addEvent);
+  const enabledRef = useRef(enabled);
+  enabledRef.current = enabled;
 
-  const sessionStartPageRef = useRef<number | null>(null);
-  const sessionStartAtRef = useRef<number | null>(null);
+  // session baselines
+  const startedRef = useRef(false);
+  const startPageRef = useRef(1);
+  const lastPageRef = useRef(1);
+  const maxVisitedRef = useRef(1);
 
-  const isPausedForProgrammaticJump = useRef(false);
-  const lastSeenPageRef = useRef<number | null>(null);
-  const maxVisitedRef = useRef<number | null>(null);
-  const maxCountedRef = useRef<number | null>(null);
+  // time tracking
+  const startedAtRef = useRef<number | null>(null);
+  const lastTickRef = useRef<number | null>(null);
+  const msSpentRef = useRef(0);
 
-  const ensureStarted = useCallback(
-    (page: number) => {
-      if (!enable) return;
-      if (!ctx?.date || !ctx?.bookUri || !ctx?.mode) return;
+  // one-tick pause (jump/strip)
+  const pauseNextTickRef = useRef(false);
 
-      if (sessionStartPageRef.current == null) {
-        sessionStartPageRef.current = page;
-        sessionStartAtRef.current = Date.now();
-      }
+  const resetBaselines = useCallback((startPage: number) => {
+    const sp = Math.max(1, clampInt(startPage || 1));
+    startedRef.current = false;
 
-      if (lastSeenPageRef.current == null) lastSeenPageRef.current = page;
-      if (maxVisitedRef.current == null) maxVisitedRef.current = page;
-      if (maxCountedRef.current == null) maxCountedRef.current = page;
-    },
-    [enable, ctx?.date, ctx?.bookUri, ctx?.mode]
-  );
+    startPageRef.current = sp;
+    lastPageRef.current = sp;
+    maxVisitedRef.current = sp;
 
-  const flushSession = useCallback(() => {
-    if (!enable) return;
-    if (!ctx?.date || !ctx?.bookUri || !ctx?.mode) return;
+    startedAtRef.current = null;
+    lastTickRef.current = null;
+    msSpentRef.current = 0;
 
-    const start = sessionStartPageRef.current;
-    const startAt = sessionStartAtRef.current;
-    const end = maxVisitedRef.current;
+    pauseNextTickRef.current = false;
+  }, []);
 
-    // Always clear baseline if missing
-    if (start == null || startAt == null || end == null) {
-      sessionStartPageRef.current = null;
-      sessionStartAtRef.current = null;
-      return;
+  const ensureStarted = useCallback((page: number) => {
+    if (!enabledRef.current) return;
+    if (!ctxRef.current?.bookUri) return;
+
+    const p = Math.max(1, clampInt(page || 1));
+
+    if (!startedRef.current) {
+      startedRef.current = true;
+      startPageRef.current = p;
+      lastPageRef.current = p;
+      maxVisitedRef.current = p;
+
+      const now = Date.now();
+      startedAtRef.current = now;
+      lastTickRef.current = now;
+      msSpentRef.current = 0;
     }
-
-    const now = Date.now();
-    const durationMs = Math.max(0, now - startAt);
-
-    // ✅ write event even if end === start (0 pages · N minutes)
-    if (durationMs > 0) {
-      addEvent({
-        date: ctx.date,
-        at: now,
-        mode: ctx.mode,
-        bookUri: ctx.bookUri,
-        targetId: ctx.targetId,
-        pageFrom: start,
-        pageTo: end,
-        durationMs,
-      });
-    }
-
-    // ✅ Gamification: ONLY on flush (close / switch / done), not on every page
-    const pagesRead = Math.max(0, end - start);
-    const minutesDelta = Math.max(0, Math.round(durationMs / 60_000));
-
-    // Optional tiny-noise gate:
-    // If you want: require at least 1 page OR at least 1 minute.
-    if (pagesRead > 0 || minutesDelta > 0) {
-      useReadingGamificationStore.getState().logReadingProgress({
-        bookUri: ctx.bookUri,
-        at: now,
-        mode: ctx.mode,
-        fromPage: start,
-        toPage: end,
-        pagesDelta: pagesRead,
-        minutesDelta,
-      });
-    }
-
-    // ✅ Pace sample fix: only if actually read pages and session >= 6s
-    if (options?.onPaceSample && pagesRead > 0 && durationMs >= 6_000) {
-      options.onPaceSample({
-        pagesRead,
-        msSpent: durationMs,
-      });
-    }
-
-    // reset session baseline
-    sessionStartPageRef.current = null;
-    sessionStartAtRef.current = null;
-  }, [
-    enable,
-    ctx?.date,
-    ctx?.bookUri,
-    ctx?.mode,
-    ctx?.targetId,
-    addEvent,
-    options,
-  ]);
+  }, []);
 
   const pauseTrackingForNextTick = useCallback(() => {
-    flushSession();
-    isPausedForProgrammaticJump.current = true;
-    setTimeout(() => {
-      isPausedForProgrammaticJump.current = false;
-    }, TRACKING_PAUSE_BUFFER_MS);
-  }, [flushSession]);
-
-  const resetBaselines = useCallback(
-    (startPage: number) => {
-      flushSession();
-
-      lastSeenPageRef.current = startPage;
-      maxVisitedRef.current = startPage;
-      maxCountedRef.current = startPage;
-
-      sessionStartPageRef.current = null;
-      sessionStartAtRef.current = null;
-
-      isPausedForProgrammaticJump.current = false;
-    },
-    [flushSession]
-  );
+    pauseNextTickRef.current = true;
+  }, []);
 
   const onPageChangedInternal = useCallback(
     (page: number) => {
-      if (!enable) return;
-      if (!ctx?.date || !ctx?.mode) return;
+      if (!enabledRef.current) return;
+      const ctx = ctxRef.current;
+      if (!ctx?.bookUri) return;
 
-      ensureStarted(page);
+      const p = Math.max(1, clampInt(page || 1));
+
+      // ensure session started
+      if (!startedRef.current) ensureStarted(p);
+
+      // accumulate time since last tick
       const now = Date.now();
+      const lastTick = lastTickRef.current;
+      if (lastTick != null) {
+        const dt = Math.max(0, now - lastTick);
+        msSpentRef.current += dt;
+      }
+      lastTickRef.current = now;
 
-      // dedupe: ignore repeated same page events in short time
-      if (
-        lastEvent &&
-        lastEvent.date === ctx.date &&
-        lastEvent.mode === ctx.mode &&
-        lastEvent.page === page &&
-        (lastEvent.bookUri ?? "") === (ctx.bookUri ?? "") &&
-        (lastEvent.targetId ?? "") === (ctx.targetId ?? "") &&
-        now - lastEvent.at < DEDUPE_THRESHOLD_MS
-      ) {
+      // If user jumped via strip/sidebar, don't count this as reading delta
+      if (pauseNextTickRef.current) {
+        pauseNextTickRef.current = false;
+        lastPageRef.current = p;
+        maxVisitedRef.current = Math.max(maxVisitedRef.current, p);
         return;
       }
 
-      setLastEvent({
-        date: ctx.date,
-        mode: ctx.mode,
-        page,
-        bookUri: ctx.bookUri,
-        targetId: ctx.targetId,
-        at: now,
-      });
-
-      // programmatic jump window: reset baselines and start time at this page
-      if (isPausedForProgrammaticJump.current) {
-        lastSeenPageRef.current = page;
-        maxVisitedRef.current = page;
-        maxCountedRef.current = page;
-
-        sessionStartPageRef.current = page;
-        sessionStartAtRef.current = now;
-        return;
-      }
-
-      const lastSeen = lastSeenPageRef.current;
-      if (lastSeen == null) {
-        lastSeenPageRef.current = page;
-        maxVisitedRef.current = page;
-        maxCountedRef.current = page;
-        return;
-      }
-
-      const step = page - lastSeen;
-
-      // big jump => treat as navigation; flush previous session and restart
-      if (Math.abs(step) > JUMP_THRESHOLD) {
-        flushSession();
-
-        lastSeenPageRef.current = page;
-        maxVisitedRef.current = page;
-        maxCountedRef.current = page;
-
-        sessionStartPageRef.current = page;
-        sessionStartAtRef.current = now;
-
-        return;
-      }
-
-      lastSeenPageRef.current = page;
-
-      const currentMax = maxVisitedRef.current ?? page;
-      const nextMax = Math.max(currentMax, page);
-      maxVisitedRef.current = nextMax;
-
-      const countedMax = maxCountedRef.current ?? nextMax;
-      const inc = nextMax - countedMax;
-
-      // pages stats only move forward
-      if (inc > 0) {
-        addPages({
-          date: ctx.date,
-          pages: inc,
-          mode: ctx.mode,
-          bookUri: ctx.bookUri,
-          targetId: ctx.targetId,
-        });
-        maxCountedRef.current = nextMax;
-      }
+      lastPageRef.current = p;
+      maxVisitedRef.current = Math.max(maxVisitedRef.current, p);
     },
-    [
-      enable,
-      ctx,
-      ensureStarted,
-      lastEvent,
-      setLastEvent,
-      flushSession,
-      addPages,
-    ]
+    [ensureStarted]
   );
 
-  useEffect(() => {
-    return () => {
-      flushSession();
-    };
-  }, [flushSession]);
+  const flushSession = useCallback((): FlushResult => {
+    if (!enabledRef.current) {
+      return {
+        pagesDelta: 0,
+        minutesDelta: 0,
+        fromPage: 1,
+        toPage: 1,
+        msSpent: 0,
+        gainedXp: 0,
+      };
+    }
 
-  return {
-    flushSession,
-    pauseTrackingForNextTick,
-    resetBaselines,
-    onPageChangedInternal,
-    ensureStarted,
-  };
+    const ctx = ctxRef.current;
+    if (!ctx?.bookUri) {
+      return {
+        pagesDelta: 0,
+        minutesDelta: 0,
+        fromPage: 1,
+        toPage: 1,
+        msSpent: 0,
+        gainedXp: 0,
+      };
+    }
+
+    // ensure last time tick is closed
+    const now = Date.now();
+    const lastTick = lastTickRef.current;
+    if (startedRef.current && lastTick != null) {
+      msSpentRef.current += Math.max(0, now - lastTick);
+    }
+    lastTickRef.current = now;
+
+    const fromPage = Math.max(1, clampInt(startPageRef.current));
+    const toPage = Math.max(fromPage, clampInt(maxVisitedRef.current));
+    const pagesDelta = Math.max(0, toPage - fromPage);
+
+    const msSpent = Math.max(0, clampInt(msSpentRef.current));
+    const minutesDelta = Math.max(0, clampInt(msSpent / 60_000));
+
+    let gainedXp = 0;
+
+    // ✅ Only log when meaningful
+    if (pagesDelta > 0 || minutesDelta > 0) {
+      gainedXp = useReadingGamificationStore.getState().logReadingProgress({
+        bookUri: ctx.bookUri,
+        at: now,
+        mode: ctx.mode,
+        fromPage,
+        toPage,
+        minutesDelta,
+      });
+
+      // ✅ emit one-shot lastGain event for toast layer (anti-spam threshold)
+      if (gainedXp > 0) {
+        const shouldToast =
+          pagesDelta >= 2 || msSpent >= 30_000 || ctx.mode !== "normal";
+
+        if (shouldToast) {
+          useLastGainStore.getState().emit({
+            at: now,
+            xp: gainedXp,
+            pages: pagesDelta,
+            minutes: minutesDelta,
+            mode: ctx.mode,
+            bookUri: ctx.bookUri,
+            kind: "pages",
+          });
+        }
+      }
+
+      // optional: pace sampling
+      if (opts.onPaceSample && msSpent > 0 && pagesDelta > 0) {
+        opts.onPaceSample({ pagesRead: pagesDelta, msSpent });
+      }
+    }
+
+    // ✅ start new baseline at current position after flush
+    const newStart = Math.max(1, clampInt(lastPageRef.current || toPage));
+    resetBaselines(newStart);
+    ensureStarted(newStart);
+
+    return { pagesDelta, minutesDelta, fromPage, toPage, msSpent, gainedXp };
+  }, [ensureStarted, opts.onPaceSample, resetBaselines]);
+
+  return useMemo(
+    () => ({
+      resetBaselines,
+      ensureStarted,
+      pauseTrackingForNextTick,
+      onPageChangedInternal,
+      flushSession,
+    }),
+    [
+      resetBaselines,
+      ensureStarted,
+      pauseTrackingForNextTick,
+      onPageChangedInternal,
+      flushSession,
+    ]
+  );
 }

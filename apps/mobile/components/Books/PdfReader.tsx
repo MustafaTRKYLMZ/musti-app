@@ -65,15 +65,6 @@ type PdfReaderProps = {
   sections?: BookSection[];
   enableStatsTracking?: boolean;
 
-  /**
-   * ✅ NEW (non-breaking):
-   * If provided, PdfReader will show time-left based on these remaining pages
-   * instead of (totalPages - currentPage).
-   *
-   * Use this for:
-   * - plan mode: remaining pages for TODAY (target - todayRead)
-   * - target mode: remaining pages in target range (endPage - cursor/current)
-   */
   timeLeftRemainingPages?: number | null;
 };
 
@@ -102,27 +93,20 @@ export const PdfReader: FC<PdfReaderProps> = ({
 }) => {
   const { colors } = useTheme();
 
-  // prefs (book-specific)
   const prefs = useReaderPrefs({ source, bookUri: readingContext?.bookUri });
 
-  // pace key (book-specific)
   const paceKey =
     readingContext?.bookUri ??
     (typeof source === "object" ? source.uri : String(source));
 
-  // reading pace (ppm + sample ingestion)
   const pace = useReadingPace({
     paceKey: paceKey ?? null,
-    // keep optional; we compute time-left ourselves to support plan/target
     currentPage,
     totalPages,
   });
 
   // ✅ mode-aware time left
   const timeLeftLabel = useMemo(() => {
-    // Determine remaining pages:
-    // - if override is provided (plan/target), use it
-    // - else fallback to "book remaining" (normal)
     let remainingPages: number | null = null;
 
     if (
@@ -189,12 +173,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
   // ✅ tracking (pace sampling burada)
   const tracking = useReadingTracking(enableStatsTracking, readingContext, {
     onPaceSample: (s) => {
-      // ✅ mevcut stats
       pace.addSample(s.pagesRead, s.msSpent);
-
-      // Gamification logging is handled inside useReadingTracking (flushSession)
-      // to avoid double-counting XP and pages, so we intentionally do not
-      // call logReadingProgress here.
     },
   });
 

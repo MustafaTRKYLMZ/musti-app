@@ -10,28 +10,26 @@ import { useReadingGamificationStore } from "@/store/bookshelf/readingGamificati
 import { useGamificationSettingsStore } from "@/store/bookshelf/readingGamification/useGamificationSettingsStore";
 
 import { useToast } from "@/components/ui/ToastProvider";
+import { useLastGain } from "@/hooks/useLastGain";
 
 const { colors, spacing, radii } = bookshelfTheme;
 
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 
-// Time window (in milliseconds) to consider a gain "fresh" for toast display
-const FRESH_GAIN_THRESHOLD_MS = 2 * 60_000; // 2 minutes
-
 export function StreakCard() {
   const [open, setOpen] = useState(false);
   const { showToast } = useToast();
 
+  // ✅ event channel (one-shot)
+  const { last, consume } = useLastGain();
+
+  // hydrate stores once
   useEffect(() => {
     const settingsState = useGamificationSettingsStore.getState();
-    if (!settingsState.hydrated) {
-      settingsState.hydrate();
-    }
+    if (!settingsState.hydrated) settingsState.hydrate();
 
     const readingState = useReadingGamificationStore.getState();
-    if (!readingState.hydrated) {
-      readingState.hydrate();
-    }
+    if (!readingState.hydrated) readingState.hydrate();
   }, []);
 
   const gHydrated = useReadingGamificationStore((s) => s.hydrated);
@@ -40,7 +38,6 @@ export function StreakCard() {
   const daily = useReadingGamificationStore((s) => s.daily);
   const streak = useReadingGamificationStore((s) => s.streak);
   const xp = useReadingGamificationStore((s) => s.xp);
-  const lastGain = useReadingGamificationStore((s) => s.lastGain);
 
   const settings = useGamificationSettingsStore((s) => s.settings);
 
@@ -55,7 +52,10 @@ export function StreakCard() {
     xp.xpForNextLevel > 0 ? xp.xpIntoLevel / xp.xpForNextLevel : 0
   );
 
+  // ✅ micro celebration pulse
   const pulse = useRef(new Animated.Value(1)).current;
+
+  // ✅ only fire "secured" once on 0 -> 1
   const prevGoalDoneRef = useRef(false);
 
   useEffect(() => {
@@ -77,33 +77,49 @@ export function StreakCard() {
         }),
       ]).start();
 
-      const now = Date.now();
-      const freshGain =
-        lastGain &&
-        lastGain.dayKey === todayKey &&
-        now - lastGain.at < FRESH_GAIN_THRESHOLD_MS &&
-        lastGain.xp > 0;
-
       showToast({
         title: "Streak secured ✅",
-        message: freshGain
-          ? `You hit ${goalPages} pages today. +${lastGain.xp} XP`
-          : `You hit ${goalPages} pages today.`,
-        duration: 3500,
+        message: `You hit ${goalPages} pages today.`,
+        duration: 3200,
       });
     }
 
     prevGoalDoneRef.current = goalDone;
-  }, [
-    goalDone,
-    goalPages,
-    gHydrated,
-    sHydrated,
-    lastGain,
-    pulse,
-    showToast,
-    todayKey,
-  ]);
+  }, [goalDone, goalPages, gHydrated, sHydrated, pulse, showToast]);
+
+  // ✅ NEW: show one-shot gain toasts (pages / planComplete / targetComplete)
+  useEffect(() => {
+    if (!gHydrated || !sHydrated) return;
+    if (!last) return;
+
+    const title =
+      last.kind === "pages"
+        ? "Progress saved 📖"
+        : last.kind === "planComplete"
+        ? "Plan completed ✅"
+        : "Target completed 🎯";
+
+    let message = "";
+    if (last.kind === "pages") {
+      // keep it short, avoid spam
+      const parts: string[] = [];
+      if (last.pages > 0)
+        parts.push(`${last.pages} page${last.pages === 1 ? "" : "s"}`);
+      if ((last.minutes ?? 0) > 0) parts.push(`${last.minutes} min`);
+      if (last.xp > 0) parts.push(`+${last.xp} XP`);
+      message = parts.join(" · ");
+    } else {
+      message = last.xp > 0 ? `+${last.xp} XP` : "Nice!";
+    }
+
+    showToast({
+      title,
+      message,
+      duration: 2600,
+    });
+
+    consume(); // ✅ one-shot: clears the event so it won't repeat
+  }, [last, consume, showToast, gHydrated, sHydrated]);
 
   const subtitle = goalDone
     ? "Today secured ✅ Tap for details"

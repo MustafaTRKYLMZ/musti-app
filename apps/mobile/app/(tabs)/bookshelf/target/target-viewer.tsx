@@ -1,4 +1,3 @@
-// apps/mobile/app/(tabs)/bookshelf/target/target-viewer.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { View, StyleSheet } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -11,6 +10,9 @@ import { BookSectionsSidebar } from "@/components/Books/BookSectionsSidebar";
 import { useReadingTargetsStore } from "@/store/bookshelf/useReadingTargetsStore";
 import { scheduleMotivationNudgeIfNeeded } from "@/utils/motivation";
 
+import { useReadingGamificationStore } from "@/store/bookshelf/readingGamification/useReadingGamificationStore";
+import { useLastGainStore } from "@/hooks/useLastGain";
+
 export default function TargetViewerScreen() {
   const router = useRouter();
   const { colors } = useTheme();
@@ -22,12 +24,8 @@ export default function TargetViewerScreen() {
   }>();
 
   const targetId = params.targetId ? String(params.targetId) : undefined;
-  const uriFromRoute = params.uri
-    ? decodeURIComponent(String(params.uri))
-    : undefined;
-  const nameFromRoute = params.name
-    ? decodeURIComponent(String(params.name))
-    : undefined;
+  const uri = params.uri ? decodeURIComponent(String(params.uri)) : undefined;
+  const name = params.name ? decodeURIComponent(String(params.name)) : "PDF";
 
   const today = dayjs().format("YYYY-MM-DD");
 
@@ -51,8 +49,8 @@ export default function TargetViewerScreen() {
     return items.find((it) => it.status === "active") ?? null;
   }, [target]);
 
-  const bookUri = uriFromRoute ?? activeItem?.bookUri ?? null;
-  const effectiveName = nameFromRoute ?? activeItem?.bookName ?? "PDF";
+  const bookUri = uri ?? activeItem?.bookUri ?? null;
+  const effectiveName = name ?? activeItem?.bookName ?? "PDF";
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [sectionsOpen, setSectionsOpen] = useState(false);
@@ -63,8 +61,11 @@ export default function TargetViewerScreen() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState<number | null>(null);
 
-  // ✅ set initial page when active item changes
+  // ✅ guard: only complete once per active item
+  const doneOnceRef = useRef(false);
+
   useEffect(() => {
+    doneOnceRef.current = false;
     const start = Math.max(
       1,
       Number(activeItem?.cursorPage ?? activeItem?.jumpPage ?? 1)
@@ -72,21 +73,6 @@ export default function TargetViewerScreen() {
     setInitialPage(start);
     setCurrentPage(start);
   }, [activeItem?.id]);
-
-  // ✅ schedule only when "book changes" (active item changes), not on every page
-  const didMountRef = useRef(false);
-  useEffect(() => {
-    if (!hydrated) return;
-    if (!activeItem?.id) return;
-
-    if (!didMountRef.current) {
-      didMountRef.current = true;
-      return;
-    }
-
-    // active item changed (user picked another / auto-next after done)
-    scheduleMotivationNudgeIfNeeded().catch(() => {});
-  }, [hydrated, activeItem?.id]);
 
   if (!targetId) {
     return (
@@ -137,24 +123,41 @@ export default function TargetViewerScreen() {
     setTotalPages(pages);
   };
 
-  // ✅ PdfReader expects (page, numberOfPages)
-  const handlePageChanged = (page: number, _numberOfPages: number) => {
+  const handlePageChanged = (page: number) => {
     setCurrentPage(page);
 
     const clamped = Math.max(startPage, Math.min(endPage, page));
     void setItemCursor(targetId, activeItem.id, clamped).catch(() => {});
 
-    // ✅ DONE only triggers here; no schedule on page flip unless done
-    if (clamped >= endPage) {
-      void markItemDone(targetId, activeItem.id)
-        .then(() => scheduleMotivationNudgeIfNeeded().catch(() => {}))
-        .catch(() => {});
+    if (!doneOnceRef.current && clamped >= endPage) {
+      doneOnceRef.current = true;
+
+      // mark done
+      void markItemDone(targetId, activeItem.id).catch(() => {});
+
+      // ✅ XP bonus + one-shot toast event
+      const at = Date.now();
+      const bonus = useReadingGamificationStore
+        .getState()
+        .onTargetCompleted({ at, bookUri });
+
+      if (bonus > 0) {
+        useLastGainStore.getState().emit({
+          at,
+          xp: bonus,
+          pages: 0,
+          mode: "target",
+          bookUri,
+          kind: "targetComplete",
+        });
+      }
+
+      void scheduleMotivationNudgeIfNeeded().catch(() => {});
     }
   };
 
   const handleClose = () => {
-    // ✅ close -> schedule once
-    scheduleMotivationNudgeIfNeeded().catch(() => {});
+    void scheduleMotivationNudgeIfNeeded().catch(() => {});
     router.replace("/(tabs)/bookshelf");
   };
 
@@ -167,8 +170,8 @@ export default function TargetViewerScreen() {
         handleClose={handleClose}
         source={source}
         initialPage={initialPage}
-        handleLoadComplete={handleLoadComplete}
-        handlePageChanged={handlePageChanged}
+        handleLoadComplete={(n) => handleLoadComplete(n)}
+        handlePageChanged={(p) => handlePageChanged(p)}
         pdfRef={pdfRef}
         onPressMenu={() => setSectionsOpen(true)}
         currentPage={currentPage}

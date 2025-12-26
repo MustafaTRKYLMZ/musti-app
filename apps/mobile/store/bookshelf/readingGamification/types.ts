@@ -52,8 +52,6 @@ export type GamificationState = {
   daily: Record<string, DailyTotals>;
   streak: StreakState;
   xp: XPState;
-
-  // ✅ optional: toast için “son kazanım”
   lastGain: LastGain | null;
 
   hydrate: () => Promise<void>;
@@ -69,7 +67,7 @@ export type GamificationState = {
     toPage?: number;
 
     minutesDelta?: number;
-  }) => number; // gainedXp döndürmek iyi (toast için)
+  }) => number; 
 
   onTargetCompleted: (args: { at: number; bookUri: string }) => number;
   onPlanCompleted: (args: { at: number; bookUri: string }) => number;
