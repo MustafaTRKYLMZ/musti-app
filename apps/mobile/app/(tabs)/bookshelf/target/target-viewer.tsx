@@ -25,7 +25,11 @@ export default function TargetViewerScreen() {
 
   const targetId = params.targetId ? String(params.targetId) : undefined;
   const uri = params.uri ? decodeURIComponent(String(params.uri)) : undefined;
-  const name = params.name ? decodeURIComponent(String(params.name)) : "PDF";
+
+  // ✅ IMPORTANT: don't default to "PDF" here
+  const routeName = params.name
+    ? decodeURIComponent(String(params.name))
+    : undefined;
 
   const today = dayjs().format("YYYY-MM-DD");
 
@@ -50,7 +54,12 @@ export default function TargetViewerScreen() {
   }, [target]);
 
   const bookUri = uri ?? activeItem?.bookUri ?? null;
-  const effectiveName = name ?? activeItem?.bookName ?? "PDF";
+
+  // ✅ FIX: fallback to activeItem.bookName when route name is missing
+  const effectiveName =
+    routeName ??
+    (activeItem?.bookName ? String(activeItem.bookName) : undefined) ??
+    "PDF";
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [sectionsOpen, setSectionsOpen] = useState(false);
@@ -61,11 +70,11 @@ export default function TargetViewerScreen() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState<number | null>(null);
 
-  // ✅ guard: only complete once per active item
   const doneOnceRef = useRef(false);
 
   useEffect(() => {
     doneOnceRef.current = false;
+
     const start = Math.max(
       1,
       Number(activeItem?.cursorPage ?? activeItem?.jumpPage ?? 1)
@@ -132,10 +141,8 @@ export default function TargetViewerScreen() {
     if (!doneOnceRef.current && clamped >= endPage) {
       doneOnceRef.current = true;
 
-      // mark done
       void markItemDone(targetId, activeItem.id).catch(() => {});
 
-      // ✅ XP bonus + one-shot toast event
       const at = Date.now();
       const bonus = useReadingGamificationStore
         .getState()
@@ -165,7 +172,7 @@ export default function TargetViewerScreen() {
     <>
       <PdfReader
         isFullscreen={isFullscreen}
-        name={effectiveName}
+        name={effectiveName} // ✅ FIXED
         setIsFullscreen={setIsFullscreen}
         handleClose={handleClose}
         source={source}
