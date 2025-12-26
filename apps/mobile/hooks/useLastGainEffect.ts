@@ -8,6 +8,10 @@ function labelForMode(mode: string) {
   return "Reading";
 }
 
+// Polling interval (in milliseconds) for checking lastGain updates
+// This interval is chosen to balance responsiveness with performance
+const LAST_GAIN_POLL_INTERVAL_MS = 250;
+
 export function useLastGainEffect() {
   const { consume } = useLastGain();
   const { showToast } = useToast();
@@ -35,7 +39,7 @@ export function useLastGainEffect() {
         message,
         duration: 2500,
       });
-    }, 250);
+    }, LAST_GAIN_POLL_INTERVAL_MS);
 
     return () => clearInterval(t);
   }, [consume, showToast]);

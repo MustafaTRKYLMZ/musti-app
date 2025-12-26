@@ -15,13 +15,23 @@ const { colors, spacing, radii } = bookshelfTheme;
 
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 
+// Time window (in milliseconds) to consider a gain "fresh" for toast display
+const FRESH_GAIN_THRESHOLD_MS = 2 * 60_000; // 2 minutes
+
 export function StreakCard() {
   const [open, setOpen] = useState(false);
   const { showToast } = useToast();
 
   useEffect(() => {
-    useGamificationSettingsStore.getState().hydrate();
-    useReadingGamificationStore.getState().hydrate();
+    const settingsState = useGamificationSettingsStore.getState();
+    if (!settingsState.hydrated) {
+      settingsState.hydrate();
+    }
+
+    const readingState = useReadingGamificationStore.getState();
+    if (!readingState.hydrated) {
+      readingState.hydrate();
+    }
   }, []);
 
   const gHydrated = useReadingGamificationStore((s) => s.hydrated);
@@ -71,7 +81,7 @@ export function StreakCard() {
       const freshGain =
         lastGain &&
         lastGain.dayKey === todayKey &&
-        now - lastGain.at < 2 * 60_000 &&
+        now - lastGain.at < FRESH_GAIN_THRESHOLD_MS &&
         lastGain.xp > 0;
 
       showToast({
