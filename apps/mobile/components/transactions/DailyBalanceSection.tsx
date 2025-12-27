@@ -3,8 +3,8 @@ import { View, StyleSheet } from "react-native";
 import dayjs from "dayjs";
 import { useTranslation } from "@budget/core";
 import { LocalizedDatePicker } from "@/components/ui/LocalizedDatePicker";
-import { MText, colors, spacing } from "@budget/ui-native";
-import { QuickChip } from "./QuickChip";
+import { MText, colors, spacing, useTheme } from "@budget/ui-native";
+import { AppChip } from "@/components/ui/AppChip";
 
 interface Props {
   selectedDate: string | undefined;
@@ -24,6 +24,7 @@ export function DailyBalanceSection({
   onChangeDate,
 }: Props) {
   const { t } = useTranslation();
+  const { colors: themeColors } = useTheme();
 
   const todayStr = dayjs().format("YYYY-MM-DD");
   const effectiveSelectedDate = selectedDate || todayStr;
@@ -34,6 +35,19 @@ export function DailyBalanceSection({
 
   const balanceColor: keyof typeof colors =
     balance > 0 ? "success" : balance < 0 ? "danger" : "textSecondary";
+
+  const chipColors = {
+    active: {
+      bg: themeColors.primary,
+      border: themeColors.primary,
+      text: themeColors.textInverse,
+    },
+    inactive: {
+      bg: "transparent",
+      border: themeColors.borderSubtle,
+      text: themeColors.textPrimary,
+    },
+  };
 
   return (
     <>
@@ -64,15 +78,21 @@ export function DailyBalanceSection({
 
       {isTransaction && (
         <View style={styles.quickRow}>
-          <QuickChip
+          <AppChip
             label={t("today")}
             active={effectiveSelectedDate === todayStr}
             onPress={() => onChangeDate(todayStr)}
+            colors={chipColors}
+            pill
+            size="md"
           />
-          <QuickChip
+          <AppChip
             label={t("end_of_month")}
             active={effectiveSelectedDate === endOfMonthStr}
             onPress={() => onChangeDate(endOfMonthStr)}
+            colors={chipColors}
+            pill
+            size="md"
           />
         </View>
       )}

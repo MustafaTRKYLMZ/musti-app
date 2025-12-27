@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ReadingTarget, TargetItem } from "@budget/core";
+import { useReadingGamificationStore } from "./readingGamification/useReadingGamificationStore";
+
 
 type TargetsState = {
   hydrated: boolean;
@@ -24,20 +26,12 @@ type TargetsState = {
   ) => Promise<void>;
   deleteItem: (targetId: string, itemId: string) => Promise<void>;
 
-  // ✅ explicit: user picked another item to start => make it active
   setActiveItem: (targetId: string, itemId: string) => Promise<void>;
 
-  // ✅ when item reaches end
   markItemDone: (targetId: string, itemId: string) => Promise<void>;
 
-  // ✅ target-only progress update (do NOT touch book progressMap)
-  setItemCursor: (
-    targetId: string,
-    itemId: string,
-    cursorPage: number
-  ) => Promise<void>;
+  setItemCursor: (targetId: string, itemId: string, cursorPage: number) => Promise<void>;
 
-  // restart
   restartTarget: (targetId: string) => Promise<void>;
   restartItem: (targetId: string, itemId: string) => Promise<void>;
 };
@@ -84,7 +78,6 @@ function ensureSingleActive(t: ReadingTarget): ReadingTarget {
     return { ...t, items: nextItems };
   }
 
-  // no active => promote first pending
   const pendingIdx = items.findIndex((it) => it.status === "pending");
   if (pendingIdx === -1) return t;
 
@@ -168,6 +161,7 @@ export const useReadingTargetsStore = create<TargetsState>((set, get) => ({
     set({ targets });
     await persist(targets);
   },
+
   updateTargetTitle: async (targetId: string, title: string) => {
     const nextTitle = title.trim() || "Untitled target";
     const targets = get().targets.map((t) =>
@@ -176,7 +170,7 @@ export const useReadingTargetsStore = create<TargetsState>((set, get) => ({
     set({ targets });
     await persist(targets);
   },
-  
+
   deleteItem: async (targetId, itemId) => {
     const targets = get().targets.map((t) => {
       if (t.id !== targetId) return t;
@@ -201,8 +195,6 @@ export const useReadingTargetsStore = create<TargetsState>((set, get) => ({
 
       const chosen = t.items.find((it) => it.id === itemId);
       if (!chosen) return t;
-
-      // don't auto-reactivate done items (safer UX)
       if (chosen.status === "done") return t;
 
       const nextItems = t.items.map((it) => {
@@ -254,17 +246,25 @@ export const useReadingTargetsStore = create<TargetsState>((set, get) => ({
   markItemDone: async (targetId, itemId) => {
     const now = Date.now();
 
+    // ✅ capture bookUri before mutate (fallback)
+    const before = get().targets.find((t) => t.id === targetId);
+    const fallbackBookUri = before?.items?.find((it) => it.bookUri)?.bookUri ?? "";
+
+    let becameDone = false;
+
     const targets = get().targets.map((t) => {
       if (t.id !== targetId) return t;
 
-      // 1) mark done
-      const items = t.items.map((it) =>
-        it.id === itemId
-          ? { ...it, status: "done" as const, doneAt: it.doneAt ?? now }
-          : it
-      );
+      const wasDone = t.status === "done";
 
-      // 2) promote next pending -> active (ONLY if no active remains)
+      // 1) mark done (idempotent)
+      const items = t.items.map((it) => {
+        if (it.id !== itemId) return it;
+        if (it.status === "done") return it; // prevent double
+        return { ...it, status: "done" as const, doneAt: it.doneAt ?? now };
+      });
+
+      // 2) promote next pending -> active if no active remains
       const hasActive = items.some((it) => it.status === "active");
       let nextItems = items;
 
@@ -292,11 +292,23 @@ export const useReadingTargetsStore = create<TargetsState>((set, get) => ({
       let nextTarget: ReadingTarget = { ...t, items: nextItems };
       nextTarget = ensureSingleActive(nextTarget);
       nextTarget = recomputeTargetStatus(nextTarget);
+
+      if (!wasDone && nextTarget.status === "done") {
+        becameDone = true;
+      }
+
       return nextTarget;
     });
 
     set({ targets });
     await persist(targets);
+
+    if (becameDone) {
+      useReadingGamificationStore.getState().onTargetCompleted({
+        at: Date.now(),
+        bookUri: fallbackBookUri,
+      });
+    }
   },
 
   restartItem: async (targetId, itemId) => {
@@ -304,7 +316,6 @@ export const useReadingTargetsStore = create<TargetsState>((set, get) => ({
       if (t.id !== targetId) return t;
 
       const nextItems = t.items.map((it) => {
-        // ✅ any existing active -> pending (we will activate the restarted one)
         if (it.status === "active" && it.id !== itemId) {
           return { ...it, status: "pending" as const };
         }
@@ -347,7 +358,6 @@ export const useReadingTargetsStore = create<TargetsState>((set, get) => ({
     const targets = get().targets.map((t) => {
       if (t.id !== targetId) return t;
 
-      // all -> pending, cursor reset, then first becomes active
       const resetItems = t.items.map((it) => {
         const { start, end } = normalizeRange(
           it.jumpPage ?? it.startPage ?? 1,

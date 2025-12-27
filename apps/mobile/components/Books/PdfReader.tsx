@@ -32,6 +32,8 @@ import { useCropTransform } from "@/hooks/ useCropTransform";
 import { useReaderPrefs } from "@/hooks/ useReaderPrefs";
 import { PdfViewport } from "../ui/pdf/ PdfViewport";
 import { ReaderHeaderBar } from "../ui/pdf/ ReaderHeaderBar";
+import { useReadingGamificationStore } from "@/store/bookshelf/readingGamification/useReadingGamificationStore";
+import { scheduleMotivationNudgeIfNeeded } from "@/utils/motivation";
 
 type PdfReaderProps = {
   isFullscreen: boolean;
@@ -63,15 +65,6 @@ type PdfReaderProps = {
   sections?: BookSection[];
   enableStatsTracking?: boolean;
 
-  /**
-   * ✅ NEW (non-breaking):
-   * If provided, PdfReader will show time-left based on these remaining pages
-   * instead of (totalPages - currentPage).
-   *
-   * Use this for:
-   * - plan mode: remaining pages for TODAY (target - todayRead)
-   * - target mode: remaining pages in target range (endPage - cursor/current)
-   */
   timeLeftRemainingPages?: number | null;
 };
 
@@ -100,27 +93,20 @@ export const PdfReader: FC<PdfReaderProps> = ({
 }) => {
   const { colors } = useTheme();
 
-  // prefs (book-specific)
   const prefs = useReaderPrefs({ source, bookUri: readingContext?.bookUri });
 
-  // pace key (book-specific)
   const paceKey =
     readingContext?.bookUri ??
     (typeof source === "object" ? source.uri : String(source));
 
-  // reading pace (ppm + sample ingestion)
   const pace = useReadingPace({
     paceKey: paceKey ?? null,
-    // keep optional; we compute time-left ourselves to support plan/target
     currentPage,
     totalPages,
   });
 
   // ✅ mode-aware time left
   const timeLeftLabel = useMemo(() => {
-    // Determine remaining pages:
-    // - if override is provided (plan/target), use it
-    // - else fallback to "book remaining" (normal)
     let remainingPages: number | null = null;
 
     if (
@@ -262,6 +248,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
   const handleCloseInternal = async () => {
     tracking.flushSession();
     await prefs.flushPrefsWrite();
+    scheduleMotivationNudgeIfNeeded().catch(() => {});
     handleClose();
   };
 

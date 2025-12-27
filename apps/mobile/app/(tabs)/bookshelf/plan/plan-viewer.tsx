@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useMemo } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { View, StyleSheet, Animated } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { MText, spacing, radii, iconSizes, useTheme } from "@budget/ui-native";
@@ -9,6 +9,10 @@ import { useReadingPlanStore } from "@/store/bookshelf/useReadingPlanStore";
 import { IconButton, BaseIcon } from "@/components/ui/AppIcon";
 import { BookSectionsSidebar } from "@/components/Books/BookSectionsSidebar";
 import { PdfRef } from "react-native-pdf";
+
+import { useReadingGamificationStore } from "@/store/bookshelf/readingGamification/useReadingGamificationStore";
+import { useLastGainStore } from "@/hooks/useLastGain";
+import { scheduleMotivationNudgeIfNeeded } from "@/utils/motivation";
 
 export default function PlanViewerScreen() {
   const router = useRouter();
@@ -61,6 +65,13 @@ export default function PlanViewerScreen() {
   const currentItemIndex = uri
     ? items.findIndex((it) => it.bookUri === uri)
     : -1;
+
+  // ✅ once-per-book per open
+  const reachedOnceRef = useRef(false);
+
+  useEffect(() => {
+    reachedOnceRef.current = false;
+  }, [uri, planId]);
 
   useEffect(() => {
     if (!uri || !plan) return;
@@ -164,6 +175,29 @@ export default function PlanViewerScreen() {
       totalTodayForThisBook >= targetForToday
     ) {
       setHasReachedTarget(true);
+
+      // ✅ plan completion bonus once
+      if (!reachedOnceRef.current) {
+        reachedOnceRef.current = true;
+
+        const at = Date.now();
+        const bonus = useReadingGamificationStore
+          .getState()
+          .onPlanCompleted({ at, bookUri: uri });
+
+        if (bonus > 0) {
+          useLastGainStore.getState().emit({
+            at,
+            xp: bonus,
+            pages: 0,
+            mode: "plan",
+            bookUri: uri,
+            kind: "planComplete",
+          });
+        }
+
+        void scheduleMotivationNudgeIfNeeded().catch(() => {});
+      }
     }
   };
 
@@ -221,6 +255,7 @@ export default function PlanViewerScreen() {
 
   const handleClose = () => {
     flushToPlan(uri);
+    void scheduleMotivationNudgeIfNeeded().catch(() => {});
     router.replace("/(tabs)/bookshelf");
   };
 
@@ -229,7 +264,6 @@ export default function PlanViewerScreen() {
       ? Math.min(todayPagesForThisBook, targetForToday)
       : todayPagesForThisBook;
 
-  // ✅ NEW: plan-remaining pages for today
   const remainingPagesToday =
     targetForToday > 0
       ? Math.max(0, targetForToday - todayPagesForThisBook)

@@ -29,6 +29,9 @@ import { BookshelfTabs } from "../Books/BookshelfTabs";
 import { TargetList } from "../Books/TargetList";
 import { CreateTargetModal } from "../ui/modals/CreateTargetModal";
 import { useBookshelfTabsStore } from "@/store/bookshelf/useBookshelfTabsStore";
+import { useReadingGamificationStore } from "@/store/bookshelf/readingGamification/useReadingGamificationStore";
+import { StreakCard } from "../Books/gamification/StreakCard";
+import { useGamificationSettingsStore } from "@/store/bookshelf/readingGamification/useGamificationSettingsStore";
 
 const { colors, spacing, radii } = bookshelfTheme;
 
@@ -53,6 +56,11 @@ const bookshelfHeaderStyles = StyleSheet.create({
 });
 
 export default function BookshelfHomeScreen() {
+  useEffect(() => {
+    useReadingGamificationStore.getState().hydrate();
+    useGamificationSettingsStore.getState().hydrate();
+  }, []);
+
   const router = useRouter();
   const selectedTab = useBookshelfTabsStore((s) => s.selected);
   const setSelectedTab = useBookshelfTabsStore((s) => s.setSelected);
@@ -366,6 +374,8 @@ export default function BookshelfHomeScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
+          <StreakCard />
+          <View style={{ height: spacing.md }} />
           <BookshelfTabs value={selectedTab} onChange={setSelectedTab} />
 
           {/* PLANS / TARGETS */}

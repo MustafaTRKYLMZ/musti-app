@@ -6,6 +6,7 @@ import { MText, radii, spacing, useTheme } from "@budget/ui-native";
 import { BookshelfNotificationsSection } from "@/components/settings/BookshelfNotificationsSection";
 import { AppScreen } from "@/components/AppScreen";
 import { IconButton } from "@/components/ui/AppIcon";
+import { GamificationSettingsCard } from "@/components/Books/gamification/GamificationSettingsCard";
 
 export default function BookshelfSettingsScreen() {
   const { colors } = useTheme();
@@ -46,6 +47,7 @@ export default function BookshelfSettingsScreen() {
             <MText variant="heading2">Notifications</MText>
             <View style={{ height: spacing.md }} />
             <BookshelfNotificationsSection />
+            <GamificationSettingsCard />
           </View>
         </ScrollView>
       </AppScreen>

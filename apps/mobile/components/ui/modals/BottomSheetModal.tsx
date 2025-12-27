@@ -1,5 +1,4 @@
-// apps/mobile/components/ui/BottomSheetModal.tsx
-import React, { ReactNode } from "react";
+import React, { ReactNode, useMemo } from "react";
 import {
   Modal,
   View,
@@ -8,14 +7,32 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { MText, colors, spacing, radii, iconSizes } from "@budget/ui-native";
+import {
+  MText,
+  spacing,
+  radii,
+  iconSizes,
+  bookshelfTheme,
+  useTheme,
+} from "@budget/ui-native";
 import { IconButton } from "@/components/ui/AppIcon";
+
+type BottomSheetOwner = "budget" | "bookshelf";
 
 type BottomSheetModalProps = {
   visible: boolean;
   title: string;
   onClose: () => void;
   children: ReactNode;
+
+  /** default: "budget" */
+  variant?: BottomSheetOwner;
+
+  /** Optional action/content at the LEFT side of the header (e.g. Reset/Settings/Back) */
+  leftAction?: ReactNode;
+
+  /** Optional action/content at the RIGHT side (if you want to override close button) */
+  rightAction?: ReactNode;
 };
 
 export function BottomSheetModal({
@@ -23,8 +40,22 @@ export function BottomSheetModal({
   title,
   onClose,
   children,
+  variant = "budget",
+  leftAction,
+  rightAction,
 }: BottomSheetModalProps) {
   const isIOS = Platform.OS === "ios";
+
+  // ✅ budget colors: app theme
+  const theme = useTheme();
+  const budgetColors = theme.colors;
+
+  // ✅ bookshelf colors: fixed theme
+  const shelfColors = bookshelfTheme.colors;
+
+  const colors = useMemo(() => {
+    return variant === "bookshelf" ? shelfColors : budgetColors;
+  }, [variant, shelfColors, budgetColors]);
 
   return (
     <Modal
@@ -32,6 +63,7 @@ export function BottomSheetModal({
       animationType="fade"
       onRequestClose={onClose}
       presentationStyle="overFullScreen"
+      transparent
     >
       <KeyboardAvoidingView
         style={styles.root}
@@ -42,15 +74,32 @@ export function BottomSheetModal({
           {/* BACKDROP */}
           <TouchableOpacity
             activeOpacity={1}
-            style={styles.backdrop}
+            style={[
+              styles.backdrop,
+              { backgroundColor: colors.backdropStrong },
+            ]}
             onPress={onClose}
           />
 
           {/* SHEET */}
-          <View style={styles.sheet}>
-            <View style={styles.handle} />
+          <View
+            style={[
+              styles.sheet,
+              {
+                backgroundColor: colors.surfaceStrong,
+                borderColor: colors.borderSubtle,
+              },
+            ]}
+          >
+            <View
+              style={[styles.handle, { backgroundColor: colors.borderSubtle }]}
+            />
 
             <View style={styles.headerRow}>
+              {/* LEFT */}
+              <View style={styles.leftSlot}>{leftAction}</View>
+
+              {/* TITLE */}
               <MText
                 variant="heading4"
                 color="textPrimary"
@@ -59,13 +108,21 @@ export function BottomSheetModal({
                 {title}
               </MText>
 
-              <IconButton
-                name="close"
-                size={iconSizes.lg}
-                color={colors.danger}
-                onPress={onClose}
-                style={styles.closeButton}
-              />
+              {/* RIGHT */}
+              <View style={styles.rightSlot}>
+                {rightAction ?? (
+                  <IconButton
+                    name="close"
+                    size={iconSizes.lg}
+                    color={colors.danger}
+                    onPress={onClose}
+                    style={[
+                      styles.closeButton,
+                      { borderColor: colors.borderSubtle },
+                    ]}
+                  />
+                )}
+              </View>
             </View>
 
             {children}
@@ -77,25 +134,17 @@ export function BottomSheetModal({
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
+  root: { flex: 1 },
+  container: { flex: 1, justifyContent: "flex-end" },
 
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.backdropStrong,
   },
 
   sheet: {
     borderTopLeftRadius: radii.xl,
     borderTopRightRadius: radii.xl,
-    backgroundColor: colors.surfaceStrong,
     borderTopWidth: 1,
-    borderColor: colors.borderSubtle,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: spacing.xl,
@@ -107,7 +156,6 @@ const styles = StyleSheet.create({
     width: 44,
     height: 5,
     borderRadius: radii.full,
-    backgroundColor: colors.borderSubtle,
     marginBottom: spacing.sm,
   },
 
@@ -115,10 +163,24 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: spacing.sm,
+    gap: spacing.sm,
+  },
+
+  leftSlot: {
+    minWidth: 44,
+    alignItems: "flex-start",
+    justifyContent: "center",
   },
 
   title: {
     flex: 1,
+    textAlign: "center",
+  },
+
+  rightSlot: {
+    minWidth: 44,
+    alignItems: "flex-end",
+    justifyContent: "center",
   },
 
   closeButton: {
@@ -126,7 +188,6 @@ const styles = StyleSheet.create({
     height: 30,
     borderRadius: radii.full,
     borderWidth: 1,
-    borderColor: colors.borderSubtle,
     alignItems: "center",
     justifyContent: "center",
   },
