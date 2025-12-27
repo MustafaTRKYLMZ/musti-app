@@ -1,19 +1,31 @@
 import dayjs from "dayjs";
+import * as Notifications from "expo-notifications";
 import { useReadingGamificationStore } from "@/store/bookshelf/readingGamification/useReadingGamificationStore";
 import { useGamificationSettingsStore } from "@/store/bookshelf/readingGamification/useGamificationSettingsStore";
 import { scheduleCustomReminder } from "@budget/notifications";
-// ↑ scheduleCustomReminder senin paylaştığın fonksiyon
 
 const MOTIVATION_ID = "motivation-nudge-v1";
 
-// TODO: Implement proper cancellation logic
-// This function should track and cancel scheduled notification IDs
-// Currently a no-op - needs implementation to prevent old notifications
-// from remaining scheduled when settings change
+/**
+ * Cancels the motivation nudge notification if it exists.
+ * Searches through all scheduled notifications and cancels any that match
+ * the motivation reminder ID.
+ */
 export async function cancelMotivationNudge() {
-  // Future implementation should:
-  // 1. Track the expo notification ID returned by scheduleCustomReminder
-  // 2. Call cancelNotificationIds([expoId]) to cancel the scheduled notification
+  try {
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    const toCancel = scheduled
+      .filter((n) => n.content.data?.reminderId === MOTIVATION_ID)
+      .map((n) => n.identifier);
+
+    if (toCancel.length > 0) {
+      await Promise.all(
+        toCancel.map((id) => Notifications.cancelScheduledNotificationAsync(id))
+      );
+    }
+  } catch (error) {
+    console.error("Failed to cancel motivation nudge:", error);
+  }
 }
 
 export async function scheduleMotivationNudgeIfNeeded() {

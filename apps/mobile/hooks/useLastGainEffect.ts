@@ -9,7 +9,11 @@ function labelForMode(mode: string) {
 }
 
 // Polling interval (in milliseconds) for checking lastGain updates
-// This interval is chosen to balance responsiveness with performance
+// 250ms (4 times per second) provides responsive toast notifications
+// while keeping CPU usage minimal. The check is lightweight (just reads
+// a flag), so the performance impact is negligible.
+// Note: An event-based approach would be more efficient but would require
+// significant architectural changes to the zustand store pattern.
 const LAST_GAIN_POLL_INTERVAL_MS = 250;
 
 export function useLastGainEffect() {

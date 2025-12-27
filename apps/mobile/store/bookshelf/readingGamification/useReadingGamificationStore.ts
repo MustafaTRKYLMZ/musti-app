@@ -211,7 +211,7 @@ export const useReadingGamificationStore = create<GamificationState>((set, get) 
     return gainedXp;
   },
 
-  onTargetCompleted: ({ at, bookUri }) => {
+  onTargetCompleted: ({ at, bookUri: _bookUri }) => {
     const settings = useGamificationSettingsStore.getState().settings;
     const bonus = Math.max(0, clampInt(settings.targetCompleteBonus ?? 250));
     if (bonus <= 0) return 0;
@@ -247,7 +247,7 @@ export const useReadingGamificationStore = create<GamificationState>((set, get) 
     return bonus;
   },
 
-  onPlanCompleted: ({ at, bookUri }) => {
+  onPlanCompleted: ({ at, bookUri: _bookUri }) => {
     const settings = useGamificationSettingsStore.getState().settings;
     const bonus = Math.max(0, clampInt(settings.planCompleteBonus ?? 150));
     if (bonus <= 0) return 0;
