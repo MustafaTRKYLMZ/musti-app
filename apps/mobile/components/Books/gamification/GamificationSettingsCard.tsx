@@ -64,7 +64,10 @@ export function GamificationSettingsCard({ inModal = false }: Props) {
     });
 
     scheduleMotivationNudgeIfNeeded().catch((error) => {
-      console.error("Failed to schedule motivation nudge after time change:", error);
+      console.error(
+        "Failed to schedule motivation nudge after time change:",
+        error
+      );
     });
   };
 
@@ -83,14 +86,20 @@ export function GamificationSettingsCard({ inModal = false }: Props) {
   const setScheduleType = async (t: "daily" | "weekly") => {
     await update({ motivationScheduleType: t });
     scheduleMotivationNudgeIfNeeded().catch((error) => {
-      console.error("Failed to schedule motivation nudge after schedule type change:", error);
+      console.error(
+        "Failed to schedule motivation nudge after schedule type change:",
+        error
+      );
     });
   };
 
   const setWeekday = async (wd: number) => {
     await update({ motivationWeekday: wd });
     scheduleMotivationNudgeIfNeeded().catch((error) => {
-      console.error("Failed to schedule motivation nudge after weekday change:", error);
+      console.error(
+        "Failed to schedule motivation nudge after weekday change:",
+        error
+      );
     });
   };
 
@@ -99,7 +108,10 @@ export function GamificationSettingsCard({ inModal = false }: Props) {
       motivationOnlyIfNotDone: !settings.motivationOnlyIfNotDone,
     });
     scheduleMotivationNudgeIfNeeded().catch((error) => {
-      console.error("Failed to schedule motivation nudge after onlyIfNotDone toggle:", error);
+      console.error(
+        "Failed to schedule motivation nudge after onlyIfNotDone toggle:",
+        error
+      );
     });
   };
 
@@ -135,7 +147,9 @@ export function GamificationSettingsCard({ inModal = false }: Props) {
 
   if (!hydrated) return null;
 
-  const cardStyle = [styles.card, inModal ? styles.cardInModal : null] as const;
+  const cardStyle = [styles.card, inModal ? styles.cardInModal : null].filter(
+    Boolean
+  );
 
   const content = (
     <View style={cardStyle}>

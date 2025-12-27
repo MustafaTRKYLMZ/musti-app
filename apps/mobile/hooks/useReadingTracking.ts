@@ -1,11 +1,16 @@
 import { useCallback, useMemo, useRef } from "react";
 import type { ReadingMode } from "@budget/core";
+
 import { useReadingGamificationStore } from "@/store/bookshelf/readingGamification/useReadingGamificationStore";
 import { useLastGainStore } from "@/hooks/useLastGain";
 
+// ✅ NEW: stats + events
+import { useReadingStatsStore } from "@/store/bookshelf/useReadingStatsStore";
+import { useReadingEventsStore } from "@/store/bookshelf/useReadingEventsStore";
+
 type ReadingContext = {
   mode: ReadingMode;
-  date: string;
+  date: string; // "YYYY-MM-DD"
   bookUri?: string;
   targetId?: string;
   sectionId?: string;
@@ -169,6 +174,31 @@ export function useReadingTracking(
 
     // ✅ Only log when meaningful
     if (pagesDelta > 0 || minutesDelta > 0) {
+      // ✅ 1) Stats store (this powers StatsBookScreen pages)
+      useReadingStatsStore.getState().addPages({
+        date: ctx.date,
+        pages: pagesDelta,
+        mode: ctx.mode,
+        bookUri: ctx.bookUri,
+        targetId: ctx.targetId,
+      });
+
+      // ✅ 2) Events store (this powers StatsBookScreen minutes)
+      useReadingEventsStore.getState().addEvent({
+        at: now,                
+        date: ctx.date,
+        bookUri: ctx.bookUri,
+        mode: ctx.mode,
+        targetId: ctx.targetId,
+        sectionId: ctx.sectionId,
+        sectionTitle: ctx.sectionTitle,
+        pageFrom: fromPage,
+        pageTo: toPage,
+        durationMs: msSpent,
+      });
+      
+
+      // ✅ 3) Gamification (XP/streak)
       gainedXp = useReadingGamificationStore.getState().logReadingProgress({
         bookUri: ctx.bookUri,
         at: now,

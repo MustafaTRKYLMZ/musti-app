@@ -32,7 +32,6 @@ import { useCropTransform } from "@/hooks/ useCropTransform";
 import { useReaderPrefs } from "@/hooks/ useReaderPrefs";
 import { PdfViewport } from "../ui/pdf/ PdfViewport";
 import { ReaderHeaderBar } from "../ui/pdf/ ReaderHeaderBar";
-import { useReadingGamificationStore } from "@/store/bookshelf/readingGamification/useReadingGamificationStore";
 import { scheduleMotivationNudgeIfNeeded } from "@/utils/motivation";
 
 type PdfReaderProps = {
@@ -105,7 +104,6 @@ export const PdfReader: FC<PdfReaderProps> = ({
     totalPages,
   });
 
-  // ✅ mode-aware time left
   const timeLeftLabel = useMemo(() => {
     let remainingPages: number | null = null;
 
@@ -177,10 +175,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
   // ✅ reset tracking baselines when doc/initial changes
   useEffect(() => {
     const startPage = Math.max(1, Math.floor(initialPage ?? 1));
-
     tracking.resetBaselines(startPage);
-
-    // ✅ START a session even if page never changes
     tracking.ensureStarted(startPage);
   }, [
     initialPage,

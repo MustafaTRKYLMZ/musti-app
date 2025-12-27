@@ -35,17 +35,15 @@ export function ReadingPlanModal({
   onClose,
   books,
 }: ReadingPlanModalProps) {
-  // ✅ NEW: multi-plan store action
-  const createPlan = useReadingPlanStore((s) => s.createPlan);
+  const { colors } = useTheme();
 
+  const createPlan = useReadingPlanStore((s) => s.createPlan);
   const [planName, setPlanName] = useState("Reading plan");
   const [entries, setEntries] = useState<PlanEntryState>({});
   const [selected, setSelected] = useState<SelectionState>({});
 
   const [selectedBookUri, setSelectedBookUri] = useState<string | null>(null);
   const [bookPickerOpen, setBookPickerOpen] = useState(false);
-
-  const { colors } = useTheme();
 
   useEffect(() => {
     if (visible) {

@@ -85,7 +85,6 @@ export default function StatsBookScreen() {
   const getBookWeekTotal = useReadingStatsStore((s) => s.getBookWeekTotal);
   const getBookMonthTotal = useReadingStatsStore((s) => s.getBookMonthTotal);
 
-  // ✅ these exist in your store code you pasted
   const getBookRange = useReadingStatsStore((s) => s.getBookRange);
   const getBookBestDay = useReadingStatsStore((s) => s.getBookBestDay);
   const getBookStreak = useReadingStatsStore((s) => s.getBookStreak);
@@ -128,12 +127,10 @@ export default function StatsBookScreen() {
     return toNonNegativeInt(getBookMonthTotal(uri, today));
   }, [uri, today, getBookMonthTotal]);
 
-  // ✅ build day rows (7 days)
   const weekRows: DayRow[] = useMemo(() => {
     if (!uri) return [];
     const stats = getBookRange(uri, weekFrom, today) ?? [];
 
-    // Map stats by date for quick fill
     const byDate: Record<string, number> = {};
     for (const s of stats) {
       if (!s?.date) continue;
@@ -148,7 +145,6 @@ export default function StatsBookScreen() {
       rows.push({ date: d, pages, minutes });
     }
 
-    // show newest first (today -> older)
     return rows;
   }, [uri, weekFrom, today, getBookRange, events]);
 
@@ -158,7 +154,6 @@ export default function StatsBookScreen() {
     return sum;
   }, [weekRows]);
 
-  // ✅ month rows (30 days) from stats + minutes (we’ll use top days to keep UI light)
   const monthRows: DayRow[] = useMemo(() => {
     if (!uri) return [];
     const stats = getBookRange(uri, monthFrom, today) ?? [];
@@ -178,8 +173,6 @@ export default function StatsBookScreen() {
   }, [uri, monthFrom, today, getBookRange, events]);
 
   const monthTotalMinutes = useMemo(() => {
-    // true month minutes should include even days with 0 pages; but OK because no session => 0 anyway.
-    // We can compute exact later if you want by iterating 30 days like week.
     let sum = 0;
     for (const r of monthRows) sum += r.minutes;
     return sum;
