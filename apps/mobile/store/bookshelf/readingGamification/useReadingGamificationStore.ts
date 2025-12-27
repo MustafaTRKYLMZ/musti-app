@@ -229,19 +229,19 @@ export const useReadingGamificationStore = create<GamificationState>((set, get) 
         mode: "target",
       };
 
-      queueMicrotask(() => {
-        const toSave: PersistShape = {
-          daily: state.daily,
-          streak: state.streak,
-          xp: { totalXp: xp.totalXp },
-          lastGain,
-        };
-        AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave)).catch((error) => {
-          console.error("Failed to persist target completion bonus:", error);
-        });
-      });
-
       return { xp, lastGain };
+    });
+
+    // Persist after state update completes
+    const currentState = useReadingGamificationStore.getState();
+    const toSave: PersistShape = {
+      daily: currentState.daily,
+      streak: currentState.streak,
+      xp: { totalXp: currentState.xp.totalXp },
+      lastGain: currentState.lastGain,
+    };
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave)).catch((error) => {
+      console.error("Failed to persist target completion bonus:", error);
     });
 
     return bonus;
@@ -265,19 +265,19 @@ export const useReadingGamificationStore = create<GamificationState>((set, get) 
         mode: "plan",
       };
 
-      queueMicrotask(() => {
-        const toSave: PersistShape = {
-          daily: state.daily,
-          streak: state.streak,
-          xp: { totalXp: xp.totalXp },
-          lastGain,
-        };
-        AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave)).catch((error) => {
-          console.error("Failed to persist plan completion bonus:", error);
-        });
-      });
-
       return { xp, lastGain };
+    });
+
+    // Persist after state update completes
+    const currentState = useReadingGamificationStore.getState();
+    const toSave: PersistShape = {
+      daily: currentState.daily,
+      streak: currentState.streak,
+      xp: { totalXp: currentState.xp.totalXp },
+      lastGain: currentState.lastGain,
+    };
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave)).catch((error) => {
+      console.error("Failed to persist plan completion bonus:", error);
     });
 
     return bonus;
