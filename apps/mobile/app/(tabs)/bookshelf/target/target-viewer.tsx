@@ -77,7 +77,9 @@ export default function TargetViewerScreen() {
   const [isClosing, setIsClosing] = useState(false);
 
   const handleClose = () => {
-    void scheduleMotivationNudgeIfNeeded().catch(() => {});
+    void scheduleMotivationNudgeIfNeeded().catch((error) => {
+      console.error("Failed to schedule motivation nudge on target close:", error);
+    });
     router.replace("/(tabs)/bookshelf");
   };
 

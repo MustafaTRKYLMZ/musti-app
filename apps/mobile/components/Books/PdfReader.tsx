@@ -166,9 +166,6 @@ export const PdfReader: FC<PdfReaderProps> = ({
       : "Tight";
 
   const zoomPercent = Math.round(userScale * 100);
-  const logReadingProgress = useReadingGamificationStore(
-    (s) => s.logReadingProgress
-  );
 
   // ✅ tracking (pace sampling burada)
   const tracking = useReadingTracking(enableStatsTracking, readingContext, {

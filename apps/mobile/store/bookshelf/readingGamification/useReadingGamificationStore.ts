@@ -93,7 +93,11 @@ export const useReadingGamificationStore = create<GamificationState>((set, get) 
         xp: parsed.xp ? recomputeXp(parsed.xp.totalXp ?? 0) : s.xp,
         lastGain: parsed.lastGain ?? null,
       }));
-    } catch {
+    } catch (error) {
+      console.error(
+        "Failed to hydrate reading gamification from AsyncStorage, falling back to defaults.",
+        error
+      );
       set({ hydrated: true });
     }
   },
@@ -197,7 +201,9 @@ export const useReadingGamificationStore = create<GamificationState>((set, get) 
         xp: { totalXp: xp.totalXp },
         lastGain,
       };
-      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave)).catch(() => {});
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave)).catch((error) => {
+        console.error("Failed to persist reading gamification progress:", error);
+      });
 
       return { daily, streak, xp, lastGain };
     });
@@ -205,7 +211,7 @@ export const useReadingGamificationStore = create<GamificationState>((set, get) 
     return gainedXp;
   },
 
-  onTargetCompleted: ({ at, bookUri }) => {
+  onTargetCompleted: ({ at, bookUri: _bookUri }) => {
     const settings = useGamificationSettingsStore.getState().settings;
     const bonus = Math.max(0, clampInt(settings.targetCompleteBonus ?? 250));
     if (bonus <= 0) return 0;
@@ -223,23 +229,25 @@ export const useReadingGamificationStore = create<GamificationState>((set, get) 
         mode: "target",
       };
 
-      queueMicrotask(() => {
-        const toSave: PersistShape = {
-          daily: state.daily,
-          streak: state.streak,
-          xp: { totalXp: xp.totalXp },
-          lastGain,
-        };
-        AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave)).catch(() => {});
-      });
-
       return { xp, lastGain };
+    });
+
+    // Persist after state update completes
+    const currentState = useReadingGamificationStore.getState();
+    const toSave: PersistShape = {
+      daily: currentState.daily,
+      streak: currentState.streak,
+      xp: { totalXp: currentState.xp.totalXp },
+      lastGain: currentState.lastGain,
+    };
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave)).catch((error) => {
+      console.error("Failed to persist target completion bonus:", error);
     });
 
     return bonus;
   },
 
-  onPlanCompleted: ({ at, bookUri }) => {
+  onPlanCompleted: ({ at, bookUri: _bookUri }) => {
     const settings = useGamificationSettingsStore.getState().settings;
     const bonus = Math.max(0, clampInt(settings.planCompleteBonus ?? 150));
     if (bonus <= 0) return 0;
@@ -257,17 +265,19 @@ export const useReadingGamificationStore = create<GamificationState>((set, get) 
         mode: "plan",
       };
 
-      queueMicrotask(() => {
-        const toSave: PersistShape = {
-          daily: state.daily,
-          streak: state.streak,
-          xp: { totalXp: xp.totalXp },
-          lastGain,
-        };
-        AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave)).catch(() => {});
-      });
-
       return { xp, lastGain };
+    });
+
+    // Persist after state update completes
+    const currentState = useReadingGamificationStore.getState();
+    const toSave: PersistShape = {
+      daily: currentState.daily,
+      streak: currentState.streak,
+      xp: { totalXp: currentState.xp.totalXp },
+      lastGain: currentState.lastGain,
+    };
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave)).catch((error) => {
+      console.error("Failed to persist plan completion bonus:", error);
     });
 
     return bonus;

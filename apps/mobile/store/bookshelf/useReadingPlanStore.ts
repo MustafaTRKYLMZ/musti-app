@@ -234,11 +234,11 @@ export const useReadingPlanStore = create<ReadingPlanState>()(
             );
 
             const perBook: Record<string, PlanBookProgress> = {};
-            Object.entries(plan.perBook ?? {}).forEach(([u, progress]) => {
-              if (u === oldUri) {
+            Object.entries(plan.perBook ?? {}).forEach(([uri, progress]) => {
+              if (uri === oldUri) {
                 perBook[newUri] = { ...progress, bookUri: newUri };
               } else {
-                perBook[u] = progress;
+                perBook[uri] = progress;
               }
             });
 
