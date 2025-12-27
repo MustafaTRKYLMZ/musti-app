@@ -63,12 +63,16 @@ export function GamificationSettingsCard({ inModal = false }: Props) {
       motivationMinute: date.getMinutes(),
     });
 
-    scheduleMotivationNudgeIfNeeded().catch(() => {});
+    scheduleMotivationNudgeIfNeeded().catch((error) => {
+      console.error("Failed to schedule motivation nudge after time change:", error);
+    });
   };
 
   const onToggleEnabled = async () => {
     await update({ motivationEnabled: !settings.motivationEnabled });
-    scheduleMotivationNudgeIfNeeded().catch(() => {});
+    scheduleMotivationNudgeIfNeeded().catch((error) => {
+      console.error("Failed to schedule motivation nudge after toggle:", error);
+    });
     showToast({
       title: "Motivation nudge",
       message: !settings.motivationEnabled ? "Enabled" : "Disabled",
@@ -78,24 +82,32 @@ export function GamificationSettingsCard({ inModal = false }: Props) {
 
   const setScheduleType = async (t: "daily" | "weekly") => {
     await update({ motivationScheduleType: t });
-    scheduleMotivationNudgeIfNeeded().catch(() => {});
+    scheduleMotivationNudgeIfNeeded().catch((error) => {
+      console.error("Failed to schedule motivation nudge after schedule type change:", error);
+    });
   };
 
   const setWeekday = async (wd: number) => {
     await update({ motivationWeekday: wd });
-    scheduleMotivationNudgeIfNeeded().catch(() => {});
+    scheduleMotivationNudgeIfNeeded().catch((error) => {
+      console.error("Failed to schedule motivation nudge after weekday change:", error);
+    });
   };
 
   const toggleOnlyIfNotDone = async () => {
     await update({
       motivationOnlyIfNotDone: !settings.motivationOnlyIfNotDone,
     });
-    scheduleMotivationNudgeIfNeeded().catch(() => {});
+    scheduleMotivationNudgeIfNeeded().catch((error) => {
+      console.error("Failed to schedule motivation nudge after onlyIfNotDone toggle:", error);
+    });
   };
 
   const onReset = async () => {
     await reset();
-    scheduleMotivationNudgeIfNeeded().catch(() => {});
+    scheduleMotivationNudgeIfNeeded().catch((error) => {
+      console.error("Failed to schedule motivation nudge after reset:", error);
+    });
     showToast({
       title: "Gamification",
       message: "Settings reset to defaults",
@@ -126,7 +138,7 @@ export function GamificationSettingsCard({ inModal = false }: Props) {
   const cardStyle = [styles.card, inModal ? styles.cardInModal : null] as const;
 
   const content = (
-    <View style={[...cardStyle]}>
+    <View style={cardStyle}>
       <View style={styles.headerRow}>
         <View style={{ flex: 1, minWidth: 0 }}>
           <MText style={{ fontSize: 16, fontWeight: "900" }}>

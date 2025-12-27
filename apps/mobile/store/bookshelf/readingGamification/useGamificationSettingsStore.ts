@@ -27,7 +27,11 @@ export const useGamificationSettingsStore = create<SettingsState>((set, get) => 
       }
       const parsed = JSON.parse(raw) as Partial<GamificationSettings>;
       set({ hydrated: true, settings: sanitizeSettings(parsed) });
-    } catch {
+    } catch (error) {
+      console.error(
+        "Failed to hydrate gamification settings from AsyncStorage, falling back to defaults.",
+        error
+      );
       set({ hydrated: true, settings: DEFAULT_GAMIFICATION_SETTINGS });
     }
   },

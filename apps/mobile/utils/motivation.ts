@@ -26,7 +26,9 @@ export async function scheduleMotivationNudgeIfNeeded() {
 
   // ✅ kapalıysa: iptal + çık
   if (!s.motivationEnabled) {
-    await cancelMotivationNudge().catch(() => {});
+    await cancelMotivationNudge().catch((error) => {
+      console.error("Failed to cancel motivation nudge:", error);
+    });
     return;
   }
 
@@ -38,7 +40,9 @@ export async function scheduleMotivationNudgeIfNeeded() {
 
   // ✅ onlyIfNotDone açıksa ve hedef tamamlandıysa iptal
   if (s.motivationOnlyIfNotDone && remaining <= 0) {
-    await cancelMotivationNudge().catch(() => {});
+    await cancelMotivationNudge().catch((error) => {
+      console.error("Failed to cancel motivation nudge:", error);
+    });
     return;
   }
 
@@ -61,7 +65,9 @@ export async function scheduleMotivationNudgeIfNeeded() {
       : { type: "daily" as const, hour, minute };
 
   // ✅ tek notification kalsın (senin mevcut cancel stratejin neyse ona bağla)
-  await cancelMotivationNudge().catch(() => {});
+  await cancelMotivationNudge().catch((error) => {
+    console.error("Failed to cancel motivation nudge before scheduling:", error);
+  });
 
   await scheduleCustomReminder({
     id: MOTIVATION_ID,

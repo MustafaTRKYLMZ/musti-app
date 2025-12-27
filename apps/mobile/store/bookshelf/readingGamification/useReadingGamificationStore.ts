@@ -93,7 +93,11 @@ export const useReadingGamificationStore = create<GamificationState>((set, get) 
         xp: parsed.xp ? recomputeXp(parsed.xp.totalXp ?? 0) : s.xp,
         lastGain: parsed.lastGain ?? null,
       }));
-    } catch {
+    } catch (error) {
+      console.error(
+        "Failed to hydrate reading gamification from AsyncStorage, falling back to defaults.",
+        error
+      );
       set({ hydrated: true });
     }
   },
@@ -197,7 +201,9 @@ export const useReadingGamificationStore = create<GamificationState>((set, get) 
         xp: { totalXp: xp.totalXp },
         lastGain,
       };
-      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave)).catch(() => {});
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave)).catch((error) => {
+        console.error("Failed to persist reading gamification progress:", error);
+      });
 
       return { daily, streak, xp, lastGain };
     });
@@ -230,7 +236,9 @@ export const useReadingGamificationStore = create<GamificationState>((set, get) 
           xp: { totalXp: xp.totalXp },
           lastGain,
         };
-        AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave)).catch(() => {});
+        AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave)).catch((error) => {
+          console.error("Failed to persist target completion bonus:", error);
+        });
       });
 
       return { xp, lastGain };
@@ -264,7 +272,9 @@ export const useReadingGamificationStore = create<GamificationState>((set, get) 
           xp: { totalXp: xp.totalXp },
           lastGain,
         };
-        AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave)).catch(() => {});
+        AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave)).catch((error) => {
+          console.error("Failed to persist plan completion bonus:", error);
+        });
       });
 
       return { xp, lastGain };
