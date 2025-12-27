@@ -14,51 +14,50 @@ import { MText, spacing, radii, iconSizes, useTheme } from "@budget/ui-native";
 
 import type { LocalPdfFile } from "@/utils/getPdfsDirectory";
 import { useReadingPlanStore } from "@/store/bookshelf/useReadingPlanStore";
-import { BaseIcon, IconButton } from "@/components/ui/AppIcon";
+import { IconButton } from "@/components/ui/AppIcon";
+import {
+  MSelectBottomSheet,
+  type MSelectItemBase,
+} from "@/components/ui/MSelectBottomSheet";
 
-interface ReadingPlanModalProps {
+interface CreatePlanModalProps {
   visible: boolean;
   onClose: () => void;
   books: LocalPdfFile[];
 }
 
-type PlanEntryState = {
-  [uri: string]: string; // pages as string for TextInput
-};
+type PlanEntryState = { [uri: string]: string };
+type SelectionState = { [uri: string]: boolean };
 
-type SelectionState = {
-  [uri: string]: boolean;
-};
-
-export function ReadingPlanModal({
+export function CreatePlanModal({
   visible,
   onClose,
   books,
-}: ReadingPlanModalProps) {
+}: CreatePlanModalProps) {
   const { colors } = useTheme();
 
   const createPlan = useReadingPlanStore((s) => s.createPlan);
+
   const [planName, setPlanName] = useState("Reading plan");
   const [entries, setEntries] = useState<PlanEntryState>({});
   const [selected, setSelected] = useState<SelectionState>({});
-
   const [selectedBookUri, setSelectedBookUri] = useState<string | null>(null);
-  const [bookPickerOpen, setBookPickerOpen] = useState(false);
 
   useEffect(() => {
-    if (visible) {
-      const initialEntries: PlanEntryState = {};
-      const initialSelected: SelectionState = {};
-      books.forEach((b) => {
-        initialEntries[b.uri] = "";
-        initialSelected[b.uri] = false;
-      });
-      setEntries(initialEntries);
-      setSelected(initialSelected);
-      setPlanName("Reading plan");
-      setBookPickerOpen(false);
-      setSelectedBookUri(books[0]?.uri ?? null);
-    }
+    if (!visible) return;
+
+    const initialEntries: PlanEntryState = {};
+    const initialSelected: SelectionState = {};
+
+    books.forEach((b) => {
+      initialEntries[b.uri] = "";
+      initialSelected[b.uri] = false;
+    });
+
+    setEntries(initialEntries);
+    setSelected(initialSelected);
+    setPlanName("Reading plan");
+    setSelectedBookUri(books[0]?.uri ?? null);
   }, [visible, books]);
 
   const availableBooks = useMemo(
@@ -66,17 +65,12 @@ export function ReadingPlanModal({
     [books, selected]
   );
 
-  const selectedBook = useMemo(
-    () => availableBooks.find((b) => b.uri === selectedBookUri) ?? null,
-    [availableBooks, selectedBookUri]
-  );
-
+  // keep selection valid when availableBooks changes
   useEffect(() => {
     if (!availableBooks.length) {
       setSelectedBookUri(null);
       return;
     }
-
     if (
       !selectedBookUri ||
       !availableBooks.some((b) => b.uri === selectedBookUri)
@@ -85,12 +79,23 @@ export function ReadingPlanModal({
     }
   }, [availableBooks, selectedBookUri]);
 
+  const selectedBook = useMemo(
+    () => availableBooks.find((b) => b.uri === selectedBookUri) ?? null,
+    [availableBooks, selectedBookUri]
+  );
+
+  const bookItems = useMemo<MSelectItemBase[]>(
+    () =>
+      availableBooks
+        .slice()
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((b) => ({ id: b.uri, label: b.name })),
+    [availableBooks]
+  );
+
   const handleChangePages = (uri: string, value: string) => {
     const cleaned = value.replace(/[^0-9]/g, "");
-    setEntries((prev) => ({
-      ...prev,
-      [uri]: cleaned,
-    }));
+    setEntries((prev) => ({ ...prev, [uri]: cleaned }));
   };
 
   const handleAddOrUpdateSelected = () => {
@@ -107,17 +112,11 @@ export function ReadingPlanModal({
       return;
     }
 
-    setSelected((prev) => ({
-      ...prev,
-      [selectedBookUri]: true,
-    }));
+    setSelected((prev) => ({ ...prev, [selectedBookUri]: true }));
   };
 
   const handleRemoveBook = (uri: string) => {
-    setSelected((prev) => ({
-      ...prev,
-      [uri]: false,
-    }));
+    setSelected((prev) => ({ ...prev, [uri]: false }));
   };
 
   const applyQuickPlanAll = (pagesPerDay: number) => {
@@ -145,11 +144,7 @@ export function ReadingPlanModal({
         const pages = raw ? parseInt(raw, 10) : 0;
         if (!pages || pages <= 0) return null;
 
-        return {
-          bookUri: b.uri,
-          bookName: b.name,
-          pagesPerDay: pages,
-        };
+        return { bookUri: b.uri, bookName: b.name, pagesPerDay: pages };
       })
       .filter(Boolean) as {
       bookUri: string;
@@ -162,17 +157,15 @@ export function ReadingPlanModal({
       return;
     }
 
-    const finalName = planName.trim() || "Reading plan";
-
-    createPlan({
-      name: finalName,
-      items,
-    });
-
+    const finalName = planName.trim() || "Create plan";
+    createPlan({ name: finalName, items });
     onClose();
   };
 
-  const selectedBooks = books.filter((b) => selected[b.uri]);
+  const selectedBooks = useMemo(
+    () => books.filter((b) => selected[b.uri]),
+    [books, selected]
+  );
 
   const currentPagesValue =
     selectedBookUri && entries[selectedBookUri] ? entries[selectedBookUri] : "";
@@ -185,12 +178,7 @@ export function ReadingPlanModal({
       onRequestClose={onClose}
     >
       <KeyboardAvoidingView
-        style={[
-          styles.backdrop,
-          {
-            backgroundColor: colors.backdropStrong,
-          },
-        ]}
+        style={[styles.backdrop, { backgroundColor: colors.backdropStrong }]}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 24}
       >
@@ -213,7 +201,7 @@ export function ReadingPlanModal({
           {/* Header */}
           <View style={styles.modalHeader}>
             <MText variant="heading1" color="textPrimary">
-              Reading plan
+              Create plan
             </MText>
 
             <IconButton
@@ -224,7 +212,6 @@ export function ReadingPlanModal({
             />
           </View>
 
-          {/* Scrollable content */}
           <ScrollView
             style={{ flex: 1 }}
             showsVerticalScrollIndicator={false}
@@ -242,7 +229,7 @@ export function ReadingPlanModal({
               <TextInput
                 value={planName}
                 onChangeText={setPlanName}
-                placeholder="Reading plan"
+                placeholder="Create plan"
                 style={[
                   styles.textInput,
                   {
@@ -285,45 +272,22 @@ export function ReadingPlanModal({
             </MText>
 
             <View style={styles.selectRow}>
-              {/* Select field */}
+              {/* ✅ MSelectBottomSheet */}
               <View style={styles.selectColumn}>
-                <MText variant="body" color="textSecondary">
-                  Book
-                </MText>
-                <TouchableOpacity
-                  style={[
-                    styles.bookSelectField,
-                    {
-                      borderColor: colors.borderSubtle,
-                      backgroundColor: colors.surfaceElevated ?? colors.surface,
-                    },
-                  ]}
-                  activeOpacity={0.8}
-                  onPress={() => {
-                    if (!availableBooks.length) return;
-                    setBookPickerOpen((prev) => !prev);
-                  }}
-                >
-                  <MText
-                    variant="body"
-                    color={selectedBook ? "textPrimary" : "textSecondary"}
-                    numberOfLines={1}
-                  >
-                    {selectedBook
-                      ? selectedBook.name
-                      : availableBooks.length
-                      ? "Select book"
-                      : "All books are in the plan"}
-                  </MText>
-
-                  {availableBooks.length > 0 && (
-                    <BaseIcon
-                      family="ion"
-                      name={bookPickerOpen ? "chevron-up" : "chevron-down"}
-                      size={iconSizes.md}
-                    />
-                  )}
-                </TouchableOpacity>
+                <MSelectBottomSheet
+                  label="Book"
+                  placeholder={
+                    availableBooks.length
+                      ? "Select a book…"
+                      : "All books are in the plan"
+                  }
+                  valueId={selectedBookUri}
+                  items={bookItems}
+                  onChange={(it) => setSelectedBookUri(it.id)}
+                  searchable
+                  searchPlaceholder="Search book…"
+                  disabled={!availableBooks.length}
+                />
               </View>
 
               {/* Pages input + plus */}
@@ -366,54 +330,6 @@ export function ReadingPlanModal({
                 />
               </View>
             </View>
-
-            {/* Dropdown list */}
-            {bookPickerOpen && availableBooks.length > 0 && (
-              <View
-                style={[
-                  styles.dropdown,
-                  {
-                    backgroundColor: colors.surface,
-                    borderColor: colors.borderSubtle,
-                  },
-                ]}
-              >
-                <ScrollView
-                  style={styles.dropdownList}
-                  contentContainerStyle={styles.dropdownContent}
-                  keyboardShouldPersistTaps="handled"
-                >
-                  {availableBooks.map((book) => {
-                    const isActive = book.uri === selectedBookUri;
-                    return (
-                      <TouchableOpacity
-                        key={book.uri}
-                        style={[
-                          styles.dropdownItem,
-                          isActive && {
-                            backgroundColor:
-                              (colors as any).surfaceStrong || colors.surface,
-                          },
-                        ]}
-                        activeOpacity={0.8}
-                        onPress={() => {
-                          setSelectedBookUri(book.uri);
-                          setBookPickerOpen(false);
-                        }}
-                      >
-                        <MText
-                          variant="body"
-                          color="textPrimary"
-                          numberOfLines={1}
-                        >
-                          {book.name}
-                        </MText>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-              </View>
-            )}
 
             {/* Selected books list */}
             {selectedBooks.length > 0 && (
@@ -522,13 +438,9 @@ export function ReadingPlanModal({
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
-  backdropTouchable: {
-    flex: 1,
-  },
+  backdrop: { flex: 1, justifyContent: "flex-end" },
+  backdropTouchable: { flex: 1 },
+
   modalContent: {
     height: "86%",
     paddingHorizontal: spacing.lg,
@@ -541,18 +453,16 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     shadowOffset: { width: 0, height: -4 },
   },
+
   modalHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: spacing.md,
   },
-  closeButton: {
-    padding: spacing.xs,
-  },
-  field: {
-    marginBottom: spacing.md,
-  },
+  closeButton: { padding: spacing.xs },
+
+  field: { marginBottom: spacing.md },
   textInput: {
     marginTop: spacing.xs,
     borderWidth: 1,
@@ -560,25 +470,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
   },
+
   quickRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: spacing.md,
   },
-  quickButtons: {
-    flexDirection: "row",
-    gap: spacing.xs,
-  },
+  quickButtons: { flexDirection: "row", gap: spacing.xs },
   quickButton: {
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: radii.lg,
     borderWidth: 1,
   },
-  sectionLabel: {
-    marginBottom: spacing.xs,
-  },
+
+  sectionLabel: { marginBottom: spacing.xs },
 
   selectRow: {
     flexDirection: "row",
@@ -586,19 +493,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     gap: spacing.sm,
   },
-  selectColumn: {
-    flex: 1.4,
-  },
-  bookSelectField: {
-    marginTop: spacing.xs,
-    borderWidth: 1,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
+  selectColumn: { flex: 1.4 },
+
   selectRight: {
     flex: 1.2,
     flexDirection: "row",
@@ -606,10 +502,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
 
-  pagesInputWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
+  pagesInputWrapper: { flexDirection: "row", alignItems: "center" },
   pagesInput: {
     width: 70,
     borderWidth: 1,
@@ -618,50 +511,19 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs / 2,
     textAlign: "center",
   },
-  pagesSuffix: {
-    marginLeft: spacing.xs,
-  },
-  addButton: {
-    marginLeft: spacing.sm,
-  },
+  pagesSuffix: { marginLeft: spacing.xs },
+  addButton: { marginLeft: spacing.sm },
 
-  dropdown: {
-    maxHeight: 200,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    marginBottom: spacing.sm,
-  },
-  dropdownList: {
-    maxHeight: 200,
-  },
-  dropdownContent: {
-    paddingVertical: spacing.xs,
-  },
-  dropdownItem: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-
-  selectedSection: {
-    marginTop: spacing.md,
-  },
+  selectedSection: { marginTop: spacing.md },
   selectedRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingVertical: spacing.xs,
   },
-  selectedInfo: {
-    flex: 1,
-    marginRight: spacing.sm,
-  },
-  selectedControls: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  removeButton: {
-    marginLeft: spacing.sm,
-  },
+  selectedInfo: { flex: 1, marginRight: spacing.sm },
+  selectedControls: { flexDirection: "row", alignItems: "center" },
+  removeButton: { marginLeft: spacing.sm },
 
   actions: {
     flexDirection: "row",
@@ -674,8 +536,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderRadius: radii.lg,
   },
-  secondaryButton: {
-    borderWidth: 1,
-  },
+  secondaryButton: { borderWidth: 1 },
   primaryButton: {},
 });

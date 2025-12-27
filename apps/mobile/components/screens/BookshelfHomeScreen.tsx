@@ -16,7 +16,7 @@ import { useReadingPlanStore } from "@/store/bookshelf/useReadingPlanStore";
 import { useReadingTargetsStore } from "@/store/bookshelf/useReadingTargetsStore";
 import { pickActiveItem } from "@/utils/pickActiveItem";
 
-import { ReadingPlanModal } from "@/components/ui/modals/CreatePlanModal";
+import { CreatePlanModal } from "@/components/ui/modals/CreatePlanModal";
 import { AppScreen } from "@/components/AppScreen";
 import { BookshelfHeader } from "@/components/Books/BookshelfHeader";
 import { bookshelfTheme, iconSizes } from "@budget/ui-native";
@@ -465,7 +465,7 @@ export default function BookshelfHomeScreen() {
           }}
         />
 
-        <ReadingPlanModal
+        <CreatePlanModal
           visible={planModalVisible}
           onClose={() => setPlanModalVisible(false)}
           books={books}

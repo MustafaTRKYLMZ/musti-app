@@ -1,3 +1,4 @@
+// MSelectBottomSheet.tsx
 import React, {
   useEffect,
   useMemo,
@@ -5,6 +6,7 @@ import React, {
   useState,
   useCallback,
 } from "react";
+import type { ViewStyle } from "react-native";
 import {
   Modal,
   View,
@@ -18,7 +20,7 @@ import {
   Platform,
 } from "react-native";
 import { MText, spacing, radii, iconSizes, useTheme } from "@budget/ui-native";
-import { IconButton } from "@/components/ui/AppIcon";
+import { IconButton, BaseIcon } from "@/components/ui/AppIcon";
 
 export type MSelectItemBase = { id: string; label: string; subLabel?: string };
 
@@ -36,6 +38,9 @@ type Props<T extends MSelectItemBase> = {
 
   // render
   renderRight?: (item: T, selected: boolean) => React.ReactNode;
+
+  // ✅ allow screens to enforce consistent form styling
+  fieldStyle?: ViewStyle;
 };
 
 export function MSelectBottomSheet<T extends MSelectItemBase>({
@@ -48,6 +53,7 @@ export function MSelectBottomSheet<T extends MSelectItemBase>({
   searchPlaceholder = "Search…",
   disabled,
   renderRight,
+  fieldStyle,
 }: Props<T>) {
   const { colors } = useTheme();
 
@@ -174,15 +180,18 @@ export function MSelectBottomSheet<T extends MSelectItemBase>({
             backgroundColor: colors.surface,
             opacity: disabled ? 0.55 : 1,
           },
+          fieldStyle, // ✅ allow override from screens
         ]}
       >
-        <View style={{ flex: 1 }}>
+        {/* ✅ reserve room for chevron so text never pushes it */}
+        <View style={{ flex: 1, paddingRight: 44 }}>
           <MText
             numberOfLines={1}
             style={{ fontWeight: "800", opacity: selected ? 1 : 0.6 }}
           >
             {selected ? selected.label : placeholder}
           </MText>
+
           {selected?.subLabel ? (
             <MText numberOfLines={1} style={{ opacity: 0.7, marginTop: 2 }}>
               {selected.subLabel}
@@ -190,12 +199,15 @@ export function MSelectBottomSheet<T extends MSelectItemBase>({
           ) : null}
         </View>
 
-        <IconButton
-          name="chevron-down"
-          size={iconSizes.md}
-          color={colors.textPrimary}
-          onPress={openSheet}
-        />
+        {/* ✅ chevron pinned to vertical center */}
+        <View style={styles.chevronWrap} pointerEvents="none">
+          <BaseIcon
+            family="ion"
+            name="chevron-down"
+            size={iconSizes.md}
+            color={colors.textPrimary}
+          />
+        </View>
       </Pressable>
 
       <Modal
@@ -228,7 +240,7 @@ export function MSelectBottomSheet<T extends MSelectItemBase>({
                   backgroundColor: colors.surface,
                   borderColor: colors.borderSubtle,
                   transform: [{ translateY }],
-                  marginBottom: spacing.lg, // ✅ distance from bottom
+                  marginBottom: spacing.lg,
                 },
               ]}
             >
@@ -276,6 +288,7 @@ export function MSelectBottomSheet<T extends MSelectItemBase>({
                       size={iconSizes.md}
                       color={colors.textSecondary}
                       onPress={() => setQ("")}
+                      style={{ padding: 0 }}
                     />
                   )}
                 </View>
@@ -340,9 +353,18 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    flexDirection: "row",
+    justifyContent: "center",
+    position: "relative",
+    minHeight: 52,
+  },
+
+  chevronWrap: {
+    position: "absolute",
+    right: spacing.sm,
+    top: 0,
+    bottom: 0,
+    justifyContent: "center",
     alignItems: "center",
-    gap: spacing.sm,
   },
 
   modalRoot: { flex: 1, justifyContent: "flex-end" },
@@ -353,7 +375,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.lg,
-    minHeight: "50%", // ✅ half screen
+    minHeight: "50%",
     maxHeight: "85%",
   },
 

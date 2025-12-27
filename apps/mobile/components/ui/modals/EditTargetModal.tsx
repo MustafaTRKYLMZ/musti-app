@@ -11,10 +11,7 @@ import {
 } from "react-native";
 import { MText, spacing, radii, iconSizes, useTheme } from "@budget/ui-native";
 import { IconButton } from "@/components/ui/AppIcon";
-import {
-  useReadingTargetsStore,
-  type TargetType,
-} from "@/store/bookshelf/useReadingTargetsStore";
+import { useReadingTargetsStore } from "@/store/bookshelf/useReadingTargetsStore";
 import { useBookSectionsStore } from "@/store/bookshelf/useBookSectionsStore";
 import {
   MSelectBottomSheet,
@@ -23,6 +20,7 @@ import {
 import { TargetItemsList } from "@/components/Books/TargetItemsList";
 import { useToast } from "@/components/ui/ToastProvider";
 import { useBooksStore } from "@/store/bookshelf/useBooksStore";
+import { TargetType } from "@budget/core";
 
 type Props = {
   visible: boolean;

@@ -23,14 +23,20 @@ import {
   Card,
   bookshelfTheme,
 } from "@budget/ui-native";
-import { IconButton, BaseIcon, IconTile } from "@/components/ui/AppIcon";
+import { IconButton, BaseIcon } from "@/components/ui/AppIcon";
 import { listLocalPdfs, type LocalPdfFile } from "@/utils/getPdfsDirectory";
 import { useReadingPlanStore } from "@/store/bookshelf/useReadingPlanStore";
 import { PlanBottomActionButtons } from "@/components/Books/PlanBottomActionButtons";
 import { PlanItemConfig } from "@budget/core";
-const { colors } = bookshelfTheme;
 
-type EntryState = Record<string, string>; // pages/day as string
+import {
+  MSelectBottomSheet,
+  type MSelectItemBase,
+} from "@/components/ui/MSelectBottomSheet";
+
+const { colors: themeColors } = bookshelfTheme;
+
+type EntryState = Record<string, string>;
 type MultiSelectedState = Record<string, boolean>;
 
 export default function EditPlanScreen() {
@@ -55,8 +61,7 @@ export default function EditPlanScreen() {
   const [order, setOrder] = useState<string[]>([]);
   const [entries, setEntries] = useState<EntryState>({});
 
-  // single picker (optional)
-  const [bookPickerOpen, setBookPickerOpen] = useState(false);
+  // ✅ single picker (BottomSheet)
   const [selectedBookUri, setSelectedBookUri] = useState<string | null>(null);
 
   // ✅ multi select
@@ -83,6 +88,7 @@ export default function EditPlanScreen() {
       nextEntries[it.bookUri] = String(it.pagesPerDay ?? "");
     }
 
+    // keep input keys stable
     for (const b of books) {
       if (nextEntries[b.uri] == null) nextEntries[b.uri] = "";
     }
@@ -117,10 +123,14 @@ export default function EditPlanScreen() {
     }
   }, [availableBooks, selectedBookUri]);
 
-  const selectedBook = useMemo(() => {
-    if (!selectedBookUri) return null;
-    return availableBooks.find((b) => b.uri === selectedBookUri) ?? null;
-  }, [availableBooks, selectedBookUri]);
+  const availableBookItems = useMemo<MSelectItemBase[]>(
+    () =>
+      availableBooks
+        .slice()
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((b) => ({ id: b.uri, label: b.name })),
+    [availableBooks]
+  );
 
   const handleChangePages = (uri: string, value: string) => {
     const cleaned = value.replace(/[^0-9]/g, "");
@@ -142,7 +152,6 @@ export default function EditPlanScreen() {
     }
 
     setOrder((prev) => [...prev, selectedBookUri]);
-    setBookPickerOpen(false);
 
     const nextAvail = availableBooks.find((b) => b.uri !== selectedBookUri);
     setSelectedBookUri(nextAvail?.uri ?? null);
@@ -173,15 +182,14 @@ export default function EditPlanScreen() {
   const addAllBooks = () => {
     if (!books.length) return;
     const allUris = books.map((b) => b.uri);
+
     setOrder(allUris);
     setEntries((prev) => {
       const next = { ...prev };
-      for (const uri of allUris) {
-        if (!next[uri]) next[uri] = "5";
-      }
+      for (const uri of allUris) if (!next[uri]) next[uri] = "5";
       return next;
     });
-    setBookPickerOpen(false);
+
     setSelectedBookUri(null);
   };
 
@@ -249,6 +257,7 @@ export default function EditPlanScreen() {
     const selectedUris = Object.keys(multiSelected).filter(
       (u) => multiSelected[u]
     );
+
     if (!selectedUris.length) {
       setMultiSelectOpen(false);
       return;
@@ -263,12 +272,9 @@ export default function EditPlanScreen() {
       return next;
     });
 
-    // default target for new ones if empty
     setEntries((prev) => {
       const next = { ...prev };
-      for (const uri of selectedUris) {
-        if (!next[uri]) next[uri] = "5";
-      }
+      for (const uri of selectedUris) if (!next[uri]) next[uri] = "5";
       return next;
     });
 
@@ -374,182 +380,181 @@ export default function EditPlanScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <View style={[styles.header, { borderBottomColor: colors.borderSubtle }]}>
-        <IconButton
-          name="arrow-back"
-          size={iconSizes.lg}
-          onPress={() => router.back()}
-        />
-        <View style={{ flex: 1 }}>
-          <MText variant="heading2" color="textPrimary" numberOfLines={1}>
-            Edit plan
-          </MText>
-          <MText variant="caption" color="textSecondary" numberOfLines={1}>
-            {plan.name}
-          </MText>
-        </View>
-      </View>
-
-      <ScrollView
+    <View style={styles.container}>
+      <KeyboardAvoidingView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: spacing["5xl"] }}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
       >
-        {/* Plan name */}
-        <Card
-          style={[
-            styles.sectionCard,
-            {
-              backgroundColor: colors.surface,
-              borderColor: colors.borderSubtle,
-            },
-          ]}
+        <View
+          style={[styles.header, { borderBottomColor: colors.borderSubtle }]}
         >
-          <MText variant="body" color="textSecondary">
-            Plan name
-          </MText>
-          <TextInput
-            value={planName}
-            onChangeText={setPlanName}
-            placeholder="Reading plan"
+          <IconButton
+            name="arrow-back"
+            size={iconSizes.lg}
+            onPress={() => router.back()}
+          />
+          <View style={{ flex: 1 }}>
+            <MText variant="heading2" color="textPrimary" numberOfLines={1}>
+              Edit plan
+            </MText>
+            <MText variant="caption" color="textSecondary" numberOfLines={1}>
+              {plan.name}
+            </MText>
+          </View>
+        </View>
+
+        <ScrollView
+          style={{ flex: 1 }}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{
+            paddingBottom: spacing["6xl"] + 24,
+          }}
+        >
+          {/* Plan name */}
+          <Card
             style={[
-              styles.textInput,
+              styles.sectionCard,
               {
-                borderColor: colors.borderSubtle,
-                color: colors.textPrimary,
                 backgroundColor: colors.surface,
+                borderColor: colors.borderSubtle,
               },
             ]}
-            placeholderTextColor={colors.textSecondary}
-          />
-        </Card>
-
-        {/* Quick actions */}
-        <Card
-          style={[
-            styles.sectionCard,
-            {
-              backgroundColor: colors.surface,
-              borderColor: colors.borderSubtle,
-            },
-          ]}
-        >
-          <View style={styles.sectionHeaderRow}>
-            <MText variant="bodyStrong" color="textPrimary">
-              Quick actions
+          >
+            <MText variant="body" color="textSecondary">
+              Plan name
             </MText>
-            <MText variant="caption" color="textSecondary">
-              Fast edits
-            </MText>
-          </View>
-
-          <View style={styles.chipsRow}>
-            <TouchableOpacity
+            <TextInput
+              value={planName}
+              onChangeText={setPlanName}
+              placeholder="Reading plan"
               style={[
-                styles.chip,
+                styles.textInput,
                 {
                   borderColor: colors.borderSubtle,
+                  color: colors.textPrimary,
                   backgroundColor: colors.surface,
                 },
               ]}
-              onPress={() => setAllTargets(5)}
-            >
-              <MText variant="body" color="textPrimary">
-                Set all 5
+              placeholderTextColor={colors.textSecondary}
+            />
+          </Card>
+
+          {/* Quick actions */}
+          <Card
+            style={[
+              styles.sectionCard,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.borderSubtle,
+              },
+            ]}
+          >
+            <View style={styles.sectionHeaderRow}>
+              <MText variant="bodyStrong" color="textPrimary">
+                Quick actions
               </MText>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.chip,
-                {
-                  borderColor: colors.borderSubtle,
-                  backgroundColor: colors.surface,
-                },
-              ]}
-              onPress={() => setAllTargets(10)}
-            >
-              <MText variant="body" color="textPrimary">
-                Set all 10
+              <MText variant="caption" color="textSecondary">
+                Fast edits
               </MText>
-            </TouchableOpacity>
+            </View>
 
-            <TouchableOpacity
-              style={[
-                styles.chip,
-                {
-                  borderColor: colors.borderSubtle,
-                  backgroundColor: colors.surface,
-                },
-              ]}
-              onPress={clearAllTargets}
-            >
-              <MText variant="body" color="textSecondary">
-                Clear targets
+            <View style={styles.chipsRow}>
+              <TouchableOpacity
+                style={[
+                  styles.chip,
+                  {
+                    borderColor: colors.borderSubtle,
+                    backgroundColor: colors.surface,
+                  },
+                ]}
+                onPress={() => setAllTargets(5)}
+              >
+                <MText variant="body" color="textPrimary">
+                  Set all 5
+                </MText>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.chip,
+                  {
+                    borderColor: colors.borderSubtle,
+                    backgroundColor: colors.surface,
+                  },
+                ]}
+                onPress={() => setAllTargets(10)}
+              >
+                <MText variant="body" color="textPrimary">
+                  Set all 10
+                </MText>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.chip,
+                  {
+                    borderColor: colors.borderSubtle,
+                    backgroundColor: colors.surface,
+                  },
+                ]}
+                onPress={clearAllTargets}
+              >
+                <MText variant="body" color="textSecondary">
+                  Clear targets
+                </MText>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.chipsRow}>
+              <TouchableOpacity
+                style={[
+                  styles.chip,
+                  {
+                    borderColor: colors.borderSubtle,
+                    backgroundColor: colors.surface,
+                  },
+                ]}
+                onPress={addAllBooks}
+              >
+                <MText variant="body" color="textPrimary">
+                  Add all books
+                </MText>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.chip,
+                  {
+                    borderColor: colors.borderSubtle,
+                    backgroundColor: colors.surface,
+                  },
+                ]}
+                onPress={removeAllBooks}
+              >
+                <MText variant="body" color="danger">
+                  Remove all
+                </MText>
+              </TouchableOpacity>
+            </View>
+          </Card>
+
+          {/* Add book */}
+          <Card
+            style={[
+              styles.sectionCard,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.borderSubtle,
+              },
+            ]}
+          >
+            <View style={styles.sectionHeaderRow}>
+              <MText variant="bodyStrong" color="textPrimary">
+                Add book
               </MText>
-            </TouchableOpacity>
-          </View>
 
-          <View style={styles.chipsRow}>
-            <TouchableOpacity
-              style={[
-                styles.chip,
-                {
-                  borderColor: colors.borderSubtle,
-                  backgroundColor: colors.surface,
-                },
-              ]}
-              onPress={addAllBooks}
-            >
-              <MText variant="body" color="textPrimary">
-                Add all books
-              </MText>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.chip,
-                {
-                  borderColor: colors.borderSubtle,
-                  backgroundColor: colors.surface,
-                },
-              ]}
-              onPress={removeAllBooks}
-            >
-              <MText variant="body" color="danger">
-                Remove all
-              </MText>
-            </TouchableOpacity>
-          </View>
-        </Card>
-
-        {/* Add book */}
-        <Card
-          style={[
-            styles.sectionCard,
-            {
-              backgroundColor: colors.surface,
-              borderColor: colors.borderSubtle,
-            },
-          ]}
-        >
-          <View style={styles.sectionHeaderRow}>
-            <MText variant="bodyStrong" color="textPrimary">
-              Add book
-            </MText>
-
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: spacing.sm,
-              }}
-            >
               <TouchableOpacity
                 onPress={() => {
                   if (!availableBooks.length) return;
@@ -561,266 +566,207 @@ export default function EditPlanScreen() {
                 </MText>
               </TouchableOpacity>
             </View>
-          </View>
 
-          {/* Multi select panel */}
-          {multiSelectOpen && (
-            <View style={{ marginTop: spacing.sm }}>
-              <View style={styles.multiHeader}>
-                <MText variant="caption" color="textSecondary">
-                  Tap to select multiple books
-                </MText>
+            {multiSelectOpen && (
+              <View style={{ marginTop: spacing.sm }}>
+                <View style={styles.multiHeader}>
+                  <MText variant="caption" color="textSecondary">
+                    Tap to select multiple books
+                  </MText>
+
+                  <TouchableOpacity
+                    onPress={() => {
+                      setMultiSelected({});
+                      setMultiSelectOpen(false);
+                    }}
+                  >
+                    <MText variant="caption" color="textSecondary">
+                      Close
+                    </MText>
+                  </TouchableOpacity>
+                </View>
+
+                <View
+                  style={[
+                    styles.multiList,
+                    { borderColor: colors.borderSubtle },
+                  ]}
+                >
+                  <ScrollView
+                    style={{ maxHeight: 260 }}
+                    keyboardShouldPersistTaps="handled"
+                  >
+                    {availableBooks.map((b) => {
+                      const checked = !!multiSelected[b.uri];
+                      return (
+                        <TouchableOpacity
+                          key={b.uri}
+                          style={styles.multiRow}
+                          onPress={() =>
+                            setMultiSelected((prev) => ({
+                              ...prev,
+                              [b.uri]: !prev[b.uri],
+                            }))
+                          }
+                        >
+                          <BaseIcon
+                            family="ion"
+                            name={
+                              checked ? "checkbox-outline" : "square-outline"
+                            }
+                            size={22}
+                            color={
+                              checked ? colors.primary : colors.textSecondary
+                            }
+                          />
+                          <MText
+                            variant="body"
+                            color="textPrimary"
+                            numberOfLines={1}
+                            style={{ marginLeft: spacing.sm, flex: 1 }}
+                          >
+                            {b.name}
+                          </MText>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                </View>
 
                 <TouchableOpacity
-                  onPress={() => {
-                    setMultiSelected({});
-                    setMultiSelectOpen(false);
-                  }}
+                  style={[
+                    styles.primaryWideBtn,
+                    { backgroundColor: colors.primary },
+                  ]}
+                  onPress={addMultiSelected}
                 >
-                  <MText variant="caption" color="textSecondary">
-                    Close
+                  <MText variant="body" color="textInverse">
+                    Add selected
                   </MText>
                 </TouchableOpacity>
+
+                <View style={{ height: spacing.sm }} />
               </View>
+            )}
 
-              <View
-                style={[styles.multiList, { borderColor: colors.borderSubtle }]}
-              >
-                <ScrollView
-                  style={{ maxHeight: 260 }}
-                  keyboardShouldPersistTaps="handled"
-                >
-                  {availableBooks.map((b) => {
-                    const checked = !!multiSelected[b.uri];
-                    return (
-                      <TouchableOpacity
-                        key={b.uri}
-                        style={styles.multiRow}
-                        onPress={() =>
-                          setMultiSelected((prev) => ({
-                            ...prev,
-                            [b.uri]: !prev[b.uri],
-                          }))
-                        }
-                      >
-                        <BaseIcon
-                          family="ion"
-                          name={checked ? "checkbox-outline" : "square-outline"}
-                          size={22}
-                          color={
-                            checked ? colors.primary : colors.textSecondary
-                          }
-                        />
-                        <MText
-                          variant="body"
-                          color="textPrimary"
-                          numberOfLines={1}
-                          style={{ marginLeft: spacing.sm, flex: 1 }}
-                        >
-                          {b.name}
-                        </MText>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-              </View>
-
-              <TouchableOpacity
-                style={[
-                  styles.primaryWideBtn,
-                  { backgroundColor: colors.primary },
-                ]}
-                onPress={addMultiSelected}
-              >
-                <MText variant="body" color="textInverse">
-                  Add selected
-                </MText>
-              </TouchableOpacity>
-
-              <View style={{ height: spacing.sm }} />
-            </View>
-          )}
-
-          {/* Single add (optional) */}
-          <View style={styles.selectRow}>
-            <View style={{ flex: 1.4 }}>
-              <TouchableOpacity
-                activeOpacity={0.85}
-                style={[
-                  styles.bookSelect,
-                  {
-                    borderColor: colors.borderSubtle,
-                    backgroundColor: colors.surface,
-                  },
-                ]}
-                onPress={() => {
-                  if (!availableBooks.length) return;
-                  setBookPickerOpen((v) => !v);
-                }}
-              >
-                <MText
-                  variant="body"
-                  color={selectedBook ? "textPrimary" : "textSecondary"}
-                  numberOfLines={1}
-                >
-                  {selectedBook
-                    ? selectedBook.name
-                    : availableBooks.length
-                    ? "Select book"
-                    : "All books are already in the plan"}
-                </MText>
-
-                {availableBooks.length > 0 && (
-                  <BaseIcon
-                    family="ion"
-                    name={bookPickerOpen ? "chevron-up" : "chevron-down"}
-                    size={iconSizes.md}
-                  />
-                )}
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.selectRight}>
-              <View style={styles.pagesInputWrap}>
-                <TextInput
-                  value={currentPagesValue}
-                  onChangeText={(t) => {
-                    if (!selectedBookUri) return;
-                    setEntries((prev) => ({
-                      ...prev,
-                      [selectedBookUri]: t.replace(/[^0-9]/g, ""),
-                    }));
-                  }}
-                  keyboardType="numeric"
-                  placeholder="0"
-                  editable={!!selectedBookUri}
-                  style={[
-                    styles.pagesInput,
-                    {
-                      borderColor: colors.borderSubtle,
-                      color: colors.textPrimary,
-                      backgroundColor: colors.surface,
-                    },
-                  ]}
-                  placeholderTextColor={colors.textSecondary}
+            {/* Single add */}
+            <View style={styles.selectRow}>
+              <View style={{ flex: 1.4 }}>
+                <MSelectBottomSheet
+                  label="Book"
+                  placeholder={
+                    availableBooks.length
+                      ? "Select book"
+                      : "All books are already in the plan"
+                  }
+                  valueId={selectedBookUri}
+                  items={availableBookItems}
+                  onChange={(it) => setSelectedBookUri(it.id)}
+                  searchable
+                  searchPlaceholder="Search book…"
+                  disabled={!availableBooks.length}
                 />
-                <MText
-                  variant="body"
-                  color="textSecondary"
-                  style={{ marginLeft: spacing.xs }}
-                >
-                  pages
-                </MText>
               </View>
 
-              <IconButton
-                name="add-circle-outline"
-                size={iconSizes.lg}
-                onPress={handleAddSelectedBook}
-              />
+              <View style={styles.selectRight}>
+                <View style={styles.pagesInputWrap}>
+                  <TextInput
+                    value={currentPagesValue}
+                    onChangeText={(t) => {
+                      if (!selectedBookUri) return;
+                      setEntries((prev) => ({
+                        ...prev,
+                        [selectedBookUri]: t.replace(/[^0-9]/g, ""),
+                      }));
+                    }}
+                    keyboardType="numeric"
+                    placeholder="0"
+                    editable={!!selectedBookUri}
+                    style={[
+                      styles.pagesInput,
+                      {
+                        borderColor: colors.borderSubtle,
+                        color: colors.textPrimary,
+                        backgroundColor: colors.surface,
+                      },
+                    ]}
+                    placeholderTextColor={colors.textSecondary}
+                  />
+                  <MText
+                    variant="body"
+                    color="textSecondary"
+                    style={{ marginLeft: spacing.xs }}
+                  >
+                    pages
+                  </MText>
+                </View>
+
+                <IconButton
+                  name="add-circle-outline"
+                  size={iconSizes.lg}
+                  onPress={handleAddSelectedBook}
+                />
+              </View>
             </View>
-          </View>
+          </Card>
 
-          {bookPickerOpen && availableBooks.length > 0 && (
-            <View
-              style={[
-                styles.dropdown,
-                {
-                  backgroundColor: colors.surface,
-                  borderColor: colors.borderSubtle,
-                },
-              ]}
-            >
-              <ScrollView
-                style={{ maxHeight: 240 }}
-                keyboardShouldPersistTaps="handled"
-              >
-                {availableBooks.map((b) => {
-                  const isActive = b.uri === selectedBookUri;
-                  return (
-                    <TouchableOpacity
-                      key={b.uri}
-                      activeOpacity={0.85}
-                      style={[
-                        styles.dropdownItem,
-                        isActive && {
-                          backgroundColor: colors.backgroundSecondary,
-                        },
-                      ]}
-                      onPress={() => {
-                        setSelectedBookUri(b.uri);
-                        setBookPickerOpen(false);
-                      }}
-                    >
-                      <MText
-                        variant="body"
-                        color="textPrimary"
-                        numberOfLines={1}
-                      >
-                        {b.name}
-                      </MText>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            </View>
-          )}
-        </Card>
-
-        {/* DnD list */}
-        <Card
-          style={[
-            styles.sectionCard,
-            {
-              backgroundColor: colors.surface,
-              borderColor: colors.borderSubtle,
-            },
-          ]}
-        >
-          <View style={styles.sectionHeaderRow}>
-            <MText variant="bodyStrong" color="textPrimary">
-              Books in this plan
-            </MText>
-            <MText variant="caption" color="textSecondary">
-              Drag to reorder
-            </MText>
-          </View>
-
-          {planBooks.length === 0 ? (
-            <View
-              style={[styles.emptyBox, { borderColor: colors.borderSubtle }]}
-            >
-              <MText variant="body" color="textSecondary">
-                No books selected.
+          {/* DnD list */}
+          <Card
+            style={[
+              styles.sectionCard,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.borderSubtle,
+              },
+            ]}
+          >
+            <View style={styles.sectionHeaderRow}>
+              <MText variant="bodyStrong" color="textPrimary">
+                Books in this plan
+              </MText>
+              <MText variant="caption" color="textSecondary">
+                Drag to reorder
               </MText>
             </View>
-          ) : (
-            <View style={{ marginTop: spacing.sm }}>
-              <DraggableFlatList
-                data={planBooks}
-                keyExtractor={(item) => item.uri}
-                onDragEnd={({ data }) => setOrder(data.map((b) => b.uri))}
-                renderItem={renderRow}
-                activationDistance={8}
-                scrollEnabled={false} // inside ScrollView
-              />
-            </View>
-          )}
-        </Card>
-      </ScrollView>
 
-      {/* Bottom actions */}
-      <PlanBottomActionButtons
-        handleDelete={handleDelete}
-        handleSave={handleSave}
-      />
-    </KeyboardAvoidingView>
+            {planBooks.length === 0 ? (
+              <View
+                style={[styles.emptyBox, { borderColor: colors.borderSubtle }]}
+              >
+                <MText variant="body" color="textSecondary">
+                  No books selected.
+                </MText>
+              </View>
+            ) : (
+              <View style={{ marginTop: spacing.sm }}>
+                <DraggableFlatList
+                  data={planBooks}
+                  keyExtractor={(item) => item.uri}
+                  onDragEnd={({ data }) => setOrder(data.map((b) => b.uri))}
+                  renderItem={renderRow}
+                  activationDistance={8}
+                  scrollEnabled={false}
+                  nestedScrollEnabled
+                />
+              </View>
+            )}
+          </Card>
+        </ScrollView>
+
+        {/* Bottom actions */}
+        <PlanBottomActionButtons
+          handleDelete={handleDelete}
+          handleSave={handleSave}
+        />
+      </KeyboardAvoidingView>
+    </View>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.surface,
+    backgroundColor: themeColors.surface,
     paddingTop: spacing["2xl"],
   },
 
@@ -884,16 +830,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
 
-  bookSelect: {
-    borderWidth: 1,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-
   selectRight: {
     flex: 1.2,
     flexDirection: "row",
@@ -914,18 +850,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xs,
     paddingVertical: spacing.xs / 2,
     textAlign: "center",
-  },
-
-  dropdown: {
-    marginTop: spacing.sm,
-    borderWidth: 1,
-    borderRadius: radii.md,
-    overflow: "hidden",
-  },
-
-  dropdownItem: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
   },
 
   emptyBox: {
@@ -965,26 +889,6 @@ const styles = StyleSheet.create({
   rowRight: {
     flexDirection: "row",
     alignItems: "center",
-  },
-
-  actions: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: spacing["2xl"],
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: spacing.sm,
-  },
-
-  btn: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.lg,
-    borderWidth: 1,
   },
 
   multiHeader: {

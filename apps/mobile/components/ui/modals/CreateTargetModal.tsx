@@ -1,18 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
-import {
-  Modal,
-  View,
-  StyleSheet,
-  Pressable,
-  ScrollView,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
-  TouchableOpacity,
-} from "react-native";
-import { MText, spacing, radii, iconSizes, useTheme } from "@budget/ui-native";
+import { View, StyleSheet, Pressable, TextInput } from "react-native";
+import { MText, spacing, radii, useTheme } from "@budget/ui-native";
+
 import type { LocalPdfFile } from "@/utils/getPdfsDirectory";
-import { IconButton } from "@/components/ui/AppIcon";
 import { useReadingTargetsStore } from "@/store/bookshelf/useReadingTargetsStore";
 import { useBookSectionsStore } from "@/store/bookshelf/useBookSectionsStore";
 import {
@@ -23,6 +13,8 @@ import { TargetItemsList } from "@/components/Books/TargetItemsList";
 import { useToast } from "@/components/ui/ToastProvider";
 import { AppChip } from "@/components/ui/AppChip";
 import { TargetType } from "@budget/core";
+
+import { MCreateModal } from "@/components/ui/modals/MCreateModal";
 
 type Props = {
   visible: boolean;
@@ -136,6 +128,7 @@ export function CreateTargetModal({
     return targets.find((t) => t.id === targetId) ?? null;
   }, [targets, targetId]);
 
+  // ✅ when opened with initialBookUri
   useEffect(() => {
     if (!visible) return;
     if (!initialBookUri) return;
@@ -174,7 +167,6 @@ export function CreateTargetModal({
 
     resetAll();
     onClose();
-
     showToast({ message: "Target saved.", duration: 2000 });
   };
 
@@ -185,16 +177,9 @@ export function CreateTargetModal({
     try {
       const id = await addTarget(t);
       setTargetId(id);
-
-      showToast({
-        message: "Target created. Now add items.",
-        duration: 2500,
-      });
+      showToast({ message: "Target created. Now add items.", duration: 2500 });
     } catch {
-      showToast({
-        message: "Failed to create target.",
-        duration: 4000,
-      });
+      showToast({ message: "Failed to create target.", duration: 4000 });
     }
   };
 
@@ -285,356 +270,270 @@ export function CreateTargetModal({
   };
 
   return (
-    <Modal
+    <MCreateModal
       visible={visible}
-      animationType="slide"
-      transparent
-      onRequestClose={handleClose}
-    >
-      {/* ✅ Make KAV own the whole modal area (same as ReadingPlanModal) */}
-      <KeyboardAvoidingView
-        style={[styles.backdrop, { backgroundColor: colors.backdropStrong }]}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 24}
-      >
-        {/* ✅ Tap outside to close */}
-        <TouchableOpacity
-          style={styles.backdropTouchable}
-          activeOpacity={1}
-          onPress={handleClose}
-        />
-
-        {/* ✅ Sheet */}
-        <View
+      onClose={handleClose}
+      title={targetId ? "Edit Target" : "New Target"}
+      // ✅ match your old sheet styling (same look)
+      sheetStyle={{ padding: spacing.lg }}
+      footer={
+        <Pressable
+          onPress={handleSave}
+          disabled={!canFinish}
           style={[
-            styles.sheet,
+            styles.finish,
             {
-              backgroundColor: colors.surface,
-              borderTopColor: colors.borderSubtle,
-              shadowColor: colors.shadowStrong,
+              borderColor: colors.borderSubtle,
+              backgroundColor: colors.surfaceElevated,
+              opacity: canFinish ? 1 : 0.5,
             },
           ]}
         >
-          <View style={styles.header}>
-            <MText variant="heading3" color="textPrimary">
-              {targetId ? "Edit Target" : "New Target"}
-            </MText>
+          <MText style={{ fontWeight: "900" }}>
+            {canFinish ? "Save & Close" : "Add at least 1 item"}
+          </MText>
+        </Pressable>
+      }
+    >
+      <MText style={styles.sectionTitle} color="textSecondary">
+        Title
+      </MText>
 
-            <IconButton
-              name="close-outline"
-              size={iconSizes.lg}
-              color={colors.textPrimary}
-              onPress={handleClose}
-              style={{ padding: spacing.xs }}
-            />
-          </View>
+      <View style={styles.titleRow}>
+        <TextInput
+          value={title}
+          onChangeText={setTitle}
+          placeholder="e.g. Morning routine"
+          placeholderTextColor={colors.textSecondary}
+          style={[
+            styles.titleInput,
+            {
+              borderColor: colors.borderSubtle,
+              backgroundColor: colors.surfaceElevated ?? colors.surface,
+              color: colors.textPrimary,
+            },
+          ]}
+          editable={!targetId}
+        />
 
-          <ScrollView
-            style={{ flex: 1 }}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="on-drag"
-            contentContainerStyle={{
-              paddingBottom: spacing["3xl"] ?? spacing.xl,
-            }}
-          >
-            <MText style={styles.sectionTitle} color="textSecondary">
-              Title
-            </MText>
-
-            <View style={styles.titleRow}>
-              <TextInput
-                value={title}
-                onChangeText={setTitle}
-                placeholder="e.g. Morning routine"
-                placeholderTextColor={colors.textSecondary}
-                style={[
-                  styles.titleInput,
-                  {
-                    borderColor: colors.borderSubtle,
-                    backgroundColor: colors.surfaceElevated ?? colors.surface,
-                    color: colors.textPrimary,
-                  },
-                ]}
-                editable={!targetId}
-              />
-
-              {!targetId ? (
-                <Pressable
-                  onPress={createGroup}
-                  disabled={!canCreateGroup}
-                  style={[
-                    styles.primaryBtn,
-                    {
-                      borderColor: colors.borderSubtle,
-                      backgroundColor: colors.surfaceElevated,
-                      opacity: canCreateGroup ? 1 : 0.5,
-                    },
-                  ]}
-                >
-                  <MText style={styles.primaryBtnText} color="textPrimary">
-                    Create
-                  </MText>
-                </Pressable>
-              ) : (
-                <View
-                  style={[
-                    styles.lockPill,
-                    {
-                      borderColor: colors.borderSubtle,
-                      backgroundColor: colors.surface,
-                    },
-                  ]}
-                >
-                  <MText style={{ fontWeight: "900", opacity: 0.7 }}>
-                    Created
-                  </MText>
-                </View>
-              )}
-            </View>
-
-            <View style={{ marginTop: spacing.md }}>
-              <MSelectBottomSheet
-                label="Book"
-                placeholder="Select a book…"
-                valueId={selectedBookId}
-                items={bookItems}
-                onChange={(it) => setSelectedBookId(it.id)}
-                searchable
-                searchPlaceholder="Search book…"
-              />
-            </View>
-
-            {selectedBook ? (
-              <>
-                <MText style={styles.sectionTitle} color="textSecondary">
-                  Type
-                </MText>
-
-                <View style={styles.chipsRow}>
-                  <AppChip
-                    label="Section"
-                    icon="list-outline"
-                    active={type === "section"}
-                    onPress={() => setType("section")}
-                    colors={chipColors}
-                    size="md"
-                    pill={false}
-                  />
-                  <AppChip
-                    label="Pages"
-                    icon="copy-outline"
-                    active={type === "pages"}
-                    onPress={() => setType("pages")}
-                    colors={chipColors}
-                    size="md"
-                    pill={false}
-                  />
-                </View>
-
-                {type === "section" ? (
-                  <>
-                    {sectionItems.length > 0 ? (
-                      <View style={{ marginTop: spacing.md }}>
-                        <MSelectBottomSheet
-                          label="Section"
-                          placeholder="Select a section…"
-                          valueId={selectedSectionId}
-                          items={sectionItems}
-                          onChange={(it) => setSelectedSectionId(it.id)}
-                          searchable
-                          searchPlaceholder="Search section…"
-                        />
-                      </View>
-                    ) : (
-                      <View style={{ marginTop: spacing.md }}>
-                        <MText style={{ opacity: 0.7 }}>
-                          No sections found for this book.
-                        </MText>
-
-                        <Pressable
-                          onPress={() =>
-                            onOpenChapters(selectedBook.uri, selectedBook.name)
-                          }
-                          style={[
-                            styles.smallBtn,
-                            {
-                              borderColor: colors.borderSubtle,
-                              backgroundColor: colors.surface,
-                              marginTop: spacing.sm,
-                            },
-                          ]}
-                        >
-                          <MText style={{ fontWeight: "800" }}>
-                            Open chapters
-                          </MText>
-                        </Pressable>
-                      </View>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <MText style={styles.sectionTitle} color="textSecondary">
-                      Pages
-                    </MText>
-
-                    <View style={styles.pagesRow}>
-                      <View style={{ flex: 1 }}>
-                        <MText style={styles.pagesLabel} color="textSecondary">
-                          Start page
-                        </MText>
-                        <TextInput
-                          value={startPageInput}
-                          onChangeText={(t) =>
-                            setStartPageInput(t.replace(/[^\d]/g, ""))
-                          }
-                          keyboardType="number-pad"
-                          placeholder="e.g. 10"
-                          placeholderTextColor={colors.textSecondary}
-                          style={[
-                            styles.pageInput,
-                            {
-                              borderColor: colors.borderSubtle,
-                              backgroundColor:
-                                colors.surfaceElevated ?? colors.surface,
-                              color: colors.textPrimary,
-                            },
-                          ]}
-                        />
-                      </View>
-
-                      <View style={{ width: spacing.sm }} />
-
-                      <View style={{ flex: 1 }}>
-                        <MText style={styles.pagesLabel} color="textSecondary">
-                          End page
-                        </MText>
-                        <TextInput
-                          value={endPageInput}
-                          onChangeText={(t) =>
-                            setEndPageInput(t.replace(/[^\d]/g, ""))
-                          }
-                          keyboardType="number-pad"
-                          placeholder="e.g. 30"
-                          placeholderTextColor={colors.textSecondary}
-                          style={[
-                            styles.pageInput,
-                            {
-                              borderColor: colors.borderSubtle,
-                              backgroundColor:
-                                colors.surfaceElevated ?? colors.surface,
-                              color: colors.textPrimary,
-                            },
-                          ]}
-                        />
-                      </View>
-                    </View>
-
-                    <MText style={{ opacity: 0.7, marginTop: spacing.xs }}>
-                      Tip: End page must be greater than start page.
-                    </MText>
-                  </>
-                )}
-
-                <Pressable
-                  onPress={addSelectedItem}
-                  disabled={!canAddItem}
-                  style={[
-                    styles.cta,
-                    {
-                      borderColor: colors.borderSubtle,
-                      backgroundColor: colors.surface,
-                      opacity: canAddItem ? 1 : 0.5,
-                    },
-                  ]}
-                >
-                  <MText style={{ fontWeight: "900" }}>
-                    {targetId ? "Add item" : "Create group first"}
-                  </MText>
-
-                  {type === "section" && selectedSection ? (
-                    <MText
-                      style={{ opacity: 0.75, marginTop: 2 }}
-                      numberOfLines={1}
-                    >
-                      {selectedBook.name} • {selectedSection.title} •{" "}
-                      {selectedSection.startPage}–{selectedSection.endPage}
-                    </MText>
-                  ) : null}
-
-                  {type === "pages" && pagesStart > 0 && pagesEnd > 0 ? (
-                    <MText
-                      style={{ opacity: 0.75, marginTop: 2 }}
-                      numberOfLines={1}
-                    >
-                      {selectedBook.name} • {pagesStart} → {pagesEnd}
-                    </MText>
-                  ) : null}
-                </Pressable>
-              </>
-            ) : null}
-
-            {currentTarget?.items?.length ? (
-              <TargetItemsList
-                items={currentTarget.items}
-                onDeleteItem={(itemId) => deleteItem(currentTarget.id, itemId)}
-              />
-            ) : null}
-
-            {/* ekstra boşluk: scroll altı rahat */}
-            <View style={{ height: spacing.lg }} />
-          </ScrollView>
-
-          {/* ✅ Bottom actions fixed (sheet içinde) */}
+        {!targetId ? (
           <Pressable
-            onPress={handleSave}
-            disabled={!canFinish}
+            onPress={createGroup}
+            disabled={!canCreateGroup}
             style={[
-              styles.finish,
+              styles.primaryBtn,
               {
                 borderColor: colors.borderSubtle,
                 backgroundColor: colors.surfaceElevated,
-                opacity: canFinish ? 1 : 0.5,
+                opacity: canCreateGroup ? 1 : 0.5,
+              },
+            ]}
+          >
+            <MText style={styles.primaryBtnText} color="textPrimary">
+              Create
+            </MText>
+          </Pressable>
+        ) : (
+          <View
+            style={[
+              styles.lockPill,
+              {
+                borderColor: colors.borderSubtle,
+                backgroundColor: colors.surface,
+              },
+            ]}
+          >
+            <MText style={{ fontWeight: "900", opacity: 0.7 }}>Created</MText>
+          </View>
+        )}
+      </View>
+
+      <View style={{ marginTop: spacing.md }}>
+        <MSelectBottomSheet
+          label="Book"
+          placeholder="Select a book…"
+          valueId={selectedBookId}
+          items={bookItems}
+          onChange={(it) => setSelectedBookId(it.id)}
+          searchable
+          searchPlaceholder="Search book…"
+        />
+      </View>
+
+      {selectedBook ? (
+        <>
+          <MText style={styles.sectionTitle} color="textSecondary">
+            Type
+          </MText>
+
+          <View style={styles.chipsRow}>
+            <AppChip
+              label="Section"
+              icon="list-outline"
+              active={type === "section"}
+              onPress={() => setType("section")}
+              colors={chipColors}
+              size="md"
+              pill={false}
+            />
+            <AppChip
+              label="Pages"
+              icon="copy-outline"
+              active={type === "pages"}
+              onPress={() => setType("pages")}
+              colors={chipColors}
+              size="md"
+              pill={false}
+            />
+          </View>
+
+          {type === "section" ? (
+            <>
+              {sectionItems.length > 0 ? (
+                <View style={{ marginTop: spacing.md }}>
+                  <MSelectBottomSheet
+                    label="Section"
+                    placeholder="Select a section…"
+                    valueId={selectedSectionId}
+                    items={sectionItems}
+                    onChange={(it) => setSelectedSectionId(it.id)}
+                    searchable
+                    searchPlaceholder="Search section…"
+                  />
+                </View>
+              ) : (
+                <View style={{ marginTop: spacing.md }}>
+                  <MText style={{ opacity: 0.7 }}>
+                    No sections found for this book.
+                  </MText>
+
+                  <Pressable
+                    onPress={() =>
+                      onOpenChapters(selectedBook.uri, selectedBook.name)
+                    }
+                    style={[
+                      styles.smallBtn,
+                      {
+                        borderColor: colors.borderSubtle,
+                        backgroundColor: colors.surface,
+                        marginTop: spacing.sm,
+                      },
+                    ]}
+                  >
+                    <MText style={{ fontWeight: "800" }}>Open chapters</MText>
+                  </Pressable>
+                </View>
+              )}
+            </>
+          ) : (
+            <>
+              <MText style={styles.sectionTitle} color="textSecondary">
+                Pages
+              </MText>
+
+              <View style={styles.pagesRow}>
+                <View style={{ flex: 1 }}>
+                  <MText style={styles.pagesLabel} color="textSecondary">
+                    Start page
+                  </MText>
+                  <TextInput
+                    value={startPageInput}
+                    onChangeText={(t) =>
+                      setStartPageInput(t.replace(/[^\d]/g, ""))
+                    }
+                    keyboardType="number-pad"
+                    placeholder="e.g. 10"
+                    placeholderTextColor={colors.textSecondary}
+                    style={[
+                      styles.pageInput,
+                      {
+                        borderColor: colors.borderSubtle,
+                        backgroundColor:
+                          colors.surfaceElevated ?? colors.surface,
+                        color: colors.textPrimary,
+                      },
+                    ]}
+                  />
+                </View>
+
+                <View style={{ width: spacing.sm }} />
+
+                <View style={{ flex: 1 }}>
+                  <MText style={styles.pagesLabel} color="textSecondary">
+                    End page
+                  </MText>
+                  <TextInput
+                    value={endPageInput}
+                    onChangeText={(t) =>
+                      setEndPageInput(t.replace(/[^\d]/g, ""))
+                    }
+                    keyboardType="number-pad"
+                    placeholder="e.g. 30"
+                    placeholderTextColor={colors.textSecondary}
+                    style={[
+                      styles.pageInput,
+                      {
+                        borderColor: colors.borderSubtle,
+                        backgroundColor:
+                          colors.surfaceElevated ?? colors.surface,
+                        color: colors.textPrimary,
+                      },
+                    ]}
+                  />
+                </View>
+              </View>
+
+              <MText style={{ opacity: 0.7, marginTop: spacing.xs }}>
+                Tip: End page must be greater than start page.
+              </MText>
+            </>
+          )}
+
+          <Pressable
+            onPress={addSelectedItem}
+            disabled={!canAddItem}
+            style={[
+              styles.cta,
+              {
+                borderColor: colors.borderSubtle,
+                backgroundColor: colors.surface,
+                opacity: canAddItem ? 1 : 0.5,
               },
             ]}
           >
             <MText style={{ fontWeight: "900" }}>
-              {canFinish ? "Save & Close" : "Add at least 1 item"}
+              {targetId ? "Add item" : "Create group first"}
             </MText>
+
+            {type === "section" && selectedSection ? (
+              <MText style={{ opacity: 0.75, marginTop: 2 }} numberOfLines={1}>
+                {selectedBook.name} • {selectedSection.title} •
+                {selectedSection.startPage}–{selectedSection.endPage}
+              </MText>
+            ) : null}
+
+            {type === "pages" && pagesStart > 0 && pagesEnd > 0 ? (
+              <MText style={{ opacity: 0.75, marginTop: 2 }} numberOfLines={1}>
+                {selectedBook.name} • {pagesStart} → {pagesEnd}
+              </MText>
+            ) : null}
           </Pressable>
-        </View>
-      </KeyboardAvoidingView>
-    </Modal>
+        </>
+      ) : null}
+
+      {currentTarget?.items?.length ? (
+        <TargetItemsList
+          items={currentTarget.items}
+          onDeleteItem={(itemId) => deleteItem(currentTarget.id, itemId)}
+        />
+      ) : null}
+
+      <View style={{ height: spacing.lg }} />
+    </MCreateModal>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
-  backdropTouchable: {
-    flex: 1,
-  },
-
-  sheet: {
-    height: "86%", // ✅ ReadingPlanModal gibi
-    padding: spacing.lg,
-    borderTopLeftRadius: radii.xl,
-    borderTopRightRadius: radii.xl,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: -4 },
-  },
-
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: spacing.md,
-  },
-
   sectionTitle: {
     marginTop: spacing.md,
     marginBottom: spacing.xs,
@@ -711,7 +610,6 @@ const styles = StyleSheet.create({
   },
 
   finish: {
-    marginTop: spacing.md,
     borderWidth: 1,
     borderRadius: radii.lg,
     paddingVertical: spacing.md,
