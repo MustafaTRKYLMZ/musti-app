@@ -24,22 +24,14 @@ import { BaseIcon, IconButton, IconTile } from "@/components/ui/AppIcon";
 import { BookPickerModal } from "@/components/Books/reminders/BookPickerModal";
 import { PlanPickerModal } from "@/components/Books/reminders/PlanPickerModal";
 import { TargetPickerModal } from "@/components/Books/reminders/TargetPickerModal";
+import { AppChip } from "@/components/ui/AppChip";
+import { WEEKDAYS } from "@/constants/weekdays";
 
 type Props = {
   owner: ReminderOwner;
   mode: "new" | "edit";
   reminderId?: string;
 };
-
-const WEEKDAYS: { label: string; value: number }[] = [
-  { label: "Pzt", value: 1 },
-  { label: "Sal", value: 2 },
-  { label: "Çar", value: 3 },
-  { label: "Per", value: 4 },
-  { label: "Cum", value: 5 },
-  { label: "Cmt", value: 6 },
-  { label: "Paz", value: 7 },
-];
 
 export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
   const theme = useTheme();
@@ -55,6 +47,24 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
 
   const primaryBg = colors.primary;
   const danger = colors.danger;
+
+  const chipColors = useMemo(
+    () => ({
+      active: {
+        bg: primaryBg,
+        border: primaryBg,
+        text: textInverse,
+        icon: textInverse,
+      },
+      inactive: {
+        bg: innerBg,
+        border,
+        text,
+        icon: text2,
+      },
+    }),
+    [primaryBg, innerBg, border, text, text2, textInverse]
+  );
 
   const addReminder = useRemindersStore((s) => s.addReminder);
   const updateReminder = useRemindersStore((s) => s.updateReminder);
@@ -84,7 +94,6 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
     initial.target.type
   );
 
-  // --- Book selection ---
   const initialBookName =
     initial.target.type === "book"
       ? (initial.target as any).bookName ?? ""
@@ -96,7 +105,6 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
   const [bookUri, setBookUri] = useState(initialBookUri);
   const [bookPickerOpen, setBookPickerOpen] = useState(false);
 
-  // --- Plan selection (needs planId in target type) ---
   const initialPlanId =
     initial.target.type === "plan" ? (initial.target as any).planId ?? "" : "";
   const [planId, setPlanId] = useState(initialPlanId);
@@ -107,7 +115,6 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
   );
   const [planPickerOpen, setPlanPickerOpen] = useState(false);
 
-  // --- Target selection (needs targetId in target type) ---
   const initialTargetId =
     initial.target.type === "target"
       ? (initial.target as any).targetId ?? ""
@@ -120,7 +127,6 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
   );
   const [targetPickerOpen, setTargetPickerOpen] = useState(false);
 
-  // ---- schedule ----
   const [scheduleType, setScheduleType] = useState<ReminderSchedule["type"]>(
     initial.schedule.type
   );
@@ -161,7 +167,6 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
     return { type: "once", timestamp: d.getTime() };
   }, [scheduleType, hour, minute, weekday, onceDate]);
 
-  // ✅ Target mapping (needs your ReminderTarget union updated)
   const target: ReminderTarget = useMemo(() => {
     if (targetType === "plan") {
       return { type: "plan", planId: (planId ?? "").trim(), planTitle };
@@ -230,29 +235,6 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
     removeReminder(reminderId);
     router.replace(basePath);
   };
-
-  const Chip = ({
-    active,
-    label,
-    onPress,
-  }: {
-    active: boolean;
-    label: string;
-    onPress: () => void;
-  }) => (
-    <Pressable
-      onPress={onPress}
-      style={[
-        styles.chip,
-        {
-          backgroundColor: active ? primaryBg : innerBg,
-          borderColor: border,
-        },
-      ]}
-    >
-      <MText style={{ color: active ? textInverse : text }}>{label}</MText>
-    </Pressable>
-  );
 
   const RowAction = ({
     label,
@@ -336,7 +318,6 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
           {mode === "new" ? "New Reminder" : "Edit Reminder"}
         </MText>
 
-        {/* MAIN CARD */}
         <View
           style={[
             styles.card,
@@ -429,7 +410,6 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
           </View>
         </View>
 
-        {/* TYPE */}
         <View
           style={[
             styles.card,
@@ -441,30 +421,50 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
           </MText>
 
           <View style={styles.rowWrap}>
-            <Chip
+            <AppChip
               active={targetType === "general"}
               label="General"
+              icon="notifications-outline"
               onPress={() => setTargetType("general")}
+              colors={chipColors}
+              size="md"
+              pill={false}
             />
-            <Chip
+            <AppChip
               active={targetType === "plan"}
               label="Plan"
+              icon="calendar-outline"
               onPress={() => setTargetType("plan")}
+              colors={chipColors}
+              size="md"
+              pill={false}
             />
-            <Chip
+            <AppChip
               active={targetType === "book"}
               label="Book"
+              icon="book-outline"
               onPress={() => setTargetType("book")}
+              colors={chipColors}
+              size="md"
+              pill={false}
             />
-            <Chip
+            <AppChip
               active={targetType === "target"}
               label="Target"
+              icon="flag-outline"
               onPress={() => setTargetType("target")}
+              colors={chipColors}
+              size="md"
+              pill={false}
             />
-            <Chip
+            <AppChip
               active={targetType === "weeklyReport"}
               label="Haftalık Rapor"
+              icon="stats-chart-outline"
               onPress={() => setTargetType("weeklyReport")}
+              colors={chipColors}
+              size="md"
+              pill={false}
             />
           </View>
 
@@ -524,7 +524,6 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
           ) : null}
         </View>
 
-        {/* SCHEDULE */}
         <View
           style={[
             styles.card,
@@ -536,31 +535,46 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
           </MText>
 
           <View style={styles.rowWrap}>
-            <Chip
+            <AppChip
               active={scheduleType === "daily"}
               label="Daily"
+              icon="repeat-outline"
               onPress={() => setScheduleType("daily")}
+              colors={chipColors}
+              size="md"
+              pill={false}
             />
-            <Chip
+            <AppChip
               active={scheduleType === "weekly"}
               label="Weekly"
+              icon="calendar-outline"
               onPress={() => setScheduleType("weekly")}
+              colors={chipColors}
+              size="md"
+              pill={false}
             />
-            <Chip
+            <AppChip
               active={scheduleType === "once"}
               label="Once"
+              icon="time-outline"
               onPress={() => setScheduleType("once")}
+              colors={chipColors}
+              size="md"
+              pill={false}
             />
           </View>
 
           {scheduleType === "weekly" ? (
             <View style={[styles.rowWrap, { marginTop: spacing.md }]}>
               {WEEKDAYS.map((d) => (
-                <Chip
+                <AppChip
                   key={d.value}
                   active={weekday === d.value}
                   label={d.label}
                   onPress={() => setWeekday(d.value)}
+                  colors={chipColors}
+                  size="sm"
+                  pill={false}
                 />
               ))}
             </View>
@@ -605,7 +619,6 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
           ) : null}
         </View>
 
-        {/* ACTIONS */}
         <View style={styles.actionsRow}>
           <IconTile
             label="Cancel"
@@ -649,7 +662,6 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
         </View>
       </ScrollView>
 
-      {/* Modals */}
       <BookPickerModal
         visible={bookPickerOpen}
         onClose={() => setBookPickerOpen(false)}
@@ -731,12 +743,6 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: spacing.sm,
     marginTop: spacing.md,
-  },
-  chip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.lg,
-    borderWidth: 1,
   },
   pill: {
     paddingHorizontal: spacing.md,

@@ -87,7 +87,6 @@ export function StreakCard() {
     prevGoalDoneRef.current = goalDone;
   }, [goalDone, goalPages, gHydrated, sHydrated, pulse, showToast]);
 
-  // ✅ NEW: show one-shot gain toasts (pages / planComplete / targetComplete)
   useEffect(() => {
     if (!gHydrated || !sHydrated) return;
     if (!last) return;
@@ -101,7 +100,6 @@ export function StreakCard() {
 
     let message = "";
     if (last.kind === "pages") {
-      // keep it short, avoid spam
       const parts: string[] = [];
       if (last.pages > 0)
         parts.push(`${last.pages} page${last.pages === 1 ? "" : "s"}`);
@@ -118,7 +116,7 @@ export function StreakCard() {
       duration: 2600,
     });
 
-    consume(); // ✅ one-shot: clears the event so it won't repeat
+    consume();
   }, [last, consume, showToast, gHydrated, sHydrated]);
 
   const subtitle = goalDone

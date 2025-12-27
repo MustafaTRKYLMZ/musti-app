@@ -169,7 +169,7 @@ export function StreakSheet({ visible, onClose }: Props) {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingBottom: spacing["6xl"] ?? spacing.xl, // ✅ bottom safe space
+    paddingBottom: spacing["6xl"] ?? spacing.xl,
   },
 
   backBtn: {

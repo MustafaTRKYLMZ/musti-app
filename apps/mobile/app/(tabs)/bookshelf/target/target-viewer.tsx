@@ -12,10 +12,12 @@ import { scheduleMotivationNudgeIfNeeded } from "@/utils/motivation";
 
 import { useReadingGamificationStore } from "@/store/bookshelf/readingGamification/useReadingGamificationStore";
 import { useLastGainStore } from "@/hooks/useLastGain";
+import { useToast } from "@/components/ui/ToastProvider";
 
 export default function TargetViewerScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { showToast } = useToast();
 
   const params = useLocalSearchParams<{
     targetId?: string;
@@ -26,7 +28,6 @@ export default function TargetViewerScreen() {
   const targetId = params.targetId ? String(params.targetId) : undefined;
   const uri = params.uri ? decodeURIComponent(String(params.uri)) : undefined;
 
-  // ✅ IMPORTANT: don't default to "PDF" here
   const routeName = params.name
     ? decodeURIComponent(String(params.name))
     : undefined;
@@ -72,6 +73,32 @@ export default function TargetViewerScreen() {
 
   const doneOnceRef = useRef(false);
 
+  // ✅ NEW: local "closing" flag to avoid showing "No active item"
+  const [isClosing, setIsClosing] = useState(false);
+
+  const handleClose = () => {
+    void scheduleMotivationNudgeIfNeeded().catch(() => {});
+    router.replace("/(tabs)/bookshelf");
+  };
+
+  // ✅ NEW: if store updates remove activeItem after completion, auto-close
+  useEffect(() => {
+    if (!hydrated) return;
+    if (!target) return;
+    if (!targetId) return;
+    if (isClosing) return;
+
+    const items = target.items ?? [];
+    const hasActive = items.some((it) => it.status === "active");
+    const allDone =
+      items.length > 0 && items.every((it) => it.status === "done");
+
+    if (!hasActive && allDone) {
+      setIsClosing(true);
+      handleClose();
+    }
+  }, [hydrated, target, targetId, isClosing]);
+
   useEffect(() => {
     doneOnceRef.current = false;
 
@@ -107,10 +134,19 @@ export default function TargetViewerScreen() {
     );
   }
 
+  if (isClosing) {
+    return (
+      <View style={[styles.center, { backgroundColor: colors.background }]}>
+        <MText>Done.</MText>
+      </View>
+    );
+  }
+
+  // NOTE: don't show "No active item" while we are navigating away.
   if (!activeItem || !bookUri) {
     return (
       <View style={[styles.center, { backgroundColor: colors.background }]}>
-        <MText>No active item.</MText>
+        <MText>Loading…</MText>
       </View>
     );
   }
@@ -141,6 +177,9 @@ export default function TargetViewerScreen() {
     if (!doneOnceRef.current && clamped >= endPage) {
       doneOnceRef.current = true;
 
+      // ✅ set closing immediately to prevent "No active item" flash
+      setIsClosing(true);
+
       void markItemDone(targetId, activeItem.id).catch(() => {});
 
       const at = Date.now();
@@ -157,22 +196,34 @@ export default function TargetViewerScreen() {
           bookUri,
           kind: "targetComplete",
         });
+
+        // ✅ TOAST: completion + earned XP
+        showToast({
+          title: "Target completed 🎯",
+          message: `You earned ${bonus} XP`,
+          duration: 3500,
+        });
+      } else {
+        // ✅ TOAST: completion (no XP bonus)
+        showToast({
+          title: "Target completed 🎯",
+          message: "Nice work!",
+          duration: 2500,
+        });
       }
 
       void scheduleMotivationNudgeIfNeeded().catch(() => {});
-    }
-  };
 
-  const handleClose = () => {
-    void scheduleMotivationNudgeIfNeeded().catch(() => {});
-    router.replace("/(tabs)/bookshelf");
+      // ✅ close now
+      handleClose();
+    }
   };
 
   return (
     <>
       <PdfReader
         isFullscreen={isFullscreen}
-        name={effectiveName} // ✅ FIXED
+        name={effectiveName}
         setIsFullscreen={setIsFullscreen}
         handleClose={handleClose}
         source={source}

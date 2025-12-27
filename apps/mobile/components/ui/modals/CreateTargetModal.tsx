@@ -12,10 +12,7 @@ import {
 import { MText, spacing, radii, iconSizes, useTheme } from "@budget/ui-native";
 import type { LocalPdfFile } from "@/utils/getPdfsDirectory";
 import { IconButton } from "@/components/ui/AppIcon";
-import {
-  useReadingTargetsStore,
-  type TargetType,
-} from "@/store/bookshelf/useReadingTargetsStore";
+import { useReadingTargetsStore } from "@/store/bookshelf/useReadingTargetsStore";
 import { useBookSectionsStore } from "@/store/bookshelf/useBookSectionsStore";
 import {
   MSelectBottomSheet,
@@ -23,6 +20,8 @@ import {
 } from "@/components/ui/MSelectBottomSheet";
 import { TargetItemsList } from "@/components/Books/TargetItemsList";
 import { useToast } from "@/components/ui/ToastProvider";
+import { AppChip } from "@/components/ui/AppChip";
+import { TargetType } from "@budget/core";
 
 type Props = {
   visible: boolean;
@@ -44,35 +43,6 @@ const clampInt = (n: any) => {
   return Math.max(0, Math.min(999999, v));
 };
 
-function Chip({
-  text,
-  active,
-  onPress,
-}: {
-  text: string;
-  active?: boolean;
-  onPress: () => void;
-}) {
-  const { colors } = useTheme();
-  return (
-    <Pressable
-      onPress={onPress}
-      style={[
-        styles.chip,
-        { borderColor: colors.borderSubtle, backgroundColor: colors.surface },
-        active && { backgroundColor: colors.surfaceElevated },
-      ]}
-    >
-      <MText
-        numberOfLines={1}
-        style={{ fontWeight: "800", opacity: active ? 1 : 0.75 }}
-      >
-        {text}
-      </MText>
-    </Pressable>
-  );
-}
-
 export function CreateTargetModal({
   visible,
   onClose,
@@ -81,31 +51,45 @@ export function CreateTargetModal({
   initialBookUri,
 }: Props) {
   const { colors } = useTheme();
+  const { showToast } = useToast();
 
   const addTarget = useReadingTargetsStore((s) => s.addTarget);
   const addItem = useReadingTargetsStore((s) => s.addItem);
   const deleteItem = useReadingTargetsStore((s) => s.deleteItem);
   const targets = useReadingTargetsStore((s) => s.targets);
-  const { showToast } = useToast();
+
+  const chipColors = useMemo(
+    () => ({
+      active: {
+        bg: colors.surfaceElevated,
+        border: colors.borderSubtle,
+        text: colors.textPrimary,
+        icon: colors.textSecondary,
+      },
+      inactive: {
+        bg: colors.surface,
+        border: colors.borderSubtle,
+        text: colors.textPrimary,
+        icon: colors.textSecondary,
+      },
+    }),
+    [colors]
+  );
 
   const getResolvedSections = useBookSectionsStore(
     (s) => (s as any).getResolvedSections
   );
 
-  // group state
   const [title, setTitle] = useState("");
   const [targetId, setTargetId] = useState<string | null>(null);
 
-  // selection state
-  const [selectedBookId, setSelectedBookId] = useState<string | null>(null); // bookUri
+  const [selectedBookId, setSelectedBookId] = useState<string | null>(null);
   const [type, setType] = useState<TargetType>("section");
 
-  // section selection
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(
     null
   );
 
-  // pages inputs (user enters)
   const [startPageInput, setStartPageInput] = useState<string>("");
   const [endPageInput, setEndPageInput] = useState<string>("");
 
@@ -114,7 +98,6 @@ export function CreateTargetModal({
     [books, selectedBookId]
   );
 
-  // book items for MSelect
   const bookItems = useMemo<MSelectItemBase[]>(
     () =>
       [...books]
@@ -123,11 +106,9 @@ export function CreateTargetModal({
     [books]
   );
 
-  // sections resolved from store (no filtering)
   const resolvedSections = useMemo<SectionPick[]>(() => {
     if (!selectedBookId) return [];
     if (!getResolvedSections) return [];
-    // totalPages: unknown olabilir, store helper zaten çözüyorsa null geç
     const secs = getResolvedSections(selectedBookId, null) ?? [];
     return secs
       .map((s: any) => ({
@@ -154,14 +135,12 @@ export function CreateTargetModal({
     return targets.find((t) => t.id === targetId) ?? null;
   }, [targets, targetId]);
 
-  // initial book
   useEffect(() => {
     if (!visible) return;
     if (!initialBookUri) return;
     setSelectedBookId(initialBookUri);
   }, [visible, initialBookUri]);
 
-  // reset dependent state when switching book/type
   useEffect(() => {
     setSelectedSectionId(null);
     setStartPageInput("");
@@ -210,7 +189,7 @@ export function CreateTargetModal({
         message: "Target created. Now add items.",
         duration: 2500,
       });
-    } catch (e) {
+    } catch {
       showToast({
         message: "Failed to create target.",
         duration: 4000,
@@ -231,17 +210,13 @@ export function CreateTargetModal({
     if (!targetId) return false;
     if (!selectedBook) return false;
 
-    if (type === "section") {
-      return !!selectedSection;
-    }
-
-    // pages: user must enter start + end
+    if (type === "section") return !!selectedSection;
     return pagesStart > 0 && pagesEnd > 0 && pagesEnd > pagesStart;
   }, [targetId, selectedBook, type, selectedSection, pagesStart, pagesEnd]);
+
   const addSelectedItem = async () => {
     if (!targetId || !selectedBook) return;
 
-    // ---- SECTION ----
     if (type === "section") {
       if (!selectedSection) {
         showToast({ message: "Select a section first.", duration: 2500 });
@@ -272,7 +247,6 @@ export function CreateTargetModal({
       return;
     }
 
-    // ---- PAGES ----
     const jumpPage = pagesStart;
     const endPage = pagesEnd;
 
@@ -341,7 +315,6 @@ export function CreateTargetModal({
               contentContainerStyle={{ paddingBottom: spacing.lg }}
               keyboardShouldPersistTaps="handled"
             >
-              {/* GROUP TITLE */}
               <MText style={styles.sectionTitle}>Title</MText>
               <View style={styles.titleRow}>
                 <TextInput
@@ -392,7 +365,6 @@ export function CreateTargetModal({
                 )}
               </View>
 
-              {/* BOOK SELECT (MSelect) */}
               <View style={{ marginTop: spacing.md }}>
                 <MSelectBottomSheet
                   label="Book"
@@ -405,20 +377,27 @@ export function CreateTargetModal({
                 />
               </View>
 
-              {/* TYPE + SECTION/PAGES */}
               {selectedBook ? (
                 <>
                   <MText style={styles.sectionTitle}>Type</MText>
                   <View style={styles.chipsRow}>
-                    <Chip
-                      text="Section"
+                    <AppChip
+                      label="Section"
+                      icon="list-outline"
                       active={type === "section"}
                       onPress={() => setType("section")}
+                      colors={chipColors}
+                      size="md"
+                      pill={false}
                     />
-                    <Chip
-                      text="Pages"
+                    <AppChip
+                      label="Pages"
+                      icon="copy-outline"
                       active={type === "pages"}
                       onPress={() => setType("pages")}
+                      colors={chipColors}
+                      size="md"
+                      pill={false}
                     />
                   </View>
 
@@ -521,7 +500,6 @@ export function CreateTargetModal({
                     </>
                   )}
 
-                  {/* ADD ITEM CTA */}
                   <Pressable
                     onPress={addSelectedItem}
                     disabled={!canAddItem}
@@ -559,20 +537,17 @@ export function CreateTargetModal({
                   </Pressable>
                 </>
               ) : null}
-              {/* ITEMS LIST */}
+
               {currentTarget?.items?.length ? (
-                <>
-                  <TargetItemsList
-                    items={currentTarget.items}
-                    onDeleteItem={(itemId) =>
-                      deleteItem(currentTarget.id, itemId)
-                    }
-                  />
-                </>
+                <TargetItemsList
+                  items={currentTarget.items}
+                  onDeleteItem={(itemId) =>
+                    deleteItem(currentTarget.id, itemId)
+                  }
+                />
               ) : null}
             </ScrollView>
 
-            {/* FINISH */}
             <Pressable
               onPress={handleSave}
               disabled={!canFinish}
@@ -649,33 +624,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
 
-  itemsBox: {
-    borderWidth: 1,
-    borderRadius: radii.lg,
-    overflow: "hidden",
-  },
-  itemRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-
   chipsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.sm,
     marginTop: spacing.xs,
     alignItems: "center",
-  },
-
-  chip: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.lg,
-    borderWidth: 1,
   },
 
   pagesRow: {

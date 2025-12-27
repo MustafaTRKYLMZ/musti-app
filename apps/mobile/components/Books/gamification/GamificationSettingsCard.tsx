@@ -10,156 +10,21 @@ import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
 import { MText, bookshelfTheme } from "@budget/ui-native";
+
 import { useGamificationSettingsStore } from "@/store/bookshelf/readingGamification/useGamificationSettingsStore";
 import { Stepper } from "./Stepper";
-import { BaseIcon } from "@/components/ui/AppIcon";
 import { scheduleMotivationNudgeIfNeeded } from "@/utils/motivation";
 import { useToast } from "@/components/ui/ToastProvider";
+import { RowAction } from "@/components/ui/RowAction";
+import { ToggleRow } from "@/components/ui/ToggleRow";
+import { WEEKDAYS } from "@/constants/weekdays";
+import { AppChip } from "@/components/ui/AppChip";
 
-const { colors, spacing, radii, iconSizes } = bookshelfTheme;
-
-const WEEKDAYS: { label: string; value: number }[] = Array.from(
-  { length: 7 },
-  (_unused, index) => {
-    const value = index + 1; // 1 = Monday, ..., 7 = Sunday
-    // Use a fixed reference Monday (2020-01-06 is a Monday) and add index days
-    const referenceMonday = new Date(Date.UTC(2020, 0, 6));
-    const referenceDateForDay = new Date(
-      referenceMonday.getTime() + index * 24 * 60 * 60 * 1000
-    );
-    const label = new Intl.DateTimeFormat(undefined, {
-      weekday: "short",
-    }).format(referenceDateForDay);
-
-    return { label, value };
-  }
-);
+const { colors, spacing, radii } = bookshelfTheme;
 
 type Props = {
   inModal?: boolean;
 };
-
-function Chip({
-  active,
-  label,
-  onPress,
-}: {
-  active: boolean;
-  label: string;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={[
-        styles.chip,
-        {
-          backgroundColor: active ? colors.primary : colors.surfaceElevated,
-          borderColor: colors.borderSubtle,
-        },
-      ]}
-    >
-      <MText
-        style={{
-          color: active ? colors.textInverse : colors.textPrimary,
-          fontWeight: "700",
-        }}
-      >
-        {label}
-      </MText>
-    </Pressable>
-  );
-}
-
-function ToggleRow({
-  label,
-  sub,
-  value,
-  onToggle,
-}: {
-  label: string;
-  sub?: string;
-  value: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <Pressable onPress={onToggle} style={styles.toggleRow}>
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <MText style={{ fontWeight: "800" }}>{label}</MText>
-        {sub ? (
-          <MText style={{ opacity: 0.7, marginTop: 2 }} numberOfLines={2}>
-            {sub}
-          </MText>
-        ) : null}
-      </View>
-
-      <View
-        style={[
-          styles.togglePill,
-          {
-            backgroundColor: value ? colors.success : colors.surfaceElevated,
-            borderColor: colors.borderSubtle,
-          },
-        ]}
-      >
-        <MText
-          style={{
-            color: value ? colors.textInverse : colors.textPrimary,
-            fontWeight: "900",
-          }}
-        >
-          {value ? "On" : "Off"}
-        </MText>
-      </View>
-    </Pressable>
-  );
-}
-
-function RowAction({
-  label,
-  value,
-  icon,
-  onPress,
-}: {
-  label: string;
-  value: string;
-  icon: string;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={[
-        styles.rowBtn,
-        {
-          borderColor: colors.borderSubtle,
-          backgroundColor: colors.surfaceElevated,
-        },
-      ]}
-    >
-      <View style={styles.rowBtnLeft}>
-        <BaseIcon
-          name={icon as any}
-          size={iconSizes.md}
-          color={colors.textSecondary}
-        />
-        <MText style={{ color: colors.textPrimary, fontWeight: "800" }}>
-          {label}
-        </MText>
-      </View>
-      <View style={styles.rowBtnRight}>
-        <MText style={{ color: colors.textSecondary, fontWeight: "900" }}>
-          {value}
-        </MText>
-        <BaseIcon
-          name={"chevron-forward" as any}
-          size={iconSizes.md}
-          color={colors.textSecondary}
-        />
-      </View>
-    </Pressable>
-  );
-}
 
 export function GamificationSettingsCard({ inModal = false }: Props) {
   const { showToast } = useToast();
@@ -237,6 +102,24 @@ export function GamificationSettingsCard({ inModal = false }: Props) {
       duration: 2500,
     });
   };
+
+  const chipColors = useMemo(
+    () => ({
+      active: {
+        bg: colors.primary,
+        border: colors.primary,
+        text: colors.textInverse,
+        icon: colors.textInverse,
+      },
+      inactive: {
+        bg: colors.surfaceElevated,
+        border: colors.borderSubtle,
+        text: colors.textPrimary,
+        icon: colors.textSecondary,
+      },
+    }),
+    []
+  );
 
   if (!hydrated) return null;
 
@@ -358,44 +241,60 @@ export function GamificationSettingsCard({ inModal = false }: Props) {
 
       <ToggleRow
         label="Enable motivation nudge"
-        sub="Sends a reminder at your chosen time."
+        description="Sends a reminder at your chosen time."
         value={settings.motivationEnabled}
         onToggle={onToggleEnabled}
+        onLabel="On"
+        offLabel="Off"
       />
 
       <View style={{ height: spacing.sm }} />
 
       <ToggleRow
         label="Only if goal not met"
-        sub="If you already hit the streak goal, don’t send."
+        description="If you already hit the streak goal, don’t send."
         value={settings.motivationOnlyIfNotDone}
         onToggle={toggleOnlyIfNotDone}
+        onLabel="On"
+        offLabel="Off"
       />
 
       <View style={{ height: spacing.md }} />
 
       <MText style={{ fontWeight: "900" }}>Schedule</MText>
+
       <View style={styles.rowWrap}>
-        <Chip
-          active={settings.motivationScheduleType === "daily"}
+        <AppChip
           label="Daily"
+          active={settings.motivationScheduleType === "daily"}
           onPress={() => setScheduleType("daily")}
+          icon="repeat-outline"
+          colors={chipColors}
+          size="md"
+          pill={false}
         />
-        <Chip
-          active={settings.motivationScheduleType === "weekly"}
+        <AppChip
           label="Weekly"
+          active={settings.motivationScheduleType === "weekly"}
           onPress={() => setScheduleType("weekly")}
+          icon="calendar-outline"
+          colors={chipColors}
+          size="md"
+          pill={false}
         />
       </View>
 
       {settings.motivationScheduleType === "weekly" ? (
         <View style={[styles.rowWrap, { marginTop: spacing.sm }]}>
           {WEEKDAYS.map((d) => (
-            <Chip
+            <AppChip
               key={d.value}
-              active={settings.motivationWeekday === d.value}
               label={d.label}
+              active={settings.motivationWeekday === d.value}
               onPress={() => setWeekday(d.value)}
+              colors={chipColors}
+              size="sm"
+              pill={false}
             />
           ))}
         </View>
@@ -480,50 +379,10 @@ const styles = StyleSheet.create({
     marginVertical: spacing.md,
   },
 
-  toggleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  togglePill: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: 8,
-    borderRadius: radii.full,
-    borderWidth: 1,
-  },
-
   rowWrap: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.sm,
     marginTop: spacing.sm,
-  },
-
-  chip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.lg,
-    borderWidth: 1,
-  },
-
-  rowBtn: {
-    borderWidth: 1,
-    borderRadius: radii.lg,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  rowBtnLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  rowBtnRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
   },
 });
