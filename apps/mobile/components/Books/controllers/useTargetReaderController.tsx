@@ -107,7 +107,11 @@ export function useTargetReaderController(): ReaderShellProps {
     setCurrentPage(start);
     
     // Reset isAdvancing when activeItem changes (navigation completed)
-    setIsAdvancing((prev) => (prev ? false : prev));
+    // Only update if currently advancing to avoid unnecessary re-renders
+    setIsAdvancing((prev) => {
+      if (prev) return false;
+      return prev;
+    });
   }, [activeItem?.id]);
 
   const guard: ReaderShellProps["guard"] = (() => {
