@@ -197,7 +197,8 @@ export function usePlanReaderController(): ReaderShellProps {
     let idx = (currentItemIndex + 1) % totalItems;
     let nextItem: (typeof items)[number] | null = null;
 
-    while (true) {
+    // Look for next book with incomplete pages, starting from next index
+    for (let step = 0; step < totalItems; step++) {
       const candidate = items[idx];
       const pb = plan.perBook?.[candidate.bookUri];
       const alreadyRead = pb?.pagesReadToday ?? 0;
@@ -209,6 +210,8 @@ export function usePlanReaderController(): ReaderShellProps {
       }
 
       idx = (idx + 1) % totalItems;
+      
+      // If we've cycled back to current index, all books are complete
       if (idx === currentItemIndex) break;
     }
 

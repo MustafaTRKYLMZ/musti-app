@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import dayjs from "dayjs";
 import type { PdfRef } from "react-native-pdf";
@@ -67,7 +67,7 @@ export function useTargetReaderController(): ReaderShellProps {
   const [isClosing, setIsClosing] = useState(false);
   const [isAdvancing, setIsAdvancing] = useState(false);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     void scheduleMotivationNudgeIfNeeded().catch((error) => {
       console.error(
         "Failed to schedule motivation nudge on target close:",
@@ -75,7 +75,7 @@ export function useTargetReaderController(): ReaderShellProps {
       );
     });
     router.replace("/(tabs)/bookshelf");
-  };
+  }, [router]);
 
   // auto-close when all done, but not while advancing
   useEffect(() => {
@@ -94,7 +94,7 @@ export function useTargetReaderController(): ReaderShellProps {
       setIsClosing(true);
       handleClose();
     }
-  }, [hydrated, target, targetId, isClosing, isAdvancing]);
+  }, [hydrated, target, targetId, isClosing, isAdvancing, handleClose]);
 
   useEffect(() => {
     doneOnceRef.current = false;
@@ -105,6 +105,13 @@ export function useTargetReaderController(): ReaderShellProps {
     );
     setInitialPage(start);
     setCurrentPage(start);
+    
+    // Reset isAdvancing when activeItem changes (navigation completed)
+    // Only update if currently advancing to avoid unnecessary re-renders
+    setIsAdvancing((prev) => {
+      if (prev) return false;
+      return prev;
+    });
   }, [activeItem?.id]);
 
   const guard: ReaderShellProps["guard"] = (() => {
