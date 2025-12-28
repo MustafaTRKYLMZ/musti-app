@@ -105,7 +105,7 @@ export function useTargetReaderController(): ReaderShellProps {
     );
     setInitialPage(start);
     setCurrentPage(start);
-    
+
     // Reset isAdvancing when activeItem changes (navigation completed)
     // Only update if currently advancing to avoid unnecessary re-renders
     setIsAdvancing((prev) => {
@@ -247,7 +247,7 @@ export function useTargetReaderController(): ReaderShellProps {
     readingContext: {
       mode: "target",
       date: today,
-      bookUri: bookUri,
+      bookUri: bookUri ?? undefined,
       targetId,
       sectionId: activeItem?.id,
       sectionTitle: activeItem?.label ?? activeItem?.bookName,
