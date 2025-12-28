@@ -210,6 +210,9 @@ export function usePlanReaderController(): ReaderShellProps {
       }
 
       idx = (idx + 1) % totalItems;
+      
+      // If we've cycled back to current index, all books are complete
+      if (idx === currentItemIndex) break;
     }
 
     if (!nextItem) {
