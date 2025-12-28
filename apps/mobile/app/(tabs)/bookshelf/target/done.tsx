@@ -7,12 +7,10 @@ import { AppScreen } from "@/components/AppScreen";
 import { IconButton } from "@/components/ui/AppIcon";
 import { TargetCard } from "@/components/Books/TargetCard";
 
-import {
-  useReadingTargetsStore,
-  type ReadingTarget,
-} from "@/store/bookshelf/useReadingTargetsStore";
+import { useReadingTargetsStore } from "@/store/bookshelf/useReadingTargetsStore";
 import { AppSwitcherButton } from "@/components/AppSwitcherButton";
 import { useToast } from "@/components/ui/ToastProvider";
+import { ReadingTarget } from "@budget/core";
 
 const { colors, spacing, radii } = bookshelfTheme;
 
