@@ -2,11 +2,21 @@ import React, { useEffect, useState } from "react";
 import { View, StyleSheet } from "react-native";
 import { MText, spacing, useTheme } from "@budget/ui-native";
 import type { PdfRef } from "react-native-pdf";
+import type { ReadingMode } from "@budget/core";
 
 import { PdfReader } from "@/components/Books/PdfReader";
 import { BookSectionsSidebar } from "@/components/Books/BookSectionsSidebar";
 
 export type ReaderGuard = { kind: "ok" } | { kind: "message"; text: string };
+
+export type ReadingContext = {
+  mode: ReadingMode;
+  date: string;
+  bookUri?: string;
+  targetId?: string;
+  sectionId?: string;
+  sectionTitle?: string;
+};
 
 export type ReaderShellProps = {
   // Guard / early UI
@@ -27,7 +37,7 @@ export type ReaderShellProps = {
   onClose: () => void;
 
   // Context / extras (pass-through to PdfReader)
-  readingContext: any;
+  readingContext: ReadingContext;
   timeLeftRemainingPages?: number | null;
 
   // Sidebar
