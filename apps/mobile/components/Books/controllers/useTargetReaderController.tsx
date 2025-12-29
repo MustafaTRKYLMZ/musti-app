@@ -5,11 +5,15 @@ import type { PdfRef } from "react-native-pdf";
 
 import { useReadingTargetsStore } from "@/store/bookshelf/useReadingTargetsStore";
 import { scheduleMotivationNudgeIfNeeded } from "@/utils/motivation";
-import { useReadingGamificationStore } from "@/store/bookshelf/readingGamification/useReadingGamificationStore";
-import { useLastGainStore } from "@/hooks/useLastGain";
 import { useToast } from "@/components/ui/ToastProvider";
 
 import type { ReaderShellProps } from "@/components/Books/ReaderShell";
+
+function clampInt(n: any) {
+  const v = Math.floor(Number(n) || 0);
+  if (!Number.isFinite(v)) return 0;
+  return Math.max(0, Math.min(999999, v));
+}
 
 export function useTargetReaderController(): ReaderShellProps {
   const router = useRouter();
@@ -19,6 +23,7 @@ export function useTargetReaderController(): ReaderShellProps {
     targetId?: string;
     uri?: string;
     name?: string;
+    jumpPage?: string; // ✅ added
   }>();
 
   const targetId = params.targetId ? String(params.targetId) : undefined;
@@ -27,6 +32,13 @@ export function useTargetReaderController(): ReaderShellProps {
   const routeName = params.name
     ? decodeURIComponent(String(params.name))
     : undefined;
+
+  // ✅ jumpPage from route (TargetCard/TargetList)
+  const jumpPageParam = useMemo(() => {
+    if (params.jumpPage == null) return null;
+    const n = clampInt(params.jumpPage);
+    return n > 0 ? n : null;
+  }, [params.jumpPage]);
 
   const today = dayjs().format("YYYY-MM-DD");
 
@@ -99,20 +111,24 @@ export function useTargetReaderController(): ReaderShellProps {
   useEffect(() => {
     doneOnceRef.current = false;
 
-    const start = Math.max(
+    const fallbackStart = Math.max(
       1,
       Number(activeItem?.cursorPage ?? activeItem?.jumpPage ?? 1)
     );
+
+    const start = Math.max(1, Number(jumpPageParam ?? fallbackStart));
+
     setInitialPage(start);
     setCurrentPage(start);
 
-    // Reset isAdvancing when activeItem changes (navigation completed)
-    // Only update if currently advancing to avoid unnecessary re-renders
-    setIsAdvancing((prev) => {
-      if (prev) return false;
-      return prev;
-    });
-  }, [activeItem?.id]);
+    // ✅ if opened with jumpPage, sync cursor immediately
+    if (targetId && activeItem?.id && jumpPageParam) {
+      void setItemCursor(targetId, activeItem.id, start).catch(() => {});
+    }
+
+    setIsAdvancing((prev) => (prev ? false : prev));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeItem?.id, jumpPageParam]);
 
   const guard: ReaderShellProps["guard"] = (() => {
     if (!targetId) return { kind: "message", text: "Invalid targetId" };
@@ -143,45 +159,12 @@ export function useTargetReaderController(): ReaderShellProps {
 
   const goToNextActiveItemInTarget = () => {
     if (!targetId) return;
-    if (!target) return;
-    if (!activeItem) return;
-
-    const items = target.items ?? [];
-    if (items.length === 0) {
-      setIsClosing(true);
-      handleClose();
-      return;
-    }
-
-    const currentIdx = items.findIndex((it) => it.id === activeItem.id);
-    const total = items.length;
-
-    let idx = currentIdx;
-    let next: (typeof items)[number] | null = null;
-
-    for (let step = 0; step < total; step++) {
-      idx = (idx + 1) % total;
-      const candidate = items[idx];
-      if (candidate.status === "active") {
-        next = candidate;
-        break;
-      }
-    }
-
-    if (!next) {
-      setIsClosing(true);
-      handleClose();
-      return;
-    }
-
     setIsAdvancing(true);
 
     router.replace({
       pathname: "/(tabs)/bookshelf/target/target-viewer",
       params: {
         targetId,
-        uri: encodeURIComponent(next.bookUri),
-        name: encodeURIComponent(next.bookName ?? "PDF"),
       },
     });
   };
@@ -197,35 +180,15 @@ export function useTargetReaderController(): ReaderShellProps {
     if (!doneOnceRef.current && clamped >= endPage) {
       doneOnceRef.current = true;
 
+      // ✅ mark done (store handles repeat + rewards)
       void markItemDone(targetId, activeItem.id).catch(() => {});
 
-      const at = Date.now();
-      const bonus = useReadingGamificationStore
-        .getState()
-        .onTargetCompleted({ at, bookUri: bookUri! });
-
-      if (bonus > 0) {
-        useLastGainStore.getState().emit({
-          at,
-          xp: bonus,
-          pages: 0,
-          mode: "target",
-          bookUri: bookUri!,
-          kind: "targetComplete",
-        });
-
-        showToast({
-          title: "Target completed 🎯",
-          message: `You earned ${bonus} XP`,
-          duration: 3500,
-        });
-      } else {
-        showToast({
-          title: "Target completed 🎯",
-          message: "Nice work!",
-          duration: 2500,
-        });
-      }
+      // ✅ toast (NO XP calculation here to avoid double-award)
+      showToast({
+        title: "Target completed 🎯",
+        message: "Nice work!",
+        duration: 2500,
+      });
 
       void scheduleMotivationNudgeIfNeeded().catch(() => {});
       goToNextActiveItemInTarget();

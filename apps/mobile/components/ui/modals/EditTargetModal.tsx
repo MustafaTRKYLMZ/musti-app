@@ -9,6 +9,10 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from "@react-native-community/datetimepicker";
+import dayjs from "dayjs";
 import { MText, spacing, radii, iconSizes, useTheme } from "@budget/ui-native";
 import { IconButton } from "@/components/ui/AppIcon";
 import { useReadingTargetsStore } from "@/store/bookshelf/useReadingTargetsStore";
@@ -20,7 +24,7 @@ import {
 import { TargetItemsList } from "@/components/Books/TargetItemsList";
 import { useToast } from "@/components/ui/ToastProvider";
 import { useBooksStore } from "@/store/bookshelf/useBooksStore";
-import { TargetType } from "@budget/core";
+import { TargetType, type TargetRepeat } from "@budget/core";
 
 type Props = {
   visible: boolean;
@@ -40,6 +44,32 @@ const clampInt = (n: any) => {
   const v = Math.floor(Number(n) || 0);
   return Math.max(0, Math.min(999999, v));
 };
+
+function isValidTimeOfDay(v: string) {
+  if (!/^\d{2}:\d{2}$/.test(v)) return false;
+  const [h, m] = v.split(":").map((x) => Number(x));
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return false;
+  return h >= 0 && h <= 23 && m >= 0 && m <= 59;
+}
+
+function normalizeTimeOfDay(v: string) {
+  const cleaned = v.replace(/[^\d:]/g, "");
+  if (cleaned.length === 5 && isValidTimeOfDay(cleaned)) return cleaned;
+  return cleaned;
+}
+
+function mergeDateWithTimeOfDay(date: Date, timeOfDay: string) {
+  const [hh, mm] = (timeOfDay || "00:00").split(":").map((x) => Number(x));
+  const safeH = Number.isFinite(hh) ? hh : 0;
+  const safeM = Number.isFinite(mm) ? mm : 0;
+
+  return dayjs(date)
+    .hour(safeH)
+    .minute(safeM)
+    .second(0)
+    .millisecond(0)
+    .valueOf();
+}
 
 function Chip({
   text,
@@ -70,6 +100,34 @@ function Chip({
   );
 }
 
+function WeekdayChip({
+  text,
+  active,
+  onPress,
+}: {
+  text: string;
+  active?: boolean;
+  onPress: () => void;
+}) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      style={[
+        styles.weekdayChip,
+        {
+          borderColor: colors.borderSubtle,
+          backgroundColor: active ? colors.surfaceElevated : colors.surface,
+        },
+      ]}
+    >
+      <MText style={{ fontWeight: "900", opacity: active ? 1 : 0.7 }}>
+        {text}
+      </MText>
+    </Pressable>
+  );
+}
+
 export function EditTargetModal({
   visible,
   targetId,
@@ -82,8 +140,8 @@ export function EditTargetModal({
   const targets = useReadingTargetsStore((s) => s.targets);
   const addItem = useReadingTargetsStore((s) => s.addItem);
   const deleteItem = useReadingTargetsStore((s) => s.deleteItem);
-
   const updateTargetTitle = useReadingTargetsStore((s) => s.updateTargetTitle);
+  const setTargetRepeat = useReadingTargetsStore((s) => s.setTargetRepeat);
 
   const getResolvedSections = useBookSectionsStore(
     (s) => (s as any).getResolvedSections
@@ -105,6 +163,20 @@ export function EditTargetModal({
   );
   const [startPageInput, setStartPageInput] = useState<string>("");
   const [endPageInput, setEndPageInput] = useState<string>("");
+
+  // --- repeat local state ---
+  const [repeatEnabled, setRepeatEnabled] = useState(false);
+  const [repeatFreq, setRepeatFreq] = useState<TargetRepeat["freq"]>("weekly");
+  const [repeatInterval, setRepeatInterval] = useState<string>("1");
+  const [repeatTimeOfDay, setRepeatTimeOfDay] = useState<string>("00:00");
+  // weekly: 0=Sun ... 6=Sat (UI: Mon..Sun)
+  const [repeatWeekdays, setRepeatWeekdays] = useState<number[]>([1]);
+
+  // --- repeat end ---
+  const [endKind, setEndKind] = useState<"never" | "until" | "count">("never");
+  const [untilDate, setUntilDate] = useState<Date>(new Date());
+  const [countRemaining, setCountRemaining] = useState<string>("10");
+  const [showUntilPicker, setShowUntilPicker] = useState(false);
 
   const availableBooks = useMemo(() => {
     const map = new Map<string, { uri: string; name: string }>();
@@ -153,6 +225,44 @@ export function EditTargetModal({
     setSelectedSectionId(null);
     setStartPageInput("");
     setEndPageInput("");
+
+    // ✅ hydrate repeat UI from target
+    if (target.repeat) {
+      setRepeatEnabled(true);
+      setRepeatFreq(target.repeat.freq);
+      setRepeatInterval(String(target.repeat.interval ?? 1));
+      setRepeatTimeOfDay(target.repeat.timeOfDay ?? "00:00");
+      setRepeatWeekdays(
+        target.repeat.weekdays && target.repeat.weekdays.length
+          ? target.repeat.weekdays
+          : [1]
+      );
+
+      // ✅ hydrate end (new+old)
+      const end = target.repeat.end as any;
+      if (!end || end.kind === "never") {
+        setEndKind("never");
+      } else if (end.kind === "until") {
+        setEndKind("until");
+        setUntilDate(new Date(end.untilAt));
+      } else if (end.kind === "count") {
+        setEndKind("count");
+        const total = Number(end.total ?? end.remaining ?? 1);
+        setCountRemaining(String(Math.max(1, Math.floor(total || 1))));
+      } else {
+        setEndKind("never");
+      }
+    } else {
+      setRepeatEnabled(false);
+      setRepeatFreq("weekly");
+      setRepeatInterval("1");
+      setRepeatTimeOfDay("00:00");
+      setRepeatWeekdays([1]);
+
+      setEndKind("never");
+      setUntilDate(new Date());
+      setCountRemaining("10");
+    }
   }, [visible, target]);
 
   useEffect(() => {
@@ -265,18 +375,80 @@ export function EditTargetModal({
     }
   };
 
+  const toggleWeekday = (d: number) => {
+    setRepeatWeekdays((prev) => {
+      const has = prev.includes(d);
+      const next = has ? prev.filter((x) => x !== d) : [...prev, d];
+      // weekly’de boş kalmasın
+      return next.length ? next : [1];
+    });
+  };
+
+  const buildRepeatPayload = (): TargetRepeat | null => {
+    if (!repeatEnabled) return null;
+
+    const interval = Math.max(1, Math.floor(Number(repeatInterval) || 1));
+    const time = repeatTimeOfDay?.trim() || "00:00";
+    const safeTime = isValidTimeOfDay(time) ? time : "00:00";
+
+    let end: TargetRepeat["end"] | undefined = undefined;
+
+    if (endKind === "until") {
+      const untilAt = mergeDateWithTimeOfDay(untilDate, safeTime);
+      end = { kind: "until", untilAt } as any;
+    } else if (endKind === "count") {
+      const total = Math.max(1, Math.floor(Number(countRemaining) || 1));
+      end = { kind: "count", total, remaining: total } as any; // ✅ total+remaining
+    } else {
+      end = undefined; // never
+    }
+
+    if (repeatFreq === "weekly") {
+      const wds =
+        repeatWeekdays && repeatWeekdays.length
+          ? [...new Set(repeatWeekdays)].filter((x) => x >= 0 && x <= 6)
+          : [1];
+
+      return {
+        freq: "weekly",
+        interval,
+        weekdays: wds,
+        timeOfDay: safeTime,
+        end,
+      };
+    }
+
+    return {
+      freq: repeatFreq,
+      interval,
+      timeOfDay: safeTime,
+      end,
+    };
+  };
+
+  const onUntilPicked = (_e: DateTimePickerEvent, d?: Date) => {
+    if (Platform.OS !== "ios") setShowUntilPicker(false);
+    if (d) setUntilDate(d);
+  };
+
   const handleSave = async () => {
+    if (!target) {
+      onClose();
+      return;
+    }
+
     try {
-      if (
-        target &&
-        updateTargetTitle &&
-        title.trim() &&
-        title.trim() !== target.title
-      ) {
+      // title
+      if (title.trim() && title.trim() !== target.title) {
         await updateTargetTitle(target.id, title.trim());
       }
+
+      // repeat
+      const payload = buildRepeatPayload();
+      await setTargetRepeat(target.id, payload);
     } catch {
-      showToast({ message: "Failed to update title.", duration: 3500 });
+      showToast({ message: "Failed to save target.", duration: 3500 });
+      return;
     }
 
     onClose();
@@ -284,6 +456,8 @@ export function EditTargetModal({
   };
 
   if (!visible) return null;
+
+  const untilLabel = dayjs(untilDate).format("D MMM YYYY");
 
   return (
     <Modal
@@ -331,6 +505,224 @@ export function EditTargetModal({
                 ]}
               />
 
+              {/* Repeat */}
+              <MText style={styles.sectionTitle}>Repeat</MText>
+
+              <View style={styles.chipsRow}>
+                <Chip
+                  text={repeatEnabled ? "On" : "Off"}
+                  active={repeatEnabled}
+                  onPress={() => setRepeatEnabled((v) => !v)}
+                />
+                {!repeatEnabled ? (
+                  <MText style={{ opacity: 0.7, marginLeft: spacing.sm }}>
+                    One-time target
+                  </MText>
+                ) : null}
+              </View>
+
+              {repeatEnabled ? (
+                <View style={{ marginTop: spacing.sm }}>
+                  <MText style={styles.sectionTitle}>Frequency</MText>
+                  <View style={styles.chipsRow}>
+                    <Chip
+                      text="Daily"
+                      active={repeatFreq === "daily"}
+                      onPress={() => setRepeatFreq("daily")}
+                    />
+                    <Chip
+                      text="Weekly"
+                      active={repeatFreq === "weekly"}
+                      onPress={() => setRepeatFreq("weekly")}
+                    />
+                    <Chip
+                      text="Monthly"
+                      active={repeatFreq === "monthly"}
+                      onPress={() => setRepeatFreq("monthly")}
+                    />
+                  </View>
+
+                  <View style={{ marginTop: spacing.md }}>
+                    <MText style={styles.sectionTitle}>Interval</MText>
+                    <TextInput
+                      value={repeatInterval}
+                      onChangeText={(t) =>
+                        setRepeatInterval(t.replace(/[^\d]/g, ""))
+                      }
+                      keyboardType="number-pad"
+                      placeholder="1"
+                      placeholderTextColor={colors.textSecondary}
+                      style={[
+                        styles.pageInput,
+                        {
+                          borderColor: colors.borderSubtle,
+                          backgroundColor: colors.surface,
+                          color: colors.textPrimary,
+                        },
+                      ]}
+                    />
+                    <MText style={{ opacity: 0.65, marginTop: spacing.xs }}>
+                      {repeatFreq === "daily"
+                        ? "Every N days"
+                        : repeatFreq === "weekly"
+                        ? "Every N weeks"
+                        : "Every N months"}
+                    </MText>
+                  </View>
+
+                  {repeatFreq === "weekly" ? (
+                    <View style={{ marginTop: spacing.md }}>
+                      <MText style={styles.sectionTitle}>Weekdays</MText>
+                      <View style={styles.weekdaysRow}>
+                        <WeekdayChip
+                          text="Mon"
+                          active={repeatWeekdays.includes(1)}
+                          onPress={() => toggleWeekday(1)}
+                        />
+                        <WeekdayChip
+                          text="Tue"
+                          active={repeatWeekdays.includes(2)}
+                          onPress={() => toggleWeekday(2)}
+                        />
+                        <WeekdayChip
+                          text="Wed"
+                          active={repeatWeekdays.includes(3)}
+                          onPress={() => toggleWeekday(3)}
+                        />
+                        <WeekdayChip
+                          text="Thu"
+                          active={repeatWeekdays.includes(4)}
+                          onPress={() => toggleWeekday(4)}
+                        />
+                        <WeekdayChip
+                          text="Fri"
+                          active={repeatWeekdays.includes(5)}
+                          onPress={() => toggleWeekday(5)}
+                        />
+                        <WeekdayChip
+                          text="Sat"
+                          active={repeatWeekdays.includes(6)}
+                          onPress={() => toggleWeekday(6)}
+                        />
+                        <WeekdayChip
+                          text="Sun"
+                          active={repeatWeekdays.includes(0)}
+                          onPress={() => toggleWeekday(0)}
+                        />
+                      </View>
+                    </View>
+                  ) : null}
+
+                  <View style={{ marginTop: spacing.md }}>
+                    <MText style={styles.sectionTitle}>Reset time</MText>
+                    <TextInput
+                      value={repeatTimeOfDay}
+                      onChangeText={(t) =>
+                        setRepeatTimeOfDay(normalizeTimeOfDay(t))
+                      }
+                      placeholder="00:00"
+                      placeholderTextColor={colors.textSecondary}
+                      style={[
+                        styles.pageInput,
+                        {
+                          borderColor: colors.borderSubtle,
+                          backgroundColor: colors.surface,
+                          color: colors.textPrimary,
+                        },
+                      ]}
+                    />
+                    {!isValidTimeOfDay(repeatTimeOfDay) ? (
+                      <MText style={{ opacity: 0.7, marginTop: spacing.xs }}>
+                        Format: HH:mm (e.g. 08:30)
+                      </MText>
+                    ) : null}
+                  </View>
+
+                  {/* END */}
+                  <View style={{ marginTop: spacing.md }}>
+                    <MText style={styles.sectionTitle}>End</MText>
+                    <View style={styles.chipsRow}>
+                      <Chip
+                        text="Never"
+                        active={endKind === "never"}
+                        onPress={() => setEndKind("never")}
+                      />
+                      <Chip
+                        text="Until"
+                        active={endKind === "until"}
+                        onPress={() => setEndKind("until")}
+                      />
+                      <Chip
+                        text="Count"
+                        active={endKind === "count"}
+                        onPress={() => setEndKind("count")}
+                      />
+                    </View>
+
+                    {endKind === "until" ? (
+                      <View style={{ marginTop: spacing.sm }}>
+                        <Pressable
+                          onPress={() => setShowUntilPicker(true)}
+                          style={[
+                            styles.smallBtn,
+                            {
+                              borderColor: colors.borderSubtle,
+                              backgroundColor: colors.surface,
+                            },
+                          ]}
+                        >
+                          <MText style={{ fontWeight: "900" }}>
+                            End date: {untilLabel}
+                          </MText>
+                        </Pressable>
+
+                        {showUntilPicker ? (
+                          <DateTimePicker
+                            value={untilDate}
+                            mode="date"
+                            display={
+                              Platform.OS === "ios" ? "spinner" : "default"
+                            }
+                            onChange={onUntilPicked}
+                          />
+                        ) : null}
+
+                        <MText style={{ opacity: 0.7, marginTop: spacing.xs }}>
+                          The repeat will stop after this date (using the reset
+                          time).
+                        </MText>
+                      </View>
+                    ) : null}
+
+                    {endKind === "count" ? (
+                      <View style={{ marginTop: spacing.sm }}>
+                        <TextInput
+                          value={countRemaining}
+                          onChangeText={(t) =>
+                            setCountRemaining(t.replace(/[^\d]/g, ""))
+                          }
+                          keyboardType="number-pad"
+                          placeholder="10"
+                          placeholderTextColor={colors.textSecondary}
+                          style={[
+                            styles.pageInput,
+                            {
+                              borderColor: colors.borderSubtle,
+                              backgroundColor: colors.surface,
+                              color: colors.textPrimary,
+                            },
+                          ]}
+                        />
+                        <MText style={{ opacity: 0.7, marginTop: spacing.xs }}>
+                          How many cycles to run (e.g. 10).
+                        </MText>
+                      </View>
+                    ) : null}
+                  </View>
+                </View>
+              ) : null}
+
+              {/* Book select */}
               <View style={{ marginTop: spacing.md }}>
                 <MSelectBottomSheet
                   label="Book"
@@ -538,6 +930,19 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     borderRadius: radii.lg,
+    borderWidth: 1,
+  },
+  weekdaysRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+    alignItems: "center",
+  },
+  weekdayChip: {
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.full,
     borderWidth: 1,
   },
   pagesRow: {

@@ -1,8 +1,21 @@
 import { create } from "zustand";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { ReadingTarget, TargetItem } from "@budget/core";
-import { useReadingGamificationStore } from "./readingGamification/useReadingGamificationStore";
+import type {
+  ReadingTarget,
+  TargetItem,
+  TargetRepeat,
+  TargetRepeatEnd,
+  TargetStatus,
+} from "@budget/core";
 
+import { useReadingGamificationStore } from "./readingGamification/useReadingGamificationStore";
+import { recomputeTargetStatus } from "@/utils/targetStatus";
+import {
+  applyRepeatEndAfterRollover,
+  computeNextResetAt,
+  resetTargetForNewCycle,
+  rolloverRepeatingTargets,
+} from "@/utils/targetRepeat";
 
 type TargetsState = {
   hydrated: boolean;
@@ -30,10 +43,22 @@ type TargetsState = {
 
   markItemDone: (targetId: string, itemId: string) => Promise<void>;
 
-  setItemCursor: (targetId: string, itemId: string, cursorPage: number) => Promise<void>;
+  setItemCursor: (
+    targetId: string,
+    itemId: string,
+    cursorPage: number
+  ) => Promise<void>;
 
   restartTarget: (targetId: string) => Promise<void>;
   restartItem: (targetId: string, itemId: string) => Promise<void>;
+
+  // repeat
+  rolloverRepeatingTargets: () => Promise<void>;
+  setTargetRepeat: (
+    targetId: string,
+    repeat: TargetRepeat | null
+  ) => Promise<void>;
+  skipTargetCycle: (targetId: string) => Promise<void>;
 };
 
 const KEY = "bookshelf.readingTargets.v2";
@@ -52,15 +77,6 @@ function normalizeRange(startLike: any, endLike: any) {
   const start = Math.max(1, clampInt(startLike) || 1);
   const end = Math.max(start, clampInt(endLike) || start);
   return { start, end };
-}
-
-function recomputeTargetStatus(t: ReadingTarget): ReadingTarget {
-  if (!t.items.length) return { ...t, status: "active", doneAt: undefined };
-
-  const allDone = t.items.every((it) => it.status === "done");
-  if (allDone) return { ...t, status: "done", doneAt: t.doneAt ?? Date.now() };
-
-  return { ...t, status: "active", doneAt: undefined };
 }
 
 function ensureSingleActive(t: ReadingTarget): ReadingTarget {
@@ -87,6 +103,34 @@ function ensureSingleActive(t: ReadingTarget): ReadingTarget {
   return { ...t, items: nextItems };
 }
 
+function normalizeRepeatEnd(end?: TargetRepeatEnd): TargetRepeatEnd | undefined {
+  if (!end) return undefined;
+  if (end.kind === "never") return end;
+  if (end.kind === "until") return end;
+
+  if (end.kind === "count") {
+    const anyEnd = end as any;
+    const remaining = Math.max(1, Math.floor(Number(anyEnd.remaining) || 1));
+    // new model: keep total too. if missing, assume total == remaining
+    const total = Math.max(
+      1,
+      Math.floor(Number(anyEnd.total ?? remaining) || remaining)
+    );
+    return { kind: "count", total, remaining } as any;
+  }
+
+  return end;
+}
+
+function normalizeRepeat(repeat: TargetRepeat): TargetRepeat {
+  const nr: TargetRepeat = {
+    ...repeat,
+    interval: Math.max(1, Math.floor(Number(repeat.interval ?? 1) || 1)),
+    end: normalizeRepeatEnd(repeat.end),
+  };
+  return nr;
+}
+
 export const useReadingTargetsStore = create<TargetsState>((set, get) => ({
   hydrated: false,
   targets: [],
@@ -94,27 +138,218 @@ export const useReadingTargetsStore = create<TargetsState>((set, get) => ({
   hydrate: async () => {
     try {
       const raw = await AsyncStorage.getItem(KEY);
-      if (!raw) return set({ hydrated: true });
+      if (!raw) {
+        set({ hydrated: true });
+        return;
+      }
 
       const parsed = JSON.parse(raw) as { targets?: ReadingTarget[] };
-      set({ targets: parsed.targets ?? [], hydrated: true });
+
+      // ✅ migrate + normalize repeat end.count to include "total"
+      const migrated = (parsed.targets ?? []).map((t) => {
+        const repeat = t.repeat ? normalizeRepeat(t.repeat) : undefined;
+
+        return {
+          ...t,
+          repeat,
+          cycleStartAt: (t as any).cycleStartAt ?? t.createdAt ?? Date.now(),
+          // keep existing fields as-is
+        };
+      });
+
+      set({ targets: migrated, hydrated: true });
+
+      await get().rolloverRepeatingTargets();
     } catch {
       set({ hydrated: true });
     }
   },
 
+  rolloverRepeatingTargets: async () => {
+    const now = Date.now();
+    const { targets: nextTargets, changed } = rolloverRepeatingTargets(
+      get().targets,
+      now,
+      normalizeRange
+    );
+
+    if (!changed) return;
+
+    const finalTargets = nextTargets.map((t) => {
+      let nt = ensureSingleActive(t);
+      nt = recomputeTargetStatus(nt);
+      return nt;
+    });
+
+    set({ targets: finalTargets });
+    await persist(finalTargets);
+  },
+
+  setTargetRepeat: async (targetId, repeat) => {
+    const now = Date.now();
+
+    const targets = get().targets.map((t) => {
+      if (t.id !== targetId) return t;
+
+      if (repeat) {
+        const safeRepeat = normalizeRepeat(repeat);
+
+        // ✅ if count, ensure total exists (total=remaining when user sets)
+        if (safeRepeat.end?.kind === "count") {
+          const anyEnd = safeRepeat.end as any;
+          const remaining = Math.max(1, Math.floor(Number(anyEnd.remaining) || 1));
+          const total = Math.max(
+            1,
+            Math.floor(Number(anyEnd.total ?? remaining) || remaining)
+          );
+          safeRepeat.end = { kind: "count", total, remaining } as any;
+        }
+
+        const baseCycleStart = t.cycleStartAt ?? t.createdAt ?? now;
+        const nextResetAt = computeNextResetAt(baseCycleStart, safeRepeat);
+
+        const nextTarget: ReadingTarget = {
+          ...t,
+          repeat: safeRepeat,
+          cycleStartAt: baseCycleStart,
+          nextResetAt,
+          cycleCompletedAt: undefined,
+          status: "active" as TargetStatus,
+          doneAt: undefined,
+        };
+
+        let nt = ensureSingleActive(nextTarget);
+        nt = recomputeTargetStatus(nt);
+        return nt;
+      }
+
+      // disable repeat
+      const nextTarget: ReadingTarget = {
+        ...t,
+        repeat: undefined,
+        nextResetAt: undefined,
+        lastResetAt: undefined,
+        cycleCompletedAt: undefined,
+        status: "active" as TargetStatus,
+        doneAt: undefined,
+      };
+
+      let nt = ensureSingleActive(nextTarget);
+      nt = recomputeTargetStatus(nt);
+      return nt;
+    });
+
+    set({ targets });
+    await persist(targets);
+
+    await get().rolloverRepeatingTargets();
+  },
+
+  skipTargetCycle: async (targetId) => {
+    const now = Date.now();
+
+    const targets = get().targets.map((t) => {
+      if (t.id !== targetId) return t;
+      if (!t.repeat) return t;
+
+      const repeat = normalizeRepeat(t.repeat);
+
+      // until end: if already beyond -> stop repeat
+      if (repeat.end?.kind === "until" && now >= repeat.end.untilAt) {
+        const stopped: ReadingTarget = {
+          ...t,
+          repeat: undefined,
+          nextResetAt: undefined,
+          lastResetAt: undefined,
+          cycleCompletedAt: undefined,
+          status: "active" as TargetStatus,
+          doneAt: undefined,
+        };
+        let nt = ensureSingleActive(stopped);
+        nt = recomputeTargetStatus(nt);
+        return nt;
+      }
+
+      const baseCycleStart = t.cycleStartAt ?? t.createdAt ?? now;
+      const cycleStart = t.nextResetAt ?? computeNextResetAt(baseCycleStart, repeat);
+
+      const maybeRepeat = applyRepeatEndAfterRollover(repeat);
+
+      // if repeat ended (count reached 0), we reset one last time and disable repeat
+      if (!maybeRepeat) {
+        const reset = resetTargetForNewCycle(
+          { ...t, repeat: undefined } as any,
+          cycleStart,
+          normalizeRange
+        ) as ReadingTarget;
+
+        const finalTarget: ReadingTarget = {
+          ...reset,
+          repeat: undefined,
+          nextResetAt: undefined,
+          lastResetAt: cycleStart,
+          cycleStartAt: cycleStart,
+          status: "active" as TargetStatus,
+          doneAt: undefined,
+        };
+
+        let nt = ensureSingleActive(finalTarget);
+        nt = recomputeTargetStatus(nt);
+        return nt;
+      }
+
+      const nextNext = computeNextResetAt(cycleStart, maybeRepeat);
+
+      const rolled = resetTargetForNewCycle(
+        {
+          ...t,
+          repeat: maybeRepeat,
+          cycleStartAt: cycleStart,
+          lastResetAt: cycleStart,
+          nextResetAt: nextNext,
+        },
+        cycleStart,
+        normalizeRange
+      ) as ReadingTarget;
+
+      let nt = ensureSingleActive(rolled);
+      nt = recomputeTargetStatus(nt);
+      return nt;
+    });
+
+    set({ targets });
+    await persist(targets);
+  },
+
   addTarget: async (title) => {
+    const now = Date.now();
     const next: ReadingTarget = {
       id: uid(),
-      createdAt: Date.now(),
+      createdAt: now,
       title: title.trim() || "Untitled target",
-      status: "active",
+      status: "active" as TargetStatus,
       items: [],
+
+      cycleStartAt: now,
+      nextResetAt: undefined,
+      lastResetAt: undefined,
+      cycleCompletedAt: undefined,
+      repeat: undefined,
     };
+
     const targets = [next, ...get().targets];
     set({ targets });
     await persist(targets);
     return next.id;
+  },
+
+  updateTargetTitle: async (targetId: string, title: string) => {
+    const nextTitle = title.trim() || "Untitled target";
+    const targets = get().targets.map((t) =>
+      t.id === targetId ? { ...t, title: nextTitle } : t
+    );
+    set({ targets });
+    await persist(targets);
   },
 
   deleteTarget: async (id) => {
@@ -133,7 +368,7 @@ export const useReadingTargetsStore = create<TargetsState>((set, get) => ({
     const targets = get().targets.map((t) => {
       if (t.id !== targetId) return t;
 
-      const hasActive = t.items.some((it) => it.status === "active");
+      const hasActive = (t.items ?? []).some((it) => it.status === "active");
 
       const { start, end } = normalizeRange(
         itemInput.jumpPage ?? itemInput.startPage ?? 1,
@@ -142,7 +377,7 @@ export const useReadingTargetsStore = create<TargetsState>((set, get) => ({
 
       const item: TargetItem = {
         id: uid(),
-        status: hasActive ? "pending" : "active",
+        status: hasActive ? ("pending" as const) : ("active" as const),
         doneAt: undefined,
         activeFromPage: start,
         cursorPage: start,
@@ -152,21 +387,12 @@ export const useReadingTargetsStore = create<TargetsState>((set, get) => ({
         jumpPage: start,
       };
 
-      let nextTarget: ReadingTarget = { ...t, items: [...t.items, item] };
+      let nextTarget: ReadingTarget = { ...t, items: [...(t.items ?? []), item] };
       nextTarget = ensureSingleActive(nextTarget);
       nextTarget = recomputeTargetStatus(nextTarget);
       return nextTarget;
     });
 
-    set({ targets });
-    await persist(targets);
-  },
-
-  updateTargetTitle: async (targetId: string, title: string) => {
-    const nextTitle = title.trim() || "Untitled target";
-    const targets = get().targets.map((t) =>
-      t.id === targetId ? { ...t, title: nextTitle } : t
-    );
     set({ targets });
     await persist(targets);
   },
@@ -193,11 +419,11 @@ export const useReadingTargetsStore = create<TargetsState>((set, get) => ({
     const targets = get().targets.map((t) => {
       if (t.id !== targetId) return t;
 
-      const chosen = t.items.find((it) => it.id === itemId);
+      const chosen = (t.items ?? []).find((it) => it.id === itemId);
       if (!chosen) return t;
       if (chosen.status === "done") return t;
 
-      const nextItems = t.items.map((it) => {
+      const nextItems = (t.items ?? []).map((it) => {
         if (it.status === "done") return it;
 
         if (it.id === itemId) {
@@ -226,13 +452,12 @@ export const useReadingTargetsStore = create<TargetsState>((set, get) => ({
     const targets = get().targets.map((t) => {
       if (t.id !== targetId) return t;
 
-      const nextItems = t.items.map((it) => {
+      const nextItems = (t.items ?? []).map((it) => {
         if (it.id !== itemId) return it;
         if (it.status !== "active") return it;
 
         const { start, end } = normalizeRange(it.activeFromPage, it.endPage);
         const clamped = Math.max(start, Math.min(end, c));
-
         return { ...it, cursorPage: clamped };
       });
 
@@ -246,25 +471,25 @@ export const useReadingTargetsStore = create<TargetsState>((set, get) => ({
   markItemDone: async (targetId, itemId) => {
     const now = Date.now();
 
-    // ✅ capture bookUri before mutate (fallback)
     const before = get().targets.find((t) => t.id === targetId);
-    const fallbackBookUri = before?.items?.find((it) => it.bookUri)?.bookUri ?? "";
+    const fallbackBookUri =
+      before?.items?.find((it) => it.bookUri)?.bookUri ?? "";
 
     let becameDone = false;
+    let becameCycleCompleted = false;
 
     const targets = get().targets.map((t) => {
       if (t.id !== targetId) return t;
 
       const wasDone = t.status === "done";
+      const wasCycleCompleted = Boolean(t.cycleCompletedAt);
 
-      // 1) mark done (idempotent)
-      const items = t.items.map((it) => {
+      const items = (t.items ?? []).map((it) => {
         if (it.id !== itemId) return it;
-        if (it.status === "done") return it; // prevent double
+        if (it.status === "done") return it;
         return { ...it, status: "done" as const, doneAt: it.doneAt ?? now };
       });
 
-      // 2) promote next pending -> active if no active remains
       const hasActive = items.some((it) => it.status === "active");
       let nextItems = items;
 
@@ -293,8 +518,15 @@ export const useReadingTargetsStore = create<TargetsState>((set, get) => ({
       nextTarget = ensureSingleActive(nextTarget);
       nextTarget = recomputeTargetStatus(nextTarget);
 
-      if (!wasDone && nextTarget.status === "done") {
-        becameDone = true;
+      if (t.repeat) {
+        const isCycleCompleted = Boolean(nextTarget.cycleCompletedAt);
+        if (!wasCycleCompleted && isCycleCompleted) {
+          becameCycleCompleted = true;
+        }
+      } else {
+        if (!wasDone && nextTarget.status === "done") {
+          becameDone = true;
+        }
       }
 
       return nextTarget;
@@ -303,7 +535,7 @@ export const useReadingTargetsStore = create<TargetsState>((set, get) => ({
     set({ targets });
     await persist(targets);
 
-    if (becameDone) {
+    if (becameDone || becameCycleCompleted) {
       useReadingGamificationStore.getState().onTargetCompleted({
         at: Date.now(),
         bookUri: fallbackBookUri,
@@ -315,7 +547,7 @@ export const useReadingTargetsStore = create<TargetsState>((set, get) => ({
     const targets = get().targets.map((t) => {
       if (t.id !== targetId) return t;
 
-      const nextItems = t.items.map((it) => {
+      const nextItems = (t.items ?? []).map((it) => {
         if (it.status === "active" && it.id !== itemId) {
           return { ...it, status: "pending" as const };
         }
@@ -341,10 +573,12 @@ export const useReadingTargetsStore = create<TargetsState>((set, get) => ({
 
       let next: ReadingTarget = {
         ...t,
-        status: "active",
+        status: "active" as TargetStatus,
         doneAt: undefined,
+        cycleCompletedAt: undefined,
         items: nextItems,
       };
+
       next = ensureSingleActive(next);
       next = recomputeTargetStatus(next);
       return next;
@@ -358,7 +592,7 @@ export const useReadingTargetsStore = create<TargetsState>((set, get) => ({
     const targets = get().targets.map((t) => {
       if (t.id !== targetId) return t;
 
-      const resetItems = t.items.map((it) => {
+      const resetItems = (t.items ?? []).map((it) => {
         const { start, end } = normalizeRange(
           it.jumpPage ?? it.startPage ?? 1,
           it.endPage ?? it.startPage ?? 1
@@ -378,8 +612,9 @@ export const useReadingTargetsStore = create<TargetsState>((set, get) => ({
 
       let next: ReadingTarget = {
         ...t,
-        status: "active",
+        status: "active" as TargetStatus,
         doneAt: undefined,
+        cycleCompletedAt: undefined,
         items: resetItems,
       };
 

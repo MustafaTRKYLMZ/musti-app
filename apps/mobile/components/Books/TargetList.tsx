@@ -31,7 +31,6 @@ const makeTargetKey = (targetId: string, date: string) =>
   `${targetId}::${date}`;
 
 const sumMinutesFromEvents = (events: ReadingEvent[]) => {
-  // durationMs optional olabilir
   const totalMs = (events ?? []).reduce((acc, e) => {
     const ms = (e as any)?.durationMs;
     if (typeof ms === "number" && Number.isFinite(ms) && ms > 0)
@@ -40,6 +39,20 @@ const sumMinutesFromEvents = (events: ReadingEvent[]) => {
   }, 0);
   return Math.max(0, Math.round(totalMs / 60000));
 };
+
+function formatResetLabel(ts?: number) {
+  if (!ts) return null;
+  const d = dayjs(ts);
+  const today = dayjs().startOf("day");
+  const diffDays = d.startOf("day").diff(today, "day");
+
+  const timeStr = d.format("HH:mm");
+  if (diffDays === 0) return `Today ${timeStr}`;
+  if (diffDays === 1) return `Tomorrow ${timeStr}`;
+  if (diffDays === -1) return `Yesterday ${timeStr}`;
+
+  return d.format("D MMM HH:mm");
+}
 
 export const TargetList = ({
   onOpenCreate,
@@ -55,19 +68,28 @@ export const TargetList = ({
   const deleteTarget = useReadingTargetsStore((s) => s.deleteTarget);
   const markItemDone = useReadingTargetsStore((s) => s.markItemDone);
   const setActiveItem = useReadingTargetsStore((s) => s.setActiveItem);
+  const skipTargetCycle = useReadingTargetsStore((s) => s.skipTargetCycle);
 
-  // pages: target-level stats store (senin mevcut mantığın)
+  // pages stats
   const byTargetDate = useReadingStatsStore((s) => s.byTargetDate);
 
-  // minutes: events store (durationMs üzerinden)
+  // minutes events
   const events = useReadingEventsStore((s) => s.events);
 
+  // hydrate once
   useEffect(() => {
     if (!hydrated) hydrate();
   }, [hydrated, hydrate]);
 
-  // ✅ local date (Amsterdam-safe)
-  const today = useMemo(() => dayjs().format("YYYY-MM-DD"), []);
+  // ✅ keep "today" fresh (optional, but nice)
+  const [today, setToday] = useState(() => dayjs().format("YYYY-MM-DD"));
+  useEffect(() => {
+    const id = setInterval(() => {
+      const next = dayjs().format("YYYY-MM-DD");
+      setToday((prev) => (prev === next ? prev : next));
+    }, 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   const active = useMemo(() => {
     return targets
@@ -84,27 +106,17 @@ export const TargetList = ({
       );
   }, [targets]);
 
-  /**
-   * ✅ Target card "Today pages"
-   * - ONLY this target's reading
-   * - ONLY mode:"target"
-   */
   const getTodayTargetPagesForTarget = useCallback(
     (target: ReadingTarget) => {
       if (!target?.id) return 0;
       const key = makeTargetKey(target.id, today);
       const stat = byTargetDate?.[key];
-
       const n = stat?.pagesByMode?.target ?? 0;
       return Math.max(0, Math.floor(Number(n) || 0));
     },
     [byTargetDate, today]
   );
 
-  /**
-   * ✅ Target card "Today minutes"
-   * - events filtered by date + mode:"target" + targetId
-   */
   const getTodayTargetMinutesForTarget = useCallback(
     (target: ReadingTarget) => {
       if (!target?.id) return 0;
@@ -126,18 +138,30 @@ export const TargetList = ({
     const todayPages = getTodayTargetPagesForTarget(item);
     const todayMinutes = getTodayTargetMinutesForTarget(item);
 
+    const isRepeat = Boolean((item as any).repeat);
+    const cycleCompleted = Boolean((item as any).cycleCompletedAt);
+    const nextResetText = isRepeat
+      ? formatResetLabel((item as any).nextResetAt)
+      : null;
+
     return (
       <TargetCard
         target={item}
         todayPages={todayPages}
         todayMinutes={todayMinutes}
+        repeatEnabled={isRepeat}
+        cycleCompleted={cycleCompleted}
+        nextResetText={nextResetText}
+        onSkipCycle={async (t) => {
+          await skipTargetCycle(t.id);
+        }}
         onBeforeOpen={async (targetId, itemId) => {
           await setActiveItem(targetId, itemId);
         }}
-        onOpen={(t) => {
+        onOpen={(t, openPage) => {
           router.push({
             pathname: "/(tabs)/bookshelf/target/target-viewer",
-            params: { targetId: t.id },
+            params: { targetId: t.id, jumpPage: String(openPage) },
           });
         }}
         onDelete={(t) => deleteTarget(t.id)}
