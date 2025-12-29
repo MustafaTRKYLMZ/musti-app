@@ -1,8 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { View, StyleSheet, Pressable, TextInput, Platform } from "react-native";
-import DateTimePicker, {
-  DateTimePickerEvent,
-} from "@react-native-community/datetimepicker";
+import { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import dayjs from "dayjs";
 import { MText, spacing, radii, useTheme } from "@budget/ui-native";
 
@@ -18,8 +16,12 @@ import { useToast } from "@/components/ui/ToastProvider";
 import { AppChip } from "@/components/ui/AppChip";
 import { TargetType, type TargetRepeat } from "@budget/core";
 import { MCreateModal } from "@/components/ui/modals/MCreateModal";
+import { RepeatEditor } from "@/components/Books/RepeatEditor";
+import { isValidTimeOfDay } from "@/utils/normalizeTimeOfDay";
+import { clampInt } from "@/utils/number";
+import { mergeDateWithTimeOfDay } from "@/utils/mergeDateWithTimeOfDay";
 
-type Props = {
+type CreateTargetModalProps = {
   visible: boolean;
   onClose: () => void;
   books: LocalPdfFile[];
@@ -34,44 +36,13 @@ type SectionPick = {
   endPage: number;
 };
 
-const clampInt = (n: any) => {
-  const v = Math.floor(Number(n) || 0);
-  return Math.max(0, Math.min(999999, v));
-};
-
-function isValidTimeOfDay(v: string) {
-  if (!/^\d{2}:\d{2}$/.test(v)) return false;
-  const [h, m] = v.split(":").map((x) => Number(x));
-  if (!Number.isFinite(h) || !Number.isFinite(m)) return false;
-  return h >= 0 && h <= 23 && m >= 0 && m <= 59;
-}
-
-function normalizeTimeOfDay(v: string) {
-  const cleaned = v.replace(/[^\d:]/g, "");
-  if (cleaned.length === 5 && isValidTimeOfDay(cleaned)) return cleaned;
-  return cleaned;
-}
-
-function mergeDateWithTimeOfDay(date: Date, timeOfDay: string) {
-  const [hh, mm] = timeOfDay.split(":").map((x) => Number(x));
-  const safeH = Number.isFinite(hh) ? hh : 0;
-  const safeM = Number.isFinite(mm) ? mm : 0;
-
-  return dayjs(date)
-    .hour(safeH)
-    .minute(safeM)
-    .second(0)
-    .millisecond(0)
-    .valueOf();
-}
-
-export function CreateTargetModal({
+export const CreateTargetModal = ({
   visible,
   onClose,
   books,
   onOpenChapters,
   initialBookUri,
-}: Props) {
+}: CreateTargetModalProps) => {
   const { colors } = useTheme();
   const { showToast } = useToast();
 
@@ -249,7 +220,6 @@ export function CreateTargetModal({
       end = { kind: "until", untilAt };
     } else if (endKind === "count") {
       const remaining = Math.max(1, Math.floor(Number(countRemaining) || 1));
-      // ✅ new model: total + remaining
       end = { kind: "count", total: remaining, remaining } as any;
     }
 
@@ -279,7 +249,6 @@ export function CreateTargetModal({
       const id = await addTarget(t);
       setTargetId(id);
 
-      // ✅ apply repeat immediately after create
       const payload = buildRepeatPayload();
       if (payload) {
         await setTargetRepeat(id, payload);
@@ -369,13 +338,6 @@ export function CreateTargetModal({
     showToast({ message: "Target saved.", duration: 2000 });
   };
 
-  const onUntilPicked = (_e: DateTimePickerEvent, d?: Date) => {
-    if (Platform.OS !== "ios") setShowUntilPicker(false);
-    if (d) setUntilDate(d);
-  };
-
-  const untilLabel = dayjs(untilDate).format("D MMM YYYY");
-
   return (
     <MCreateModal
       visible={visible}
@@ -455,223 +417,28 @@ export function CreateTargetModal({
       </View>
 
       {/* ✅ Repeat (create stage) */}
-      <MText style={styles.sectionTitle} color="textSecondary">
-        Repeat
-      </MText>
-
-      <View style={styles.chipsRow}>
-        <AppChip
-          label={repeatEnabled ? "On" : "Off"}
-          icon="repeat-outline"
-          active={repeatEnabled}
-          onPress={() => setRepeatEnabled((v) => !v)}
-          colors={chipColors}
-          size="md"
-          pill={false}
-        />
-      </View>
-
-      {repeatEnabled ? (
-        <>
-          <MText style={styles.sectionTitle} color="textSecondary">
-            Frequency
-          </MText>
-
-          <View style={styles.chipsRow}>
-            <AppChip
-              label="Daily"
-              icon="calendar-outline"
-              active={repeatFreq === "daily"}
-              onPress={() => setRepeatFreq("daily")}
-              colors={chipColors}
-              size="md"
-              pill={false}
-            />
-            <AppChip
-              label="Weekly"
-              icon="calendar-outline"
-              active={repeatFreq === "weekly"}
-              onPress={() => setRepeatFreq("weekly")}
-              colors={chipColors}
-              size="md"
-              pill={false}
-            />
-            <AppChip
-              label="Monthly"
-              icon="calendar-outline"
-              active={repeatFreq === "monthly"}
-              onPress={() => setRepeatFreq("monthly")}
-              colors={chipColors}
-              size="md"
-              pill={false}
-            />
-          </View>
-
-          <MText style={styles.sectionTitle} color="textSecondary">
-            Interval
-          </MText>
-          <TextInput
-            value={repeatInterval}
-            onChangeText={(t) => setRepeatInterval(t.replace(/[^\d]/g, ""))}
-            keyboardType="number-pad"
-            placeholder="1"
-            placeholderTextColor={colors.textSecondary}
-            style={[
-              styles.pageInput,
-              {
-                borderColor: colors.borderSubtle,
-                backgroundColor: colors.surfaceElevated ?? colors.surface,
-                color: colors.textPrimary,
-              },
-            ]}
-          />
-
-          {repeatFreq === "weekly" ? (
-            <>
-              <MText style={styles.sectionTitle} color="textSecondary">
-                Weekdays
-              </MText>
-              <View style={styles.weekdaysRow}>
-                {[
-                  ["Mon", 1],
-                  ["Tue", 2],
-                  ["Wed", 3],
-                  ["Thu", 4],
-                  ["Fri", 5],
-                  ["Sat", 6],
-                  ["Sun", 0],
-                ].map(([label, d]) => (
-                  <Pressable
-                    key={String(d)}
-                    onPress={() => toggleWeekday(d as number)}
-                    style={[
-                      styles.weekdayChip,
-                      {
-                        borderColor: colors.borderSubtle,
-                        backgroundColor: repeatWeekdays.includes(d as number)
-                          ? colors.surfaceElevated
-                          : colors.surface,
-                      },
-                    ]}
-                  >
-                    <MText style={{ fontWeight: "900", opacity: 0.8 }}>
-                      {label}
-                    </MText>
-                  </Pressable>
-                ))}
-              </View>
-            </>
-          ) : null}
-
-          <MText style={styles.sectionTitle} color="textSecondary">
-            Reset time (HH:mm)
-          </MText>
-          <TextInput
-            value={repeatTimeOfDay}
-            onChangeText={(t) => setRepeatTimeOfDay(normalizeTimeOfDay(t))}
-            placeholder="00:00"
-            placeholderTextColor={colors.textSecondary}
-            style={[
-              styles.pageInput,
-              {
-                borderColor: colors.borderSubtle,
-                backgroundColor: colors.surfaceElevated ?? colors.surface,
-                color: colors.textPrimary,
-              },
-            ]}
-          />
-          {!isValidTimeOfDay(repeatTimeOfDay) ? (
-            <MText style={{ opacity: 0.7, marginTop: spacing.xs }}>
-              Format: HH:mm (e.g. 08:30)
-            </MText>
-          ) : null}
-
-          <MText style={styles.sectionTitle} color="textSecondary">
-            End
-          </MText>
-
-          <View style={styles.chipsRow}>
-            <AppChip
-              label="Never"
-              icon="infinite-outline"
-              active={endKind === "never"}
-              onPress={() => setEndKind("never")}
-              colors={chipColors}
-              size="md"
-              pill={false}
-            />
-            <AppChip
-              label="Until"
-              icon="calendar-outline"
-              active={endKind === "until"}
-              onPress={() => setEndKind("until")}
-              colors={chipColors}
-              size="md"
-              pill={false}
-            />
-            <AppChip
-              label="Count"
-              icon="repeat-outline"
-              active={endKind === "count"}
-              onPress={() => setEndKind("count")}
-              colors={chipColors}
-              size="md"
-              pill={false}
-            />
-          </View>
-
-          {endKind === "until" ? (
-            <View style={{ marginTop: spacing.sm }}>
-              <Pressable
-                onPress={() => setShowUntilPicker(true)}
-                style={[
-                  styles.smallBtn,
-                  {
-                    borderColor: colors.borderSubtle,
-                    backgroundColor: colors.surface,
-                  },
-                ]}
-              >
-                <MText style={{ fontWeight: "900" }}>
-                  End date: {untilLabel}
-                </MText>
-              </Pressable>
-
-              {showUntilPicker ? (
-                <DateTimePicker
-                  value={untilDate}
-                  mode="date"
-                  display={Platform.OS === "ios" ? "spinner" : "default"}
-                  onChange={onUntilPicked}
-                />
-              ) : null}
-            </View>
-          ) : null}
-
-          {endKind === "count" ? (
-            <View style={{ marginTop: spacing.sm }}>
-              <TextInput
-                value={countRemaining}
-                onChangeText={(t) => setCountRemaining(t.replace(/[^\d]/g, ""))}
-                keyboardType="number-pad"
-                placeholder="10"
-                placeholderTextColor={colors.textSecondary}
-                style={[
-                  styles.pageInput,
-                  {
-                    borderColor: colors.borderSubtle,
-                    backgroundColor: colors.surfaceElevated ?? colors.surface,
-                    color: colors.textPrimary,
-                  },
-                ]}
-              />
-              <MText style={{ opacity: 0.7, marginTop: spacing.xs }}>
-                How many cycles (e.g. 10).
-              </MText>
-            </View>
-          ) : null}
-        </>
-      ) : null}
+      <RepeatEditor
+        sectionTitleStyle={styles.sectionTitle}
+        chipColors={chipColors}
+        repeatEnabled={repeatEnabled}
+        onToggleEnabled={() => setRepeatEnabled((v) => !v)}
+        repeatFreq={repeatFreq}
+        onChangeFreq={setRepeatFreq}
+        repeatInterval={repeatInterval}
+        onChangeInterval={setRepeatInterval}
+        selectedWeekdays={repeatWeekdays}
+        onToggleWeekday={toggleWeekday}
+        repeatTimeOfDay={repeatTimeOfDay}
+        onChangeTimeOfDay={setRepeatTimeOfDay}
+        endKind={endKind}
+        onChangeEndKind={setEndKind}
+        untilDate={untilDate}
+        onChangeUntilDate={setUntilDate}
+        countRemaining={countRemaining}
+        onChangeCountRemaining={setCountRemaining}
+        showUntilPicker={showUntilPicker}
+        onSetShowUntilPicker={setShowUntilPicker}
+      />
 
       <View style={{ marginTop: spacing.md }}>
         <MSelectBottomSheet
@@ -841,7 +608,7 @@ export function CreateTargetModal({
       <View style={{ height: spacing.lg }} />
     </MCreateModal>
   );
-}
+};
 
 const styles = StyleSheet.create({
   sectionTitle: {

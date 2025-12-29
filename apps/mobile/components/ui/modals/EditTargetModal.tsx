@@ -25,6 +25,11 @@ import { TargetItemsList } from "@/components/Books/TargetItemsList";
 import { useToast } from "@/components/ui/ToastProvider";
 import { useBooksStore } from "@/store/bookshelf/useBooksStore";
 import { TargetType, type TargetRepeat } from "@budget/core";
+import { clampInt } from "@/utils/number";
+import {
+  isValidTimeOfDay,
+  normalizeTimeOfDay,
+} from "@/utils/normalizeTimeOfDay";
 
 type Props = {
   visible: boolean;
@@ -39,24 +44,6 @@ type SectionPick = {
   startPage: number;
   endPage: number;
 };
-
-const clampInt = (n: any) => {
-  const v = Math.floor(Number(n) || 0);
-  return Math.max(0, Math.min(999999, v));
-};
-
-function isValidTimeOfDay(v: string) {
-  if (!/^\d{2}:\d{2}$/.test(v)) return false;
-  const [h, m] = v.split(":").map((x) => Number(x));
-  if (!Number.isFinite(h) || !Number.isFinite(m)) return false;
-  return h >= 0 && h <= 23 && m >= 0 && m <= 59;
-}
-
-function normalizeTimeOfDay(v: string) {
-  const cleaned = v.replace(/[^\d:]/g, "");
-  if (cleaned.length === 5 && isValidTimeOfDay(cleaned)) return cleaned;
-  return cleaned;
-}
 
 function mergeDateWithTimeOfDay(date: Date, timeOfDay: string) {
   const [hh, mm] = (timeOfDay || "00:00").split(":").map((x) => Number(x));

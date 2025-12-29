@@ -16,6 +16,7 @@ import {
   resetTargetForNewCycle,
   rolloverRepeatingTargets,
 } from "@/utils/targetRepeat";
+import { clampInt } from "@/utils/number";
 
 type TargetsState = {
   hydrated: boolean;
@@ -68,10 +69,6 @@ async function persist(targets: ReadingTarget[]) {
   await AsyncStorage.setItem(KEY, JSON.stringify({ targets }));
 }
 
-function clampInt(n: any) {
-  const v = Math.floor(Number(n) || 0);
-  return Math.max(0, Math.min(999999, v));
-}
 
 function normalizeRange(startLike: any, endLike: any) {
   const start = Math.max(1, clampInt(startLike) || 1);

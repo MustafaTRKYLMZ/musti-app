@@ -8,12 +8,7 @@ import { scheduleMotivationNudgeIfNeeded } from "@/utils/motivation";
 import { useToast } from "@/components/ui/ToastProvider";
 
 import type { ReaderShellProps } from "@/components/Books/ReaderShell";
-
-function clampInt(n: any) {
-  const v = Math.floor(Number(n) || 0);
-  if (!Number.isFinite(v)) return 0;
-  return Math.max(0, Math.min(999999, v));
-}
+import { clampInt } from "@/utils/number";
 
 export function useTargetReaderController(): ReaderShellProps {
   const router = useRouter();
