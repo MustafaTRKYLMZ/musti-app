@@ -11,27 +11,55 @@ import { MText, spacing, radii, iconSizes, useTheme } from "@budget/ui-native";
 import { IconButton } from "@/components/ui/AppIcon";
 
 import type { LocalPdfFile } from "@/utils/getPdfsDirectory";
-import { useReadingPlanStore } from "@/store/bookshelf/useReadingPlanStore";
+import type { PlanItemConfig } from "@budget/core";
 
 import { usePlanFormController } from "@/components/Books/controllers/usePlanFormController";
 import { PlanForm } from "@/components/Books/forms/PlanForm";
 
-type Props = {
-  visible: boolean;
-  onClose: () => void;
-  books: LocalPdfFile[];
+type Plan = {
+  id: string;
+  name: string;
+  items: Array<{ bookUri: string; bookName: string; pagesPerDay: number }>;
 };
 
-export function CreatePlanModal({ visible, onClose, books }: Props) {
+type Props = {
+  visible: boolean;
+  planId: string | null;
+  plan: Plan | null;
+  books: LocalPdfFile[];
+  onClose: () => void;
+
+  updatePlan: (args: {
+    planId: string;
+    name: string;
+    items: PlanItemConfig[];
+  }) => void;
+  deletePlan: (planId: string) => void;
+  onDeleted?: () => void;
+};
+
+export function EditPlanModal({
+  visible,
+  planId,
+  plan,
+  books,
+  onClose,
+  updatePlan,
+  deletePlan,
+  onDeleted,
+}: Props) {
   const { colors } = useTheme();
-  const createPlan = useReadingPlanStore((s) => s.createPlan);
 
   const c = usePlanFormController({
-    mode: "create",
+    mode: "edit",
     visible,
+    planId,
+    plan,
     books,
-    createPlan,
+    updatePlan,
+    deletePlan,
     onClose,
+    onDeleted,
   });
 
   return (
@@ -63,9 +91,14 @@ export function CreatePlanModal({ visible, onClose, books }: Props) {
           ]}
         >
           <View style={styles.modalHeader}>
-            <MText variant="heading1" color="textPrimary">
-              Create plan
-            </MText>
+            <View style={{ flex: 1 }}>
+              <MText variant="heading1" color="textPrimary" numberOfLines={1}>
+                Edit plan
+              </MText>
+              <MText variant="caption" color="textSecondary" numberOfLines={1}>
+                {plan?.name ?? ""}
+              </MText>
+            </View>
 
             <IconButton
               name="close-outline"
@@ -76,8 +109,8 @@ export function CreatePlanModal({ visible, onClose, books }: Props) {
           </View>
 
           <PlanForm
-            mode="create"
-            subtitle=""
+            mode="edit"
+            subtitle={plan?.name ?? ""}
             books={books}
             control={c.control}
             errors={c.errors}
@@ -103,6 +136,7 @@ export function CreatePlanModal({ visible, onClose, books }: Props) {
             removeAllBooks={c.removeAllBooks}
             setOrderFromDnd={c.setOrderFromDnd}
             onSave={c.save}
+            onDelete={c.confirmDelete}
           />
         </View>
       </KeyboardAvoidingView>
@@ -130,6 +164,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: spacing.md,
+    gap: spacing.sm,
   },
   closeButton: { padding: spacing.xs },
 });

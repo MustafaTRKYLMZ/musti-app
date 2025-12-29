@@ -1,6 +1,5 @@
 import React, { FC, useEffect, useMemo } from "react";
 import { View, FlatList, StyleSheet } from "react-native";
-import { useRouter } from "expo-router";
 import dayjs from "dayjs";
 import { bookshelfTheme, MText, radii, spacing } from "@budget/ui-native";
 import { ShelfHeader } from "../ShelfHeader";
@@ -26,6 +25,9 @@ type PlanListProps = {
   suppressNextPlanOpenRef: React.MutableRefObject<boolean>;
   openPlanDirect: (planId: string) => void;
   handleDeletePlan: (planId: string) => void;
+
+  // ✅ new: open edit modal
+  openEditPlan: (planId: string) => void;
 };
 
 const sumTodayMinutesForPlan = (args: {
@@ -55,8 +57,6 @@ const sumTodayMinutesForPlan = (args: {
     totalMs += ms;
   }
 
-  // 0 yazmasın diye istersen Math.ceil kullanabilirsin:
-  // return Math.ceil(totalMs / 60000);
   return Math.round(totalMs / 60000);
 };
 
@@ -66,9 +66,8 @@ export const PlanList: FC<PlanListProps> = ({
   suppressNextPlanOpenRef,
   openPlanDirect,
   handleDeletePlan,
+  openEditPlan,
 }) => {
-  const router = useRouter();
-
   const events = useReadingEventsStore((s) => s.events);
 
   const today = useMemo(() => dayjs().format("YYYY-MM-DD"), []);
@@ -86,7 +85,6 @@ export const PlanList: FC<PlanListProps> = ({
       const bDone = (b.totalReadToday ?? 0) >= bTotal && bTotal > 0;
 
       if (aDone !== bDone) return aDone ? 1 : -1;
-
       return 0;
     });
   }, [plans]);
@@ -150,10 +148,8 @@ export const PlanList: FC<PlanListProps> = ({
                         300
                       );
 
-                      router.push({
-                        pathname: "/(tabs)/bookshelf/plan/edit-plan",
-                        params: { planId: item.id },
-                      });
+                      // ✅ modal open
+                      openEditPlan(item.id);
                     }}
                     onDeletePlan={() => {
                       suppressNextPlanOpenRef.current = true;
@@ -200,12 +196,10 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingRight: spacing.lg,
   },
-
   cardItem: {
     width: 300,
     marginRight: spacing.sm,
   },
-
   emptyPlanShelf: {
     borderRadius: radii.lg,
     borderWidth: 1,

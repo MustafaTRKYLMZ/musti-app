@@ -1,5 +1,4 @@
-// apps/mobile/components/pdf/PdfModal.tsx
-import React, { useState } from "react";
+import React from "react";
 import {
   Modal,
   View,
@@ -7,60 +6,32 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from "react-native";
-import * as DocumentPicker from "expo-document-picker";
-import * as FileSystem from "expo-file-system/legacy";
 import { MText, spacing, radii, useTheme } from "@budget/ui-native";
-import { getPdfsDirectory } from "@/utils/getPdfsDirectory";
 
-interface AddPdfModalProps {
+import { useImportPdfController } from "@/components/Books/controllers/useImportPdfController";
+
+type Props = {
   visible: boolean;
   onClose: () => void;
-  onPdfImported?: (doc: { uri: string; name: string }) => void;
-}
+  onBookImported?: (doc: { uri: string; name: string }) => void;
+};
 
-export const AddPdfModal: React.FC<AddPdfModalProps> = ({
+export const AddBookModal: React.FC<Props> = ({
   visible,
   onClose,
-  onPdfImported,
+  onBookImported,
 }) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const theme = useTheme();
-  const { colors } = theme;
+  const { colors } = useTheme();
 
-  const handlePickPdf = async () => {
-    try {
-      setIsLoading(true);
-
-      const result = await DocumentPicker.getDocumentAsync({
-        type: "application/pdf",
-        copyToCacheDirectory: true,
-        multiple: false,
-      });
-
-      if (result.canceled) return;
-
-      const asset = result.assets[0];
-      const safeName =
-        asset.name?.replace(/\s+/g, "_") || `pdf-${Date.now()}.pdf`;
-
-      const pdfDir = await getPdfsDirectory();
-      const destPath = pdfDir + `${Date.now()}-${safeName}`;
-
-      await FileSystem.copyAsync({
-        from: asset.uri,
-        to: destPath,
-      });
-
-      onPdfImported?.({
-        uri: destPath,
-        name: safeName,
-      });
-    } catch (e) {
+  const c = useImportPdfController({
+    onImported: (doc) => {
+      onBookImported?.(doc);
+      onClose();
+    },
+    onError: (e) => {
       console.warn("PDF import error:", e);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+  });
 
   return (
     <Modal
@@ -70,12 +41,7 @@ export const AddPdfModal: React.FC<AddPdfModalProps> = ({
       onRequestClose={onClose}
     >
       <View
-        style={[
-          styles.backdrop,
-          {
-            backgroundColor: colors.backdropStrong,
-          },
-        ]}
+        style={[styles.backdrop, { backgroundColor: colors.backdropStrong }]}
       >
         <View
           style={[
@@ -88,7 +54,7 @@ export const AddPdfModal: React.FC<AddPdfModalProps> = ({
           ]}
         >
           <MText variant="heading2" color="textPrimary" style={styles.title}>
-            Add PDF
+            Add book
           </MText>
 
           <MText
@@ -100,11 +66,17 @@ export const AddPdfModal: React.FC<AddPdfModalProps> = ({
           </MText>
 
           <TouchableOpacity
-            onPress={handlePickPdf}
-            style={[styles.primaryButton, { backgroundColor: colors.primary }]}
-            disabled={isLoading}
+            onPress={c.pickAndImport}
+            style={[
+              styles.primaryButton,
+              {
+                backgroundColor: colors.primary,
+                opacity: c.isLoading ? 0.8 : 1,
+              },
+            ]}
+            disabled={c.isLoading}
           >
-            {isLoading ? (
+            {c.isLoading ? (
               <ActivityIndicator color={colors.textInverse} />
             ) : (
               <MText
@@ -117,8 +89,16 @@ export const AddPdfModal: React.FC<AddPdfModalProps> = ({
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <MText variant="body" color="textPrimary">
+          <TouchableOpacity
+            onPress={onClose}
+            style={styles.closeButton}
+            disabled={c.isLoading}
+          >
+            <MText
+              variant="body"
+              color="textPrimary"
+              style={{ opacity: c.isLoading ? 0.6 : 1 }}
+            >
               Close
             </MText>
           </TouchableOpacity>
@@ -129,10 +109,7 @@ export const AddPdfModal: React.FC<AddPdfModalProps> = ({
 };
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
+  backdrop: { flex: 1, justifyContent: "flex-end" },
   modalContent: {
     borderTopLeftRadius: radii.xl,
     borderTopRightRadius: radii.xl,
@@ -143,12 +120,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: -4 },
     marginBottom: spacing["6xl"],
   },
-  title: {
-    marginBottom: spacing.sm,
-  },
-  description: {
-    marginBottom: spacing.lg,
-  },
+  title: { marginBottom: spacing.sm },
+  description: { marginBottom: spacing.lg },
   primaryButton: {
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.lg,
@@ -156,9 +129,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  primaryButtonText: {
-    fontWeight: "600",
-  },
+  primaryButtonText: { fontWeight: "600" },
   closeButton: {
     marginTop: spacing.lg,
     alignSelf: "flex-end",
