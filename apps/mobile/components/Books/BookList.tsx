@@ -1,151 +1,94 @@
-import React, { FC } from "react";
-import { View, StyleSheet } from "react-native";
-import { bookshelfTheme, MText, radii, spacing } from "@budget/ui-native";
-import { ShelfHeader } from "../ShelfHeader";
+// apps/mobile/components/Books/BookList.tsx
+import React from "react";
+import { View, StyleSheet, TouchableOpacity } from "react-native";
+import { MText, spacing } from "@budget/ui-native";
+import type { LocalPdfFile } from "@/utils/getPdfsDirectory";
 import { BookCard } from "./BookCard";
-import { SHELF_PLANK_HEIGHT } from "./ShelfPlankWrapper";
-import { ShelfWithPlank } from "./ShelfWithPlank";
 
-const { colors } = bookshelfTheme;
-const today = new Date().toISOString().split("T")[0];
+type GridBook = LocalPdfFile & { lastOpened: number };
 
-type BookListProps = {
-  setModalVisible: (visible: boolean) => void;
-  gridRows: Array<
-    Array<{
-      uri: string;
-      name: string;
-      lastOpened: number;
-    }>
-  >;
-  handleOpenPdf: (file: {
-    uri: string;
-    name: string;
-    lastOpened: number;
-  }) => void;
-  handleDeletePdf: (file: {
-    uri: string;
-    name: string;
-    lastOpened: number;
-  }) => void;
-  renameBook: (
-    file: { uri: string; name: string; lastOpened: number },
-    newName: string
-  ) => void;
+type Props = {
+  setModalVisible: (v: boolean) => void;
+  gridRows: GridBook[][];
+  handleOpenPdf: (item: LocalPdfFile) => void;
+  handleDeletePdf: (item: LocalPdfFile) => void;
 
-  progressMap: { [uri: string]: { lastPage: number; totalPages: number } };
+  onRequestRename?: (file: LocalPdfFile) => void;
 
-  // ✅ UPDATED
-  readingStats: { [key: string]: { pagesTotal: number; targetPages: number } };
+  progressMap: Record<string, { lastPage?: number; totalPages?: number }>;
+  readingStats?: Record<string, { pagesTotal: number; targetPages: number }>;
 };
 
-export const BookList: FC<BookListProps> = ({
+export function BookList({
   setModalVisible,
   gridRows,
   handleOpenPdf,
   handleDeletePdf,
-  renameBook,
+  onRequestRename,
   progressMap,
   readingStats,
-}) => {
-  const BOOK_SINK = 12;
+}: Props) {
+  const today = new Date().toISOString().slice(0, 10);
 
   return (
-    <View>
-      <ShelfHeader title="Books" handleOpen={() => setModalVisible(true)} />
-      <View style={styles.shelfInner}>
-        {gridRows.length === 0 ? (
-          <View style={styles.emptyState}>
-            <MText color="textSecondary">
-              No books yet. Use the plus button to add one.
-            </MText>
-          </View>
-        ) : (
-          <View style={styles.gridContent}>
-            {gridRows.map((row, rowIndex) => (
-              <ShelfWithPlank
-                key={rowIndex}
-                containerStyle={StyleSheet.flatten([
-                  styles.gridRowContainer,
-                  { paddingBottom: SHELF_PLANK_HEIGHT - 12 },
-                ])}
-              >
-                <View style={styles.gridRow}>
-                  {row.map((item) => {
-                    const progress = progressMap[item.uri];
+    <View style={{ marginTop: spacing.xl }}>
+      <View style={styles.headerRow}>
+        <MText variant="heading2" color="textPrimary">
+          Books
+        </MText>
 
-                    const statKey = `${item.uri}::${today}`;
-                    const todayStat = readingStats[statKey];
-
-                    const todayPages = todayStat?.pagesTotal ?? 0;
-                    const todayTargetPages = todayStat?.targetPages ?? 0;
-
-                    return (
-                      <View
-                        key={item.uri}
-                        style={[
-                          styles.gridItem,
-                          { transform: [{ translateY: BOOK_SINK }] },
-                        ]}
-                      >
-                        <BookCard
-                          file={item as any}
-                          onOpen={() => handleOpenPdf(item)}
-                          onDelete={() => handleDeletePdf(item)}
-                          lastPage={progress?.lastPage}
-                          totalPages={progress?.totalPages}
-                          todayPages={todayPages}
-                          todayTargetPages={todayTargetPages}
-                          onRename={(newName) => renameBook(item, newName)}
-                          variant="grid"
-                        />
-                      </View>
-                    );
-                  })}
-                </View>
-              </ShelfWithPlank>
-            ))}
-          </View>
-        )}
+        <TouchableOpacity onPress={() => setModalVisible(true)}>
+          <MText variant="body" color="textSecondary">
+            Add
+          </MText>
+        </TouchableOpacity>
       </View>
+
+      <View style={{ height: spacing.md }} />
+
+      {gridRows.map((row, rIdx) => (
+        <View key={rIdx} style={styles.row}>
+          {row.map((file) => {
+            const pm = progressMap[file.uri] ?? {};
+            const key = `${file.uri}::${today}`;
+            const stat = readingStats?.[key];
+
+            return (
+              <View key={file.uri} style={styles.cell}>
+                <BookCard
+                  file={file}
+                  variant="grid"
+                  onOpen={() => handleOpenPdf(file)}
+                  onDelete={() => handleDeletePdf(file)}
+                  onRequestRename={
+                    onRequestRename ? () => onRequestRename(file) : undefined
+                  }
+                  lastPage={pm.lastPage}
+                  totalPages={pm.totalPages}
+                  todayPages={stat?.pagesTotal ?? 0}
+                  todayTargetPages={stat?.targetPages ?? 0}
+                />
+              </View>
+            );
+          })}
+        </View>
+      ))}
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  shelfInner: {
+  headerRow: {
     paddingHorizontal: spacing.lg,
-    position: "relative",
-  },
-
-  emptyState: {
-    minHeight: 120,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: spacing.lg,
-    marginTop: spacing.lg,
-    borderRadius: radii.lg,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-  },
-
-  gridContent: {
-    paddingBottom: spacing.lg,
-    paddingRight: spacing.lg,
-  },
-
-  gridRowContainer: {
-    position: "relative",
-  },
-
-  gridRow: {
     flexDirection: "row",
+    alignItems: "center",
     justifyContent: "space-between",
-    alignItems: "flex-end",
   },
-
-  gridItem: {
-    width: "38%",
+  row: {
+    paddingHorizontal: spacing.lg,
+    flexDirection: "row",
+    gap: spacing.md,
+    marginBottom: spacing.md,
   },
+  cell: { flex: 1 },
 });

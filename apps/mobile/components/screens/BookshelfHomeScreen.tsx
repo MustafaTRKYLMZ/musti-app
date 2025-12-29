@@ -1,3 +1,4 @@
+// apps/mobile/app/(tabs)/bookshelf/index.tsx
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { View, StyleSheet, Alert, ScrollView } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
@@ -9,7 +10,6 @@ import {
   deleteLocalPdf,
   type LocalPdfFile,
 } from "@/utils/getPdfsDirectory";
-import { AddPdfModal } from "@/components/ui/pdf/AddPdfModal";
 import { useBooksStore } from "@/store/bookshelf/useBooksStore";
 import { useReadingStatsStore } from "@/store/bookshelf/useReadingStatsStore";
 import { useReadingPlanStore } from "@/store/bookshelf/useReadingPlanStore";
@@ -32,6 +32,10 @@ import { useBookshelfTabsStore } from "@/store/bookshelf/useBookshelfTabsStore";
 import { useReadingGamificationStore } from "@/store/bookshelf/readingGamification/useReadingGamificationStore";
 import { StreakCard } from "../Books/gamification/StreakCard";
 import { useGamificationSettingsStore } from "@/store/bookshelf/readingGamification/useGamificationSettingsStore";
+
+import { AddBookModal } from "../ui/modals/AddBookModal";
+import { EditPlanModal } from "../ui/modals/EditPlanModal";
+import { RenameBookModal } from "../ui/modals/RenameBookModal";
 
 const { colors, spacing, radii } = bookshelfTheme;
 
@@ -66,20 +70,31 @@ export default function BookshelfHomeScreen() {
   const setSelectedTab = useBookshelfTabsStore((s) => s.setSelected);
 
   const [books, setBooks] = useState<LocalPdfFile[]>([]);
-  const [modalVisible, setModalVisible] = useState(false);
+  const [addBookVisible, setAddBookVisible] = useState(false);
   const [planModalVisible, setPlanModalVisible] = useState(false);
   const [targetModalVisible, setTargetModalVisible] = useState(false);
+
   const [createTargetInitialBookUri, setCreateTargetInitialBookUri] = useState<
     string | null
   >(null);
 
-  const progressMap = useBooksStore((s) => s.items);
+  // ✅ rename modal (tek yerde)
+  const [renameModalVisible, setRenameModalVisible] = useState(false);
+  const [renameTarget, setRenameTarget] = useState<{
+    uri: string;
+    name: string;
+  } | null>(null);
 
-  // ✅ stats v3
+  // ✅ edit plan modal
+  const [editPlanModalVisible, setEditPlanModalVisible] = useState(false);
+  const [editPlanId, setEditPlanId] = useState<string | null>(null);
+
+  const progressMap = useBooksStore((s) => s.items);
   const byBookDate = useReadingStatsStore((s) => s.byBookDate);
 
   // plans
   const plans = useReadingPlanStore((s) => s.plans);
+  const updatePlan = useReadingPlanStore((s) => s.updatePlan);
   const deletePlan = useReadingPlanStore((s) => s.deletePlan);
   const ensureTodayPlan = useReadingPlanStore((s) => s.ensureTodayPlan);
   const renameBookInPlan = useReadingPlanStore((s) => s.renameBookInPlan);
@@ -114,25 +129,19 @@ export default function BookshelfHomeScreen() {
   // ✅ prevents chip press from opening plan when user pressed 3-dot
   const suppressNextPlanOpenRef = React.useRef(false);
 
-  // ✅ plan daily targets by bookUri (MAX if multiple)
   const planTargetByBookUri = useMemo(() => {
     const map: Record<string, number> = {};
-
     for (const plan of plans ?? []) {
       for (const it of plan.items ?? []) {
         const uri = it.bookUri;
         const t = Number(it.pagesPerDay ?? 0) || 0;
         if (!uri || t <= 0) continue;
-
         map[uri] = Math.max(map[uri] ?? 0, t);
       }
     }
-
     return map;
   }, [plans]);
 
-  // ✅ target (range) targets by bookUri (MAX if multiple targets)
-  // target pages = endPage - startPage (total range)
   const targetTargetByBookUri = useMemo(() => {
     const map: Record<string, number> = {};
     if (!targetsHydrated) return map;
@@ -144,16 +153,13 @@ export default function BookshelfHomeScreen() {
       const start = Math.max(1, Math.floor(active.startPage ?? 1));
       const end = Math.max(1, Math.floor(active.endPage ?? start));
       const total = Math.max(0, end - start);
-
       if (total <= 0) continue;
+
       map[active.bookUri] = Math.max(map[active.bookUri] ?? 0, total);
     }
-
     return map;
   }, [targetsHydrated, targets]);
 
-  // ✅ final target by bookUri (prefer showing something meaningful)
-  // We take MAX(planDailyTarget, targetRangeTarget)
   const todayTargetByBookUri = useMemo(() => {
     const out: Record<string, number> = {};
     const allUris = new Set<string>([
@@ -170,20 +176,13 @@ export default function BookshelfHomeScreen() {
     return out;
   }, [planTargetByBookUri, targetTargetByBookUri]);
 
-  // ✅ Shape adapter for BookCard UI (LastReadBook/BookList)
-  // key: `${bookUri}::${date}` -> { pagesTotal, targetPages }
   const readingStatsForCards = useMemo(() => {
     const out: Record<string, { pagesTotal: number; targetPages: number }> = {};
 
-    // pagesTotal from stats
     for (const [key, stat] of Object.entries(byBookDate ?? {})) {
-      out[key] = {
-        pagesTotal: stat?.pagesTotal ?? 0,
-        targetPages: 0,
-      };
+      out[key] = { pagesTotal: stat?.pagesTotal ?? 0, targetPages: 0 };
     }
 
-    // targetPages for today (bookUri -> `${bookUri}::${today}`)
     for (const [bookUri, targetPages] of Object.entries(todayTargetByBookUri)) {
       const k = `${bookUri}::${today}`;
       const cur = out[k];
@@ -192,7 +191,6 @@ export default function BookshelfHomeScreen() {
         targetPages: Number(targetPages ?? 0) || 0,
       };
     }
-
     return out;
   }, [byBookDate, todayTargetByBookUri, today]);
 
@@ -239,7 +237,6 @@ export default function BookshelfHomeScreen() {
 
   const handleDeletePlan = (planId: string) => {
     const planName = plans.find((p) => p.id === planId)?.name ?? "this plan";
-
     Alert.alert("Delete plan", `Delete "${planName}"?`, [
       { text: "Cancel", style: "cancel" },
       {
@@ -254,7 +251,6 @@ export default function BookshelfHomeScreen() {
     const plan = plans.find((p) => p.id === planId);
     if (!plan || !plan.items.length) return;
 
-    // first remaining book today; fallback first
     let next = plan.items[0];
     for (const it of plan.items) {
       const pb = plan.perBook?.[it.bookUri];
@@ -274,6 +270,24 @@ export default function BookshelfHomeScreen() {
         name: encodeURIComponent(next.bookName),
       },
     });
+  };
+
+  // ✅ edit plan modal open
+  const openEditPlan = (planId: string) => {
+    setEditPlanId(planId);
+    setEditPlanModalVisible(true);
+  };
+  const closeEditPlan = () => setEditPlanModalVisible(false);
+
+  const editPlan = useMemo(() => {
+    if (!editPlanId) return null;
+    return (plans ?? []).find((p) => p.id === editPlanId) ?? null;
+  }, [plans, editPlanId]);
+
+  // ✅ parent-level rename open (BookCard -> BookList/LastReadBook -> burası)
+  const openRenameForFile = (file: LocalPdfFile) => {
+    setRenameTarget({ uri: file.uri, name: file.name });
+    setRenameModalVisible(true);
   };
 
   async function renameBook(file: LocalPdfFile, newName: string) {
@@ -335,6 +349,18 @@ export default function BookshelfHomeScreen() {
     return rows;
   }, [gridBooks]);
 
+  const uiPlans = useMemo(() => {
+    return (plans ?? []).map((p) => ({
+      id: p.id,
+      name: p.name,
+      items: (p.items ?? []).map((it) => ({
+        bookUri: it.bookUri,
+        pagesPerDay: it.pagesPerDay ?? 0,
+      })),
+      totalReadToday: (p as any).totalReadToday ?? 0,
+    }));
+  }, [plans]);
+
   return (
     <AppScreen
       title="Bookshelf"
@@ -347,7 +373,6 @@ export default function BookshelfHomeScreen() {
             color={bColors.textPrimary}
             onPress={() => router.push("/(tabs)/bookshelf/stats")}
           />
-
           <IconButton
             name="notifications-circle-outline"
             size={iconSizes.lg}
@@ -378,21 +403,20 @@ export default function BookshelfHomeScreen() {
           <View style={{ height: spacing.md }} />
           <BookshelfTabs value={selectedTab} onChange={setSelectedTab} />
 
-          {/* PLANS / TARGETS */}
           {selectedTab === "plans" ? (
             <PlanList
               setPlanModalVisible={setPlanModalVisible}
-              plans={plans}
+              plans={uiPlans}
               openPlanDirect={openPlanDirect}
               handleDeletePlan={handleDeletePlan}
               suppressNextPlanOpenRef={suppressNextPlanOpenRef}
+              openEditPlan={openEditPlan}
             />
           ) : (
             <TargetList
               onOpenCreate={() => setTargetModalVisible(true)}
               onOpenChapters={(bookUri, bookName) => {
                 setTargetModalVisible(false);
-
                 const start = Number(progressMap[bookUri]?.lastPage ?? 1) || 1;
                 router.push({
                   pathname: "/(tabs)/bookshelf/pdf/viewer",
@@ -409,7 +433,6 @@ export default function BookshelfHomeScreen() {
             />
           )}
 
-          {/* LAST READ */}
           <LastReadBook
             readingStats={readingStatsForCards}
             lastReadBooks={lastReadBooks.map((book) => ({
@@ -419,22 +442,18 @@ export default function BookshelfHomeScreen() {
             }))}
             handleOpenPdf={handleOpenPdf}
             handleDeletePdf={handleDeletePdf}
-            renameBook={renameBook}
+            onRequestRename={openRenameForFile}
             progressMap={Object.fromEntries(
               Object.entries(progressMap).map(([key, value]) => [
                 key,
-                {
-                  ...value,
-                  totalPages: value.totalPages ?? 0,
-                },
+                { ...value, totalPages: value.totalPages ?? 0 },
               ])
             )}
           />
 
-          {/* ALL BOOKS */}
           <BookList
             readingStats={readingStatsForCards}
-            setModalVisible={setModalVisible}
+            setModalVisible={setAddBookVisible}
             gridRows={gridRows.map((row) =>
               row.map((book) => ({
                 ...book,
@@ -443,24 +462,21 @@ export default function BookshelfHomeScreen() {
             )}
             handleOpenPdf={handleOpenPdf}
             handleDeletePdf={handleDeletePdf}
-            renameBook={renameBook}
+            onRequestRename={openRenameForFile} // ✅
             progressMap={Object.fromEntries(
               Object.entries(progressMap).map(([key, value]) => [
                 key,
-                {
-                  ...value,
-                  totalPages: value.totalPages ?? 0,
-                },
+                { ...value, totalPages: value.totalPages ?? 0 },
               ])
             )}
           />
         </ScrollView>
 
-        <AddPdfModal
-          visible={modalVisible}
-          onClose={() => setModalVisible(false)}
-          onPdfImported={() => {
-            setModalVisible(false);
+        <AddBookModal
+          visible={addBookVisible}
+          onClose={() => setAddBookVisible(false)}
+          onBookImported={() => {
+            setAddBookVisible(false);
             loadBooks();
           }}
         />
@@ -471,6 +487,20 @@ export default function BookshelfHomeScreen() {
           books={books}
         />
 
+        <EditPlanModal
+          visible={editPlanModalVisible}
+          planId={editPlanId}
+          plan={editPlan}
+          books={books}
+          onClose={closeEditPlan}
+          updatePlan={updatePlan}
+          deletePlan={deletePlan}
+          onDeleted={() => {
+            setEditPlanId(null);
+            setEditPlanModalVisible(false);
+          }}
+        />
+
         <CreateTargetModal
           visible={targetModalVisible}
           onClose={() => setTargetModalVisible(false)}
@@ -478,7 +508,6 @@ export default function BookshelfHomeScreen() {
           initialBookUri={createTargetInitialBookUri}
           onOpenChapters={(bookUri, bookName) => {
             setTargetModalVisible(false);
-
             const start = Number(progressMap[bookUri]?.lastPage ?? 1) || 1;
             router.push({
               pathname: "/(tabs)/bookshelf/pdf/viewer",
@@ -493,6 +522,23 @@ export default function BookshelfHomeScreen() {
             });
           }}
         />
+
+        {/* ✅ ONLY ONE rename modal here */}
+        <RenameBookModal
+          visible={renameModalVisible}
+          currentName={renameTarget?.name ?? ""}
+          onClose={() => {
+            setRenameModalVisible(false);
+            setRenameTarget(null);
+          }}
+          onConfirm={async (nextName) => {
+            if (!renameTarget) return;
+            await renameBook(
+              { uri: renameTarget.uri, name: renameTarget.name },
+              nextName
+            );
+          }}
+        />
       </View>
     </AppScreen>
   );
@@ -500,71 +546,10 @@ export default function BookshelfHomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-
   headerActions: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
   },
-
-  scrollContent: {
-    paddingTop: spacing.lg,
-    paddingBottom: spacing["3xl"],
-  },
-
-  shelfSection: { marginBottom: spacing.xl },
-  shelfInner: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    position: "relative",
-  },
-  shelfRail: {
-    position: "absolute",
-    left: spacing.lg,
-    right: spacing.lg,
-    bottom: spacing.xs,
-    height: 4,
-    borderRadius: radii.full,
-    backgroundColor: colors.backgroundSecondary,
-    opacity: 0.6,
-  },
-  planListContent: {
-    paddingVertical: spacing.sm,
-    paddingRight: spacing.lg,
-  },
-
-  planChip: {
-    borderWidth: 1,
-    borderRadius: radii.lg,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    marginRight: spacing.sm,
-    minWidth: 220,
-  },
-
-  emptyPlanShelf: {
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    backgroundColor: colors.surface,
-    padding: spacing.md,
-    marginTop: spacing.xs,
-  },
-
-  emptyState: {
-    minHeight: 120,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: spacing.lg,
-    marginTop: spacing.lg,
-    borderRadius: radii.lg,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-  },
-
-  listContent: {
-    paddingVertical: spacing.lg,
-    paddingRight: spacing.lg,
-  },
+  scrollContent: { paddingTop: spacing.lg, paddingBottom: spacing["3xl"] },
 });
