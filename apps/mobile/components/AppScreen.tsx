@@ -1,19 +1,25 @@
 // components/AppScreen.tsx
-import React, { ReactNode } from "react";
+import React, { ReactNode, useMemo } from "react";
 import {
   View,
   StyleSheet,
   StyleProp,
   ViewStyle,
   TextStyle,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MText, spacing, radii, bookshelfTheme } from "@budget/ui-native";
+import {
+  MText,
+  spacing,
+  radii,
+  bookshelfTheme,
+  budgetTheme,
+} from "@budget/ui-native";
 import { AppSwitcherButton } from "@/components/AppSwitcherButton";
 import { HeaderMenuButton } from "@/components/ui/HeaderMenuButton";
 
 type AppScreenVariant = "default" | "bookshelf" | "budget";
-const { colors } = bookshelfTheme;
 
 type AppScreenProps = {
   title?: string;
@@ -27,12 +33,42 @@ type AppScreenProps = {
   showSwitcher?: boolean;
   variant?: AppScreenVariant;
 
-  // style overrides from parent
   safeAreaStyle?: StyleProp<ViewStyle>;
   headerContainerStyle?: StyleProp<ViewStyle>;
   headerTitleStyle?: StyleProp<TextStyle>;
-  headerTitleColor?: string; // direct color value (e.g. bookshelfTheme.colors.textPrimary)
+  headerTitleColor?: string;
 };
+
+function getThemeByVariant(variant: AppScreenVariant) {
+  switch (variant) {
+    case "budget":
+      return budgetTheme;
+    case "bookshelf":
+      return bookshelfTheme;
+    case "default":
+    default:
+      return bookshelfTheme;
+  }
+}
+
+function getHeaderBackground(variant: AppScreenVariant, colors: any) {
+  if (variant === "budget") {
+    return (
+      colors.surface ??
+      colors.card ??
+      colors.backgroundSecondary ??
+      colors.background
+    );
+  }
+  return colors.background;
+}
+
+function getHeaderBorderColor(variant: AppScreenVariant, colors: any) {
+  if (variant === "budget") {
+    return colors.borderSubtle ?? colors.border ?? "rgba(0,0,0,0.12)";
+  }
+  return colors.borderSubtle;
+}
 
 export function AppScreen({
   title,
@@ -50,6 +86,12 @@ export function AppScreen({
   headerTitleStyle,
   headerTitleColor,
 }: AppScreenProps) {
+  const theme = useMemo(() => getThemeByVariant(variant), [variant]);
+  const colors = theme.colors;
+
+  const headerBg = getHeaderBackground(variant, colors);
+  const headerBorder = getHeaderBorderColor(variant, colors);
+
   const renderCenter = () => {
     if (headerCenter) return headerCenter;
 
@@ -57,7 +99,7 @@ export function AppScreen({
       const mergedTitleStyle = StyleSheet.flatten<TextStyle>([
         styles.title,
         headerTitleStyle,
-        headerTitleColor ? { color: headerTitleColor } : null,
+        { color: headerTitleColor ?? colors.textPrimary },
       ]);
 
       return (
@@ -73,17 +115,13 @@ export function AppScreen({
   const renderRight = () => {
     if (headerRight) return headerRight;
     if (!showSwitcher) return null;
-
     return <AppSwitcherButton />;
   };
 
   const renderLeft = () => {
     if (headerLeft) return headerLeft;
-
-    if (showMenu && onPressMenu) {
+    if (showMenu && onPressMenu)
       return <HeaderMenuButton onPress={onPressMenu} />;
-    }
-
     return null;
   };
 
@@ -92,7 +130,17 @@ export function AppScreen({
       style={[styles.safe, safeAreaStyle]}
       edges={["top", "left", "right", "bottom"]}
     >
-      <View style={[styles.header, headerContainerStyle]}>
+      <View
+        style={[
+          styles.header,
+          variant === "budget" ? styles.headerBudget : null,
+          {
+            borderBottomColor: headerBorder,
+            backgroundColor: headerBg,
+          },
+          headerContainerStyle,
+        ]}
+      >
         <View style={styles.left}>{renderLeft()}</View>
         <View style={styles.center}>{renderCenter()}</View>
         <View style={styles.right}>{renderRight()}</View>
@@ -112,12 +160,23 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.borderSubtle,
     borderRadius: radii.sm,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
-    backgroundColor: colors.background,
   },
+
+  headerBudget: Platform.select({
+    ios: {
+      shadowOpacity: 0.08,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 6 },
+    },
+    android: {
+      elevation: 2,
+    },
+    default: {},
+  }) as ViewStyle,
+
   left: {
     width: 40,
     justifyContent: "center",
