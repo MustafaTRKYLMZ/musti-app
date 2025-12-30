@@ -18,7 +18,7 @@ import { pickActiveItem } from "@/utils/pickActiveItem";
 import { useToast } from "../ui/ToastProvider";
 import { TargetItemSummary } from "./TargetItemSummary";
 import { MenuRow } from "../MenuRow";
-import type { ReadingTarget, TargetItem } from "@budget/core";
+import type { ReadingTarget, TargetItem, TargetRepeatEnd } from "@budget/core";
 import { RemainingTimeBadge } from "../ui/pdf/RemainingTimeBadge";
 
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
@@ -27,7 +27,6 @@ const clamp = (x: number, a: number, b: number) => Math.max(a, Math.min(b, x));
 type Props = {
   target: ReadingTarget;
 
-  // ✅ already computed in TargetList
   todayPages?: number;
   todayMinutes?: number;
 
@@ -40,6 +39,12 @@ type Props = {
   onBeforeOpen?: (targetId: string, itemId: string) => Promise<void> | void;
 
   onEditTarget?: (t: ReadingTarget) => void;
+
+  // repeat
+  repeatEnabled?: boolean;
+  cycleCompleted?: boolean;
+  nextResetText?: string | null;
+  onSkipCycle?: (t: ReadingTarget) => Promise<void> | void;
 };
 
 const FALLBACK_ITEM: TargetItem = {
@@ -57,6 +62,32 @@ const FALLBACK_ITEM: TargetItem = {
   status: "pending",
 };
 
+function getCycleBadgeText(end?: TargetRepeatEnd): string | null {
+  if (!end) return "Cycle: ∞";
+  if (end.kind === "never") return "Cycle: ∞";
+  if (end.kind === "until") return "Cycle: ∞";
+
+  if (end.kind === "count") {
+    const anyEnd = end as any;
+
+    // new: total + remaining, old: remaining only
+    const total = Math.max(
+      1,
+      Math.floor(Number(anyEnd.total ?? anyEnd.remaining ?? 1) || 1)
+    );
+    const remaining = Math.max(
+      0,
+      Math.floor(Number(anyEnd.remaining ?? total) || 0)
+    );
+
+    // cycle index: total-remaining + 1  (clamped)
+    const idx = Math.max(1, Math.min(total, total - remaining + 1));
+    return `Cycle: ${idx}/${total}`;
+  }
+
+  return null;
+}
+
 export const TargetCard = ({
   target,
   onOpen,
@@ -68,6 +99,11 @@ export const TargetCard = ({
   disableOpen,
   todayPages,
   todayMinutes,
+
+  repeatEnabled,
+  cycleCompleted,
+  nextResetText,
+  onSkipCycle,
 }: Props) => {
   const { colors } = useTheme();
   const { showToast } = useToast();
@@ -81,9 +117,10 @@ export const TargetCard = ({
     y: 0,
   });
   const menuAnchorRef = useRef<View | null>(null);
+
   const isDoneTarget = target.status === "done";
 
-  const MENU_W = 180;
+  const MENU_W = 200;
   const SAFE_PAD = 8;
 
   const openMenu = () => {
@@ -130,14 +167,28 @@ export const TargetCard = ({
       message: target.title,
       actions: [
         { label: "Cancel", onPress: () => {} },
-        {
-          label: "Restart",
-          onPress: () => onRestart?.(target),
-          destructive: false,
-        },
+        { label: "Restart", onPress: () => onRestart?.(target) },
       ],
       duration: 6000,
     });
+  };
+
+  const handleSkipCycle = async () => {
+    closeMenu();
+    try {
+      await onSkipCycle?.(target);
+      try {
+        showToast({ message: "Moved to next cycle.", duration: 1800 } as any);
+      } catch {
+        showToast("Moved to next cycle." as any);
+      }
+    } catch {
+      try {
+        showToast({ message: "Failed to skip cycle.", duration: 3000 } as any);
+      } catch {
+        showToast("Failed to skip cycle." as any);
+      }
+    }
   };
 
   useEffect(() => {
@@ -265,7 +316,7 @@ export const TargetCard = ({
         await onBeforeOpen?.(target.id, displayItem.id);
       }
     } catch {
-      showToast("Failed to open target item.");
+      showToast("Failed to open target item." as any);
       return;
     }
 
@@ -281,6 +332,23 @@ export const TargetCard = ({
     : 0;
 
   const todayLabel = `Today: ${todayPagesSafe} pages · ${todayMinutesSafe} min`;
+
+  const showRepeat = Boolean(repeatEnabled ?? target.repeat);
+  const effectiveCycleCompleted = Boolean(
+    cycleCompleted ?? (target as any).cycleCompletedAt
+  );
+
+  const repeatLine1 =
+    showRepeat && effectiveCycleCompleted ? "Completed ✅" : null;
+  const repeatLine2 =
+    showRepeat && nextResetText ? `Resets: ${nextResetText}` : null;
+
+  const cycleBadge = showRepeat
+    ? getCycleBadgeText((target.repeat as any)?.end)
+    : null;
+
+  const canSkip =
+    Boolean(onSkipCycle) && Boolean(target.repeat) && !isDoneTarget;
 
   if (!target.items.length || !displayItem) {
     return (
@@ -312,6 +380,28 @@ export const TargetCard = ({
               />
             </View>
           </View>
+
+          {showRepeat ? (
+            <View style={{ marginTop: spacing.xs }}>
+              {repeatLine1 ? (
+                <MText style={{ fontWeight: "900", color: colors.textPrimary }}>
+                  {repeatLine1}
+                </MText>
+              ) : null}
+
+              {cycleBadge ? (
+                <MText style={{ opacity: 0.8, color: colors.textSecondary }}>
+                  {cycleBadge}
+                </MText>
+              ) : null}
+
+              {repeatLine2 ? (
+                <MText style={{ opacity: 0.75, color: colors.textSecondary }}>
+                  {repeatLine2}
+                </MText>
+              ) : null}
+            </View>
+          ) : null}
 
           <MText
             style={{
@@ -357,6 +447,15 @@ export const TargetCard = ({
                 },
               ]}
             >
+              {canSkip ? (
+                <MenuRow
+                  icon="play-forward-outline"
+                  label="Skip to next cycle"
+                  color={colors.textPrimary}
+                  onPress={handleSkipCycle}
+                />
+              ) : null}
+
               {!!onRestart && isDoneTarget && (
                 <MenuRow
                   icon="refresh-outline"
@@ -403,7 +502,6 @@ export const TargetCard = ({
           disableOpen && { opacity: 0.92 },
         ]}
       >
-        {/* Header */}
         <View style={styles.headerRow}>
           <View style={{ flex: 1 }}>
             <MText
@@ -412,6 +510,30 @@ export const TargetCard = ({
             >
               {target.title}
             </MText>
+
+            {showRepeat ? (
+              <View style={{ marginTop: spacing.xs }}>
+                {repeatLine1 ? (
+                  <MText
+                    style={{ fontWeight: "900", color: colors.textPrimary }}
+                  >
+                    {repeatLine1}
+                  </MText>
+                ) : null}
+
+                {cycleBadge ? (
+                  <MText style={{ opacity: 0.8, color: colors.textSecondary }}>
+                    {cycleBadge}
+                  </MText>
+                ) : null}
+
+                {repeatLine2 ? (
+                  <MText style={{ opacity: 0.75, color: colors.textSecondary }}>
+                    {repeatLine2}
+                  </MText>
+                ) : null}
+              </View>
+            ) : null}
 
             <Animated.View
               style={{
@@ -489,7 +611,7 @@ export const TargetCard = ({
           </View>
         </View>
 
-        {/* Today line (lighter) */}
+        {/* Today line */}
         <View style={styles.todayRow}>
           <BaseIcon
             name="time-outline"
@@ -538,6 +660,15 @@ export const TargetCard = ({
               },
             ]}
           >
+            {canSkip ? (
+              <MenuRow
+                icon="play-forward-outline"
+                label="Skip to next cycle"
+                color={colors.textPrimary}
+                onPress={handleSkipCycle}
+              />
+            ) : null}
+
             {!!onRestart && isDoneTarget && (
               <MenuRow
                 icon="refresh-outline"
@@ -640,7 +771,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     borderRadius: radii.lg,
     borderWidth: 1,
-    width: 180,
+    width: 200,
     elevation: 6,
     shadowColor: "#000",
     shadowOpacity: 0.15,

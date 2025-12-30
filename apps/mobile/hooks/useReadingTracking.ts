@@ -7,6 +7,7 @@ import { useLastGainStore } from "@/hooks/useLastGain";
 // ✅ NEW: stats + events
 import { useReadingStatsStore } from "@/store/bookshelf/useReadingStatsStore";
 import { useReadingEventsStore } from "@/store/bookshelf/useReadingEventsStore";
+import { clampInt } from "@/utils/number";
 
 type ReadingContext = {
   mode: ReadingMode;
@@ -32,7 +33,6 @@ type FlushResult = {
   gainedXp: number;
 };
 
-const clampInt = (n: number) => (Number.isFinite(n) ? Math.floor(n) : 0);
 
 export function useReadingTracking(
   enabled: boolean,

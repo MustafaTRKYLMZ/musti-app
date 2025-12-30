@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ReadingMode, ReadingEvent } from "@budget/core";
+import { toIntOr } from "@/utils/number";
 
 type AddEventInput = Omit<ReadingEvent, "id">;
 
@@ -35,14 +36,9 @@ const dateLTE = (a: string, b: string) => a <= b;
 
 const MAX_STORED_EVENTS = 2000;
 
-const clampInt = (n: any, fallback: number) => {
-  const x = Math.floor(Number(n));
-  return Number.isFinite(x) ? x : fallback;
-};
-
 const normalizePages = (pageFrom: any, pageTo: any) => {
-  const a0 = Math.max(1, clampInt(pageFrom, 1));
-  const b0 = Math.max(1, clampInt(pageTo, a0));
+  const a0 = Math.max(1, toIntOr(pageFrom, 1));
+  const b0 = Math.max(1, toIntOr(pageTo, a0));
   const from = Math.min(a0, b0);
   const to = Math.max(a0, b0);
   return { from, to };

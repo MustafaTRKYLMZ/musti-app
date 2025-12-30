@@ -5,6 +5,7 @@ import type { DailyTotals, GamificationState, XPState, LastGain } from "./types"
 import { xpForNextLevel } from "@/constants/xp";
 import { ReadingMode } from "@budget/core";
 import { useGamificationSettingsStore } from "./useGamificationSettingsStore";
+import { clampInt } from "@/utils/number";
 
 const STORAGE_KEY = "reading_gamification_v1";
 
@@ -16,7 +17,6 @@ const toDayKeyLocal = (ts: number) => {
   return `${yyyy}-${mm}-${dd}`;
 };
 
-const clampInt = (n: number) => (Number.isFinite(n) ? Math.floor(n) : 0);
 
 const recomputeXp = (totalXp: number): XPState => {
   let level = 1;

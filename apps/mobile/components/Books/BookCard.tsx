@@ -5,14 +5,13 @@ import {
   View,
   StyleSheet,
   Modal,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
   UIManager,
   findNodeHandle,
   Animated,
 } from "react-native";
 import Svg, { Rect, Line } from "react-native-svg";
+import { Dimensions } from "react-native";
+
 import {
   MText,
   spacing,
@@ -23,13 +22,15 @@ import {
 } from "@budget/ui-native";
 import { IconButton, BaseIcon } from "@/components/ui/AppIcon";
 import type { LocalPdfFile } from "@/utils/getPdfsDirectory";
-import { Dimensions } from "react-native";
 
 type BookCardProps = {
   file: LocalPdfFile;
   onOpen: () => void;
   onDelete: () => void;
-  onRename?: (newName: string) => void;
+
+  // ✅ artık BookCard modal açmaz, parent’a iletir
+  onRequestRename?: () => void;
+
   lastPage?: number;
   totalPages?: number;
 
@@ -63,15 +64,14 @@ export const BookCard: FC<BookCardProps> = ({
   file,
   onOpen,
   onDelete,
-  onRename,
+  onRequestRename,
   lastPage,
   totalPages,
   todayPages,
   todayTargetPages,
   variant = "grid",
 }) => {
-  const theme = useTheme();
-  const { colors } = theme;
+  const { colors } = useTheme();
 
   const bookId = file.uri ?? file.name;
   const spineColor = getSpineColorFromString(bookId);
@@ -83,9 +83,6 @@ export const BookCard: FC<BookCardProps> = ({
     y: 0,
   });
   const menuIconRef = useRef<View | null>(null);
-
-  const [renameVisible, setRenameVisible] = useState(false);
-  const [tempName, setTempName] = useState(file.name);
 
   // ✅ stats modal
   const [statsVisible, setStatsVisible] = useState(false);
@@ -148,7 +145,6 @@ export const BookCard: FC<BookCardProps> = ({
 
   const POPOVER_W = 160;
   const EDGE = 8;
-
   const clamp = (v: number, min: number, max: number) =>
     Math.max(min, Math.min(max, v));
 
@@ -159,13 +155,8 @@ export const BookCard: FC<BookCardProps> = ({
     const screenW = Dimensions.get("window").width;
 
     UIManager.measure(handle, (_x, _y, width, height, pageX, pageY) => {
-      // default: iconun sağından popover aç
       const desiredX = pageX + width - POPOVER_W;
-
-      // ✅ clamp: ekran dışına taşmasın
       const x = clamp(desiredX, EDGE, screenW - POPOVER_W - EDGE);
-
-      // y için de ufak güvenlik payı
       const y = Math.max(EDGE, pageY + height + 8);
 
       setMenuPos({ x, y });
@@ -174,30 +165,6 @@ export const BookCard: FC<BookCardProps> = ({
   };
 
   const closeMenu = () => setMenuVisible(false);
-
-  const openRename = () => {
-    setTempName(file.name);
-    setMenuVisible(false);
-    setRenameVisible(true);
-  };
-
-  const cancelRename = () => {
-    setRenameVisible(false);
-  };
-
-  const confirmRename = () => {
-    if (!onRename) {
-      setRenameVisible(false);
-      return;
-    }
-    const trimmed = tempName.trim();
-    if (!trimmed || trimmed === file.name) {
-      setRenameVisible(false);
-      return;
-    }
-    onRename(trimmed);
-    setRenameVisible(false);
-  };
 
   const handleDeleteFromMenu = () => {
     setMenuVisible(false);
@@ -209,15 +176,17 @@ export const BookCard: FC<BookCardProps> = ({
     setStatsVisible(true);
   };
 
+  const requestRenameFromMenu = () => {
+    setMenuVisible(false);
+    onRequestRename?.();
+  };
+
   // ✅ stats strings
   const safeTodayPages = Math.max(0, Number(todayPages ?? 0) || 0);
   const safeTodayTarget = Math.max(0, Number(todayTargetPages ?? 0) || 0);
-
   const showTodayHint = safeTodayPages > 0 || safeTodayTarget > 0;
 
-  const todayLine = useMemo(() => {
-    return `${safeTodayPages}`;
-  }, [safeTodayPages]);
+  const todayLine = useMemo(() => `${safeTodayPages}`, [safeTodayPages]);
 
   const goalLine = useMemo(() => {
     if (safeTodayTarget <= 0) return null;
@@ -297,7 +266,7 @@ export const BookCard: FC<BookCardProps> = ({
               </Svg>
             </View>
 
-            {/* ✅ ONLY ellipsis in the corner (same place) */}
+            {/* menu */}
             <View
               style={styles.menuIconWrapper}
               ref={menuIconRef}
@@ -312,7 +281,7 @@ export const BookCard: FC<BookCardProps> = ({
               />
             </View>
 
-            {/* Centered title */}
+            {/* title */}
             <View style={styles.titleWrapper}>
               <MText
                 variant="body"
@@ -323,7 +292,6 @@ export const BookCard: FC<BookCardProps> = ({
                 {file.name}
               </MText>
 
-              {/* ✅ Today hint with small icon (12px) */}
               {showTodayHint && (
                 <View style={styles.todayBlock}>
                   <View style={styles.todayRow}>
@@ -357,7 +325,7 @@ export const BookCard: FC<BookCardProps> = ({
               )}
             </View>
 
-            {/* Progress */}
+            {/* progress */}
             {totalPages && totalPages > 0 ? (
               <>
                 <View
@@ -422,7 +390,6 @@ export const BookCard: FC<BookCardProps> = ({
               },
             ]}
           >
-            {/* ✅ Stats entry inside the menu */}
             <TouchableOpacity
               style={styles.menuItemRow}
               onPress={openStatsFromMenu}
@@ -438,8 +405,11 @@ export const BookCard: FC<BookCardProps> = ({
               </MText>
             </TouchableOpacity>
 
-            {onRename && (
-              <TouchableOpacity style={styles.menuItemRow} onPress={openRename}>
+            {!!onRequestRename && (
+              <TouchableOpacity
+                style={styles.menuItemRow}
+                onPress={requestRenameFromMenu}
+              >
                 <BaseIcon
                   family="ion"
                   name="create-outline"
@@ -470,7 +440,7 @@ export const BookCard: FC<BookCardProps> = ({
         </TouchableOpacity>
       </Modal>
 
-      {/* ✅ Stats modal */}
+      {/* stats modal */}
       <Modal
         visible={statsVisible}
         transparent
@@ -524,7 +494,7 @@ export const BookCard: FC<BookCardProps> = ({
               </MText>
             </View>
 
-            {goalLine && (
+            {!!goalLine && (
               <View style={styles.statsRow}>
                 <MText variant="body" color="textSecondary">
                   Goal
@@ -556,7 +526,6 @@ export const BookCard: FC<BookCardProps> = ({
             </View>
 
             <View style={{ height: spacing.md }} />
-
             <MText
               variant="caption"
               color="textSecondary"
@@ -567,114 +536,22 @@ export const BookCard: FC<BookCardProps> = ({
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
-
-      {/* Rename modal */}
-      <Modal
-        visible={renameVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={cancelRename}
-      >
-        <KeyboardAvoidingView
-          style={[
-            styles.renameOverlay,
-            { backgroundColor: colors.backdropStrong },
-          ]}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-        >
-          <View
-            style={[
-              styles.renameBox,
-              {
-                backgroundColor: colors.surface,
-                borderColor: colors.borderSubtle,
-              },
-            ]}
-          >
-            <MText
-              variant="body"
-              color="textPrimary"
-              style={styles.renameTitle}
-            >
-              Rename book
-            </MText>
-
-            <TextInput
-              value={tempName}
-              onChangeText={setTempName}
-              style={[
-                styles.renameInput,
-                {
-                  borderColor: colors.borderSubtle,
-                  color: colors.textPrimary,
-                },
-              ]}
-              placeholder="Book name"
-              placeholderTextColor={colors.textSecondary}
-            />
-
-            <View style={styles.renameActions}>
-              <TouchableOpacity
-                onPress={cancelRename}
-                style={[
-                  styles.renameButton,
-                  styles.renameCancel,
-                  { borderColor: colors.borderSubtle },
-                ]}
-              >
-                <MText variant="body" color="textSecondary">
-                  Cancel
-                </MText>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={confirmRename}
-                style={[
-                  styles.renameButton,
-                  styles.renameConfirm,
-                  { backgroundColor: colors.primary },
-                ]}
-              >
-                <MText variant="body" color="textInverse">
-                  Save
-                </MText>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
     </>
   );
 };
 
 const styles = StyleSheet.create({
-  cardWrapper: {
-    marginRight: spacing.md,
-  },
+  cardWrapper: { marginRight: spacing.md },
 
-  // shared base
   cardBase: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     justifyContent: "space-between",
     overflow: "hidden",
   },
+  cardRow: { width: 120, aspectRatio: 0.8 },
+  cardGrid: { width: "100%", aspectRatio: 0.8 },
 
-  // Last read (horizontal)
-  cardRow: {
-    width: 120,
-    height: undefined,
-    aspectRatio: 0.8,
-  },
-
-  // Books grid
-  cardGrid: {
-    width: "100%",
-    height: undefined,
-    aspectRatio: 0.8,
-  },
-
-  // decoration
   bookSpine: {
     position: "absolute",
     left: 0,
@@ -711,7 +588,6 @@ const styles = StyleSheet.create({
     width: 26,
   },
 
-  // menu icon (common)
   menuIconWrapper: {
     position: "absolute",
     top: spacing.xs,
@@ -719,33 +595,25 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
 
-  // centered title (common)
   titleWrapper: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: spacing.sm,
   },
-  title: {
-    textAlign: "center",
-    fontSize: 14,
-  },
+  title: { textAlign: "center", fontSize: 14 },
 
-  // today row (with 12 icon)
   todayRow: {
     marginTop: 2,
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
   },
-  todayText: {
-    textAlign: "center",
-    opacity: 0.92,
-  },
+  todayText: { textAlign: "center", opacity: 0.92 },
+  todayBlock: { marginTop: 2, alignItems: "center" },
+  goalText: { marginTop: 1, opacity: 0.9, textAlign: "center" },
 
-  cardHint: {
-    marginTop: spacing.xs,
-  },
+  cardHint: { marginTop: spacing.xs },
 
   progressContainer: {
     height: 6,
@@ -754,19 +622,14 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     marginTop: spacing.sm,
   },
-  progressBar: {
-    height: "100%",
-  },
+  progressBar: { height: "100%" },
   progressLabel: {
     marginTop: spacing.xs,
     fontSize: spacing.lg - 4,
     paddingHorizontal: spacing.xs,
   },
 
-  menuOverlay: {
-    flex: 1,
-    backgroundColor: "transparent",
-  },
+  menuOverlay: { flex: 1, backgroundColor: "transparent" },
   popover: {
     position: "absolute",
     paddingVertical: spacing.xs,
@@ -786,7 +649,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
 
-  // stats modal
   statsOverlay: {
     flex: 1,
     justifyContent: "center",
@@ -810,50 +672,4 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: spacing.xs,
   },
-  todayBlock: {
-    marginTop: 2,
-    alignItems: "center",
-  },
-  goalText: {
-    marginTop: 1,
-    opacity: 0.9,
-    textAlign: "center",
-  },
-  // rename
-  renameOverlay: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  renameBox: {
-    width: "85%",
-    borderRadius: radii.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-  },
-  renameTitle: {
-    marginBottom: spacing.sm,
-  },
-  renameInput: {
-    borderWidth: 1,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    marginTop: spacing.xs,
-  },
-  renameActions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    marginTop: spacing.md,
-    gap: spacing.sm,
-  },
-  renameButton: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.lg,
-  },
-  renameCancel: {
-    borderWidth: 1,
-  },
-  renameConfirm: {},
 });

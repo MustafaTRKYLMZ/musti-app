@@ -4,7 +4,12 @@ export const toIntOr = (n: unknown, fallback: number) => {
     const x = Math.floor(Number(n));
     return Number.isFinite(x) ? x : fallback;
   };
-  
+  export const clampInt = (n: any,) => {
+    const v = Math.floor(Number(n) || 0);
+    return Math.max(0, Math.min(999999, v));
+  };
+
+
   export const clampBetween = (
     n: unknown,
     min: number,
