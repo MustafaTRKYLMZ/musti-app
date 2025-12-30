@@ -1,4 +1,4 @@
-import React, { FC, useMemo, useRef, useState } from "react";
+import React, { FC, useEffect, useMemo, useRef, useState } from "react";
 import {
   TouchableOpacity,
   View,
@@ -9,6 +9,7 @@ import {
   StyleProp,
   ViewStyle,
   Dimensions,
+  PanResponder,
 } from "react-native";
 import {
   MText,
@@ -21,6 +22,7 @@ import {
 import { BaseIcon, IconButton } from "@/components/ui/AppIcon";
 import { ProgressPill, getProgressColor } from "@/components/ui/ProgressPill";
 import { RemainingTimeBadge } from "../ui/pdf/RemainingTimeBadge";
+import { ItemDots } from "../ui/ItemDots";
 
 export type PlanInfo = {
   name: string;
@@ -31,27 +33,47 @@ export type PlanInfo = {
   currentBookUri?: string;
   remainingInItem?: number;
   suggestedBookName?: string;
-  todayMinutes?: number; // minutes today (plan mode)
+  todayMinutes?: number;
+};
+
+type PlanItem = {
+  bookUri: string;
+  pagesPerDay: number;
+  bookName?: string;
 };
 
 type PlanCardProps = {
+  planId: string;
   currentPlanInfo: PlanInfo | null;
   onPress: () => void;
   onDeletePlan: () => void;
   onEditPlan?: () => void;
   wrapperStyle?: StyleProp<ViewStyle>;
   cardStyle?: StyleProp<ViewStyle>;
+  planItems?: PlanItem[];
 };
 
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 
+function prettyNameFromUri(uri?: string) {
+  if (!uri) return "Unknown book";
+  try {
+    const last = uri.split("/").pop() || uri;
+    return decodeURIComponent(last).replace(/\.(pdf|epub)$/i, "");
+  } catch {
+    return uri;
+  }
+}
+
 export const PlanCard: FC<PlanCardProps> = ({
+  planId,
   currentPlanInfo,
   onPress,
   onDeletePlan,
   onEditPlan,
   wrapperStyle,
   cardStyle,
+  planItems,
 }) => {
   const { colors } = useTheme();
 
@@ -63,6 +85,12 @@ export const PlanCard: FC<PlanCardProps> = ({
 
   const menuAnchorRef = useRef<View | null>(null);
 
+  // ✅ preview = only what we display (does NOT drive dot statuses)
+  const [previewIndex, setPreviewIndex] = useState(0);
+
+  const items = planItems ?? [];
+  const planLen = items.length;
+
   if (!currentPlanInfo) return null;
 
   const {
@@ -72,10 +100,30 @@ export const PlanCard: FC<PlanCardProps> = ({
     totalPagesInPlan,
     currentBookName,
     currentBookUri,
-    remainingInItem,
     suggestedBookName,
     todayMinutes,
   } = currentPlanInfo;
+
+  // reset preview when plan changes
+  useEffect(() => {
+    if (!planLen) {
+      setPreviewIndex(0);
+      return;
+    }
+
+    // initial preview: prefer currentBookUri if present in items
+    const idx = currentBookUri
+      ? items.findIndex((it) => it.bookUri === currentBookUri)
+      : -1;
+
+    setPreviewIndex(idx >= 0 ? idx : 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [planId]);
+
+  const safePreviewIndex =
+    planLen > 0 ? Math.max(0, Math.min(planLen - 1, previewIndex)) : 0;
+
+  const displayItem = planLen ? items[safePreviewIndex] : null;
 
   const safeTotal = Math.max(totalPagesInPlan || 1, 1);
   const pct01 = clamp01((totalCompleted || 0) / safeTotal);
@@ -110,24 +158,10 @@ export const PlanCard: FC<PlanCardProps> = ({
     onDeletePlan();
   };
 
-  const handleCardPress = () => onPress();
-
   const minsSafe =
     typeof todayMinutes === "number" && Number.isFinite(todayMinutes)
       ? Math.max(0, Math.round(todayMinutes))
       : 0;
-
-  // Plan-level remaining
-  const remainingPagesToday =
-    totalPagesInPlan > 0
-      ? Math.max(0, totalPagesInPlan - (totalCompleted ?? 0))
-      : 0;
-
-  // Prefer per-item remaining for display (more meaningful)
-  const remainingForDisplay =
-    typeof remainingInItem === "number" && Number.isFinite(remainingInItem)
-      ? Math.max(0, Math.floor(remainingInItem))
-      : remainingPagesToday;
 
   const subtitle = isCompleted
     ? suggestedBookName
@@ -137,28 +171,74 @@ export const PlanCard: FC<PlanCardProps> = ({
     ? `Now: ${currentBookName}`
     : "Plan is in progress.";
 
-  // Single compact meta line
-  const metaLeft = useMemo(() => {
-    const a = `${totalCompleted ?? 0}/${totalPagesInPlan ?? 0} pages`;
-    const b = `${minsSafe} min`;
-    const c = isCompleted ? "0 left" : `${remainingForDisplay} left`;
-    return `${a} · ${b} · ${c}`;
-  }, [
-    totalCompleted,
-    totalPagesInPlan,
-    minsSafe,
-    remainingForDisplay,
-    isCompleted,
-  ]);
+  // selected item info (TargetCard-like)
+  const itemLine = displayItem
+    ? `Item ${safePreviewIndex + 1}/${planLen} · ${
+        displayItem.pagesPerDay
+      } pages/day`
+    : null;
 
-  const paceKey = currentBookUri ?? null;
+  const itemBookName =
+    displayItem?.bookName || prettyNameFromUri(displayItem?.bookUri);
+
+  // badge based on selected item
+  const paceKeyForItem = displayItem?.bookUri ?? null;
+  const remainingForItem = Math.max(
+    0,
+    Math.floor(displayItem?.pagesPerDay ?? 0)
+  );
+
+  // dots colors
+  const statusActive = colors.success;
+  const statusPending = colors.primaryLight;
+  const statusDone = colors.textMuted;
+
+  // ✅ IMPORTANT: dot status is NOT derived from previewIndex
+  const dotItems = useMemo(() => {
+    if (!planLen) return [];
+
+    const idxFromNow = currentBookUri
+      ? items.findIndex((it) => it.bookUri === currentBookUri)
+      : -1;
+
+    const activeIndex = idxFromNow >= 0 ? idxFromNow : 0;
+
+    return items.map((it, idx) => ({
+      id: it.bookUri || `__plan_${idx}__`,
+      status: isCompleted
+        ? ("done" as const)
+        : idx === activeIndex
+        ? ("active" as const)
+        : ("pending" as const),
+    }));
+  }, [planLen, items, currentBookUri, isCompleted]);
+
+  // swipe only changes preview (not status)
+  const swipeThreshold = 18;
+  const panResponder = useMemo(() => {
+    if (!planLen) return null;
+
+    return PanResponder.create({
+      onMoveShouldSetPanResponder: (_, g) =>
+        Math.abs(g.dx) > Math.abs(g.dy) && Math.abs(g.dx) > 6,
+      onPanResponderRelease: (_, g) => {
+        if (!planLen) return;
+
+        if (g.dx <= -swipeThreshold) {
+          setPreviewIndex((i) => Math.min(planLen - 1, i + 1));
+        } else if (g.dx >= swipeThreshold) {
+          setPreviewIndex((i) => Math.max(0, i - 1));
+        }
+      },
+    });
+  }, [planLen]);
 
   return (
     <>
       <TouchableOpacity
         style={[styles.wrapper, wrapperStyle]}
         activeOpacity={0.9}
-        onPress={handleCardPress}
+        onPress={onPress}
       >
         <Card style={[styles.card, cardStyle]}>
           <View style={styles.leftSection}>
@@ -197,7 +277,26 @@ export const PlanCard: FC<PlanCardProps> = ({
                 {subtitle}
               </MText>
 
-              {/* Progress pill (alone, clean) */}
+              {displayItem ? (
+                <View style={{ marginTop: spacing.xs }}>
+                  <MText
+                    variant="caption"
+                    color="textSecondary"
+                    numberOfLines={1}
+                  >
+                    {itemLine}
+                  </MText>
+                  <MText
+                    variant="body"
+                    color="textPrimary"
+                    numberOfLines={1}
+                    style={{ fontWeight: "800" }}
+                  >
+                    {itemBookName}
+                  </MText>
+                </View>
+              ) : null}
+
               <View style={styles.pillRow}>
                 <ProgressPill
                   value={totalCompleted}
@@ -208,7 +307,6 @@ export const PlanCard: FC<PlanCardProps> = ({
                 />
               </View>
 
-              {/* Single meta row: left text + right badge */}
               <View style={styles.metaRow}>
                 <MText
                   variant="caption"
@@ -216,14 +314,33 @@ export const PlanCard: FC<PlanCardProps> = ({
                   numberOfLines={1}
                   style={styles.metaText}
                 >
-                  {metaLeft}
+                  {`${totalCompleted ?? 0}/${
+                    totalPagesInPlan ?? 0
+                  } pages · ${minsSafe} min`}
                 </MText>
 
                 <RemainingTimeBadge
-                  paceKey={paceKey}
-                  remainingPages={remainingPagesToday}
+                  paceKey={paceKeyForItem}
+                  remainingPages={remainingForItem}
                 />
               </View>
+
+              {dotItems.length ? (
+                <View
+                  style={styles.dotContainer}
+                  {...(panResponder ? panResponder.panHandlers : {})}
+                >
+                  <ItemDots
+                    items={dotItems as any}
+                    activeColor={statusActive}
+                    doneColor={statusDone}
+                    pendingColor={statusPending}
+                    maxDots={10}
+                    selectedIndex={safePreviewIndex}
+                    onSelectIndex={setPreviewIndex}
+                  />
+                </View>
+              ) : null}
             </View>
           </View>
 
@@ -335,10 +452,7 @@ const styles = StyleSheet.create({
   title: { marginBottom: 2 },
   subtitle: { marginBottom: spacing.xs, opacity: 0.9 },
 
-  pillRow: {
-    marginTop: spacing.xs,
-    marginBottom: spacing.xs,
-  },
+  pillRow: { marginTop: spacing.xs, marginBottom: spacing.xs },
 
   metaRow: {
     flexDirection: "row",
@@ -346,9 +460,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: spacing.sm,
   },
-  metaText: {
-    flex: 1,
-    opacity: 0.85,
+  metaText: { flex: 1, opacity: 0.85 },
+
+  dotContainer: {
+    marginTop: spacing.sm,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.xs,
   },
 
   rightSection: { marginLeft: spacing.sm },

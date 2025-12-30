@@ -5,6 +5,7 @@ import { bookshelfTheme, MText, radii, spacing } from "@budget/ui-native";
 import { ShelfHeader } from "../ShelfHeader";
 import { PlanCard, PlanInfo } from "@/components/Books/PlanCard";
 import { useReadingEventsStore } from "@/store/bookshelf/useReadingEventsStore";
+import { useBooksStore } from "@/store/bookshelf/useBooksStore";
 import type { ReadingEvent } from "@budget/core";
 
 const { colors } = bookshelfTheme;
@@ -49,15 +50,46 @@ const sumTodayMinutesForPlan = (args: {
     if (!set.has(e.bookUri)) continue;
 
     const ms =
-      typeof (e as any).durationMs === "number" &&
-      Number.isFinite((e as any).durationMs)
-        ? Math.max(0, (e as any).durationMs)
+      typeof e.durationMs === "number" && Number.isFinite(e.durationMs)
+        ? Math.max(0, e.durationMs)
         : 0;
 
     totalMs += ms;
   }
 
   return Math.round(totalMs / 60000);
+};
+
+// ✅ today plan-mode içinde: bu planın kitapları arasından en son okunan bookUri
+const getCurrentBookUriForPlanToday = (args: {
+  events: ReadingEvent[];
+  today: string;
+  bookUris: string[];
+}) => {
+  const { events, today, bookUris } = args;
+  if (!events?.length) return undefined;
+  if (!bookUris?.length) return undefined;
+
+  const set = new Set(bookUris.filter(Boolean));
+
+  let bestUri: string | undefined = undefined;
+  let bestAt = -1;
+
+  for (const e of events) {
+    if (!e) continue;
+    if (e.date !== today) continue;
+    if (e.mode !== "plan") continue;
+    if (!set.has(e.bookUri)) continue;
+
+    const at = typeof e.at === "number" && Number.isFinite(e.at) ? e.at : 0;
+
+    if (at >= bestAt) {
+      bestAt = at;
+      bestUri = e.bookUri;
+    }
+  }
+
+  return bestUri;
 };
 
 export const PlanList: FC<PlanListProps> = ({
@@ -69,6 +101,50 @@ export const PlanList: FC<PlanListProps> = ({
   openEditPlan,
 }) => {
   const events = useReadingEventsStore((s) => s.events);
+
+  // ✅ books store’dan uri->name map
+  const booksAny = useBooksStore(
+    (s: any) => s.books ?? s.items ?? s.library ?? s.byUri ?? []
+  );
+
+  const bookNameByUri = useMemo(() => {
+    const map = new Map<string, string>();
+
+    if (Array.isArray(booksAny)) {
+      for (const b of booksAny) {
+        const uri = b?.uri ?? b?.bookUri ?? b?.fileUri;
+        const name = b?.name ?? b?.title ?? b?.bookName;
+        if (
+          typeof uri === "string" &&
+          uri &&
+          typeof name === "string" &&
+          name
+        ) {
+          map.set(uri, name);
+        }
+      }
+      return map;
+    }
+
+    if (booksAny && typeof booksAny === "object") {
+      for (const [uri, b] of Object.entries<any>(booksAny)) {
+        const name = b?.name ?? b?.title ?? b?.bookName;
+        if (
+          typeof uri === "string" &&
+          uri &&
+          typeof name === "string" &&
+          name
+        ) {
+          map.set(uri, name);
+        }
+      }
+      return map;
+    }
+
+    return map;
+  }, [booksAny]);
+
+  const resolveBookName = (uri: string) => bookNameByUri.get(uri) ?? undefined;
 
   const today = useMemo(() => dayjs().format("YYYY-MM-DD"), []);
 
@@ -125,17 +201,37 @@ export const PlanList: FC<PlanListProps> = ({
                 bookUris,
               });
 
+              // ✅ real active book for this plan (today, plan mode)
+              const currentBookUri = getCurrentBookUriForPlanToday({
+                events: events ?? [],
+                today,
+                bookUris,
+              });
+              const currentBookName = currentBookUri
+                ? resolveBookName(currentBookUri)
+                : undefined;
+
               const currentPlanInfo: PlanInfo = {
                 name: item.name,
                 totalCompleted: done,
                 totalPagesInPlan: totalTarget,
                 isCompleted: totalTarget > 0 && done >= totalTarget,
                 todayMinutes,
+                currentBookUri,
+                currentBookName,
               };
+
+              // ✅ items with names for per-dot display
+              const itemsWithNames = item.items.map((it) => ({
+                ...it,
+                bookName: resolveBookName(it.bookUri),
+              }));
 
               return (
                 <View style={styles.cardItem}>
                   <PlanCard
+                    planId={item.id}
+                    planItems={itemsWithNames}
                     currentPlanInfo={currentPlanInfo}
                     onPress={() => {
                       if (suppressNextPlanOpenRef.current) return;
@@ -147,8 +243,6 @@ export const PlanList: FC<PlanListProps> = ({
                         () => (suppressNextPlanOpenRef.current = false),
                         300
                       );
-
-                      // ✅ modal open
                       openEditPlan(item.id);
                     }}
                     onDeletePlan={() => {

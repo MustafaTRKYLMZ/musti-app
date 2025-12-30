@@ -1,5 +1,5 @@
 import type { TargetRepeat } from "@budget/core";
-import { isValidTimeOfDay } from "@/utils/normalizeTimeOfDay"; 
+import { isValidTimeOfDay } from "../utils/normalizeTimeOfDay"; 
 
 
 import { mergeDateWithTimeOfDay } from "./mergeDateWithTimeOfDay";

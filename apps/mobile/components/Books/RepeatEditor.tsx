@@ -9,10 +9,7 @@ import { MText, spacing, radii, useTheme } from "@budget/ui-native";
 import { AppChip } from "@/components/ui/AppChip";
 import type { TargetRepeat } from "@budget/core";
 import { WEEKDAYS } from "@/constants/weekdays";
-import {
-  isValidTimeOfDay,
-  normalizeTimeOfDay,
-} from "@/utils/normalizeTimeOfDay";
+import { isValidTimeOfDay, normalizeTimeOfDay } from "@budget/forms";
 
 export type RepeatEndKind = "never" | "until" | "count";
 
