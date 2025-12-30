@@ -55,6 +55,7 @@ export function AppSwitcherMenu({ visible, onClose }: Props) {
               color={budgetTheme.colors.success}
               labelColor={colors.textInverse}
               onPress={goBudget}
+              style={{ backgroundColor: colors.backgroundBackdrop }}
             />
 
             <IconTile
@@ -63,6 +64,7 @@ export function AppSwitcherMenu({ visible, onClose }: Props) {
               color={bookshelfTheme.colors.success}
               labelColor={colors.textInverse}
               onPress={goBookshelf}
+              style={{ backgroundColor: colors.backgroundBackdrop }}
             />
           </View>
         </Pressable>
@@ -98,6 +100,6 @@ const makeStyles = (colors: typeof budgetTheme.colors) =>
     grid: {
       flexDirection: "row",
       justifyContent: "space-between",
-      backgroundColor: "red",
+      backgroundColor: colors.surfaceStrong,
     },
   });
