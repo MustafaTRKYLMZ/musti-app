@@ -38,9 +38,7 @@ export function AppSwitcherMenu({ visible, onClose }: Props) {
       animationType="fade"
       onRequestClose={onClose}
     >
-      {/* ✅ Tek overlay: dışa basınca kapanır */}
       <Pressable style={styles.overlay} onPress={onClose}>
-        {/* ✅ Menü: basılınca overlay'e düşmesin (kapanmasın) */}
         <Pressable
           onPress={() => {}}
           style={styles.menuContainer}
@@ -89,10 +87,8 @@ const makeStyles = (colors: typeof budgetTheme.colors) =>
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.md,
 
-      // ✅ Android: mutlaka üstte olsun
       elevation: 20,
 
-      // ✅ iOS
       shadowColor: "#000",
       shadowOpacity: 0.18,
       shadowRadius: 10,
@@ -102,5 +98,6 @@ const makeStyles = (colors: typeof budgetTheme.colors) =>
     grid: {
       flexDirection: "row",
       justifyContent: "space-between",
+      backgroundColor: "red",
     },
   });
