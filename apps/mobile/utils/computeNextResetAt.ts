@@ -49,7 +49,6 @@ function parseTimeOfDay(s?: string) {
       : [1]; 
   
     const fromDay = startOfDay(base);
-    const fromDow = fromDay.getDay();
   
     for (let delta = 1; delta <= 7 * interval; delta++) {
       const cand = addDays(fromDay, delta);
