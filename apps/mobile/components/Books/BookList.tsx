@@ -1,13 +1,19 @@
 // apps/mobile/components/Books/BookList.tsx
-import React from "react";
-import { View, StyleSheet, TouchableOpacity } from "react-native";
+import React, { useMemo } from "react";
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  useWindowDimensions,
+} from "react-native";
 import { MText, spacing } from "@budget/ui-native";
 import type { LocalPdfFile } from "@/utils/getPdfsDirectory";
 import { BookCard } from "./BookCard";
+import { IconButton } from "../ui/AppIcon";
 
 type GridBook = LocalPdfFile & { lastOpened: number };
 
-type Props = {
+type BookListProps = {
   setModalVisible: (v: boolean) => void;
   gridRows: GridBook[][];
   handleOpenPdf: (item: LocalPdfFile) => void;
@@ -19,7 +25,9 @@ type Props = {
   readingStats?: Record<string, { pagesTotal: number; targetPages: number }>;
 };
 
-export function BookList({
+const COLS = 3;
+
+export const BookList = ({
   setModalVisible,
   gridRows,
   handleOpenPdf,
@@ -27,8 +35,17 @@ export function BookList({
   onRequestRename,
   progressMap,
   readingStats,
-}: Props) {
+}: BookListProps) => {
   const today = new Date().toISOString().slice(0, 10);
+  const { width: screenW } = useWindowDimensions();
+
+  const cellWidth = useMemo(() => {
+    const paddingTotal = spacing.lg * 2;
+    const gapsTotal = spacing.md * (COLS - 1);
+    const available = screenW - paddingTotal - gapsTotal;
+    const w = Math.floor(available / COLS);
+    return Math.max(110, w);
+  }, [screenW]);
 
   return (
     <View style={{ marginTop: spacing.xl }}>
@@ -36,46 +53,61 @@ export function BookList({
         <MText variant="heading2" color="textPrimary">
           Books
         </MText>
-
-        <TouchableOpacity onPress={() => setModalVisible(true)}>
-          <MText variant="body" color="textSecondary">
-            Add
-          </MText>
-        </TouchableOpacity>
+        <IconButton
+          name="add-circle-outline"
+          size={spacing.xl * 1.2}
+          color="textSecondary"
+          onPress={() => setModalVisible(true)}
+        />
       </View>
 
       <View style={{ height: spacing.md }} />
 
-      {gridRows.map((row, rIdx) => (
-        <View key={rIdx} style={styles.row}>
-          {row.map((file) => {
-            const pm = progressMap[file.uri] ?? {};
-            const key = `${file.uri}::${today}`;
-            const stat = readingStats?.[key];
+      {gridRows.map((row, rIdx) => {
+        const missing = Math.max(0, COLS - row.length);
 
-            return (
-              <View key={file.uri} style={styles.cell}>
-                <BookCard
-                  file={file}
-                  variant="grid"
-                  onOpen={() => handleOpenPdf(file)}
-                  onDelete={() => handleDeletePdf(file)}
-                  onRequestRename={
-                    onRequestRename ? () => onRequestRename(file) : undefined
-                  }
-                  lastPage={pm.lastPage}
-                  totalPages={pm.totalPages}
-                  todayPages={stat?.pagesTotal ?? 0}
-                  todayTargetPages={stat?.targetPages ?? 0}
-                />
-              </View>
-            );
-          })}
-        </View>
-      ))}
+        return (
+          <View key={rIdx} style={styles.row}>
+            {row.map((file) => {
+              const pm = progressMap[file.uri] ?? {};
+              const key = `${file.uri}::${today}`;
+              const stat = readingStats?.[key];
+
+              return (
+                <View
+                  key={file.uri}
+                  style={[styles.cell, { width: cellWidth }]}
+                >
+                  <BookCard
+                    file={file}
+                    variant="grid"
+                    onOpen={() => handleOpenPdf(file)}
+                    onDelete={() => handleDeletePdf(file)}
+                    onRequestRename={
+                      onRequestRename ? () => onRequestRename(file) : undefined
+                    }
+                    lastPage={pm.lastPage}
+                    totalPages={pm.totalPages}
+                    todayPages={stat?.pagesTotal ?? 0}
+                    todayTargetPages={stat?.targetPages ?? 0}
+                  />
+                </View>
+              );
+            })}
+
+            {Array.from({ length: missing }).map((_, i) => (
+              <View
+                key={`empty-${rIdx}-${i}`}
+                style={[styles.cell, { width: cellWidth, opacity: 0 }]}
+                pointerEvents="none"
+              />
+            ))}
+          </View>
+        );
+      })}
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   headerRow: {
@@ -89,6 +121,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.md,
     marginBottom: spacing.md,
+    justifyContent: "flex-start",
   },
-  cell: { flex: 1 },
+  cell: {},
 });
