@@ -1,4 +1,3 @@
-// apps/mobile/app/(tabs)/bookshelf/index.tsx
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { View, StyleSheet, Alert, ScrollView } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
@@ -36,8 +35,15 @@ import { useGamificationSettingsStore } from "@/store/bookshelf/readingGamificat
 import { AddBookModal } from "../ui/modals/AddBookModal";
 import { EditPlanModal } from "../ui/modals/EditPlanModal";
 import { RenameBookModal } from "../ui/modals/RenameBookModal";
+import { AddTextBookModal } from "@/components/ui/modals/AddTextBookModal";
+import { TextBookList, TextBookListItem } from "../Books/TextBookList";
+import {
+  deleteTextBookById,
+  listTextBookFiles,
+  readTextBook,
+} from "@/utils/textBooksStorage";
 
-const { colors, spacing, radii } = bookshelfTheme;
+const { spacing } = bookshelfTheme;
 
 const bColors = bookshelfTheme.colors;
 const bSpacing = bookshelfTheme.spacing;
@@ -68,9 +74,11 @@ export default function BookshelfHomeScreen() {
   const router = useRouter();
   const selectedTab = useBookshelfTabsStore((s) => s.selected);
   const setSelectedTab = useBookshelfTabsStore((s) => s.setSelected);
+  const [textBooks, setTextBooks] = useState<TextBookListItem[]>([]);
 
   const [books, setBooks] = useState<LocalPdfFile[]>([]);
   const [addBookVisible, setAddBookVisible] = useState(false);
+  const [addTextBookVisible, setAddTextBookVisible] = useState(false);
   const [planModalVisible, setPlanModalVisible] = useState(false);
   const [targetModalVisible, setTargetModalVisible] = useState(false);
 
@@ -78,28 +86,24 @@ export default function BookshelfHomeScreen() {
     string | null
   >(null);
 
-  // ✅ rename modal (tek yerde)
   const [renameModalVisible, setRenameModalVisible] = useState(false);
   const [renameTarget, setRenameTarget] = useState<{
     uri: string;
     name: string;
   } | null>(null);
 
-  // ✅ edit plan modal
   const [editPlanModalVisible, setEditPlanModalVisible] = useState(false);
   const [editPlanId, setEditPlanId] = useState<string | null>(null);
 
   const progressMap = useBooksStore((s) => s.items);
   const byBookDate = useReadingStatsStore((s) => s.byBookDate);
 
-  // plans
   const plans = useReadingPlanStore((s) => s.plans);
   const updatePlan = useReadingPlanStore((s) => s.updatePlan);
   const deletePlan = useReadingPlanStore((s) => s.deletePlan);
   const ensureTodayPlan = useReadingPlanStore((s) => s.ensureTodayPlan);
   const renameBookInPlan = useReadingPlanStore((s) => s.renameBookInPlan);
 
-  // targets
   const hydrateTargets = useReadingTargetsStore((s) => s.hydrate);
   const targetsHydrated = useReadingTargetsStore((s) => s.hydrated);
   const targets = useReadingTargetsStore((s) => s.targets);
@@ -126,7 +130,6 @@ export default function BookshelfHomeScreen() {
 
   const today = dayjs().format("YYYY-MM-DD");
 
-  // ✅ prevents chip press from opening plan when user pressed 3-dot
   const suppressNextPlanOpenRef = React.useRef(false);
 
   const planTargetByBookUri = useMemo(() => {
@@ -198,10 +201,33 @@ export default function BookshelfHomeScreen() {
     const all = await listLocalPdfs();
     setBooks(all);
   }, []);
+  const loadTextBooks = useCallback(async () => {
+    const files = await listTextBookFiles();
+    const items: TextBookListItem[] = [];
+
+    for (const f of files) {
+      try {
+        const data = await readTextBook(f.uri);
+        items.push({
+          id: data.id,
+          title: data.title,
+          createdAt: data.createdAt,
+          uri: f.uri,
+        });
+      } catch {}
+    }
+
+    items.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+    setTextBooks(items);
+  }, []);
 
   useEffect(() => {
     loadBooks();
   }, [loadBooks]);
+
+  useEffect(() => {
+    loadTextBooks();
+  }, [loadTextBooks]);
 
   useEffect(() => {
     ensureTodayPlan(today);
@@ -272,11 +298,11 @@ export default function BookshelfHomeScreen() {
     });
   };
 
-  // ✅ edit plan modal open
   const openEditPlan = (planId: string) => {
     setEditPlanId(planId);
     setEditPlanModalVisible(true);
   };
+
   const closeEditPlan = () => setEditPlanModalVisible(false);
 
   const editPlan = useMemo(() => {
@@ -284,7 +310,6 @@ export default function BookshelfHomeScreen() {
     return (plans ?? []).find((p) => p.id === editPlanId) ?? null;
   }, [plans, editPlanId]);
 
-  // ✅ parent-level rename open (BookCard -> BookList/LastReadBook -> burası)
   const openRenameForFile = (file: LocalPdfFile) => {
     setRenameTarget({ uri: file.uri, name: file.name });
     setRenameModalVisible(true);
@@ -311,7 +336,6 @@ export default function BookshelfHomeScreen() {
 
       await FileSystem.moveAsync({ from: oldUri, to: newUri });
 
-      // ✅ rename across all plans
       renameBookInPlan(oldUri, newUri, finalName);
 
       await loadBooks();
@@ -367,6 +391,12 @@ export default function BookshelfHomeScreen() {
       headerCenter={<BookshelfHeader />}
       headerRight={
         <View style={styles.headerActions}>
+          <IconButton
+            name="document-text-outline"
+            size={iconSizes.lg}
+            color={bColors.textPrimary}
+            onPress={() => setAddTextBookVisible(true)}
+          />
           <IconButton
             name="stats-chart-outline"
             size={iconSizes.lg}
@@ -433,7 +463,7 @@ export default function BookshelfHomeScreen() {
             />
           )}
 
-          <LastReadBook
+          {/* <LastReadBook
             readingStats={readingStatsForCards}
             lastReadBooks={lastReadBooks.map((book) => ({
               uri: book.uri,
@@ -449,9 +479,22 @@ export default function BookshelfHomeScreen() {
                 { ...value, totalPages: value.totalPages ?? 0 },
               ])
             )}
+          /> */}
+          <TextBookList
+            items={textBooks}
+            onOpen={(it) => {
+              router.push({
+                pathname: "/(tabs)/bookshelf/textbook/viewer",
+                params: { uri: encodeURIComponent(it.uri) },
+              });
+            }}
+            onDelete={async (it) => {
+              await deleteTextBookById(it.id);
+              await loadTextBooks();
+            }}
           />
 
-          <BookList
+          {/* <BookList
             readingStats={readingStatsForCards}
             setModalVisible={setAddBookVisible}
             gridRows={gridRows.map((row) =>
@@ -462,14 +505,14 @@ export default function BookshelfHomeScreen() {
             )}
             handleOpenPdf={handleOpenPdf}
             handleDeletePdf={handleDeletePdf}
-            onRequestRename={openRenameForFile} // ✅
+            onRequestRename={openRenameForFile}
             progressMap={Object.fromEntries(
               Object.entries(progressMap).map(([key, value]) => [
                 key,
                 { ...value, totalPages: value.totalPages ?? 0 },
               ])
             )}
-          />
+          /> */}
         </ScrollView>
 
         <AddBookModal
@@ -478,6 +521,14 @@ export default function BookshelfHomeScreen() {
           onBookImported={() => {
             setAddBookVisible(false);
             loadBooks();
+          }}
+        />
+
+        <AddTextBookModal
+          visible={addTextBookVisible}
+          onClose={() => setAddTextBookVisible(false)}
+          onCreated={() => {
+            loadTextBooks();
           }}
         />
 
@@ -523,7 +574,6 @@ export default function BookshelfHomeScreen() {
           }}
         />
 
-        {/* ✅ ONLY ONE rename modal here */}
         <RenameBookModal
           visible={renameModalVisible}
           currentName={renameTarget?.name ?? ""}

@@ -25,6 +25,7 @@ export * from "./types/cashflowLike";
 export * from "./types/book";
 export * from "./types/bookProgress";
 export * from "./types/readingPlan";
+export * from "./types/textBook";
 //types - stats
 export * from "./types/stats/addPagesInput";
 export * from "./types/stats/dailyReadingStat";
