@@ -8,9 +8,9 @@ import {
   UIManager,
   findNodeHandle,
   Animated,
+  Dimensions,
 } from "react-native";
 import Svg, { Rect, Line } from "react-native-svg";
-import { Dimensions } from "react-native";
 
 import {
   MText,
@@ -28,7 +28,6 @@ type BookCardProps = {
   onOpen: () => void;
   onDelete: () => void;
 
-  // ✅ artık BookCard modal açmaz, parent’a iletir
   onRequestRename?: () => void;
 
   lastPage?: number;
@@ -59,6 +58,14 @@ function getSpineColorFromString(id: string): string {
   const index = hash % SPINE_PALETTE.length;
   return SPINE_PALETTE[index];
 }
+
+const GRID_COLS = 3;
+
+// ⚠️ Parent grid container padding'ine göre ayarla:
+// Eğer grid ekranında paddingHorizontal: spacing.lg ise -> spacing.lg * 2 doğru.
+// Değilse aşağıdaki değeri değiştir.
+const GRID_H_PADDING_TOTAL = spacing.lg * 2; // left + right
+const GRID_GAP = spacing.md;
 
 export const BookCard: FC<BookCardProps> = ({
   file,
@@ -143,6 +150,15 @@ export const BookCard: FC<BookCardProps> = ({
     opacity: appearAnim,
   };
 
+  // ✅ Grid item width: 3 sütun sabit, tek kalsa da büyümez
+  const gridItemWidth = useMemo(() => {
+    const screenW = Dimensions.get("window").width;
+    const available =
+      screenW - GRID_H_PADDING_TOTAL - GRID_GAP * (GRID_COLS - 1);
+    const w = Math.floor(available / GRID_COLS);
+    return Math.max(110, w);
+  }, []);
+
   const POPOVER_W = 160;
   const EDGE = 8;
   const clamp = (v: number, min: number, max: number) =>
@@ -206,14 +222,19 @@ export const BookCard: FC<BookCardProps> = ({
         onPress={onOpen}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
-        style={styles.cardWrapper}
+        style={[
+          styles.cardWrapper,
+          variant === "grid" ? styles.cardWrapperGrid : styles.cardWrapperRow,
+        ]}
         activeOpacity={0.85}
       >
         <Animated.View style={animatedCardStyle}>
           <Card
             style={[
               styles.cardBase,
-              variant === "grid" ? styles.cardGrid : styles.cardRow,
+              variant === "grid"
+                ? [styles.cardGrid, { width: gridItemWidth }]
+                : styles.cardRow,
             ]}
           >
             {/* Decorative book structure */}
@@ -541,7 +562,16 @@ export const BookCard: FC<BookCardProps> = ({
 };
 
 const styles = StyleSheet.create({
-  cardWrapper: { marginRight: spacing.md },
+  cardWrapper: {},
+
+  // Row list spacing
+  cardWrapperRow: { marginRight: spacing.md },
+
+  // Grid spacing (gap gibi)
+  cardWrapperGrid: {
+    marginRight: spacing.md,
+    marginBottom: spacing.md,
+  },
 
   cardBase: {
     paddingHorizontal: spacing.md,
@@ -549,8 +579,11 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     overflow: "hidden",
   },
+
   cardRow: { width: 120, aspectRatio: 0.8 },
-  cardGrid: { width: "100%", aspectRatio: 0.8 },
+
+  // width render'da hesaplanıp veriliyor
+  cardGrid: { aspectRatio: 0.8 },
 
   bookSpine: {
     position: "absolute",
