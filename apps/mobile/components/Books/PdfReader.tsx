@@ -6,7 +6,7 @@ import React, {
   useState,
   useMemo,
 } from "react";
-import { View, StyleSheet } from "react-native";
+import { View, StyleSheet, Animated } from "react-native";
 import { PdfRef } from "react-native-pdf";
 import { spacing, useTheme, iconSizes } from "@budget/ui-native";
 import { IconButton } from "@/components/ui/AppIcon";
@@ -28,11 +28,13 @@ import { useReadingTracking } from "@/hooks/useReadingTracking";
 
 import { formatDurationShort } from "@/utils/formatDuration";
 import { clampBetween } from "@/utils/number";
+
+import { scheduleMotivationNudgeIfNeeded } from "@/utils/motivation";
+import { PdfOpenIntroOverlay } from "@/components/ui/pdf/PdfOpenIntroOverlay";
 import { useCropTransform } from "@/hooks/ useCropTransform";
 import { useReaderPrefs } from "@/hooks/ useReaderPrefs";
 import { PdfViewport } from "../ui/pdf/ PdfViewport";
 import { ReaderHeaderBar } from "../ui/pdf/ ReaderHeaderBar";
-import { scheduleMotivationNudgeIfNeeded } from "@/utils/motivation";
 
 type PdfReaderProps = {
   isFullscreen: boolean;
@@ -94,9 +96,42 @@ export const PdfReader: FC<PdfReaderProps> = ({
 
   const prefs = useReaderPrefs({ source, bookUri: readingContext?.bookUri });
 
+  /** Intro overlay control */
+  const [introVisible, setIntroVisible] = useState(true);
+  const [pdfReady, setPdfReady] = useState(false);
+
+  const pdfOpacity = useRef(new Animated.Value(0)).current;
+
   const paceKey =
     readingContext?.bookUri ??
     (typeof source === "object" ? source.uri : String(source));
+
+  useEffect(() => {
+    setIntroVisible(true);
+    setPdfReady(false);
+    pdfOpacity.setValue(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    // en güvenlisi: pdf’in kimliği
+    typeof source === "object" ? source.uri : String(source),
+    // bazı akışlarda aynı source ama farklı context olabilir:
+    readingContext?.mode,
+    readingContext?.targetId,
+  ]);
+
+  const onLoadCompleteInternal = useCallback(
+    (n: number, fp?: string) => {
+      handleLoadComplete(n, fp);
+      setPdfReady(true);
+
+      Animated.timing(pdfOpacity, {
+        toValue: 1,
+        duration: 180,
+        useNativeDriver: true,
+      }).start();
+    },
+    [handleLoadComplete, pdfOpacity]
+  );
 
   const pace = useReadingPace({
     paceKey: paceKey ?? null,
@@ -135,10 +170,8 @@ export const PdfReader: FC<PdfReaderProps> = ({
   const { setViewerSize, userScale, visualScale, cropTransform } =
     useCropTransform(prefs.cropKey, prefs.zoomPresetIndex);
 
-  // settings
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  // zoom hint
   const [zoomHintVisible, setZoomHintVisible] = useState(false);
   const hideZoomTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -165,14 +198,10 @@ export const PdfReader: FC<PdfReaderProps> = ({
 
   const zoomPercent = Math.round(userScale * 100);
 
-  // ✅ tracking (pace sampling burada)
   const tracking = useReadingTracking(enableStatsTracking, readingContext, {
-    onPaceSample: (s) => {
-      pace.addSample(s.pagesRead, s.msSpent);
-    },
+    onPaceSample: (s) => pace.addSample(s.pagesRead, s.msSpent),
   });
 
-  // ✅ reset tracking baselines when doc/initial changes
   useEffect(() => {
     const startPage = Math.max(1, Math.floor(initialPage ?? 1));
     tracking.resetBaselines(startPage);
@@ -184,7 +213,6 @@ export const PdfReader: FC<PdfReaderProps> = ({
     tracking.ensureStarted,
   ]);
 
-  // zoom actions
   const applyZoomIndex = useCallback(
     (nextIdx: number) => {
       const next = clampIndex(nextIdx, 0, ZOOM_PRESETS.length - 1);
@@ -254,6 +282,15 @@ export const PdfReader: FC<PdfReaderProps> = ({
         { backgroundColor: isFullscreen ? "#000" : colors.background },
       ]}
     >
+      <PdfOpenIntroOverlay
+        visible={introVisible}
+        ready={pdfReady}
+        title={`Opening “${name}”`}
+        subtitle="Preparing pages…"
+        coverUri={null}
+        onHidden={() => setIntroVisible(false)}
+      />
+
       {!isFullscreen && (
         <ReaderHeaderBar
           name={name}
@@ -284,22 +321,25 @@ export const PdfReader: FC<PdfReaderProps> = ({
         </View>
       )}
 
-      <PdfViewport
-        pdfRef={pdfRef}
-        source={source}
-        initialPage={initialPage}
-        backgroundColor={isFullscreen ? "#000" : colors.background}
-        horizontal={pdfHorizontal}
-        enablePaging={pdfEnablePaging}
-        onLoadComplete={handleLoadComplete}
-        onError={(e) => console.log("PDF error:", e)}
-        onPageChanged={handlePageChangedInternal}
-        onLayoutSize={(w, h) => setViewerSize({ w, h })}
-        translateX={cropTransform.tx * userScale}
-        translateY={cropTransform.ty * userScale}
-        scale={visualScale}
-        onDoubleTap={handleDoubleTapZoom}
-      />
+      {/* ✅ crossfade PDF */}
+      <Animated.View style={{ flex: 1, opacity: pdfOpacity }}>
+        <PdfViewport
+          pdfRef={pdfRef}
+          source={source}
+          initialPage={initialPage}
+          backgroundColor={isFullscreen ? "#000" : colors.background}
+          horizontal={pdfHorizontal}
+          enablePaging={pdfEnablePaging}
+          onLoadComplete={onLoadCompleteInternal}
+          onError={(e) => console.log("PDF error:", e)}
+          onPageChanged={handlePageChangedInternal}
+          onLayoutSize={(w, h) => setViewerSize({ w, h })}
+          translateX={cropTransform.tx * userScale}
+          translateY={cropTransform.ty * userScale}
+          scale={visualScale}
+          onDoubleTap={handleDoubleTapZoom}
+        />
+      </Animated.View>
 
       <ReaderBadges
         currentPage={currentPage}
@@ -311,7 +351,6 @@ export const PdfReader: FC<PdfReaderProps> = ({
         isFullscreen={isFullscreen}
       />
 
-      {/* Strip */}
       {prefs.prefsReady &&
         !isFullscreen &&
         typeof totalPages === "number" &&
