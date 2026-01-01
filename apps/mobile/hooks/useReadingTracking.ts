@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { ReadingMode } from "@budget/core";
 
 import { useReadingGamificationStore } from "@/store/bookshelf/readingGamification/useReadingGamificationStore";
@@ -32,7 +32,6 @@ type FlushResult = {
   msSpent: number;
   gainedXp: number;
 };
-
 
 export function useReadingTracking(
   enabled: boolean,
@@ -155,10 +154,22 @@ export function useReadingTracking(
       };
     }
 
+    // ✅ nothing to flush (prevents double-flush spam)
+    if (!startedRef.current) {
+      return {
+        pagesDelta: 0,
+        minutesDelta: 0,
+        fromPage: 1,
+        toPage: 1,
+        msSpent: 0,
+        gainedXp: 0,
+      };
+    }
+
     // ensure last time tick is closed
     const now = Date.now();
     const lastTick = lastTickRef.current;
-    if (startedRef.current && lastTick != null) {
+    if (lastTick != null) {
       msSpentRef.current += Math.max(0, now - lastTick);
     }
     lastTickRef.current = now;
@@ -174,7 +185,7 @@ export function useReadingTracking(
 
     // ✅ Only log when meaningful
     if (pagesDelta > 0 || minutesDelta > 0) {
-      // ✅ 1) Stats store (this powers StatsBookScreen pages)
+      // ✅ 1) Stats store (pages)
       useReadingStatsStore.getState().addPages({
         date: ctx.date,
         pages: pagesDelta,
@@ -183,9 +194,9 @@ export function useReadingTracking(
         targetId: ctx.targetId,
       });
 
-      // ✅ 2) Events store (this powers StatsBookScreen minutes)
+      // ✅ 2) Events store (minutes)
       useReadingEventsStore.getState().addEvent({
-        at: now,                
+        at: now,
         date: ctx.date,
         bookUri: ctx.bookUri,
         mode: ctx.mode,
@@ -196,7 +207,6 @@ export function useReadingTracking(
         pageTo: toPage,
         durationMs: msSpent,
       });
-      
 
       // ✅ 3) Gamification (XP/streak)
       gainedXp = useReadingGamificationStore.getState().logReadingProgress({
@@ -208,7 +218,7 @@ export function useReadingTracking(
         minutesDelta,
       });
 
-      // ✅ emit one-shot lastGain event for toast layer (anti-spam threshold)
+      // ✅ emit one-shot lastGain event for toast layer
       if (gainedXp > 0) {
         const shouldToast =
           pagesDelta >= 2 || msSpent >= 30_000 || ctx.mode !== "normal";
@@ -239,6 +249,12 @@ export function useReadingTracking(
 
     return { pagesDelta, minutesDelta, fromPage, toPage, msSpent, gainedXp };
   }, [ensureStarted, opts.onPaceSample, resetBaselines]);
+
+  useEffect(() => {
+    return () => {
+      flushSession();
+    };
+  }, [flushSession]);
 
   return useMemo(
     () => ({

@@ -166,7 +166,7 @@ export function useTargetReaderController(): ReaderShellProps {
 
   const onPageChanged = (page: number, _total: number) => {
     setCurrentPage(page);
-
+    console.log("onPageChanged:", { page, _total });
     if (!targetId || !activeItem) return;
 
     const clamped = Math.max(startPage, Math.min(endPage, page));
