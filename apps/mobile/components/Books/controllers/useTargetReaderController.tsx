@@ -9,6 +9,7 @@ import { useToast } from "@/components/ui/ToastProvider";
 
 import type { ReaderShellProps } from "@/components/Books/ReaderShell";
 import { clampInt } from "@/utils/number";
+import { usePdfSource } from "./usePdfSource";
 
 export function useTargetReaderController(): ReaderShellProps {
   const router = useRouter();
@@ -18,7 +19,7 @@ export function useTargetReaderController(): ReaderShellProps {
     targetId?: string;
     uri?: string;
     name?: string;
-    jumpPage?: string; // ✅ added
+    jumpPage?: string;
   }>();
 
   const targetId = params.targetId ? String(params.targetId) : undefined;
@@ -28,7 +29,6 @@ export function useTargetReaderController(): ReaderShellProps {
     ? decodeURIComponent(String(params.name))
     : undefined;
 
-  // ✅ jumpPage from route (TargetCard/TargetList)
   const jumpPageParam = useMemo(() => {
     if (params.jumpPage == null) return null;
     const n = clampInt(params.jumpPage);
@@ -57,7 +57,7 @@ export function useTargetReaderController(): ReaderShellProps {
     return items.find((it) => it.status === "active") ?? null;
   }, [target]);
 
-  const bookUri = uri ?? activeItem?.bookUri ?? null;
+  const bookUri: string | null = uri ?? activeItem?.bookUri ?? null;
 
   const effectiveName =
     routeName ??
@@ -83,6 +83,14 @@ export function useTargetReaderController(): ReaderShellProps {
     });
     router.replace("/(tabs)/bookshelf");
   }, [router]);
+
+  // ✅ PDF source (cached)
+  const pdf = usePdfSource({
+    uri: bookUri,
+    invalidText: "Loading…",
+    preparingText: "Preparing PDF…",
+    failedText: "Failed to load PDF.",
+  });
 
   // auto-close when all done, but not while advancing
   useEffect(() => {
@@ -125,17 +133,26 @@ export function useTargetReaderController(): ReaderShellProps {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeItem?.id, jumpPageParam]);
 
-  const guard: ReaderShellProps["guard"] = (() => {
+  // ✅ single, final guard (base checks + pdf guard last)
+  const guard: ReaderShellProps["guard"] = useMemo(() => {
     if (!targetId) return { kind: "message", text: "Invalid targetId" };
     if (!hydrated) return { kind: "message", text: "Loading…" };
     if (!target) return { kind: "message", text: "Target not found." };
     if (isClosing) return { kind: "message", text: "Done." };
     if (isAdvancing) return { kind: "message", text: "Loading…" };
     if (!activeItem || !bookUri) return { kind: "message", text: "Loading…" };
-    return { kind: "ok" };
-  })();
 
-  const source = { uri: bookUri ?? "", cache: true };
+    return pdf.guard;
+  }, [
+    targetId,
+    hydrated,
+    target,
+    isClosing,
+    isAdvancing,
+    activeItem,
+    bookUri,
+    pdf.guard,
+  ]);
 
   const startPage = Math.max(
     1,
@@ -158,15 +175,13 @@ export function useTargetReaderController(): ReaderShellProps {
 
     router.replace({
       pathname: "/(tabs)/bookshelf/target/target-viewer",
-      params: {
-        targetId,
-      },
+      params: { targetId },
     });
   };
 
   const onPageChanged = (page: number, _total: number) => {
     setCurrentPage(page);
-    console.log("onPageChanged:", { page, _total });
+
     if (!targetId || !activeItem) return;
 
     const clamped = Math.max(startPage, Math.min(endPage, page));
@@ -175,10 +190,8 @@ export function useTargetReaderController(): ReaderShellProps {
     if (!doneOnceRef.current && clamped >= endPage) {
       doneOnceRef.current = true;
 
-      // ✅ mark done (store handles repeat + rewards)
       void markItemDone(targetId, activeItem.id).catch(() => {});
 
-      // ✅ toast (NO XP calculation here to avoid double-award)
       showToast({
         title: "Target completed 🎯",
         message: "Nice work!",
@@ -190,22 +203,20 @@ export function useTargetReaderController(): ReaderShellProps {
     }
   };
 
-  const onClose = handleClose;
-
   return {
     guard,
-    source,
+    source: pdf.source, // ✅ cached source here
     name: effectiveName,
     initialPage,
     currentPage,
     totalPages: totalPages ?? undefined,
     onLoadComplete,
     onPageChanged,
-    onClose,
+    onClose: handleClose,
     readingContext: {
       mode: "target",
       date: today,
-      bookUri: bookUri ?? undefined,
+      bookUri: bookUri ?? undefined, // ✅ original identity for stats/pace
       targetId,
       sectionId: activeItem?.id,
       sectionTitle: activeItem?.label ?? activeItem?.bookName,

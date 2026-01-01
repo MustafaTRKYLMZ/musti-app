@@ -5,6 +5,8 @@ import type { PdfRef } from "react-native-pdf";
 
 import { useBooksStore } from "@/store/bookshelf/useBooksStore";
 import type { ReaderShellProps } from "@/components/Books/ReaderShell";
+import { useCachedPdfUri } from "@/hooks/useCachedPdfUri";
+import { usePdfSource } from "./usePdfSource";
 
 export function useNormalReaderController(): ReaderShellProps {
   const router = useRouter();
@@ -59,11 +61,12 @@ export function useNormalReaderController(): ReaderShellProps {
     setCurrentPage(last);
   }, [uri, currentProgress]);
 
-  const guard: ReaderShellProps["guard"] = !uri
-    ? { kind: "message", text: "Invalid PDF path" }
-    : { kind: "ok" };
-
-  const source = { uri: uri ?? "", cache: true };
+  const { guard, source } = usePdfSource({
+    uri,
+    invalidText: "Invalid PDF path",
+    preparingText: "Preparing PDF…",
+    failedText: "Failed to load PDF.",
+  });
 
   const onLoadComplete = (pages: number) => {
     setTotalPages(pages);
@@ -80,9 +83,9 @@ export function useNormalReaderController(): ReaderShellProps {
     if (jumpPage && !appliedJumpOnceRef.current) {
       appliedJumpOnceRef.current = true;
       const safe = Math.max(1, Math.min(pages, jumpPage));
-      setTimeout(() => {
+      requestAnimationFrame(() => {
         pdfRef.current?.setPage(safe);
-      }, 0);
+      });
     }
   };
 
