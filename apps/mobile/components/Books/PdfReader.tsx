@@ -1,12 +1,13 @@
+// apps/mobile/components/Books/PdfReader.tsx
 import React, {
   FC,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
-  useMemo,
 } from "react";
-import { View, StyleSheet, Animated } from "react-native";
+import { View, StyleSheet } from "react-native";
 import { PdfRef } from "react-native-pdf";
 import { spacing, useTheme, iconSizes } from "@budget/ui-native";
 import { IconButton } from "@/components/ui/AppIcon";
@@ -35,6 +36,7 @@ import { useCropTransform } from "@/hooks/ useCropTransform";
 import { useReaderPrefs } from "@/hooks/ useReaderPrefs";
 import { PdfViewport } from "../ui/pdf/ PdfViewport";
 import { ReaderHeaderBar } from "../ui/pdf/ ReaderHeaderBar";
+import { usePdfCoverFromFirstPage } from "@/hooks/usePdfCoverFromFirstPage";
 
 type PdfReaderProps = {
   isFullscreen: boolean;
@@ -96,42 +98,28 @@ export const PdfReader: FC<PdfReaderProps> = ({
 
   const prefs = useReaderPrefs({ source, bookUri: readingContext?.bookUri });
 
-  /** Intro overlay control */
+  // ✅ overlay state
   const [introVisible, setIntroVisible] = useState(true);
   const [pdfReady, setPdfReady] = useState(false);
 
-  const pdfOpacity = useRef(new Animated.Value(0)).current;
+  // reset on doc/source change
+  const sourceKey = useMemo(
+    () => (typeof source === "object" ? source.uri : String(source)),
+    [source]
+  );
+  const sourceUri =
+    typeof source === "object" && source?.uri ? source.uri : null;
+
+  const cover = usePdfCoverFromFirstPage(sourceUri);
+  console.log("cover", cover);
+  useEffect(() => {
+    setIntroVisible(true);
+    setPdfReady(false);
+  }, [sourceKey, prefs.storageKey]);
 
   const paceKey =
     readingContext?.bookUri ??
     (typeof source === "object" ? source.uri : String(source));
-
-  useEffect(() => {
-    setIntroVisible(true);
-    setPdfReady(false);
-    pdfOpacity.setValue(0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    // en güvenlisi: pdf’in kimliği
-    typeof source === "object" ? source.uri : String(source),
-    // bazı akışlarda aynı source ama farklı context olabilir:
-    readingContext?.mode,
-    readingContext?.targetId,
-  ]);
-
-  const onLoadCompleteInternal = useCallback(
-    (n: number, fp?: string) => {
-      handleLoadComplete(n, fp);
-      setPdfReady(true);
-
-      Animated.timing(pdfOpacity, {
-        toValue: 1,
-        duration: 180,
-        useNativeDriver: true,
-      }).start();
-    },
-    [handleLoadComplete, pdfOpacity]
-  );
 
   const pace = useReadingPace({
     paceKey: paceKey ?? null,
@@ -166,7 +154,6 @@ export const PdfReader: FC<PdfReaderProps> = ({
     return formatDurationShort(ms);
   }, [timeLeftRemainingPages, currentPage, totalPages, pace.ppm]);
 
-  // crop + zoom transforms
   const { setViewerSize, userScale, visualScale, cropTransform } =
     useCropTransform(prefs.cropKey, prefs.zoomPresetIndex);
 
@@ -275,6 +262,15 @@ export const PdfReader: FC<PdfReaderProps> = ({
     handleClose();
   };
 
+  // ✅ PDF loads while overlay is visible (no opacity tricks)
+  const onLoadCompleteInternal = useCallback(
+    (n: number, fp?: string) => {
+      handleLoadComplete(n, fp);
+      setPdfReady(true);
+    },
+    [handleLoadComplete]
+  );
+
   return (
     <View
       style={[
@@ -287,7 +283,8 @@ export const PdfReader: FC<PdfReaderProps> = ({
         ready={pdfReady}
         title={`Opening “${name}”`}
         subtitle="Preparing pages…"
-        coverUri={null}
+        coverUri={cover.coverUri}
+        minShowMs={450}
         onHidden={() => setIntroVisible(false)}
       />
 
@@ -321,37 +318,40 @@ export const PdfReader: FC<PdfReaderProps> = ({
         </View>
       )}
 
-      {/* ✅ crossfade PDF */}
-      <Animated.View style={{ flex: 1, opacity: pdfOpacity }}>
-        <PdfViewport
-          pdfRef={pdfRef}
-          source={source}
-          initialPage={initialPage}
-          backgroundColor={isFullscreen ? "#000" : colors.background}
-          horizontal={pdfHorizontal}
-          enablePaging={pdfEnablePaging}
-          onLoadComplete={onLoadCompleteInternal}
-          onError={(e) => console.log("PDF error:", e)}
-          onPageChanged={handlePageChangedInternal}
-          onLayoutSize={(w, h) => setViewerSize({ w, h })}
-          translateX={cropTransform.tx * userScale}
-          translateY={cropTransform.ty * userScale}
-          scale={visualScale}
-          onDoubleTap={handleDoubleTapZoom}
-        />
-      </Animated.View>
-
-      <ReaderBadges
-        currentPage={currentPage}
-        totalPages={totalPages}
-        zoomHintVisible={zoomHintVisible}
-        zoomPercent={zoomPercent}
-        cropLabel={cropLabel}
-        timeLeftLabel={timeLeftLabel}
-        isFullscreen={isFullscreen}
+      {/* ✅ Always mounted: starts loading immediately */}
+      <PdfViewport
+        pdfRef={pdfRef}
+        source={source}
+        initialPage={initialPage}
+        backgroundColor={isFullscreen ? "#000" : colors.background}
+        horizontal={pdfHorizontal}
+        enablePaging={pdfEnablePaging}
+        onLoadComplete={onLoadCompleteInternal}
+        onError={(e) => console.log("PDF error:", e)}
+        onPageChanged={handlePageChangedInternal}
+        onLayoutSize={(w, h) => setViewerSize({ w, h })}
+        translateX={cropTransform.tx * userScale}
+        translateY={cropTransform.ty * userScale}
+        scale={visualScale}
+        onDoubleTap={handleDoubleTapZoom}
       />
 
-      {prefs.prefsReady &&
+      {/* Badges/Strip: istersen overlay varken de kalsın, ama genelde daha temiz:
+          overlay varken göstermek istemiyorsan introVisible ile gate edebilirsin */}
+      {!introVisible && (
+        <ReaderBadges
+          currentPage={currentPage}
+          totalPages={totalPages}
+          zoomHintVisible={zoomHintVisible}
+          zoomPercent={zoomPercent}
+          cropLabel={cropLabel}
+          timeLeftLabel={timeLeftLabel}
+          isFullscreen={isFullscreen}
+        />
+      )}
+
+      {!introVisible &&
+        prefs.prefsReady &&
         !isFullscreen &&
         typeof totalPages === "number" &&
         totalPages > 1 && (

@@ -9,6 +9,7 @@ import {
   findNodeHandle,
   Animated,
   Dimensions,
+  Image,
 } from "react-native";
 import Svg, { Rect, Line } from "react-native-svg";
 
@@ -22,6 +23,9 @@ import {
 } from "@budget/ui-native";
 import { IconButton, BaseIcon } from "@/components/ui/AppIcon";
 import type { LocalPdfFile } from "@/utils/getPdfsDirectory";
+
+import { usePdfCoverFromFirstPage } from "@/hooks/usePdfCoverFromFirstPage";
+import { useCachedPdfUri } from "@/hooks/useCachedPdfUri";
 
 type BookCardProps = {
   file: LocalPdfFile;
@@ -216,6 +220,11 @@ export const BookCard: FC<BookCardProps> = ({
     return lp > 0 ? String(lp) : "—";
   }, [lastPage, totalPages]);
 
+  // ✅ COVER FIX: content:// -> file:// cache, sonra cover üret
+  const { cachedUri, ready: pdfReady } = useCachedPdfUri(file.uri ?? undefined);
+  const cover = usePdfCoverFromFirstPage(pdfReady ? cachedUri : null);
+  const showCover = variant === "grid" && !!cover.coverUri;
+
   return (
     <>
       <TouchableOpacity
@@ -237,6 +246,24 @@ export const BookCard: FC<BookCardProps> = ({
                 : styles.cardRow,
             ]}
           >
+            {/* ✅ Cover (only grid) */}
+            {showCover && (
+              <View style={styles.coverClip} pointerEvents="none">
+                <Image
+                  source={{ uri: cover.coverUri as string }}
+                  style={styles.coverImg}
+                  resizeMode="cover"
+                />
+                {/* hafif karartma, yazılar okunur */}
+                <View
+                  style={[
+                    StyleSheet.absoluteFillObject,
+                    { backgroundColor: "rgba(0,0,0,0.08)" },
+                  ]}
+                />
+              </View>
+            )}
+
             {/* Decorative book structure */}
             <View
               style={[
@@ -585,6 +612,20 @@ const styles = StyleSheet.create({
   // width render'da hesaplanıp veriliyor
   cardGrid: { aspectRatio: 0.8 },
 
+  // ✅ cover sits inside book body area (between spine and right edge)
+  coverClip: {
+    position: "absolute",
+    top: spacing.sm + 4,
+    bottom: spacing.sm,
+    left: 22, // after spine + highlight
+    right: 26, // before right edge
+    borderRadius: radii.lg,
+    overflow: "hidden",
+    opacity: 0.95,
+    zIndex: 1,
+  },
+  coverImg: { width: "100%", height: "100%" },
+
   bookSpine: {
     position: "absolute",
     left: 0,
@@ -619,6 +660,7 @@ const styles = StyleSheet.create({
     bottom: spacing.sm,
     right: 0,
     width: 26,
+    zIndex: 2,
   },
 
   menuIconWrapper: {

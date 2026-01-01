@@ -1,155 +1,224 @@
 // apps/mobile/components/ui/pdf/PdfOpenIntroOverlay.tsx
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { View, StyleSheet, Animated, Easing, Image } from "react-native";
+import React, { FC, useEffect, useMemo, useRef, useState } from "react";
+import {
+  View,
+  StyleSheet,
+  Animated,
+  Easing,
+  ActivityIndicator,
+  Image,
+} from "react-native";
 import { MText, spacing, radii, useTheme } from "@budget/ui-native";
+import { BaseIcon } from "@/components/ui/AppIcon";
 
 type Props = {
-  /** Parent controls this: when true overlay shows */
-  visible: boolean;
-
-  /** When PDF is truly ready (onLoadComplete), set to true */
-  ready: boolean;
-
-  /** Title (book name) */
+  visible: boolean; // parent wants it shown
+  ready: boolean; // true when PDF onLoadComplete fires
   title?: string;
-
-  /** Optional subtitle line */
   subtitle?: string;
 
-  /** Optional cover image */
   coverUri?: string | null;
 
-  /** Minimum time overlay stays visible once shown (prevents flash) */
+  // UX tuning
   minShowMs?: number;
-
-  /** Fade duration for crossfade */
-  fadeMs?: number;
-
-  /** If true, show a fake progress that ramps to 70% while loading */
-  showFakeProgress?: boolean;
-
-  /** Called when overlay has fully hidden (after fade out) */
   onHidden?: () => void;
 };
 
-export const PdfOpenIntroOverlay: React.FC<Props> = ({
+const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
+
+export const PdfOpenIntroOverlay: FC<Props> = ({
   visible,
   ready,
   title = "Opening…",
   subtitle = "Preparing pages…",
   coverUri = null,
   minShowMs = 450,
-  fadeMs = 180,
-  showFakeProgress = true,
   onHidden,
 }) => {
   const { colors } = useTheme();
 
-  const [rendered, setRendered] = useState(visible);
+  const [mounted, setMounted] = useState(visible);
+  const shownAtRef = useRef<number | null>(null);
 
-  const introOpacity = useRef(new Animated.Value(0)).current;
-  const cardTranslate = useRef(new Animated.Value(8)).current;
+  // overlay anim
+  const opacity = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(0.98)).current;
+  const translateY = useRef(new Animated.Value(10)).current;
 
-  const shownAtRef = useRef<number>(0);
+  // progress anim (0..1)
+  const progress = useRef(new Animated.Value(0)).current;
+  const progressLoopRef = useRef<Animated.CompositeAnimation | null>(null);
 
-  // fake progress (0..1)
-  const prog = useRef(new Animated.Value(0)).current;
+  const [progressText, setProgressText] = useState(0);
 
-  const progressText = useMemo(() => {
-    // avoid reading animated value directly; just render a generic text
-    return ready ? "Finalizing…" : "Preparing…";
-  }, [ready]);
+  const backdropStyle = useMemo(
+    () => ({ backgroundColor: colors.backdropStrong }),
+    [colors.backdropStrong]
+  );
+
+  const cardStyle = useMemo(
+    () => ({
+      backgroundColor: colors.surface,
+      borderColor: colors.borderSubtle,
+    }),
+    [colors.surface, colors.borderSubtle]
+  );
+
+  // keep % label in sync
+  useEffect(() => {
+    const id = progress.addListener(({ value }) => {
+      setProgressText(Math.round(clamp01(value) * 100));
+    });
+    return () => progress.removeListener(id);
+  }, [progress]);
 
   const startFakeProgress = () => {
-    if (!showFakeProgress) return;
+    progress.stopAnimation();
+    progress.setValue(0);
 
-    prog.stopAnimation();
-    prog.setValue(0);
-
-    // ramp to 0.7 over ~1.1s, then hold
-    Animated.timing(prog, {
-      toValue: 0.7,
-      duration: 1100,
+    // 0 -> 0.72 in ~1.3s, then 0.72 -> 0.86 slow repeat
+    const a = Animated.timing(progress, {
+      toValue: 0.72,
+      duration: 1300,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: false,
-    }).start();
-  };
+    });
 
-  const finishFakeProgress = () => {
-    if (!showFakeProgress) return;
-
-    prog.stopAnimation();
-    Animated.timing(prog, {
-      toValue: 1,
-      duration: 220,
-      easing: Easing.out(Easing.cubic),
+    const b1 = Animated.timing(progress, {
+      toValue: 0.86,
+      duration: 2400,
+      easing: Easing.inOut(Easing.quad),
       useNativeDriver: false,
-    }).start();
+    });
+
+    const b2 = Animated.timing(progress, {
+      toValue: 0.74,
+      duration: 2600,
+      easing: Easing.inOut(Easing.quad),
+      useNativeDriver: false,
+    });
+
+    const loop = Animated.loop(Animated.sequence([b1, b2]));
+    progressLoopRef.current = loop;
+
+    a.start(({ finished }) => {
+      if (!finished) return;
+      // start looping only if still not ready
+      if (!ready) loop.start();
+    });
   };
 
-  const show = () => {
-    setRendered(true);
+  const stopFakeProgressLoop = () => {
+    progressLoopRef.current?.stop?.();
+    progressLoopRef.current = null;
+  };
+
+  // show overlay
+  useEffect(() => {
+    if (!visible) return;
+
+    setMounted(true);
     shownAtRef.current = Date.now();
-    startFakeProgress();
 
-    introOpacity.stopAnimation();
-    cardTranslate.stopAnimation();
-
-    introOpacity.setValue(0);
-    cardTranslate.setValue(8);
+    // show anim
+    opacity.setValue(0);
+    scale.setValue(0.98);
+    translateY.setValue(10);
 
     Animated.parallel([
-      Animated.timing(introOpacity, {
+      Animated.timing(opacity, {
         toValue: 1,
-        duration: 160,
-        easing: Easing.out(Easing.cubic),
+        duration: 180,
+        easing: Easing.out(Easing.quad),
         useNativeDriver: true,
       }),
-      Animated.spring(cardTranslate, {
-        toValue: 0,
+      Animated.timing(scale, {
+        toValue: 1,
+        duration: 220,
+        easing: Easing.out(Easing.quad),
         useNativeDriver: true,
-        friction: 7,
+      }),
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: 220,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
       }),
     ]).start();
-  };
 
-  const hide = () => {
-    const elapsed = Date.now() - shownAtRef.current;
-    const wait = Math.max(0, minShowMs - elapsed);
+    // progress anim
+    startFakeProgress();
 
-    finishFakeProgress();
-
-    setTimeout(() => {
-      Animated.timing(introOpacity, {
-        toValue: 0,
-        duration: fadeMs,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }).start(() => {
-        setRendered(false);
-        onHidden?.();
-      });
-    }, wait);
-  };
-
-  // when parent toggles visible
-  useEffect(() => {
-    if (visible) show();
-    else if (rendered) hide();
+    return () => {
+      stopFakeProgressLoop();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
-  // when ready flips true while visible, auto-hide
+  // when ready: fill to 100, wait minShowMs, then hide
   useEffect(() => {
+    if (!mounted) return;
     if (!visible) return;
     if (!ready) return;
-    hide();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready]);
 
-  if (!rendered) return null;
+    stopFakeProgressLoop();
 
-  const progressWidth = prog.interpolate({
+    const shownAt = shownAtRef.current ?? Date.now();
+    const elapsed = Date.now() - shownAt;
+    const wait = Math.max(0, minShowMs - elapsed);
+
+    // 1) snap progress to 1 quickly
+    Animated.timing(progress, {
+      toValue: 1,
+      duration: 240,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+
+    // 2) hide after min show
+    const t = setTimeout(() => {
+      Animated.parallel([
+        Animated.timing(opacity, {
+          toValue: 0,
+          duration: 180,
+          easing: Easing.in(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(scale, {
+          toValue: 0.985,
+          duration: 180,
+          easing: Easing.in(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(translateY, {
+          toValue: 6,
+          duration: 180,
+          easing: Easing.in(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]).start(({ finished }) => {
+        if (!finished) return;
+        setMounted(false);
+        onHidden?.();
+      });
+    }, wait);
+
+    return () => clearTimeout(t);
+  }, [
+    mounted,
+    visible,
+    ready,
+    minShowMs,
+    opacity,
+    scale,
+    translateY,
+    progress,
+    onHidden,
+  ]);
+
+  if (!mounted) return null;
+
+  const barWidth = progress.interpolate({
     inputRange: [0, 1],
     outputRange: ["0%", "100%"],
   });
@@ -158,101 +227,157 @@ export const PdfOpenIntroOverlay: React.FC<Props> = ({
     <Animated.View
       pointerEvents="auto"
       style={[
-        StyleSheet.absoluteFillObject,
         styles.overlay,
+        backdropStyle,
         {
-          backgroundColor: colors.background,
-          opacity: introOpacity,
+          opacity,
         },
       ]}
     >
       <Animated.View
         style={[
           styles.card,
+          cardStyle,
           {
-            backgroundColor: colors.surface,
-            borderColor: colors.borderSubtle,
-            transform: [{ translateY: cardTranslate }],
+            transform: [{ translateY }, { scale }],
           },
         ]}
       >
+        {/* Header Row */}
+        <View style={styles.headerRow}>
+          <View style={styles.iconCircle}>
+            <BaseIcon
+              family="ion"
+              name="book-outline"
+              size={20}
+              color={colors.textPrimary}
+            />
+          </View>
+
+          <View style={{ flex: 1 }}>
+            <MText variant="bodyStrong" color="textPrimary" numberOfLines={2}>
+              {title}
+            </MText>
+            <MText
+              variant="body"
+              color="textSecondary"
+              numberOfLines={2}
+              style={{ marginTop: 2, opacity: 0.85 }}
+            >
+              {subtitle}
+            </MText>
+          </View>
+
+          <View style={{ alignItems: "flex-end", gap: 6 }}>
+            <MText variant="caption" color="textSecondary">
+              {progressText}%
+            </MText>
+            <ActivityIndicator />
+          </View>
+        </View>
+
+        {/* Book / Cover Visual */}
+        <View style={{ height: spacing.md }} />
+
+        <View style={styles.bookRow}>
+          <View style={styles.bookMockWrap}>
+            {coverUri ? (
+              <Image
+                source={{ uri: coverUri }}
+                style={[
+                  styles.coverImage,
+                  { borderColor: colors.borderSubtle },
+                ]}
+                resizeMode="cover"
+              />
+            ) : (
+              <View
+                style={[
+                  styles.bookMock,
+                  {
+                    backgroundColor: colors.surfaceElevated,
+                    borderColor: colors.borderSubtle,
+                  },
+                ]}
+              >
+                {/* spine */}
+                <View
+                  style={[styles.spine, { backgroundColor: colors.primary }]}
+                />
+                {/* spine highlight */}
+                <View
+                  style={[
+                    styles.spineHighlight,
+                    { backgroundColor: "rgba(255,255,255,0.18)" },
+                  ]}
+                />
+                {/* simple title lines */}
+                <View style={styles.mockText}>
+                  <View
+                    style={[
+                      styles.mockLine,
+                      { backgroundColor: colors.borderSubtle, width: "70%" },
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.mockLine,
+                      { backgroundColor: colors.borderSubtle, width: "52%" },
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.mockLine,
+                      { backgroundColor: colors.borderSubtle, width: "40%" },
+                    ]}
+                  />
+                </View>
+              </View>
+            )}
+          </View>
+
+          <View style={{ flex: 1, gap: 6, justifyContent: "center" }}>
+            <MText
+              variant="body"
+              color="textPrimary"
+              style={{ fontWeight: "800" }}
+            >
+              Getting things ready…
+            </MText>
+            <MText
+              variant="caption"
+              color="textSecondary"
+              style={{ opacity: 0.85 }}
+            >
+              This may take a moment for large PDFs.
+            </MText>
+          </View>
+        </View>
+
+        {/* Progress Bar */}
+        <View style={{ height: spacing.md }} />
+
         <View
           style={[
-            styles.cover,
+            styles.progressTrack,
             {
               backgroundColor: colors.backgroundSecondary,
               borderColor: colors.borderSubtle,
             },
           ]}
         >
-          {coverUri ? (
-            <Image
-              source={{ uri: coverUri }}
-              style={styles.coverImg}
-              resizeMode="cover"
-            />
-          ) : (
-            <>
-              <View
-                style={[
-                  styles.spine,
-                  { backgroundColor: colors.primary, opacity: 0.55 },
-                ]}
-              />
-              <View style={styles.skel} />
-              <View style={[styles.skel, { width: "65%", opacity: 0.55 }]} />
-            </>
-          )}
+          <Animated.View
+            style={[
+              styles.progressFill,
+              { width: barWidth, backgroundColor: colors.primary },
+            ]}
+          />
         </View>
 
-        <View style={{ height: spacing.lg }} />
-
-        <MText
-          variant="bodyStrong"
-          color="textPrimary"
-          numberOfLines={2}
-          style={{ textAlign: "center" }}
-        >
-          {title}
-        </MText>
-
-        <View style={{ height: spacing.xs }} />
-
-        <MText
-          variant="caption"
-          color="textSecondary"
-          numberOfLines={1}
-          style={{ textAlign: "center", opacity: 0.9 }}
-        >
-          {subtitle}
-        </MText>
-
-        <View style={{ height: spacing.lg }} />
-
-        {showFakeProgress ? (
-          <View
-            style={[
-              styles.progressTrack,
-              { backgroundColor: colors.borderSubtle },
-            ]}
-          >
-            <Animated.View
-              style={[
-                styles.progressFill,
-                { backgroundColor: colors.primary, width: progressWidth },
-              ]}
-            />
-          </View>
-        ) : null}
-
+        {/* tiny hint */}
         <View style={{ height: spacing.sm }} />
-
-        <MText
-          variant="caption"
-          color="textSecondary"
-          style={{ textAlign: "center", opacity: 0.75 }}
-        >
-          {progressText}
+        <MText variant="caption" color="textSecondary" style={{ opacity: 0.8 }}>
+          Tip: You can swipe pages as soon as it opens.
         </MText>
       </Animated.View>
     </Animated.View>
@@ -261,28 +386,67 @@ export const PdfOpenIntroOverlay: React.FC<Props> = ({
 
 const styles = StyleSheet.create({
   overlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 9999,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: spacing.lg,
   },
+
   card: {
     width: "100%",
-    maxWidth: 360,
+    maxWidth: 560,
     borderRadius: radii.xl,
     borderWidth: 1,
-    padding: spacing.lg,
-    alignItems: "center",
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    shadowColor: "#000",
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    elevation: 8,
   },
-  cover: {
-    width: 120,
-    height: 160,
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    overflow: "hidden",
+
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+  },
+
+  iconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
   },
-  coverImg: { width: "100%", height: "100%" },
+
+  bookRow: {
+    flexDirection: "row",
+    gap: spacing.md,
+    alignItems: "center",
+  },
+
+  bookMockWrap: {
+    width: 72,
+    height: 92,
+  },
+
+  coverImage: {
+    width: "100%",
+    height: "100%",
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+
+  bookMock: {
+    width: "100%",
+    height: "100%",
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+
   spine: {
     position: "absolute",
     left: 0,
@@ -290,18 +454,38 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: 14,
   },
-  skel: {
-    width: "70%",
-    height: 10,
-    borderRadius: 6,
-    backgroundColor: "rgba(255,255,255,0.22)",
-    marginTop: 10,
+
+  spineHighlight: {
+    position: "absolute",
+    left: 14,
+    top: 0,
+    bottom: 0,
+    width: 4,
   },
+
+  mockText: {
+    flex: 1,
+    paddingLeft: 22,
+    paddingRight: 10,
+    paddingTop: 14,
+    gap: 8,
+  },
+
+  mockLine: {
+    height: 6,
+    borderRadius: 4,
+    opacity: 0.85,
+  },
+
   progressTrack: {
-    width: "100%",
     height: 8,
-    borderRadius: 999,
+    borderRadius: radii.full,
     overflow: "hidden",
+    borderWidth: 1,
   },
-  progressFill: { height: "100%" },
+
+  progressFill: {
+    height: "100%",
+    borderRadius: radii.full,
+  },
 });
