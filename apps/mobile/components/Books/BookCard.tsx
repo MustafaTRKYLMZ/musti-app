@@ -1,4 +1,3 @@
-// apps/mobile/components/ui/Books/BookCard.tsx
 import React, { FC, useRef, useState, useEffect, useMemo } from "react";
 import {
   TouchableOpacity,
@@ -68,6 +67,8 @@ const ROW_W = 120;
 const FOOTER_H = 64;
 const FOOTER_OVERLAP = FOOTER_H / 2;
 const FOOTER_OPTICAL_SHIFT = spacing.sm + FOOTER_OVERLAP / 3;
+
+const CONTACT_SHADOW_Y = -10;
 
 export const BookCard: FC<BookCardProps> = ({
   file,
@@ -211,12 +212,11 @@ export const BookCard: FC<BookCardProps> = ({
         onPressOut={handlePressOut}
         style={[
           isRow ? styles.cardWrapperRow : styles.cardWrapperGrid,
-          { paddingBottom: FOOTER_OVERLAP }, // ✅ altta yer aç
+          { paddingBottom: FOOTER_OVERLAP },
         ]}
         activeOpacity={0.85}
       >
         <Animated.View style={animatedCardStyle}>
-          {/* ✅ footer absolute için referans wrapper */}
           <View style={[styles.cardOuter, { width: wrapperW }]}>
             <Card
               style={[
@@ -225,7 +225,6 @@ export const BookCard: FC<BookCardProps> = ({
                 isRow ? styles.cardRow : styles.cardGrid,
               ]}
             >
-              {/* ✅ BODY */}
               <View style={[styles.body, { paddingBottom: FOOTER_OVERLAP }]}>
                 {showCover && (
                   <View style={styles.coverClip} pointerEvents="none">
@@ -299,7 +298,7 @@ export const BookCard: FC<BookCardProps> = ({
               </View>
             </Card>
 
-            {/* ✅ FOOTER: Card DIŞINDA, ortası Card alt çizgisine gelecek */}
+            {/* ✅ footer */}
             <View
               pointerEvents="none"
               style={[
@@ -320,6 +319,17 @@ export const BookCard: FC<BookCardProps> = ({
                 compact={isRow}
               />
             </View>
+
+            <View
+              pointerEvents="none"
+              style={[
+                styles.contactShadow,
+                {
+                  width: wrapperW,
+                  bottom: -FOOTER_OVERLAP + FOOTER_H + CONTACT_SHADOW_Y,
+                },
+              ]}
+            />
           </View>
         </Animated.View>
       </TouchableOpacity>
@@ -582,6 +592,17 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     padding: 1,
     backgroundColor: "rgba(255,255,255,0.78)",
+  },
+
+  contactShadow: {
+    position: "absolute",
+    left: 14,
+    right: 14,
+    height: 10,
+    borderRadius: 999,
+    backgroundColor: "rgba(0,0,0,0.18)",
+    opacity: 0.28,
+    zIndex: 19,
   },
 
   menuOverlay: { flex: 1, backgroundColor: "transparent" },

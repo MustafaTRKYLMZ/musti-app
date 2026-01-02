@@ -1,9 +1,11 @@
+// apps/mobile/components/Books/LastReadBook.tsx
 import React, { useMemo } from "react";
-import { View, StyleSheet, FlatList } from "react-native";
+import { View, StyleSheet, FlatList, useWindowDimensions } from "react-native";
 import { MText, spacing } from "@budget/ui-native";
 import type { LocalPdfFile } from "@/utils/getPdfsDirectory";
 import { BookCard } from "./BookCard";
 import { PdfCoverPrewarmer } from "../ui/pdf/PdfCoverPrewarmer";
+import { ShelfPlank } from "./ShelfPlank";
 
 type Props = {
   lastReadBooks: { uri: string; name: string; lastOpened: number }[];
@@ -15,7 +17,10 @@ type Props = {
 };
 
 const FOOTER_H = 64;
-const FOOTER_OVERLAP = FOOTER_H / 2;
+const FOOTER_OVERLAP = FOOTER_H / 5;
+
+const BOOK_TO_SHELF_GAP = -28;
+const SHELF_EXTRA_PADDING = (spacing as any)["2xl"] ?? spacing.xl * 1.2;
 
 export const LastReadBook = ({
   lastReadBooks,
@@ -26,6 +31,7 @@ export const LastReadBook = ({
   readingStats,
 }: Props) => {
   const today = new Date().toISOString().slice(0, 10);
+  const { width: screenW } = useWindowDimensions();
 
   if (!lastReadBooks.length) return null;
 
@@ -33,6 +39,10 @@ export const LastReadBook = ({
     const flat = lastReadBooks.map((b) => b.uri).filter(Boolean) as string[];
     return Array.from(new Set(flat));
   }, [lastReadBooks]);
+
+  const shelfWidth = useMemo(() => {
+    return screenW - spacing.lg * 2 + spacing.md * 2;
+  }, [screenW]);
 
   return (
     <View style={styles.root}>
@@ -42,36 +52,42 @@ export const LastReadBook = ({
         </MText>
       </View>
 
-      <FlatList
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.list}
-        contentContainerStyle={styles.listContent}
-        data={lastReadBooks}
-        keyExtractor={(x) => x.uri}
-        renderItem={({ item }) => {
-          const file = { uri: item.uri, name: item.name } as LocalPdfFile;
-          const pm = progressMap[file.uri] ?? {};
-          const key = `${file.uri}::${today}`;
-          const stat = readingStats?.[key];
+      <View style={styles.listWrap}>
+        <View pointerEvents="none" style={styles.shelfAbs}>
+          <ShelfPlank idSuffix="last-read" width={shelfWidth} />
+        </View>
 
-          return (
-            <BookCard
-              file={file}
-              variant="row"
-              onOpen={() => handleOpenPdf(file)}
-              onDelete={() => handleDeletePdf(file)}
-              onRequestRename={
-                onRequestRename ? () => onRequestRename(file) : undefined
-              }
-              lastPage={pm.lastPage}
-              totalPages={pm.totalPages}
-              todayPages={stat?.pagesTotal ?? 0}
-              todayTargetPages={stat?.targetPages ?? 0}
-            />
-          );
-        }}
-      />
+        <FlatList
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.list}
+          contentContainerStyle={styles.listContent}
+          data={lastReadBooks}
+          keyExtractor={(x) => x.uri}
+          renderItem={({ item }) => {
+            const file = { uri: item.uri, name: item.name } as LocalPdfFile;
+            const pm = progressMap[file.uri] ?? {};
+            const key = `${file.uri}::${today}`;
+            const stat = readingStats?.[key];
+
+            return (
+              <BookCard
+                file={file}
+                variant="row"
+                onOpen={() => handleOpenPdf(file)}
+                onDelete={() => handleDeletePdf(file)}
+                onRequestRename={
+                  onRequestRename ? () => onRequestRename(file) : undefined
+                }
+                lastPage={pm.lastPage}
+                totalPages={pm.totalPages}
+                todayPages={stat?.pagesTotal ?? 0}
+                todayTargetPages={stat?.targetPages ?? 0}
+              />
+            );
+          }}
+        />
+      </View>
 
       <PdfCoverPrewarmer enabled pdfUris={pdfUris} maxToProcess={18} />
     </View>
@@ -91,13 +107,30 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
 
+  listWrap: {
+    position: "relative",
+    overflow: "visible",
+    paddingBottom: SHELF_EXTRA_PADDING,
+  },
+
   list: {
     overflow: "visible",
+    zIndex: 2,
+    elevation: 2,
   },
 
   listContent: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: spacing.md + FOOTER_OVERLAP,
+  },
+
+  shelfAbs: {
+    position: "absolute",
+    left: spacing.lg,
+    right: spacing.lg,
+    bottom: BOOK_TO_SHELF_GAP,
+    zIndex: 1,
+    elevation: 0,
   },
 });
