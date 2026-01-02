@@ -1,5 +1,5 @@
 // apps/mobile/components/ui/modals/RenameBookModal.tsx
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import {
   Modal,
   View,
@@ -35,11 +35,25 @@ export function RenameBookModal({
     onConfirm,
   });
 
-  // modal açılınca input focus (opsiyonel)
+  // ✅ Prefill'i sadece bir kez yapmak için
+  const lastPrefillRef = useRef<string>("");
+
   useEffect(() => {
-    if (!visible) return;
-    c.setValue("name", currentName ?? "", { shouldDirty: false });
-  }, [visible, currentName, c]);
+    // modal kapalıyken ref'i sıfırla ki tekrar açılınca prefill olsun
+    if (!visible) {
+      lastPrefillRef.current = "";
+      return;
+    }
+
+    const next = (currentName ?? "").trim();
+
+    // aynı isim için tekrar setValue yapma (loop'u keser)
+    if (lastPrefillRef.current === next) return;
+    lastPrefillRef.current = next;
+
+    // ✅ sadece prefill: dirty/touched yapma
+    c.setValue("name", next, { shouldDirty: false, shouldTouch: false });
+  }, [visible, currentName]); // ❌ c yok!
 
   return (
     <Modal
