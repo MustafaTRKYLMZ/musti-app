@@ -1,4 +1,3 @@
-// apps/mobile/components/ui/modals/RenameBookModal.tsx
 import React, { useEffect, useRef } from "react";
 import {
   Modal,
@@ -20,12 +19,12 @@ type Props = {
   onConfirm: (nextName: string) => Promise<void> | void;
 };
 
-export function RenameBookModal({
+export const RenameBookModal = ({
   visible,
   currentName,
   onClose,
   onConfirm,
-}: Props) {
+}: Props) => {
   const { colors } = useTheme();
 
   const c = useRenameBookController({
@@ -35,11 +34,9 @@ export function RenameBookModal({
     onConfirm,
   });
 
-  // ✅ Prefill'i sadece bir kez yapmak için
   const lastPrefillRef = useRef<string>("");
 
   useEffect(() => {
-    // modal kapalıyken ref'i sıfırla ki tekrar açılınca prefill olsun
     if (!visible) {
       lastPrefillRef.current = "";
       return;
@@ -47,13 +44,11 @@ export function RenameBookModal({
 
     const next = (currentName ?? "").trim();
 
-    // aynı isim için tekrar setValue yapma (loop'u keser)
     if (lastPrefillRef.current === next) return;
     lastPrefillRef.current = next;
 
-    // ✅ sadece prefill: dirty/touched yapma
     c.setValue("name", next, { shouldDirty: false, shouldTouch: false });
-  }, [visible, currentName]); // ❌ c yok!
+  }, [visible, currentName]);
 
   return (
     <Modal
@@ -157,7 +152,7 @@ export function RenameBookModal({
       </KeyboardAvoidingView>
     </Modal>
   );
-}
+};
 
 const styles = StyleSheet.create({
   overlay: {
