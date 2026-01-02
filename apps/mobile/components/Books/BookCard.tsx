@@ -23,15 +23,13 @@ import {
 } from "@budget/ui-native";
 import { IconButton, BaseIcon } from "@/components/ui/AppIcon";
 import type { LocalPdfFile } from "@/utils/getPdfsDirectory";
-
-import { usePdfCoverFromFirstPage } from "@/hooks/usePdfCoverFromFirstPage";
-import { useCachedPdfUri } from "@/hooks/useCachedPdfUri";
+import { usePdfCoverFromCache } from "@/hooks/usePdfCoverFromCache";
+import { BookCardFooter } from "./BookCardFooter";
 
 type BookCardProps = {
   file: LocalPdfFile;
   onOpen: () => void;
   onDelete: () => void;
-
   onRequestRename?: () => void;
 
   lastPage?: number;
@@ -56,20 +54,20 @@ const SPINE_PALETTE = [
 
 function getSpineColorFromString(id: string): string {
   let hash = 0;
-  for (let i = 0; i < id.length; i++) {
+  for (let i = 0; i < id.length; i++)
     hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
-  }
-  const index = hash % SPINE_PALETTE.length;
-  return SPINE_PALETTE[index];
+  return SPINE_PALETTE[hash % SPINE_PALETTE.length];
 }
 
 const GRID_COLS = 3;
-
-// ⚠️ Parent grid container padding'ine göre ayarla:
-// Eğer grid ekranında paddingHorizontal: spacing.lg ise -> spacing.lg * 2 doğru.
-// Değilse aşağıdaki değeri değiştir.
-const GRID_H_PADDING_TOTAL = spacing.lg * 2; // left + right
+const GRID_H_PADDING_TOTAL = spacing.lg * 2;
 const GRID_GAP = spacing.md;
+
+const ROW_W = 120;
+
+const FOOTER_H = 64;
+const FOOTER_OVERLAP = FOOTER_H / 2;
+const FOOTER_OPTICAL_SHIFT = spacing.sm + FOOTER_OVERLAP / 3;
 
 export const BookCard: FC<BookCardProps> = ({
   file,
@@ -79,7 +77,6 @@ export const BookCard: FC<BookCardProps> = ({
   lastPage,
   totalPages,
   todayPages,
-  todayTargetPages,
   variant = "grid",
 }) => {
   const { colors } = useTheme();
@@ -95,7 +92,6 @@ export const BookCard: FC<BookCardProps> = ({
   });
   const menuIconRef = useRef<View | null>(null);
 
-  // ✅ stats modal
   const [statsVisible, setStatsVisible] = useState(false);
 
   const progress =
@@ -105,6 +101,9 @@ export const BookCard: FC<BookCardProps> = ({
 
   const appearAnim = useRef(new Animated.Value(0)).current;
   const pressAnim = useRef(new Animated.Value(0)).current;
+
+  const cover = usePdfCoverFromCache(file.uri ?? null);
+  const showCover = cover.ready && !!cover.coverUri;
 
   useEffect(() => {
     Animated.timing(appearAnim, {
@@ -121,7 +120,6 @@ export const BookCard: FC<BookCardProps> = ({
       useNativeDriver: true,
     }).start();
   };
-
   const handlePressOut = () => {
     Animated.spring(pressAnim, {
       toValue: 0,
@@ -144,24 +142,29 @@ export const BookCard: FC<BookCardProps> = ({
           outputRange: [1, 0.97],
         }),
       },
-      {
-        rotateY: pressAnim.interpolate({
-          inputRange: [0, 1],
-          outputRange: ["0deg", "-5deg"],
-        }),
-      },
     ],
     opacity: appearAnim,
   };
 
-  // ✅ Grid item width: 3 sütun sabit, tek kalsa da büyümez
   const gridItemWidth = useMemo(() => {
     const screenW = Dimensions.get("window").width;
     const available =
       screenW - GRID_H_PADDING_TOTAL - GRID_GAP * (GRID_COLS - 1);
-    const w = Math.floor(available / GRID_COLS);
-    return Math.max(110, w);
+    return Math.max(110, Math.floor(available / GRID_COLS));
   }, []);
+
+  const isRow = variant === "row";
+  const wrapperW = isRow ? ROW_W : gridItemWidth;
+
+  const safeTodayPages = Math.max(0, Number(todayPages ?? 0) || 0);
+  const todayLabel = `Today: ${safeTodayPages}`;
+
+  const lastPosLine = useMemo(() => {
+    const lp = Math.max(0, Number(lastPage ?? 0) || 0);
+    const tp = Math.max(0, Number(totalPages ?? 0) || 0);
+    if (tp > 0) return `${lp} / ${tp}`;
+    return lp > 0 ? String(lp) : "—";
+  }, [lastPage, totalPages]);
 
   const POPOVER_W = 160;
   const EDGE = 8;
@@ -178,7 +181,6 @@ export const BookCard: FC<BookCardProps> = ({
       const desiredX = pageX + width - POPOVER_W;
       const x = clamp(desiredX, EDGE, screenW - POPOVER_W - EDGE);
       const y = Math.max(EDGE, pageY + height + 8);
-
       setMenuPos({ x, y });
       setMenuVisible(true);
     });
@@ -201,30 +203,6 @@ export const BookCard: FC<BookCardProps> = ({
     onRequestRename?.();
   };
 
-  // ✅ stats strings
-  const safeTodayPages = Math.max(0, Number(todayPages ?? 0) || 0);
-  const safeTodayTarget = Math.max(0, Number(todayTargetPages ?? 0) || 0);
-  const showTodayHint = safeTodayPages > 0 || safeTodayTarget > 0;
-
-  const todayLine = useMemo(() => `${safeTodayPages}`, [safeTodayPages]);
-
-  const goalLine = useMemo(() => {
-    if (safeTodayTarget <= 0) return null;
-    return `Goal: ${safeTodayTarget}`;
-  }, [safeTodayTarget]);
-
-  const lastPosLine = useMemo(() => {
-    const lp = Math.max(0, Number(lastPage ?? 0) || 0);
-    const tp = Math.max(0, Number(totalPages ?? 0) || 0);
-    if (tp > 0) return `${lp} / ${tp}`;
-    return lp > 0 ? String(lp) : "—";
-  }, [lastPage, totalPages]);
-
-  // ✅ COVER FIX: content:// -> file:// cache, sonra cover üret
-  const { cachedUri, ready: pdfReady } = useCachedPdfUri(file.uri ?? undefined);
-  const cover = usePdfCoverFromFirstPage(pdfReady ? cachedUri : null);
-  const showCover = variant === "grid" && !!cover.coverUri;
-
   return (
     <>
       <TouchableOpacity
@@ -232,186 +210,117 @@ export const BookCard: FC<BookCardProps> = ({
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         style={[
-          styles.cardWrapper,
-          variant === "grid" ? styles.cardWrapperGrid : styles.cardWrapperRow,
+          isRow ? styles.cardWrapperRow : styles.cardWrapperGrid,
+          { paddingBottom: FOOTER_OVERLAP }, // ✅ altta yer aç
         ]}
         activeOpacity={0.85}
       >
         <Animated.View style={animatedCardStyle}>
-          <Card
-            style={[
-              styles.cardBase,
-              variant === "grid"
-                ? [styles.cardGrid, { width: gridItemWidth }]
-                : styles.cardRow,
-            ]}
-          >
-            {/* ✅ Cover (only grid) */}
-            {showCover && (
-              <View style={styles.coverClip} pointerEvents="none">
-                <Image
-                  source={{ uri: cover.coverUri as string }}
-                  style={styles.coverImg}
-                  resizeMode="cover"
-                />
-                {/* hafif karartma, yazılar okunur */}
+          {/* ✅ footer absolute için referans wrapper */}
+          <View style={[styles.cardOuter, { width: wrapperW }]}>
+            <Card
+              style={[
+                styles.cardBase,
+                { width: wrapperW },
+                isRow ? styles.cardRow : styles.cardGrid,
+              ]}
+            >
+              {/* ✅ BODY */}
+              <View style={[styles.body, { paddingBottom: FOOTER_OVERLAP }]}>
+                {showCover && (
+                  <View style={styles.coverClip} pointerEvents="none">
+                    <Image
+                      source={{ uri: cover.coverUri! }}
+                      style={styles.coverImg}
+                      resizeMode="cover"
+                    />
+                  </View>
+                )}
+
                 <View
                   style={[
-                    StyleSheet.absoluteFillObject,
-                    { backgroundColor: "rgba(0,0,0,0.08)" },
+                    styles.bookSpine,
+                    {
+                      backgroundColor: spineColor,
+                      borderRightColor: spineEdgeColor,
+                    },
                   ]}
                 />
-              </View>
-            )}
+                <View style={styles.bookSpineHighlight} />
+                <View
+                  style={[
+                    styles.bookPageEdgeTop,
+                    { backgroundColor: colors.backgroundSecondary },
+                  ]}
+                />
+                <View style={styles.bookPageEdgeRight} pointerEvents="none">
+                  <Svg width="100%" height="100%">
+                    <Rect
+                      x={0}
+                      y={0}
+                      width="100%"
+                      height="100%"
+                      fill={colors.surface}
+                      opacity={0.94}
+                    />
+                    {Array.from({ length: 6 }).map((_, idx) => {
+                      const x = 4 + idx * 4;
+                      return (
+                        <Line
+                          key={idx}
+                          x1={x}
+                          y1={2}
+                          x2={x}
+                          y2={"98%"}
+                          stroke={colors.borderSubtle}
+                          strokeWidth={0.6}
+                          opacity={0.55 - idx * 0.06}
+                        />
+                      );
+                    })}
+                  </Svg>
+                </View>
 
-            {/* Decorative book structure */}
+                <View
+                  style={styles.menuIconWrapper}
+                  ref={menuIconRef}
+                  collapsable={false}
+                >
+                  <View style={styles.menuChip}>
+                    <IconButton
+                      name="ellipsis-vertical"
+                      size={iconSizes.md}
+                      color={colors.textPrimary}
+                      onPress={openMenu}
+                      hitSlop={8}
+                    />
+                  </View>
+                </View>
+              </View>
+            </Card>
+
+            {/* ✅ FOOTER: Card DIŞINDA, ortası Card alt çizgisine gelecek */}
             <View
+              pointerEvents="none"
               style={[
-                styles.bookSpine,
+                styles.footerFloat,
                 {
-                  backgroundColor: spineColor,
-                  borderRightColor: spineEdgeColor,
+                  width: wrapperW,
+                  height: FOOTER_H,
+                  bottom: -FOOTER_OVERLAP,
                 },
               ]}
-            />
-            <View
-              style={[
-                styles.bookSpineHighlight,
-                { backgroundColor: "rgba(255,255,255,0.16)" },
-              ]}
-            />
-            <View
-              style={[
-                styles.bookPageEdgeTop,
-                { backgroundColor: colors.backgroundSecondary },
-              ]}
-            />
-            <View style={styles.bookPageEdgeRight} pointerEvents="none">
-              <Svg width="100%" height="100%">
-                <Rect
-                  x={0}
-                  y={0}
-                  width="100%"
-                  height="100%"
-                  fill={colors.surface}
-                  opacity={0.94}
-                />
-                {Array.from({ length: 6 }).map((_, idx) => {
-                  const x = 4 + idx * 4;
-                  return (
-                    <Line
-                      key={idx}
-                      x1={x}
-                      y1={2}
-                      x2={x}
-                      y2={"98%"}
-                      stroke={colors.borderSubtle}
-                      strokeWidth={0.6}
-                      opacity={0.55 - idx * 0.06}
-                    />
-                  );
-                })}
-              </Svg>
-            </View>
-
-            {/* menu */}
-            <View
-              style={styles.menuIconWrapper}
-              ref={menuIconRef}
-              collapsable={false}
             >
-              <IconButton
-                name="ellipsis-vertical"
-                size={iconSizes.md}
-                color={colors.textPrimary}
-                onPress={openMenu}
-                hitSlop={8}
+              <BookCardFooter
+                file={file}
+                todayLabel={todayLabel}
+                totalPages={totalPages}
+                progress={progress}
+                width={wrapperW}
+                compact={isRow}
               />
             </View>
-
-            {/* title */}
-            <View style={styles.titleWrapper}>
-              <MText
-                variant="body"
-                color="textPrimary"
-                style={styles.title}
-                numberOfLines={2}
-              >
-                {file.name}
-              </MText>
-
-              {showTodayHint && (
-                <View style={styles.todayBlock}>
-                  <View style={styles.todayRow}>
-                    <BaseIcon
-                      family="ion"
-                      name="flame-outline"
-                      size={12}
-                      color={colors.textSecondary}
-                    />
-                    <MText
-                      variant="caption"
-                      color="textSecondary"
-                      numberOfLines={1}
-                      style={styles.todayText}
-                    >
-                      Today: {todayLine}
-                    </MText>
-                  </View>
-
-                  {!!goalLine && (
-                    <MText
-                      variant="caption"
-                      color="textSecondary"
-                      numberOfLines={1}
-                      style={styles.goalText}
-                    >
-                      {goalLine}
-                    </MText>
-                  )}
-                </View>
-              )}
-            </View>
-
-            {/* progress */}
-            {totalPages && totalPages > 0 ? (
-              <>
-                <View
-                  style={[
-                    styles.progressContainer,
-                    { backgroundColor: colors.borderSubtle },
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.progressBar,
-                      {
-                        width: `${progress * 100}%`,
-                        backgroundColor: colors.success,
-                      },
-                    ]}
-                  />
-                </View>
-                <MText
-                  variant="body"
-                  color="textSecondary"
-                  style={styles.progressLabel}
-                  numberOfLines={1}
-                >
-                  {Math.round(progress * 100)}% · {lastPage ?? 0} / {totalPages}
-                </MText>
-              </>
-            ) : (
-              <MText
-                variant="body"
-                color="textSecondary"
-                style={styles.cardHint}
-                numberOfLines={1}
-              >
-                Tap to open
-              </MText>
-            )}
-          </Card>
+          </View>
         </Animated.View>
       </TouchableOpacity>
 
@@ -538,20 +447,9 @@ export const BookCard: FC<BookCardProps> = ({
                 Today
               </MText>
               <MText variant="body" color="textPrimary">
-                {todayLine}
+                {safeTodayPages}
               </MText>
             </View>
-
-            {!!goalLine && (
-              <View style={styles.statsRow}>
-                <MText variant="body" color="textSecondary">
-                  Goal
-                </MText>
-                <MText variant="body" color="textPrimary">
-                  {safeTodayTarget} pages
-                </MText>
-              </View>
-            )}
 
             <View style={styles.statsRow}>
               <MText variant="body" color="textSecondary">
@@ -589,39 +487,45 @@ export const BookCard: FC<BookCardProps> = ({
 };
 
 const styles = StyleSheet.create({
-  cardWrapper: {},
-
-  // Row list spacing
   cardWrapperRow: { marginRight: spacing.md },
-
-  // Grid spacing (gap gibi)
   cardWrapperGrid: {
-    marginRight: spacing.md,
+    marginRight: 0,
     marginBottom: spacing.md,
   },
 
-  cardBase: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    justifyContent: "space-between",
-    overflow: "hidden",
+  cardOuter: {
+    position: "relative",
   },
 
-  cardRow: { width: 120, aspectRatio: 0.8 },
+  footerFloat: {
+    position: "absolute",
+    left: 0,
+    zIndex: 20,
+  },
 
-  // width render'da hesaplanıp veriliyor
+  cardBase: {
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    overflow: "hidden",
+    flexDirection: "column",
+  },
+
+  cardRow: { aspectRatio: 0.8 },
   cardGrid: { aspectRatio: 0.8 },
 
-  // ✅ cover sits inside book body area (between spine and right edge)
+  body: {
+    position: "relative",
+    flex: 1,
+  },
+
   coverClip: {
     position: "absolute",
     top: spacing.sm + 4,
-    bottom: spacing.sm,
-    left: 22, // after spine + highlight
-    right: 26, // before right edge
-    borderRadius: radii.lg,
+    left: 22,
+    right: spacing.lg,
+    bottom: FOOTER_OPTICAL_SHIFT,
+    borderRadius: radii.sm,
     overflow: "hidden",
-    opacity: 0.95,
     zIndex: 1,
   },
   coverImg: { width: "100%", height: "100%" },
@@ -635,6 +539,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: radii.lg,
     borderBottomLeftRadius: radii.lg,
     borderRightWidth: StyleSheet.hairlineWidth,
+    zIndex: 3,
   },
   bookSpineHighlight: {
     position: "absolute",
@@ -644,6 +549,8 @@ const styles = StyleSheet.create({
     width: 4,
     borderTopLeftRadius: radii.lg,
     borderBottomLeftRadius: radii.lg,
+    backgroundColor: "rgba(255,255,255,0.16)",
+    zIndex: 3,
   },
   bookPageEdgeTop: {
     position: "absolute",
@@ -653,55 +560,28 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 4,
     opacity: 0.4,
+    zIndex: 4,
   },
   bookPageEdgeRight: {
     position: "absolute",
     top: spacing.sm + 4,
     bottom: spacing.sm,
     right: 0,
-    width: 26,
-    zIndex: 2,
+    width: spacing.sm,
+    zIndex: 5,
   },
 
   menuIconWrapper: {
     position: "absolute",
     top: spacing.xs,
     right: spacing.xs,
-    zIndex: 2,
+    zIndex: 10,
   },
-
-  titleWrapper: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: spacing.sm,
-  },
-  title: { textAlign: "center", fontSize: 14 },
-
-  todayRow: {
-    marginTop: 2,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  todayText: { textAlign: "center", opacity: 0.92 },
-  todayBlock: { marginTop: 2, alignItems: "center" },
-  goalText: { marginTop: 1, opacity: 0.9, textAlign: "center" },
-
-  cardHint: { marginTop: spacing.xs },
-
-  progressContainer: {
-    height: 6,
-    width: "100%",
-    borderRadius: 4,
+  menuChip: {
+    borderRadius: 999,
     overflow: "hidden",
-    marginTop: spacing.sm,
-  },
-  progressBar: { height: "100%" },
-  progressLabel: {
-    marginTop: spacing.xs,
-    fontSize: spacing.lg - 4,
-    paddingHorizontal: spacing.xs,
+    padding: 1,
+    backgroundColor: "rgba(255,255,255,0.78)",
   },
 
   menuOverlay: { flex: 1, backgroundColor: "transparent" },

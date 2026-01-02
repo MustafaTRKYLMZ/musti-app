@@ -1,15 +1,11 @@
 // apps/mobile/components/Books/BookList.tsx
 import React, { useMemo } from "react";
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  useWindowDimensions,
-} from "react-native";
+import { View, StyleSheet, useWindowDimensions } from "react-native";
 import { MText, spacing } from "@budget/ui-native";
 import type { LocalPdfFile } from "@/utils/getPdfsDirectory";
 import { BookCard } from "./BookCard";
 import { IconButton } from "../ui/AppIcon";
+import { PdfCoverPrewarmer } from "@/components/ui/pdf/PdfCoverPrewarmer";
 
 type GridBook = LocalPdfFile & { lastOpened: number };
 
@@ -47,6 +43,14 @@ export const BookList = ({
     return Math.max(110, w);
   }, [screenW]);
 
+  const pdfUris = useMemo(() => {
+    const flat = gridRows
+      .flat()
+      .map((f) => f.uri)
+      .filter(Boolean) as string[];
+    return Array.from(new Set(flat));
+  }, [gridRows]);
+
   return (
     <View style={{ marginTop: spacing.xl }}>
       <View style={styles.headerRow}>
@@ -74,10 +78,7 @@ export const BookList = ({
               const stat = readingStats?.[key];
 
               return (
-                <View
-                  key={file.uri}
-                  style={[styles.cell, { width: cellWidth }]}
-                >
+                <View key={file.uri} style={{ width: cellWidth }}>
                   <BookCard
                     file={file}
                     variant="grid"
@@ -98,13 +99,20 @@ export const BookList = ({
             {Array.from({ length: missing }).map((_, i) => (
               <View
                 key={`empty-${rIdx}-${i}`}
-                style={[styles.cell, { width: cellWidth, opacity: 0 }]}
+                style={{ width: cellWidth, opacity: 0 }}
                 pointerEvents="none"
               />
             ))}
           </View>
         );
       })}
+
+      <PdfCoverPrewarmer
+        enabled
+        pdfUris={pdfUris}
+        maxToProcess={18}
+        onProgress={() => {}}
+      />
     </View>
   );
 };
@@ -116,12 +124,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
+
   row: {
     paddingHorizontal: spacing.lg,
     flexDirection: "row",
-    gap: spacing.md,
-    marginBottom: spacing.md,
     justifyContent: "flex-start",
+    alignItems: "flex-start",
+    gap: spacing.md,
+    paddingBottom: spacing.md,
   },
-  cell: {},
 });

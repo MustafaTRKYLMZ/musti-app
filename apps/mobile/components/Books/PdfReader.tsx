@@ -1,24 +1,26 @@
-// apps/mobile/components/Books/PdfReader.tsx
 import React, {
   FC,
-  useCallback,
-  useEffect,
   useMemo,
   useRef,
   useState,
+  useCallback,
+  useEffect,
 } from "react";
 import { View, StyleSheet } from "react-native";
-import { PdfRef } from "react-native-pdf";
+import type { PdfRef } from "react-native-pdf";
+import { captureRef } from "react-native-view-shot";
+import * as FileSystem from "expo-file-system/legacy";
+
 import { spacing, useTheme, iconSizes } from "@budget/ui-native";
 import { IconButton } from "@/components/ui/AppIcon";
 
+import { ReaderBadges } from "@/components/ui/pdf/ReaderBadges";
+import { ReaderSettingsPanel } from "@/components/ui/pdf/ReaderSettingsPanel";
 import {
   FloatingPageStrip,
   StripMode,
 } from "@/components/Books/FloatingPageStrip";
 import { PageStrip } from "@/components/ui/pdf/PageStrip";
-import { ReaderSettingsPanel } from "@/components/ui/pdf/ReaderSettingsPanel";
-import { ReaderBadges } from "@/components/ui/pdf/ReaderBadges";
 
 import type { BookSection, ReadingMode } from "@budget/core";
 import type { CropKey } from "@/components/ui/pdf/types";
@@ -26,17 +28,16 @@ import type { CropKey } from "@/components/ui/pdf/types";
 import { ZOOM_PRESETS } from "@/constants/readerPresets";
 import { useReadingPace } from "@/hooks/useReadingPace";
 import { useReadingTracking } from "@/hooks/useReadingTracking";
-
 import { formatDurationShort } from "@/utils/formatDuration";
 import { clampBetween } from "@/utils/number";
-
 import { scheduleMotivationNudgeIfNeeded } from "@/utils/motivation";
-import { PdfOpenIntroOverlay } from "@/components/ui/pdf/PdfOpenIntroOverlay";
+import { PdfOpenIntroOverlay } from "../ui/pdf/PdfOpenIntroOverlay";
+
+import { ensureCoversDir, getCoverPathForPdfUri } from "@/hooks/pdfCoverCache";
 import { useCropTransform } from "@/hooks/ useCropTransform";
 import { useReaderPrefs } from "@/hooks/ useReaderPrefs";
 import { PdfViewport } from "../ui/pdf/ PdfViewport";
 import { ReaderHeaderBar } from "../ui/pdf/ ReaderHeaderBar";
-import { usePdfCoverFromFirstPage } from "@/hooks/usePdfCoverFromFirstPage";
 
 type PdfReaderProps = {
   isFullscreen: boolean;
@@ -77,6 +78,9 @@ const clampIndex = (n: number, min: number, max: number) =>
 const MIN_VALID_PPM = 0.2;
 const MAX_VALID_PPM = 12;
 
+// ✅ in-memory lock to avoid duplicate captures
+const coverJobLock = new Set<string>();
+
 export const PdfReader: FC<PdfReaderProps> = ({
   isFullscreen,
   name,
@@ -98,24 +102,86 @@ export const PdfReader: FC<PdfReaderProps> = ({
 
   const prefs = useReaderPrefs({ source, bookUri: readingContext?.bookUri });
 
-  // ✅ overlay state
   const [introVisible, setIntroVisible] = useState(true);
   const [pdfReady, setPdfReady] = useState(false);
 
-  // reset on doc/source change
-  const sourceKey = useMemo(
-    () => (typeof source === "object" ? source.uri : String(source)),
-    [source]
-  );
-  const sourceUri =
-    typeof source === "object" && source?.uri ? source.uri : null;
+  // ✅ capture ONLY the PDF area (PdfViewport wraps Pdf with this ref)
+  const pdfCaptureRef = useRef<View | null>(null);
 
-  const cover = usePdfCoverFromFirstPage(sourceUri);
-  console.log("cover", cover);
+  const bookUriForCover = useMemo(() => {
+    const u =
+      readingContext?.bookUri ??
+      (typeof source === "object" ? source.uri : null);
+    return typeof u === "string" ? u : null;
+  }, [readingContext?.bookUri, source]);
+
+  const tryCaptureCover = useCallback(async () => {
+    try {
+      const pdfUri = bookUriForCover;
+      if (!pdfUri) return;
+      if (!pdfUri.startsWith("file://")) return;
+
+      // only once per pdf
+      if (coverJobLock.has(pdfUri)) return;
+      coverJobLock.add(pdfUri);
+
+      await ensureCoversDir();
+      const dest = getCoverPathForPdfUri(pdfUri);
+
+      const info = await FileSystem.getInfoAsync(dest);
+      if (info.exists) {
+        coverJobLock.delete(pdfUri);
+        return;
+      }
+
+      // wait a couple frames so the PDF view is actually painted
+      await new Promise<void>((res) => requestAnimationFrame(() => res()));
+      await new Promise<void>((res) => requestAnimationFrame(() => res()));
+
+      if (!pdfCaptureRef.current) {
+        coverJobLock.delete(pdfUri);
+        return;
+      }
+
+      const tmpUri = await captureRef(pdfCaptureRef, {
+        format: "jpg",
+        quality: 0.82,
+        result: "tmpfile",
+      });
+
+      if (!tmpUri) {
+        coverJobLock.delete(pdfUri);
+        return;
+      }
+
+      await FileSystem.copyAsync({ from: tmpUri, to: dest }).catch(async () => {
+        await FileSystem.moveAsync({ from: tmpUri, to: dest }).catch(() => {});
+      });
+
+      coverJobLock.delete(pdfUri);
+    } catch (e) {
+      console.log("tryCaptureCover error:", e);
+      if (bookUriForCover) coverJobLock.delete(bookUriForCover);
+    }
+  }, [bookUriForCover]);
+
+  const onLoadComplete = useCallback(
+    (n: number, fp?: string) => {
+      handleLoadComplete(n, fp);
+      setPdfReady(true);
+
+      // ✅ start cover capture in background
+      // (do not await to avoid blocking UI)
+      void tryCaptureCover();
+    },
+    [handleLoadComplete, tryCaptureCover]
+  );
+
   useEffect(() => {
+    // reset intro per doc
     setIntroVisible(true);
     setPdfReady(false);
-  }, [sourceKey, prefs.storageKey]);
+  }, [prefs.storageKey]);
 
   const paceKey =
     readingContext?.bookUri ??
@@ -149,25 +215,27 @@ export const PdfReader: FC<PdfReaderProps> = ({
 
     const safePpm = clampBetween(pace.ppm, MIN_VALID_PPM, MAX_VALID_PPM);
     const minutes = remainingPages / safePpm;
-    const ms = minutes * 60_000;
-
-    return formatDurationShort(ms);
+    return formatDurationShort(minutes * 60_000);
   }, [timeLeftRemainingPages, currentPage, totalPages, pace.ppm]);
 
+  // crop + zoom transforms
   const { setViewerSize, userScale, visualScale, cropTransform } =
     useCropTransform(prefs.cropKey, prefs.zoomPresetIndex);
 
+  // settings
   const [settingsOpen, setSettingsOpen] = useState(false);
 
+  // zoom hint
   const [zoomHintVisible, setZoomHintVisible] = useState(false);
   const hideZoomTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showZoomHint = useCallback(() => {
     setZoomHintVisible(true);
     if (hideZoomTimeoutRef.current) clearTimeout(hideZoomTimeoutRef.current);
-    hideZoomTimeoutRef.current = setTimeout(() => {
-      setZoomHintVisible(false);
-    }, 1200);
+    hideZoomTimeoutRef.current = setTimeout(
+      () => setZoomHintVisible(false),
+      1200
+    );
   }, []);
 
   useEffect(() => {
@@ -185,10 +253,14 @@ export const PdfReader: FC<PdfReaderProps> = ({
 
   const zoomPercent = Math.round(userScale * 100);
 
+  // ✅ tracking (pace sampling burada)
   const tracking = useReadingTracking(enableStatsTracking, readingContext, {
-    onPaceSample: (s) => pace.addSample(s.pagesRead, s.msSpent),
+    onPaceSample: (s) => {
+      pace.addSample(s.pagesRead, s.msSpent);
+    },
   });
 
+  // ✅ reset tracking baselines when doc/initial changes
   useEffect(() => {
     const startPage = Math.max(1, Math.floor(initialPage ?? 1));
     tracking.resetBaselines(startPage);
@@ -200,6 +272,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
     tracking.ensureStarted,
   ]);
 
+  // zoom actions
   const applyZoomIndex = useCallback(
     (nextIdx: number) => {
       const next = clampIndex(nextIdx, 0, ZOOM_PRESETS.length - 1);
@@ -262,15 +335,6 @@ export const PdfReader: FC<PdfReaderProps> = ({
     handleClose();
   };
 
-  // ✅ PDF loads while overlay is visible (no opacity tricks)
-  const onLoadCompleteInternal = useCallback(
-    (n: number, fp?: string) => {
-      handleLoadComplete(n, fp);
-      setPdfReady(true);
-    },
-    [handleLoadComplete]
-  );
-
   return (
     <View
       style={[
@@ -283,8 +347,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
         ready={pdfReady}
         title={`Opening “${name}”`}
         subtitle="Preparing pages…"
-        coverUri={cover.coverUri}
-        minShowMs={450}
+        coverUri={null}
         onHidden={() => setIntroVisible(false)}
       />
 
@@ -318,15 +381,15 @@ export const PdfReader: FC<PdfReaderProps> = ({
         </View>
       )}
 
-      {/* ✅ Always mounted: starts loading immediately */}
       <PdfViewport
         pdfRef={pdfRef}
+        captureRef={pdfCaptureRef} // ✅ IMPORTANT: wrap Pdf with this ref
         source={source}
         initialPage={initialPage}
         backgroundColor={isFullscreen ? "#000" : colors.background}
         horizontal={pdfHorizontal}
         enablePaging={pdfEnablePaging}
-        onLoadComplete={onLoadCompleteInternal}
+        onLoadComplete={onLoadComplete} // ✅ wrapped
         onError={(e) => console.log("PDF error:", e)}
         onPageChanged={handlePageChangedInternal}
         onLayoutSize={(w, h) => setViewerSize({ w, h })}
@@ -336,22 +399,18 @@ export const PdfReader: FC<PdfReaderProps> = ({
         onDoubleTap={handleDoubleTapZoom}
       />
 
-      {/* Badges/Strip: istersen overlay varken de kalsın, ama genelde daha temiz:
-          overlay varken göstermek istemiyorsan introVisible ile gate edebilirsin */}
-      {!introVisible && (
-        <ReaderBadges
-          currentPage={currentPage}
-          totalPages={totalPages}
-          zoomHintVisible={zoomHintVisible}
-          zoomPercent={zoomPercent}
-          cropLabel={cropLabel}
-          timeLeftLabel={timeLeftLabel}
-          isFullscreen={isFullscreen}
-        />
-      )}
+      <ReaderBadges
+        currentPage={currentPage}
+        totalPages={totalPages}
+        zoomHintVisible={zoomHintVisible}
+        zoomPercent={zoomPercent}
+        cropLabel={cropLabel}
+        timeLeftLabel={timeLeftLabel}
+        isFullscreen={isFullscreen}
+      />
 
-      {!introVisible &&
-        prefs.prefsReady &&
+      {/* Strip */}
+      {prefs.prefsReady &&
         !isFullscreen &&
         typeof totalPages === "number" &&
         totalPages > 1 && (
