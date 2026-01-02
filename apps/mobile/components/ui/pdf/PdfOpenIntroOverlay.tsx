@@ -15,7 +15,6 @@ type Props = {
   visible: boolean;
   ready: boolean;
 
-  // ✅ total pages biliniyorsa göster
   totalPages?: number;
 
   title?: string;
@@ -91,14 +90,12 @@ export const PdfOpenIntroOverlay: FC<Props> = ({
     [colors.surface, colors.borderSubtle]
   );
 
-  // keep % + pages label in sync
   useEffect(() => {
     const id = progress.addListener(({ value }) => {
       const v = clamp01(value);
       setProgressPct(Math.round(v * 100));
 
       if (safeTotalPages > 0) {
-        // ready gelmeden önce 0..0.88 civarı “prepared pages” gibi hissettirsin
         const cap = Math.max(1, Math.floor(safeTotalPages * 0.88));
         const prepared = Math.min(safeTotalPages, Math.round(v * cap));
         setPagesPrepared(prepared);
@@ -160,7 +157,6 @@ export const PdfOpenIntroOverlay: FC<Props> = ({
     visualLoopRef.current.start();
   };
 
-  // ✅ monotonic (hep artan) creep
   const startProgressCreep = () => {
     stopProgressLoop();
 
@@ -197,14 +193,12 @@ export const PdfOpenIntroOverlay: FC<Props> = ({
     progress.stopAnimation();
     progress.setValue(0);
 
-    // totalPages varsa süreyi ona göre ayarla (çok uzun pdf’de bile aşırı uzamasın)
     const base = 900;
-    const per100 = 650; // 100 sayfa başına ekstra
-    const pagesBucket = Math.min(400, safeTotalPages); // 400 üstünü sabitle
+    const per100 = 650;
+    const pagesBucket = Math.min(700, safeTotalPages);
     const duration =
       safeTotalPages > 0 ? base + (pagesBucket / 100) * per100 : 1400;
 
-    // 0 -> 0.88 (ready gelmeden önce)
     Animated.timing(progress, {
       toValue: 0.88,
       duration: Math.round(duration),
@@ -213,7 +207,7 @@ export const PdfOpenIntroOverlay: FC<Props> = ({
     }).start(({ finished }) => {
       if (!finished) return;
       if (!readyRef.current) {
-        startProgressCreep(); // ✅ sadece ileri
+        startProgressCreep();
       }
     });
   };
@@ -299,7 +293,6 @@ export const PdfOpenIntroOverlay: FC<Props> = ({
       stopAllLoops();
       progress.stopAnimation();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
   // hide logic
@@ -312,10 +305,8 @@ export const PdfOpenIntroOverlay: FC<Props> = ({
     }
 
     if (ready) {
-      // ✅ ready gelince loop'ları kesin durdur (yoksa bar geri çekiştirir)
       stopAllLoops();
 
-      // 1) progress -> 1
       progress.stopAnimation();
       Animated.timing(progress, {
         toValue: 1,
@@ -324,7 +315,6 @@ export const PdfOpenIntroOverlay: FC<Props> = ({
         useNativeDriver: false,
       }).start();
 
-      // 2) küçük “done” pop
       Animated.sequence([
         Animated.timing(scale, {
           toValue: 1.02,
@@ -340,7 +330,6 @@ export const PdfOpenIntroOverlay: FC<Props> = ({
         }),
       ]).start();
 
-      // 3) minShowMs sonrası kapat
       const shownAt = shownAtRef.current ?? Date.now();
       const elapsed = Date.now() - shownAt;
       const wait = Math.max(0, minShowMs - elapsed);
@@ -348,7 +337,6 @@ export const PdfOpenIntroOverlay: FC<Props> = ({
       return () => clearTimeout(t);
     }
 
-    // fail-safe
     const shownAt = shownAtRef.current ?? Date.now();
     const elapsed = Date.now() - shownAt;
     const left = Math.max(0, maxShowMs - elapsed);
@@ -358,7 +346,6 @@ export const PdfOpenIntroOverlay: FC<Props> = ({
 
   if (!mounted) return null;
 
-  // cover “opening” illusion
   const coverTilt = bookWobble.interpolate({
     inputRange: [0, 1],
     outputRange: ["0deg", "-10deg"],
@@ -368,7 +355,6 @@ export const PdfOpenIntroOverlay: FC<Props> = ({
     outputRange: [1, 0.92],
   });
 
-  // shimmer position
   const shimmerTranslate = shimmerX.interpolate({
     inputRange: [0, 1],
     outputRange: [-30, 110],
