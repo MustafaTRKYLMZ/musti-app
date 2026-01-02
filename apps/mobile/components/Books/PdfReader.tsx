@@ -345,6 +345,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
       <PdfOpenIntroOverlay
         visible={introVisible}
         ready={pdfReady}
+        totalPages={totalPages}
         title={`Opening “${name}”`}
         subtitle="Preparing pages…"
         coverUri={null}

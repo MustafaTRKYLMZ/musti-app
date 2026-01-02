@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
   },
 
   row: {
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.xs,
     flexDirection: "row",
     justifyContent: "flex-start",
     alignItems: "flex-start",
@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
 
   shelfAbs: {
     position: "absolute",
-    left: spacing.lg,
+    left: 0,
     right: spacing.lg,
     bottom: BOOK_TO_SHELF_GAP,
     zIndex: 1,

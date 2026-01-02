@@ -12,15 +12,19 @@ import { MText, spacing, radii, useTheme } from "@budget/ui-native";
 import { BaseIcon } from "@/components/ui/AppIcon";
 
 type Props = {
-  visible: boolean; // parent wants it shown
-  ready: boolean; // true when PDF onLoadComplete fires
+  visible: boolean;
+  ready: boolean;
+
+  // ✅ total pages biliniyorsa göster
+  totalPages?: number;
+
   title?: string;
   subtitle?: string;
-
   coverUri?: string | null;
 
-  // UX tuning
   minShowMs?: number;
+  maxShowMs?: number;
+
   onHidden?: () => void;
 };
 
@@ -29,10 +33,12 @@ const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 export const PdfOpenIntroOverlay: FC<Props> = ({
   visible,
   ready,
+  totalPages,
   title = "Opening…",
   subtitle = "Preparing pages…",
   coverUri = null,
   minShowMs = 450,
+  maxShowMs = 9000,
   onHidden,
 }) => {
   const { colors } = useTheme();
@@ -40,16 +46,37 @@ export const PdfOpenIntroOverlay: FC<Props> = ({
   const [mounted, setMounted] = useState(visible);
   const shownAtRef = useRef<number | null>(null);
 
+  const readyRef = useRef(ready);
+  useEffect(() => {
+    readyRef.current = ready;
+  }, [ready]);
+
   // overlay anim
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.98)).current;
   const translateY = useRef(new Animated.Value(10)).current;
 
-  // progress anim (0..1)
+  // book anim
+  const bookWobble = useRef(new Animated.Value(0)).current; // 0..1
+  const shimmerX = useRef(new Animated.Value(0)).current; // 0..1
+
+  // progress 0..1
   const progress = useRef(new Animated.Value(0)).current;
+
+  // visual loops (wobble + shimmer)
+  const visualLoopRef = useRef<Animated.CompositeAnimation | null>(null);
+
+  // progress loop (creep)
   const progressLoopRef = useRef<Animated.CompositeAnimation | null>(null);
 
-  const [progressText, setProgressText] = useState(0);
+  // UI texts
+  const [phase, setPhase] = useState<"Indexing" | "Rendering" | "Finalizing">(
+    "Indexing"
+  );
+  const [progressPct, setProgressPct] = useState(0);
+  const [pagesPrepared, setPagesPrepared] = useState(0);
+
+  const safeTotalPages = Math.max(0, Number(totalPages ?? 0) || 0);
 
   const backdropStyle = useMemo(
     () => ({ backgroundColor: colors.backdropStrong }),
@@ -64,53 +91,160 @@ export const PdfOpenIntroOverlay: FC<Props> = ({
     [colors.surface, colors.borderSubtle]
   );
 
-  // keep % label in sync
+  // keep % + pages label in sync
   useEffect(() => {
     const id = progress.addListener(({ value }) => {
-      setProgressText(Math.round(clamp01(value) * 100));
+      const v = clamp01(value);
+      setProgressPct(Math.round(v * 100));
+
+      if (safeTotalPages > 0) {
+        // ready gelmeden önce 0..0.88 civarı “prepared pages” gibi hissettirsin
+        const cap = Math.max(1, Math.floor(safeTotalPages * 0.88));
+        const prepared = Math.min(safeTotalPages, Math.round(v * cap));
+        setPagesPrepared(prepared);
+      } else {
+        setPagesPrepared(0);
+      }
     });
     return () => progress.removeListener(id);
-  }, [progress]);
+  }, [progress, safeTotalPages]);
 
-  const startFakeProgress = () => {
+  const stopVisualLoops = () => {
+    visualLoopRef.current?.stop?.();
+    visualLoopRef.current = null;
+  };
+
+  const stopProgressLoop = () => {
+    progressLoopRef.current?.stop?.();
+    progressLoopRef.current = null;
+  };
+
+  const stopAllLoops = () => {
+    stopVisualLoops();
+    stopProgressLoop();
+  };
+
+  const startVisualLoops = () => {
+    stopVisualLoops();
+
+    bookWobble.setValue(0);
+    shimmerX.setValue(0);
+
+    const wobble = Animated.loop(
+      Animated.sequence([
+        Animated.timing(bookWobble, {
+          toValue: 1,
+          duration: 900,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(bookWobble, {
+          toValue: 0,
+          duration: 900,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    const shimmer = Animated.loop(
+      Animated.timing(shimmerX, {
+        toValue: 1,
+        duration: 1200,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    );
+
+    visualLoopRef.current = Animated.parallel([wobble, shimmer]);
+    visualLoopRef.current.start();
+  };
+
+  // ✅ monotonic (hep artan) creep
+  const startProgressCreep = () => {
+    stopProgressLoop();
+
+    const creep = Animated.loop(
+      Animated.sequence([
+        Animated.timing(progress, {
+          toValue: 0.92,
+          duration: 1800,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: false,
+        }),
+        Animated.timing(progress, {
+          toValue: 0.96,
+          duration: 2400,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: false,
+        }),
+        Animated.timing(progress, {
+          toValue: 0.98,
+          duration: 3200,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: false,
+        }),
+      ])
+    );
+
+    progressLoopRef.current = creep;
+    creep.start();
+  };
+
+  const startProgressToSoftCap = () => {
+    stopProgressLoop();
+
     progress.stopAnimation();
     progress.setValue(0);
 
-    // 0 -> 0.72 in ~1.3s, then 0.72 -> 0.86 slow repeat
-    const a = Animated.timing(progress, {
-      toValue: 0.72,
-      duration: 1300,
+    // totalPages varsa süreyi ona göre ayarla (çok uzun pdf’de bile aşırı uzamasın)
+    const base = 900;
+    const per100 = 650; // 100 sayfa başına ekstra
+    const pagesBucket = Math.min(400, safeTotalPages); // 400 üstünü sabitle
+    const duration =
+      safeTotalPages > 0 ? base + (pagesBucket / 100) * per100 : 1400;
+
+    // 0 -> 0.88 (ready gelmeden önce)
+    Animated.timing(progress, {
+      toValue: 0.88,
+      duration: Math.round(duration),
       easing: Easing.out(Easing.cubic),
       useNativeDriver: false,
-    });
-
-    const b1 = Animated.timing(progress, {
-      toValue: 0.86,
-      duration: 2400,
-      easing: Easing.inOut(Easing.quad),
-      useNativeDriver: false,
-    });
-
-    const b2 = Animated.timing(progress, {
-      toValue: 0.74,
-      duration: 2600,
-      easing: Easing.inOut(Easing.quad),
-      useNativeDriver: false,
-    });
-
-    const loop = Animated.loop(Animated.sequence([b1, b2]));
-    progressLoopRef.current = loop;
-
-    a.start(({ finished }) => {
+    }).start(({ finished }) => {
       if (!finished) return;
-      // start looping only if still not ready
-      if (!ready) loop.start();
+      if (!readyRef.current) {
+        startProgressCreep(); // ✅ sadece ileri
+      }
     });
   };
 
-  const stopFakeProgressLoop = () => {
-    progressLoopRef.current?.stop?.();
-    progressLoopRef.current = null;
+  const hideNow = () => {
+    stopAllLoops();
+
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 0,
+        duration: 180,
+        easing: Easing.in(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.timing(scale, {
+        toValue: 0.985,
+        duration: 180,
+        easing: Easing.in(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateY, {
+        toValue: 6,
+        duration: 180,
+        easing: Easing.in(Easing.quad),
+        useNativeDriver: true,
+      }),
+    ]).start(({ finished }) => {
+      if (!finished) return;
+      setMounted(false);
+      onHidden?.();
+    });
   };
 
   // show overlay
@@ -120,7 +254,6 @@ export const PdfOpenIntroOverlay: FC<Props> = ({
     setMounted(true);
     shownAtRef.current = Date.now();
 
-    // show anim
     opacity.setValue(0);
     scale.setValue(0.98);
     translateY.setValue(10);
@@ -146,109 +279,131 @@ export const PdfOpenIntroOverlay: FC<Props> = ({
       }),
     ]).start();
 
-    // progress anim
-    startFakeProgress();
+    // phases (cosmetic)
+    setPhase("Indexing");
+    const t1 = setTimeout(
+      () => !readyRef.current && setPhase("Rendering"),
+      650
+    );
+    const t2 = setTimeout(
+      () => !readyRef.current && setPhase("Finalizing"),
+      1500
+    );
+
+    startVisualLoops();
+    startProgressToSoftCap();
 
     return () => {
-      stopFakeProgressLoop();
+      clearTimeout(t1);
+      clearTimeout(t2);
+      stopAllLoops();
+      progress.stopAnimation();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
-  // when ready: fill to 100, wait minShowMs, then hide
+  // hide logic
   useEffect(() => {
     if (!mounted) return;
-    if (!visible) return;
-    if (!ready) return;
 
-    stopFakeProgressLoop();
+    if (!visible) {
+      hideNow();
+      return;
+    }
 
-    const shownAt = shownAtRef.current ?? Date.now();
-    const elapsed = Date.now() - shownAt;
-    const wait = Math.max(0, minShowMs - elapsed);
+    if (ready) {
+      // ✅ ready gelince loop'ları kesin durdur (yoksa bar geri çekiştirir)
+      stopAllLoops();
 
-    // 1) snap progress to 1 quickly
-    Animated.timing(progress, {
-      toValue: 1,
-      duration: 240,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: false,
-    }).start();
+      // 1) progress -> 1
+      progress.stopAnimation();
+      Animated.timing(progress, {
+        toValue: 1,
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }).start();
 
-    // 2) hide after min show
-    const t = setTimeout(() => {
-      Animated.parallel([
-        Animated.timing(opacity, {
-          toValue: 0,
-          duration: 180,
-          easing: Easing.in(Easing.quad),
+      // 2) küçük “done” pop
+      Animated.sequence([
+        Animated.timing(scale, {
+          toValue: 1.02,
+          duration: 90,
+          easing: Easing.out(Easing.quad),
           useNativeDriver: true,
         }),
         Animated.timing(scale, {
-          toValue: 0.985,
-          duration: 180,
-          easing: Easing.in(Easing.quad),
+          toValue: 1,
+          duration: 120,
+          easing: Easing.out(Easing.quad),
           useNativeDriver: true,
         }),
-        Animated.timing(translateY, {
-          toValue: 6,
-          duration: 180,
-          easing: Easing.in(Easing.quad),
-          useNativeDriver: true,
-        }),
-      ]).start(({ finished }) => {
-        if (!finished) return;
-        setMounted(false);
-        onHidden?.();
-      });
-    }, wait);
+      ]).start();
 
+      // 3) minShowMs sonrası kapat
+      const shownAt = shownAtRef.current ?? Date.now();
+      const elapsed = Date.now() - shownAt;
+      const wait = Math.max(0, minShowMs - elapsed);
+      const t = setTimeout(() => hideNow(), wait);
+      return () => clearTimeout(t);
+    }
+
+    // fail-safe
+    const shownAt = shownAtRef.current ?? Date.now();
+    const elapsed = Date.now() - shownAt;
+    const left = Math.max(0, maxShowMs - elapsed);
+    const t = setTimeout(() => hideNow(), left);
     return () => clearTimeout(t);
-  }, [
-    mounted,
-    visible,
-    ready,
-    minShowMs,
-    opacity,
-    scale,
-    translateY,
-    progress,
-    onHidden,
-  ]);
+  }, [mounted, visible, ready, minShowMs, maxShowMs, progress, scale]);
 
   if (!mounted) return null;
+
+  // cover “opening” illusion
+  const coverTilt = bookWobble.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "-10deg"],
+  });
+  const coverScaleX = bookWobble.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 0.92],
+  });
+
+  // shimmer position
+  const shimmerTranslate = shimmerX.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-30, 110],
+  });
 
   const barWidth = progress.interpolate({
     inputRange: [0, 1],
     outputRange: ["0%", "100%"],
   });
 
+  const pagesLine =
+    safeTotalPages > 0
+      ? `${Math.min(safeTotalPages, pagesPrepared)} / ${safeTotalPages} pages`
+      : `${progressPct}%`;
+
   return (
-    <Animated.View
-      pointerEvents="auto"
-      style={[
-        styles.overlay,
-        backdropStyle,
-        {
-          opacity,
-        },
-      ]}
-    >
+    <Animated.View style={[styles.overlay, backdropStyle, { opacity }]}>
       <Animated.View
         style={[
           styles.card,
           cardStyle,
-          {
-            transform: [{ translateY }, { scale }],
-          },
+          { transform: [{ translateY }, { scale }] },
         ]}
       >
-        {/* Header Row */}
+        {/* Header */}
         <View style={styles.headerRow}>
-          <View style={styles.iconCircle}>
+          <View
+            style={[
+              styles.iconCircle,
+              { backgroundColor: colors.backgroundSecondary },
+            ]}
+          >
             <BaseIcon
               family="ion"
-              name="book-outline"
+              name="document-text-outline"
               size={20}
               color={colors.textPrimary}
             />
@@ -270,91 +425,76 @@ export const PdfOpenIntroOverlay: FC<Props> = ({
 
           <View style={{ alignItems: "flex-end", gap: 6 }}>
             <MText variant="caption" color="textSecondary">
-              {progressText}%
+              {phase}…
             </MText>
             <ActivityIndicator />
           </View>
         </View>
 
-        {/* Book / Cover Visual */}
         <View style={{ height: spacing.md }} />
 
-        <View style={styles.bookRow}>
-          <View style={styles.bookMockWrap}>
+        {/* Book Animation */}
+        <View style={styles.bookStage}>
+          {/* Pages block */}
+          <View
+            style={[
+              styles.pages,
+              {
+                backgroundColor: colors.surfaceElevated,
+                borderColor: colors.borderSubtle,
+              },
+            ]}
+          >
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                styles.shimmer,
+                {
+                  transform: [{ translateX: shimmerTranslate }],
+                  backgroundColor: "rgba(255,255,255,0.20)",
+                },
+              ]}
+            />
+          </View>
+
+          {/* Cover */}
+          <Animated.View
+            style={[
+              styles.cover,
+              {
+                borderColor: colors.borderSubtle,
+                transform: [
+                  { perspective: 800 },
+                  { rotateY: coverTilt },
+                  { scaleX: coverScaleX },
+                ],
+              },
+            ]}
+          >
             {coverUri ? (
               <Image
                 source={{ uri: coverUri }}
-                style={[
-                  styles.coverImage,
-                  { borderColor: colors.borderSubtle },
-                ]}
+                style={{ width: "100%", height: "100%" }}
                 resizeMode="cover"
               />
             ) : (
               <View
                 style={[
-                  styles.bookMock,
-                  {
-                    backgroundColor: colors.surfaceElevated,
-                    borderColor: colors.borderSubtle,
-                  },
+                  styles.coverFallback,
+                  { backgroundColor: colors.primary },
                 ]}
-              >
-                {/* spine */}
-                <View
-                  style={[styles.spine, { backgroundColor: colors.primary }]}
-                />
-                {/* spine highlight */}
-                <View
-                  style={[
-                    styles.spineHighlight,
-                    { backgroundColor: "rgba(255,255,255,0.18)" },
-                  ]}
-                />
-                {/* simple title lines */}
-                <View style={styles.mockText}>
-                  <View
-                    style={[
-                      styles.mockLine,
-                      { backgroundColor: colors.borderSubtle, width: "70%" },
-                    ]}
-                  />
-                  <View
-                    style={[
-                      styles.mockLine,
-                      { backgroundColor: colors.borderSubtle, width: "52%" },
-                    ]}
-                  />
-                  <View
-                    style={[
-                      styles.mockLine,
-                      { backgroundColor: colors.borderSubtle, width: "40%" },
-                    ]}
-                  />
-                </View>
-              </View>
+              />
             )}
-          </View>
+          </Animated.View>
 
-          <View style={{ flex: 1, gap: 6, justifyContent: "center" }}>
-            <MText
-              variant="body"
-              color="textPrimary"
-              style={{ fontWeight: "800" }}
-            >
-              Getting things ready…
-            </MText>
-            <MText
-              variant="caption"
-              color="textSecondary"
-              style={{ opacity: 0.85 }}
-            >
-              This may take a moment for large PDFs.
-            </MText>
-          </View>
+          {/* shadow under book */}
+          <View
+            pointerEvents="none"
+            style={[styles.bookShadow, { backgroundColor: "rgba(0,0,0,0.16)" }]}
+          />
         </View>
 
-        {/* Progress Bar */}
+        {/* Progress */}
         <View style={{ height: spacing.md }} />
 
         <View
@@ -374,11 +514,24 @@ export const PdfOpenIntroOverlay: FC<Props> = ({
           />
         </View>
 
-        {/* tiny hint */}
         <View style={{ height: spacing.sm }} />
-        <MText variant="caption" color="textSecondary" style={{ opacity: 0.8 }}>
-          Tip: You can swipe pages as soon as it opens.
-        </MText>
+
+        <View style={styles.metaRow}>
+          <MText
+            variant="caption"
+            color="textSecondary"
+            style={{ opacity: 0.85 }}
+          >
+            {pagesLine}
+          </MText>
+          <MText
+            variant="caption"
+            color="textSecondary"
+            style={{ opacity: 0.85 }}
+          >
+            {progressPct}%
+          </MText>
+        </View>
       </Animated.View>
     </Animated.View>
   );
@@ -420,61 +573,50 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
-  bookRow: {
-    flexDirection: "row",
-    gap: spacing.md,
+  bookStage: {
+    height: 110,
+    justifyContent: "center",
     alignItems: "center",
   },
 
-  bookMockWrap: {
-    width: 72,
-    height: 92,
-  },
-
-  coverImage: {
-    width: "100%",
-    height: "100%",
-    borderRadius: radii.lg,
+  pages: {
+    position: "absolute",
+    width: 96,
+    height: 108,
+    borderRadius: 16,
     borderWidth: 1,
     overflow: "hidden",
   },
 
-  bookMock: {
-    width: "100%",
-    height: "100%",
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    overflow: "hidden",
-  },
-
-  spine: {
+  shimmer: {
     position: "absolute",
-    left: 0,
     top: 0,
     bottom: 0,
-    width: 14,
-  },
-
-  spineHighlight: {
-    position: "absolute",
-    left: 14,
-    top: 0,
-    bottom: 0,
-    width: 4,
-  },
-
-  mockText: {
-    flex: 1,
-    paddingLeft: 22,
-    paddingRight: 10,
-    paddingTop: 14,
-    gap: 8,
-  },
-
-  mockLine: {
-    height: 6,
-    borderRadius: 4,
+    width: 28,
+    borderRadius: 16,
     opacity: 0.85,
+  },
+
+  cover: {
+    width: 92,
+    height: 108,
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+
+  coverFallback: {
+    flex: 1,
+    opacity: 0.9,
+  },
+
+  bookShadow: {
+    position: "absolute",
+    bottom: 10,
+    width: 90,
+    height: 10,
+    borderRadius: 999,
+    opacity: 0.35,
   },
 
   progressTrack: {
@@ -487,5 +629,11 @@ const styles = StyleSheet.create({
   progressFill: {
     height: "100%",
     borderRadius: radii.full,
+  },
+
+  metaRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
 });

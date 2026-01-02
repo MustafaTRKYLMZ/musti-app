@@ -19,12 +19,14 @@ import {
   iconSizes,
   useTheme,
   Card,
+  bookshelfTheme,
 } from "@budget/ui-native";
 import { IconButton, BaseIcon } from "@/components/ui/AppIcon";
 import type { LocalPdfFile } from "@/utils/getPdfsDirectory";
 import { usePdfCoverFromCache } from "@/hooks/usePdfCoverFromCache";
 import { BookCardFooter } from "./BookCardFooter";
 
+const { colors } = bookshelfTheme;
 type BookCardProps = {
   file: LocalPdfFile;
   onOpen: () => void;
@@ -584,14 +586,14 @@ const styles = StyleSheet.create({
   menuIconWrapper: {
     position: "absolute",
     top: spacing.xs,
-    right: spacing.xs,
+    right: 0,
     zIndex: 10,
   },
   menuChip: {
-    borderRadius: 999,
+    borderRadius: spacing.md,
     overflow: "hidden",
     padding: 1,
-    backgroundColor: "rgba(255,255,255,0.78)",
+    backgroundColor: colors.surface,
   },
 
   contactShadow: {
