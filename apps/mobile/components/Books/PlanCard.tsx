@@ -259,15 +259,24 @@ export const PlanCard: FC<PlanCardProps> = ({
             </View>
 
             <View style={styles.textBlock}>
-              <MText
-                variant="bodyStrong"
-                color="textPrimary"
-                numberOfLines={1}
-                style={styles.title}
-              >
-                {name}
-              </MText>
+              <View style={styles.headerRow}>
+                <MText
+                  variant="bodyStrong"
+                  color="textPrimary"
+                  numberOfLines={1}
+                  style={styles.title}
+                >
+                  {name}
+                </MText>
 
+                <View ref={menuAnchorRef} collapsable={false}>
+                  <IconButton
+                    name="ellipsis-vertical"
+                    size={iconSizes.md}
+                    onPress={openMenu}
+                  />
+                </View>
+              </View>
               <MText
                 variant="body"
                 color="textSecondary"
@@ -341,16 +350,6 @@ export const PlanCard: FC<PlanCardProps> = ({
                   />
                 </View>
               ) : null}
-            </View>
-          </View>
-
-          <View style={styles.rightSection}>
-            <View ref={menuAnchorRef} collapsable={false}>
-              <IconButton
-                name="ellipsis-vertical"
-                size={iconSizes.md}
-                onPress={openMenu}
-              />
             </View>
           </View>
         </Card>
@@ -468,7 +467,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xs,
   },
 
-  rightSection: { marginLeft: spacing.sm },
+  headerRow: {
+    marginLeft: spacing.sm,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
 
   menuOverlay: { flex: 1, backgroundColor: "transparent" },
   popover: {
