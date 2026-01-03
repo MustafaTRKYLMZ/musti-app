@@ -52,7 +52,7 @@ export default function RootLayout() {
       const data = response?.notification?.request?.content?.data as any;
       const payload = data?.payload;
 
-      if (!payload) return;
+      //     if (!payload) return;
 
       const to = routeFromNotificationPayload(payload);
 
@@ -72,8 +72,10 @@ export default function RootLayout() {
 
     sub = Notifications.addNotificationResponseReceivedListener(handleResponse);
 
-    return () => sub?.remove();
-  }, [router, navState?.key]);
+    return () => {
+      if (sub) sub.remove();
+    };
+  }, [router]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
