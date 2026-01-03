@@ -1,4 +1,3 @@
-// apps/mobile/components/ui/pdf/PdfOpenIntroOverlay.tsx
 import React, { FC, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
@@ -50,25 +49,19 @@ export const PdfOpenIntroOverlay: FC<Props> = ({
     readyRef.current = ready;
   }, [ready]);
 
-  // overlay anim
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.98)).current;
   const translateY = useRef(new Animated.Value(10)).current;
 
-  // book anim
-  const bookWobble = useRef(new Animated.Value(0)).current; // 0..1
-  const shimmerX = useRef(new Animated.Value(0)).current; // 0..1
+  const bookWobble = useRef(new Animated.Value(0)).current;
+  const shimmerX = useRef(new Animated.Value(0)).current;
 
-  // progress 0..1
   const progress = useRef(new Animated.Value(0)).current;
 
-  // visual loops (wobble + shimmer)
   const visualLoopRef = useRef<Animated.CompositeAnimation | null>(null);
 
-  // progress loop (creep)
   const progressLoopRef = useRef<Animated.CompositeAnimation | null>(null);
 
-  // UI texts
   const [phase, setPhase] = useState<"Indexing" | "Rendering" | "Finalizing">(
     "Indexing"
   );
@@ -157,34 +150,45 @@ export const PdfOpenIntroOverlay: FC<Props> = ({
     visualLoopRef.current.start();
   };
 
-  const startProgressCreep = () => {
+  const startProgressCreepOnce = () => {
     stopProgressLoop();
 
-    const creep = Animated.loop(
-      Animated.sequence([
+    // şu anki değeri al, asla geri gitme
+    progress.stopAnimation((current) => {
+      const from = clamp01(current ?? 0);
+
+      const to1 = Math.max(from, 0.92);
+      const to2 = Math.max(to1, 0.96);
+      const to3 = Math.max(to2, 0.98);
+
+      const seq = Animated.sequence([
         Animated.timing(progress, {
-          toValue: 0.92,
+          toValue: to1,
+          duration: 1200,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: false,
+        }),
+        Animated.timing(progress, {
+          toValue: to2,
           duration: 1800,
           easing: Easing.inOut(Easing.quad),
           useNativeDriver: false,
         }),
         Animated.timing(progress, {
-          toValue: 0.96,
-          duration: 2400,
+          toValue: to3,
+          duration: 2600,
           easing: Easing.inOut(Easing.quad),
           useNativeDriver: false,
         }),
-        Animated.timing(progress, {
-          toValue: 0.98,
-          duration: 3200,
-          easing: Easing.inOut(Easing.quad),
-          useNativeDriver: false,
-        }),
-      ])
-    );
+      ]);
 
-    progressLoopRef.current = creep;
-    creep.start();
+      progressLoopRef.current = seq;
+      seq.start(({ finished }) => {
+        if (!finished) return;
+        // hazır değilse burada sabit kalsın (geri yok)
+        if (!readyRef.current) progress.setValue(to3);
+      });
+    });
   };
 
   const startProgressToSoftCap = () => {
@@ -207,7 +211,7 @@ export const PdfOpenIntroOverlay: FC<Props> = ({
     }).start(({ finished }) => {
       if (!finished) return;
       if (!readyRef.current) {
-        startProgressCreep();
+        startProgressCreepOnce();
       }
     });
   };
