@@ -126,12 +126,22 @@ export const PdfCoverPrewarmer: FC<Props> = ({
 
       if (!tmpUri) return;
 
-      await FileSystem.copyAsync({ from: tmpUri, to: dest }).catch(async (copyErr) => {
-        console.warn("PdfCoverPrewarmer: copyAsync failed, trying moveAsync", copyErr);
-        await FileSystem.moveAsync({ from: tmpUri, to: dest }).catch((moveErr) => {
-          console.error("PdfCoverPrewarmer: moveAsync also failed", moveErr);
-        });
-      });
+      await FileSystem.copyAsync({ from: tmpUri, to: dest }).catch(
+        async (copyErr) => {
+          console.warn(
+            "PdfCoverPrewarmer: copyAsync failed, trying moveAsync",
+            copyErr
+          );
+          await FileSystem.moveAsync({ from: tmpUri, to: dest }).catch(
+            (moveErr) => {
+              console.error(
+                "PdfCoverPrewarmer: moveAsync also failed",
+                moveErr
+              );
+            }
+          );
+        }
+      );
     } finally {
       inFlight.delete(pdfUri);
     }
@@ -142,7 +152,10 @@ export const PdfCoverPrewarmer: FC<Props> = ({
     try {
       await captureAndSave(active);
     } catch (error) {
-      console.error("PdfCoverPrewarmer: failed to capture and save PDF cover", error);
+      console.error(
+        "PdfCoverPrewarmer: failed to capture and save PDF cover",
+        error
+      );
     }
     onProgress?.(Math.min(done + 1, total), total);
     advance();
@@ -150,11 +163,6 @@ export const PdfCoverPrewarmer: FC<Props> = ({
 
   if (!enabled || !active) return null;
 
-  /**
-   * ✅ Önemli:
-   * - opacity: 0 yapma (bazı cihazlarda render olmaz -> boş capture)
-   * - ekran dışına al ama ölçü ver
-   */
   return (
     <View style={styles.host} pointerEvents="none">
       <View ref={wrapRef} collapsable={false} style={styles.captureBox}>
@@ -169,7 +177,6 @@ export const PdfCoverPrewarmer: FC<Props> = ({
           fitPolicy={2}
           onLoadComplete={() => onLoadComplete()}
           onError={(error) => {
-            // if error, move to next item
             console.warn("PdfCoverPrewarmer: PDF load error", error);
             onProgress?.(Math.min(done + 1, total), total);
             advance();

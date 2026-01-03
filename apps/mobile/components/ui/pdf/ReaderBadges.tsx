@@ -30,7 +30,6 @@ export const ReaderBadges: FC<Props> = ({
   zoomPercent,
   cropLabel,
   timeLeftLabel,
-  isFullscreen = false,
 }) => {
   const { colors } = useTheme();
 
