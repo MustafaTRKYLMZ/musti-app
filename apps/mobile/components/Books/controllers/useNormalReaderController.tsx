@@ -5,7 +5,6 @@ import type { PdfRef } from "react-native-pdf";
 
 import { useBooksStore } from "@/store/bookshelf/useBooksStore";
 import type { ReaderShellProps } from "@/components/Books/ReaderShell";
-import { useCachedPdfUri } from "@/hooks/useCachedPdfUri";
 import { usePdfSource } from "./usePdfSource";
 
 export function useNormalReaderController(): ReaderShellProps {

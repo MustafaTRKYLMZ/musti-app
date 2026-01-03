@@ -11,7 +11,9 @@ export function getCoversDir() {
 
 export async function ensureCoversDir() {
   const dir = getCoversDir();
-  await FileSystem.makeDirectoryAsync(dir, { intermediates: true }).catch(() => {});
+  await FileSystem.makeDirectoryAsync(dir, { intermediates: true }).catch((error) => {
+    console.warn("Failed to create PDF covers directory:", dir, error);
+  });
   return dir;
 }
 

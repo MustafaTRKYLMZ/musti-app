@@ -20,7 +20,7 @@ const FOOTER_H = 64;
 const FOOTER_OVERLAP = FOOTER_H / 5;
 
 const BOOK_TO_SHELF_GAP = -28;
-const SHELF_EXTRA_PADDING = (spacing as any)["2xl"] ?? spacing.xl * 1.2;
+const SHELF_EXTRA_PADDING = spacing["2xl"];
 
 export const LastReadBook = ({
   lastReadBooks,

@@ -3,12 +3,10 @@ import React, { FC, useMemo } from "react";
 import { View, StyleSheet } from "react-native";
 import {
   bookshelfTheme,
-  iconSizes,
   MText,
   radii,
   spacing,
 } from "@budget/ui-native";
-import { BaseIcon } from "@/components/ui/AppIcon";
 
 const { colors } = bookshelfTheme;
 
@@ -33,11 +31,6 @@ export const BookCardFooter: FC<Props> = ({
   width,
   compact = false,
 }) => {
-  const todayText = useMemo(() => {
-    if (!todayLabel) return null;
-    return compact ? compactToday(todayLabel) : todayLabel;
-  }, [todayLabel, compact]);
-
   const pct = useMemo(() => {
     const p = Number.isFinite(progress)
       ? Math.max(0, Math.min(1, progress))
