@@ -1,4 +1,3 @@
-// app/launcher.tsx
 import React from "react";
 import { View, StyleSheet, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
@@ -9,6 +8,8 @@ import {
   radii,
   iconSizes,
   shadows,
+  useTheme,
+  bookshelfTheme,
 } from "@budget/ui-native";
 import { BaseIcon } from "@/components/ui/AppIcon";
 
@@ -22,7 +23,7 @@ export default function LauncherScreen() {
   const handleOpenBookshelf = () => {
     router.push("/(tabs)/bookshelf");
   };
-
+  const { colors } = bookshelfTheme;
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -64,7 +65,7 @@ export default function LauncherScreen() {
 
         {/* Bookshelf card */}
         <TouchableOpacity
-          style={styles.card}
+          style={[styles.card, { backgroundColor: colors.background }]}
           activeOpacity={0.9}
           onPress={handleOpenBookshelf}
         >
@@ -77,13 +78,16 @@ export default function LauncherScreen() {
             />
           </View>
 
-          <MText variant="heading3" style={styles.cardTitle}>
+          <MText
+            variant="heading3"
+            style={[styles.cardTitle, { color: colors.textPrimary }]}
+          >
             Bookshelf
           </MText>
           <MText
             variant="body"
             color="textSecondary"
-            style={styles.cardDescription}
+            style={[styles.cardDescription, { color: colors.textPrimary }]}
           >
             Read PDFs and follow your daily reading plan.
           </MText>
@@ -97,11 +101,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing["3xl"],
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "flex-start",
+    paddingTop: spacing["6xl"],
   },
   header: {
+    marginTop: spacing["2xl"],
     marginBottom: spacing["2xl"],
+    alignItems: "center",
   },
   title: {
     marginBottom: spacing.xs,

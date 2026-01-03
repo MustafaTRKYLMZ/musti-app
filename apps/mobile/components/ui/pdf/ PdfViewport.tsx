@@ -6,6 +6,7 @@ import { runOnJS } from "react-native-reanimated";
 
 type Props = {
   pdfRef?: React.RefObject<PdfRef | null>;
+  captureRef?: React.RefObject<View | null>; // ✅ NEW
   source: { uri: string } | number;
   initialPage: number;
 
@@ -30,6 +31,7 @@ type Props = {
 
 export const PdfViewport: FC<Props> = ({
   pdfRef,
+  captureRef,
   source,
   initialPage,
   backgroundColor,
@@ -63,28 +65,31 @@ export const PdfViewport: FC<Props> = ({
     >
       <GestureDetector gesture={doubleTapGesture}>
         <View style={styles.cropClip}>
-          <Pdf
-            ref={pdfRef}
-            source={source}
-            style={[
-              styles.pdf,
-              {
-                backgroundColor,
-                transform: [{ translateX }, { translateY }, { scale }],
-              },
-            ]}
-            horizontal={horizontal}
-            enablePaging={enablePaging}
-            page={initialPage}
-            scale={1}
-            minScale={1}
-            maxScale={1}
-            enableDoubleTapZoom={false}
-            fitPolicy={2}
-            onLoadComplete={onLoadComplete}
-            onError={onError}
-            onPageChanged={onPageChanged}
-          />
+          {/* ✅ Wrap Pdf with captureRef so we screenshot only this area */}
+          <View ref={captureRef} style={styles.captureWrap} collapsable={false}>
+            <Pdf
+              ref={pdfRef}
+              source={source}
+              style={[
+                styles.pdf,
+                {
+                  backgroundColor,
+                  transform: [{ translateX }, { translateY }, { scale }],
+                },
+              ]}
+              horizontal={horizontal}
+              enablePaging={enablePaging}
+              page={initialPage}
+              scale={1}
+              minScale={1}
+              maxScale={1}
+              enableDoubleTapZoom={false}
+              fitPolicy={2}
+              onLoadComplete={onLoadComplete}
+              onError={onError}
+              onPageChanged={onPageChanged}
+            />
+          </View>
         </View>
       </GestureDetector>
     </View>
@@ -94,5 +99,6 @@ export const PdfViewport: FC<Props> = ({
 const styles = StyleSheet.create({
   viewer: { flex: 1 },
   cropClip: { flex: 1, overflow: "hidden" },
+  captureWrap: { flex: 1 },
   pdf: { flex: 1, width: "100%", height: "100%" },
 });

@@ -12,6 +12,7 @@ import { useLastGainStore } from "@/hooks/useLastGain";
 import { scheduleMotivationNudgeIfNeeded } from "@/utils/motivation";
 
 import type { ReaderShellProps } from "@/components/Books/ReaderShell";
+import { usePdfSource } from "./usePdfSource";
 
 export function usePlanReaderController(): ReaderShellProps {
   const router = useRouter();
@@ -60,7 +61,7 @@ export function usePlanReaderController(): ReaderShellProps {
   const [todayPagesForThisBook, setTodayPagesForThisBook] = useState(0);
   const [hasReachedTarget, setHasReachedTarget] = useState(false);
 
-  const bannerAnim = React.useRef(new Animated.Value(0)).current;
+  const bannerAnim = useRef(new Animated.Value(0)).current;
   const reachedOnceRef = useRef(false);
 
   useEffect(() => {
@@ -112,16 +113,12 @@ export function usePlanReaderController(): ReaderShellProps {
     }
   }, [hasReachedTarget, bannerAnim]);
 
-  const guard: ReaderShellProps["guard"] = (() => {
-    if (!planId || !uri)
-      return { kind: "message", text: "Invalid route params" };
-    if (!plan) return { kind: "message", text: "Plan not found." };
-    if (currentItemIndex === -1)
-      return { kind: "message", text: "This book is not in this plan." };
-    return { kind: "ok" };
-  })();
-
-  const source = { uri: uri ?? "", cache: true };
+  const { guard, source } = usePdfSource({
+    uri,
+    invalidText: "Invalid PDF path",
+    preparingText: "Preparing PDF…",
+    failedText: "Failed to load PDF.",
+  });
 
   const onLoadComplete = (pages: number) => {
     setSessionTotalPages(pages);
@@ -133,11 +130,13 @@ export function usePlanReaderController(): ReaderShellProps {
     setSessionLastPage(page);
     setCurrentPage(page);
 
-    setMaxPageVisited((prev) => (prev == null ? page : Math.max(prev, page)));
+    // ✅ avoid stale maxPageVisited usage
+    const prevMax = maxPageVisited ?? page;
+    const nextMax = Math.max(prevMax, page);
+    setMaxPageVisited(nextMax);
 
     const start = sessionStartPage ?? page;
-    const maxVisited = Math.max(page, maxPageVisited ?? page);
-    const pagesInThisSession = Math.max(0, maxVisited - start);
+    const pagesInThisSession = Math.max(0, nextMax - start);
 
     const totalTodayForThisBook = initialPagesReadToday + pagesInThisSession;
     setTodayPagesForThisBook(totalTodayForThisBook);
@@ -210,7 +209,7 @@ export function usePlanReaderController(): ReaderShellProps {
       }
 
       idx = (idx + 1) % totalItems;
-      
+
       // If we've cycled back to current index, all books are complete
       if (idx === currentItemIndex) break;
     }

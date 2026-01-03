@@ -1,5 +1,4 @@
-// apps/mobile/components/ui/modals/RenameBookModal.tsx
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import {
   Modal,
   View,
@@ -20,12 +19,12 @@ type Props = {
   onConfirm: (nextName: string) => Promise<void> | void;
 };
 
-export function RenameBookModal({
+export const RenameBookModal = ({
   visible,
   currentName,
   onClose,
   onConfirm,
-}: Props) {
+}: Props) => {
   const { colors } = useTheme();
 
   const c = useRenameBookController({
@@ -35,10 +34,20 @@ export function RenameBookModal({
     onConfirm,
   });
 
-  // modal açılınca input focus (opsiyonel)
+  const lastPrefillRef = useRef<string>("");
+
   useEffect(() => {
-    if (!visible) return;
-    c.setValue("name", currentName ?? "", { shouldDirty: false });
+    if (!visible) {
+      lastPrefillRef.current = "";
+      return;
+    }
+
+    const next = (currentName ?? "").trim();
+
+    if (lastPrefillRef.current === next) return;
+    lastPrefillRef.current = next;
+
+    c.setValue("name", next, { shouldDirty: false, shouldTouch: false });
   }, [visible, currentName, c]);
 
   return (
@@ -143,7 +152,7 @@ export function RenameBookModal({
       </KeyboardAvoidingView>
     </Modal>
   );
-}
+};
 
 const styles = StyleSheet.create({
   overlay: {

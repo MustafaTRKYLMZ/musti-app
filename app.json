@@ -1,5 +1,10 @@
 {
   "android": {
     "package": "com.mustafa123_1.budgetcore"
+  },
+  "extra": {
+    "eas": {
+      "projectId": "b2fa2f94-576c-4b7c-aea1-e7d2380eee21"
+    }
   }
 }

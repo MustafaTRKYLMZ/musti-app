@@ -24,6 +24,8 @@ type ShelfPlankProps = {
   accent?: boolean;
   accentHeight?: number;
   accentGlow?: boolean;
+
+  idSuffix?: string;
 };
 
 export const ShelfPlank: FC<ShelfPlankProps> = ({
@@ -41,6 +43,8 @@ export const ShelfPlank: FC<ShelfPlankProps> = ({
   accent = true,
   accentHeight = 2,
   accentGlow = false,
+
+  idSuffix = "0",
 }) => {
   const c = bookshelfTheme.colors;
 
@@ -51,13 +55,11 @@ export const ShelfPlank: FC<ShelfPlankProps> = ({
   const pts = useMemo(() => {
     const w = width;
 
-    // FRONT rect points (for reference)
     const F1 = { x: 0, y: topY };
     const F2 = { x: w, y: topY };
     const F3 = { x: w, y: topY + t };
     const F4 = { x: 0, y: topY + t };
 
-    // BACK top edge
     const B1 = { x: F1.x + skewX, y: F1.y - d };
     const B2 = { x: F2.x + skewX, y: F2.y - d };
 
@@ -87,14 +89,20 @@ export const ShelfPlank: FC<ShelfPlankProps> = ({
   const sideOpacity = 0.85 + 0.1 * brightness;
   const borderOpacity = 0.18;
 
-  // radius clamp
   const r = Math.min(radius, pts.frontRect.h / 2);
+
+  // ✅ unique ids
+  const topLightId = `topLight-${idSuffix}`;
+  const frontShadeId = `frontShade-${idSuffix}`;
+  const accentLineId = `accentLine-${idSuffix}`;
+  const topContactId = `topContact-${idSuffix}`;
+  const frontClipId = `frontClip-${idSuffix}`;
+  const topClipId = `topClip-${idSuffix}`;
 
   return (
     <Svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
       <Defs>
-        {/* top */}
-        <LinearGradient id="topLight" x1="0" y1="0" x2="0" y2="1">
+        <LinearGradient id={topLightId} x1="0" y1="0" x2="0" y2="1">
           <Stop offset="0" stopColor={c.surfaceElevated} stopOpacity={0.8} />
           <Stop offset="0.55" stopColor={c.surface} stopOpacity={0.22} />
           <Stop
@@ -104,8 +112,7 @@ export const ShelfPlank: FC<ShelfPlankProps> = ({
           />
         </LinearGradient>
 
-        {/* Front: naturel shadow */}
-        <LinearGradient id="frontShade" x1="0" y1="0" x2="0" y2="1">
+        <LinearGradient id={frontShadeId} x1="0" y1="0" x2="0" y2="1">
           <Stop offset="0" stopColor={c.surface} stopOpacity={0.18} />
           <Stop
             offset="1"
@@ -114,20 +121,18 @@ export const ShelfPlank: FC<ShelfPlankProps> = ({
           />
         </LinearGradient>
 
-        {/* Accent: micro depth line */}
-        <LinearGradient id="accentLine" x1="0" y1="0" x2="0" y2="1">
+        <LinearGradient id={accentLineId} x1="0" y1="0" x2="0" y2="1">
           <Stop offset="0" stopColor={c.borderSubtle} stopOpacity={0.7} />
           <Stop offset="1" stopColor={c.shadowStrong} stopOpacity={0.35} />
         </LinearGradient>
 
-        <LinearGradient id="topContact" x1="0" y1="0" x2="0" y2="1">
+        <LinearGradient id={topContactId} x1="0" y1="0" x2="0" y2="1">
           <Stop offset="0" stopColor={c.shadowStrong} stopOpacity={0.0} />
           <Stop offset="0.35" stopColor={c.shadowStrong} stopOpacity={0.18} />
           <Stop offset="1" stopColor={c.shadowStrong} stopOpacity={0.0} />
         </LinearGradient>
 
-        {/* Front clip (rounded) */}
-        <ClipPath id="frontClip">
+        <ClipPath id={frontClipId}>
           <Rect
             x={pts.frontRect.x}
             y={pts.frontRect.y}
@@ -138,8 +143,7 @@ export const ShelfPlank: FC<ShelfPlankProps> = ({
           />
         </ClipPath>
 
-        {/* Top clip */}
-        <ClipPath id="topClip">
+        <ClipPath id={topClipId}>
           <Rect
             x={0}
             y={Math.max(0, pts.F1.y - d - 6)}
@@ -151,20 +155,19 @@ export const ShelfPlank: FC<ShelfPlankProps> = ({
         </ClipPath>
       </Defs>
 
-      {/* TOP (base) */}
       <Polygon
         points={toStr(pts.top)}
         fill={c.backgroundSecondary}
         opacity={0.88 + 0.08 * brightness}
         stroke={`rgba(120, 68, 30, ${borderOpacity})`}
         strokeWidth={strokeWidth}
-        clipPath="url(#topClip)"
+        clipPath={`url(#${topClipId})`}
       />
       <Polygon
         points={toStr(pts.top)}
-        fill="url(#topLight)"
+        fill={`url(#${topLightId})`}
         opacity={topOverlayOpacity}
-        clipPath="url(#topClip)"
+        clipPath={`url(#${topClipId})`}
       />
 
       <Rect
@@ -172,13 +175,12 @@ export const ShelfPlank: FC<ShelfPlankProps> = ({
         y={pts.F1.y - 2}
         width={width}
         height={6}
-        fill="url(#topContact)"
+        fill={`url(#${topContactId})`}
         opacity={0.55}
         rx={r}
         ry={r}
       />
 
-      {/* SIDE */}
       <Polygon
         points={toStr(pts.side)}
         fill={c.background}
@@ -187,7 +189,6 @@ export const ShelfPlank: FC<ShelfPlankProps> = ({
         strokeWidth={strokeWidth}
       />
 
-      {/* FRONT: rounded rect */}
       <Rect
         x={pts.frontRect.x}
         y={pts.frontRect.y}
@@ -207,19 +208,18 @@ export const ShelfPlank: FC<ShelfPlankProps> = ({
         height={pts.frontRect.h}
         rx={r}
         ry={r}
-        fill="url(#frontShade)"
+        fill={`url(#${frontShadeId})`}
         opacity={frontOverlayOpacity}
       />
 
-      {/* ACCENT bottom line */}
       {accentGlow && (
         <Rect
-          clipPath="url(#frontClip)"
+          clipPath={`url(#${frontClipId})`}
           x={pts.glowRect.x}
           y={pts.glowRect.y}
           width={pts.glowRect.w}
           height={pts.glowRect.h}
-          fill="url(#accentLine)"
+          fill={`url(#${accentLineId})`}
           opacity={0.12}
           rx={r}
           ry={r}
@@ -228,12 +228,12 @@ export const ShelfPlank: FC<ShelfPlankProps> = ({
 
       {accent && (
         <Rect
-          clipPath="url(#frontClip)"
+          clipPath={`url(#${frontClipId})`}
           x={pts.accentRect.x}
           y={pts.accentRect.y}
           width={pts.accentRect.w}
           height={pts.accentRect.h}
-          fill="url(#accentLine)"
+          fill={`url(#${accentLineId})`}
           opacity={0.55}
           rx={r}
           ry={r}
