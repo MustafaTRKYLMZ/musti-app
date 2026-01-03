@@ -118,7 +118,7 @@ export const PdfCoverPrewarmer: FC<Props> = ({
 
       if (!wrapRef.current) return;
 
-      const tmpUri = await captureRef(wrapRef as React.RefObject<View>, {
+      const tmpUri = await captureRef(wrapRef, {
         format: "jpg",
         quality: 0.82,
         result: "tmpfile",

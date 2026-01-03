@@ -56,7 +56,7 @@ export function useCachedPdfUri(uri?: string) {
       }
 
       // Put PDFs into a subfolder to avoid polluting cache root
-      const folder = baseDir.endsWith("/") ? `${baseDir}pdf-cache/` : `${baseDir}/pdf-cache/`;
+      const folder = baseDir.endsWith("/") ? `${baseDir}pdf-files/` : `${baseDir}/pdf-files/`;
 
       try {
         // ensure dir exists
