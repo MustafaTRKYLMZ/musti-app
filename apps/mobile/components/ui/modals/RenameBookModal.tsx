@@ -48,7 +48,7 @@ export const RenameBookModal = ({
     lastPrefillRef.current = next;
 
     c.setValue("name", next, { shouldDirty: false, shouldTouch: false });
-  }, [visible, currentName]);
+  }, [visible, currentName, c]);
 
   return (
     <Modal

@@ -22,7 +22,7 @@ type BookListProps = {
 const COLS = 3;
 
 const BOOK_TO_SHELF_GAP = -40;
-const SHELF_ROW_GAP = (spacing as any)["2xl"] ?? spacing.xl * 1.5;
+const SHELF_ROW_GAP = spacing["2xl"];
 
 export const BookList = ({
   setModalVisible,

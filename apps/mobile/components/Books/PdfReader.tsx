@@ -154,8 +154,11 @@ export const PdfReader: FC<PdfReaderProps> = ({
         return;
       }
 
-      await FileSystem.copyAsync({ from: tmpUri, to: dest }).catch(async () => {
-        await FileSystem.moveAsync({ from: tmpUri, to: dest }).catch(() => {});
+      await FileSystem.copyAsync({ from: tmpUri, to: dest }).catch(async (copyErr) => {
+        console.warn("PdfReader: copyAsync failed while saving cover, falling back to moveAsync", copyErr);
+        await FileSystem.moveAsync({ from: tmpUri, to: dest }).catch((moveErr) => {
+          console.error("PdfReader: moveAsync fallback also failed while saving cover", moveErr);
+        });
       });
 
       coverJobLock.delete(pdfUri);

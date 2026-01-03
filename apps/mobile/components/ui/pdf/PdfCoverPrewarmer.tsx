@@ -14,9 +14,9 @@ import * as FileSystem from "expo-file-system/legacy";
 import { ensureCoversDir, getCoverPathForPdfUri } from "@/hooks/pdfCoverCache";
 
 type Props = {
-  pdfUris: string[]; // file:// uriler
+  pdfUris: string[]; // file:// URIs
   enabled?: boolean; // default true
-  maxToProcess?: number; // default 12 (ilk ekranda yeter)
+  maxToProcess?: number; // default 12 (enough for first screen)
   onProgress?: (done: number, total: number) => void;
 };
 
@@ -34,7 +34,7 @@ export const PdfCoverPrewarmer: FC<Props> = ({
   const wrapRef = useRef<View | null>(null);
   const cancelledRef = useRef(false);
 
-  // queue hazırla: sadece file:// ve cache’de olmayanlar
+  // prepare queue: only file:// URIs and those not in cache
   useEffect(() => {
     cancelledRef.current = false;
 
@@ -66,7 +66,8 @@ export const PdfCoverPrewarmer: FC<Props> = ({
           onProgress?.(0, picked.length);
         }
       } catch (e) {
-        // sessiz geç
+        // silently skip on error
+        console.warn("PdfCoverPrewarmer: failed to prepare cover queue", e);
         if (!cancelledRef.current) {
           setQueue([]);
           setActive(null);
@@ -87,7 +88,7 @@ export const PdfCoverPrewarmer: FC<Props> = ({
     return Math.max(0, idx);
   }, [queue, active, total]);
 
-  // sıradaki elemana geç
+  // move to next element in queue
   const advance = useCallback(() => {
     setActive((cur) => {
       if (!cur) return null;
@@ -97,7 +98,7 @@ export const PdfCoverPrewarmer: FC<Props> = ({
     });
   }, [queue]);
 
-  // capture + cache yaz
+  // capture and write to cache
   const captureAndSave = useCallback(async (pdfUri: string) => {
     if (cancelledRef.current) return;
 
@@ -107,17 +108,17 @@ export const PdfCoverPrewarmer: FC<Props> = ({
     try {
       const dest = getCoverPathForPdfUri(pdfUri);
 
-      // tekrar kontrol (yarış durumuna karşı)
+      // check again to prevent race condition
       const info = await FileSystem.getInfoAsync(dest);
       if (info.exists) return;
 
-      // render'ın oturması için 2 frame bekle
+      // wait 2 frames for render to settle
       await new Promise<void>((r) => requestAnimationFrame(() => r()));
       await new Promise<void>((r) => requestAnimationFrame(() => r()));
 
       if (!wrapRef.current) return;
 
-      const tmpUri = await captureRef(wrapRef as any, {
+      const tmpUri = await captureRef(wrapRef as React.RefObject<View>, {
         format: "jpg",
         quality: 0.82,
         result: "tmpfile",
@@ -125,8 +126,11 @@ export const PdfCoverPrewarmer: FC<Props> = ({
 
       if (!tmpUri) return;
 
-      await FileSystem.copyAsync({ from: tmpUri, to: dest }).catch(async () => {
-        await FileSystem.moveAsync({ from: tmpUri, to: dest }).catch(() => {});
+      await FileSystem.copyAsync({ from: tmpUri, to: dest }).catch(async (copyErr) => {
+        console.warn("PdfCoverPrewarmer: copyAsync failed, trying moveAsync", copyErr);
+        await FileSystem.moveAsync({ from: tmpUri, to: dest }).catch((moveErr) => {
+          console.error("PdfCoverPrewarmer: moveAsync also failed", moveErr);
+        });
       });
     } finally {
       inFlight.delete(pdfUri);
@@ -137,7 +141,9 @@ export const PdfCoverPrewarmer: FC<Props> = ({
     if (!active) return;
     try {
       await captureAndSave(active);
-    } catch {}
+    } catch (error) {
+      console.error("PdfCoverPrewarmer: failed to capture and save PDF cover", error);
+    }
     onProgress?.(Math.min(done + 1, total), total);
     advance();
   }, [active, captureAndSave, advance, done, total, onProgress]);
@@ -162,8 +168,9 @@ export const PdfCoverPrewarmer: FC<Props> = ({
           horizontal={false}
           fitPolicy={2}
           onLoadComplete={() => onLoadComplete()}
-          onError={() => {
-            // hata olursa sıradakine geç
+          onError={(error) => {
+            // if error, move to next item
+            console.warn("PdfCoverPrewarmer: PDF load error", error);
             onProgress?.(Math.min(done + 1, total), total);
             advance();
           }}
@@ -185,7 +192,7 @@ const styles = StyleSheet.create({
   captureBox: {
     width: 360,
     height: 520,
-    // opacity 0 değil
+    // opacity is intentionally not 0 (some devices won't render with opacity: 0)
     opacity: Platform.OS === "android" ? 0.03 : 0.01,
     backgroundColor: "#fff",
     overflow: "hidden",

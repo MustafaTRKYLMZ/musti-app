@@ -2,12 +2,17 @@
 import { useEffect, useMemo, useState } from "react";
 import * as FileSystem from "expo-file-system/legacy";
 
-// tiny stable hash (fast, good enough for filenames)
+// FNV-1a 32-bit hash: fast, stable, and good distribution for short strings/filenames.
+// We use this instead of a cryptographic hash because we only need a deterministic,
+// low-collision filename component, not security.
+const FNV1A_32_OFFSET_BASIS = 2166136261; // Standard 32-bit FNV-1a offset basis
+const FNV1A_32_PRIME = 16777619;         // Standard 32-bit FNV-1a prime
+
 function hashString(input: string) {
-  let h = 2166136261; // FNV-1a seed
+  let h = FNV1A_32_OFFSET_BASIS;
   for (let i = 0; i < input.length; i++) {
     h ^= input.charCodeAt(i);
-    h = Math.imul(h, 16777619);
+    h = Math.imul(h, FNV1A_32_PRIME);
   }
   return (h >>> 0).toString(36);
 }
@@ -59,8 +64,9 @@ export function useCachedPdfUri(uri?: string) {
         if (!dirInfo.exists) {
           await FileSystem.makeDirectoryAsync(folder, { intermediates: true });
         }
-      } catch {
-        // if can't create folder, fallback
+      } catch (error) {
+        // if can't create folder, fallback to original URI
+        console.warn("useCachedPdfUri: Failed to create cache directory", folder, error);
         setCachedUri(uri);
         setReady(true);
         return;
@@ -89,6 +95,7 @@ export function useCachedPdfUri(uri?: string) {
 
         if (!cancelled) setCachedUri(dest);
       } catch (e) {
+        console.warn("useCachedPdfUri: Failed to cache PDF, falling back to original URI", uri, e);
         if (!cancelled) setCachedUri(uri);
       } finally {
         if (!cancelled) setReady(true);
