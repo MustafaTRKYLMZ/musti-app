@@ -1,10 +1,17 @@
-import React, { FC } from "react";
-import { View, StyleSheet, Pressable } from "react-native";
-import { MText, iconSizes, radii, spacing, useTheme } from "@budget/ui-native";
+import React, { FC, useMemo, useState } from "react";
+import { View, StyleSheet } from "react-native";
+import { iconSizes, radii, spacing, useTheme } from "@budget/ui-native";
 import { IconButton } from "@/components/ui/AppIcon";
+import type { ReaderBookNavItem } from "@/hooks/useReaderBookNav";
+import { ReaderHeaderTitleToggle } from "@/components/ui/pdf/ReaderHeaderTitleToggle";
+import { HeaderBookTabsBar } from "@/components/ui/pdf/HeaderBookTabsBar";
 
 type Props = {
   name: string;
+  activeUri?: string | null;
+
+  bookItems?: ReaderBookNavItem[];
+  onSelectBook?: (it: ReaderBookNavItem) => void;
 
   scrollMode: "horizontal-paged" | "vertical-scroll";
   onToggleScrollMode: () => void;
@@ -20,10 +27,15 @@ type Props = {
 
   onEnterFullscreen: () => void;
   onClose: () => void;
+  bookNavItems?: ReaderBookNavItem[];
 };
 
 export const ReaderHeaderBar: FC<Props> = ({
   name,
+  activeUri = null,
+  bookNavItems = [],
+  onSelectBook,
+
   scrollMode,
   onToggleScrollMode,
   cropLabel,
@@ -36,32 +48,40 @@ export const ReaderHeaderBar: FC<Props> = ({
   onClose,
 }) => {
   const { colors } = useTheme();
+  const [tabsOpen, setTabsOpen] = useState(false);
+
+  const hasTabs = useMemo(
+    () => (bookNavItems?.length ?? 0) > 1,
+    [bookNavItems]
+  );
 
   return (
-    <View>
-      <View
-        style={[
-          styles.header,
-          {
-            backgroundColor: colors.surface,
-            borderBottomWidth: StyleSheet.hairlineWidth,
-            borderBottomColor: colors.borderSubtle,
-            shadowColor: colors.shadowStrong,
-            shadowOpacity: 0.12,
-            shadowRadius: 8,
-            shadowOffset: { width: 0, height: 3 },
-            paddingTop: spacing["2xl"],
-          },
-        ]}
-      >
-        <MText
-          variant="heading2"
-          color="textPrimary"
-          style={styles.title}
-          numberOfLines={1}
-        >
-          {name}
-        </MText>
+    <View
+      style={[
+        styles.wrap,
+        {
+          backgroundColor: colors.surface,
+          borderBottomColor: colors.borderSubtle,
+          shadowColor: colors.shadowStrong,
+        },
+      ]}
+    >
+      <View style={styles.headerTopRow}>
+        <View style={styles.left}>
+          {hasTabs ? (
+            <ReaderHeaderTitleToggle
+              title={name}
+              open={tabsOpen}
+              onToggle={() => setTabsOpen((v) => !v)}
+            />
+          ) : (
+            <ReaderHeaderTitleToggle
+              title={name}
+              open={false}
+              onToggle={() => {}}
+            />
+          )}
+        </View>
 
         <View style={styles.headerActions}>
           <IconButton
@@ -81,7 +101,19 @@ export const ReaderHeaderBar: FC<Props> = ({
         </View>
       </View>
 
-      <View style={[styles.menuButton, { backgroundColor: colors.surface }]}>
+      {/* ✅ DROPDOWN: FULL WIDTH */}
+      {hasTabs && tabsOpen && (
+        <HeaderBookTabsBar
+          items={bookNavItems}
+          activeUri={activeUri}
+          onSelect={(it) => {
+            setTabsOpen(false);
+            onSelectBook?.(it);
+          }}
+        />
+      )}
+
+      <View style={styles.controlsRow}>
         <IconButton
           name="remove-outline"
           onPress={onZoomMinus}
@@ -113,22 +145,6 @@ export const ReaderHeaderBar: FC<Props> = ({
           accessibilityLabel={`Trim margins: ${cropLabel}`}
         />
 
-        <Pressable
-          onPress={onCycleCrop}
-          style={[
-            styles.badge,
-            {
-              backgroundColor: colors.surface,
-              borderColor: colors.borderSubtle,
-            },
-          ]}
-          accessibilityLabel="Toggle margin trim"
-        >
-          <MText variant="caption" color="textSecondary">
-            {cropLabel}
-          </MText>
-        </Pressable>
-
         <IconButton
           name="options-outline"
           onPress={onOpenSettings}
@@ -148,20 +164,37 @@ export const ReaderHeaderBar: FC<Props> = ({
 };
 
 const styles = StyleSheet.create({
-  header: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xl,
-    paddingVertical: spacing.md,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+  wrap: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
     zIndex: 2,
   },
-  title: { flex: 1, marginRight: spacing.md },
-  headerActions: { flexDirection: "row", alignItems: "center" },
-  iconButton: { marginLeft: spacing.sm },
 
-  menuButton: {
+  headerTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing["2xl"],
+    paddingBottom: spacing.sm,
+  },
+
+  left: {
+    flex: 1,
+    paddingRight: spacing.md,
+  },
+
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  iconButton: {
+    marginLeft: spacing.sm,
+  },
+
+  controlsRow: {
     flexDirection: "row",
     justifyContent: "flex-end",
     alignItems: "center",
@@ -169,10 +202,13 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xs,
     gap: spacing.sm,
   },
+
   badge: {
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: radii.full,
     borderWidth: StyleSheet.hairlineWidth,
+    minWidth: 44,
+    height: 28,
   },
 });
