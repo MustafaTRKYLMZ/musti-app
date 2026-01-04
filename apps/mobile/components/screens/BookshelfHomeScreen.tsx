@@ -37,7 +37,7 @@ import { AddBookModal } from "../ui/modals/AddBookModal";
 import { EditPlanModal } from "../ui/modals/EditPlanModal";
 import { RenameBookModal } from "../ui/modals/RenameBookModal";
 
-const { colors, spacing, radii } = bookshelfTheme;
+const { spacing } = bookshelfTheme;
 
 const bColors = bookshelfTheme.colors;
 const bSpacing = bookshelfTheme.spacing;

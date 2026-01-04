@@ -38,6 +38,7 @@ import { useCropTransform } from "@/hooks/ useCropTransform";
 import { useReaderPrefs } from "@/hooks/ useReaderPrefs";
 import { PdfViewport } from "../ui/pdf/ PdfViewport";
 import { ReaderHeaderBar } from "../ui/pdf/ ReaderHeaderBar";
+import { useReaderBookNav } from "@/hooks/useReaderBookNav";
 
 type PdfReaderProps = {
   isFullscreen: boolean;
@@ -78,7 +79,6 @@ const clampIndex = (n: number, min: number, max: number) =>
 const MIN_VALID_PPM = 0.2;
 const MAX_VALID_PPM = 12;
 
-// ✅ in-memory lock to avoid duplicate captures
 const coverJobLock = new Set<string>();
 
 export const PdfReader: FC<PdfReaderProps> = ({
@@ -105,7 +105,6 @@ export const PdfReader: FC<PdfReaderProps> = ({
   const [introVisible, setIntroVisible] = useState(true);
   const [pdfReady, setPdfReady] = useState(false);
 
-  // ✅ capture ONLY the PDF area (PdfViewport wraps Pdf with this ref)
   const pdfCaptureRef = useRef<View | null>(null);
 
   const bookUriForCover = useMemo(() => {
@@ -154,12 +153,22 @@ export const PdfReader: FC<PdfReaderProps> = ({
         return;
       }
 
-      await FileSystem.copyAsync({ from: tmpUri, to: dest }).catch(async (copyErr) => {
-        console.warn("PdfReader: copyAsync failed while saving cover, falling back to moveAsync", copyErr);
-        await FileSystem.moveAsync({ from: tmpUri, to: dest }).catch((moveErr) => {
-          console.error("PdfReader: moveAsync fallback also failed while saving cover", moveErr);
-        });
-      });
+      await FileSystem.copyAsync({ from: tmpUri, to: dest }).catch(
+        async (copyErr) => {
+          console.warn(
+            "PdfReader: copyAsync failed while saving cover, falling back to moveAsync",
+            copyErr
+          );
+          await FileSystem.moveAsync({ from: tmpUri, to: dest }).catch(
+            (moveErr) => {
+              console.error(
+                "PdfReader: moveAsync fallback also failed while saving cover",
+                moveErr
+              );
+            }
+          );
+        }
+      );
 
       coverJobLock.delete(pdfUri);
     } catch (e) {
@@ -172,16 +181,12 @@ export const PdfReader: FC<PdfReaderProps> = ({
     (n: number, fp?: string) => {
       handleLoadComplete(n, fp);
       setPdfReady(true);
-
-      // ✅ start cover capture in background
-      // (do not await to avoid blocking UI)
       void tryCaptureCover();
     },
     [handleLoadComplete, tryCaptureCover]
   );
 
   useEffect(() => {
-    // reset intro per doc
     setIntroVisible(true);
     setPdfReady(false);
   }, [prefs.storageKey]);
@@ -221,7 +226,6 @@ export const PdfReader: FC<PdfReaderProps> = ({
     return formatDurationShort(minutes * 60_000);
   }, [timeLeftRemainingPages, currentPage, totalPages, pace.ppm]);
 
-  // crop + zoom transforms
   const { setViewerSize, userScale, visualScale, cropTransform } =
     useCropTransform(prefs.cropKey, prefs.zoomPresetIndex);
 
@@ -263,7 +267,6 @@ export const PdfReader: FC<PdfReaderProps> = ({
     },
   });
 
-  // ✅ reset tracking baselines when doc/initial changes
   useEffect(() => {
     const startPage = Math.max(1, Math.floor(initialPage ?? 1));
     tracking.resetBaselines(startPage);
@@ -288,6 +291,19 @@ export const PdfReader: FC<PdfReaderProps> = ({
 
   const handleAminus = () => applyZoomIndex(prefs.zoomPresetIndex - 1);
   const handleAplus = () => applyZoomIndex(prefs.zoomPresetIndex + 1);
+  const activeBookUri = useMemo(() => {
+    const u =
+      readingContext?.bookUri ??
+      (typeof source === "object" ? source.uri : null);
+    return typeof u === "string" ? u : null;
+  }, [readingContext?.bookUri, source]);
+
+  const bookNav = useReaderBookNav({
+    activeUri: activeBookUri,
+    sort: "recent",
+    limit: 30,
+    enabled: !isFullscreen,
+  });
 
   const handleDoubleTapZoom = useCallback(() => {
     const next = prefs.zoomPresetIndex >= 5 ? 0 : prefs.zoomPresetIndex + 1;
@@ -358,6 +374,9 @@ export const PdfReader: FC<PdfReaderProps> = ({
       {!isFullscreen && (
         <ReaderHeaderBar
           name={name}
+          bookNavItems={bookNav.items}
+          activeUri={activeBookUri}
+          onSelectBook={bookNav.openBook}
           scrollMode={prefs.scrollMode}
           onToggleScrollMode={toggleScrollMode}
           cropLabel={cropLabel}
@@ -387,13 +406,13 @@ export const PdfReader: FC<PdfReaderProps> = ({
 
       <PdfViewport
         pdfRef={pdfRef}
-        captureRef={pdfCaptureRef} // ✅ IMPORTANT: wrap Pdf with this ref
+        captureRef={pdfCaptureRef}
         source={source}
         initialPage={initialPage}
         backgroundColor={isFullscreen ? "#000" : colors.background}
         horizontal={pdfHorizontal}
         enablePaging={pdfEnablePaging}
-        onLoadComplete={onLoadComplete} // ✅ wrapped
+        onLoadComplete={onLoadComplete}
         onError={(e) => console.log("PDF error:", e)}
         onPageChanged={handlePageChangedInternal}
         onLayoutSize={(w, h) => setViewerSize({ w, h })}
