@@ -1,4 +1,3 @@
-// apps/mobile/features/transactions/components/AnimatedFutureRow.tsx
 import React, { useEffect, useRef } from "react";
 import { Animated, Easing } from "react-native";
 

@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { View, StyleSheet } from "react-native";
-import { MText, spacing, useTheme } from "@budget/ui-native";
+import { MText, spacing, useTheme } from "/ui-native";
 import type { PdfRef } from "react-native-pdf";
-import type { ReadingMode } from "@budget/core";
+import type { ReadingMode } from "/core";
 
 import { PdfReader } from "@/components/Books/PdfReader";
 import { BookSectionsSidebar } from "@/components/Books/BookSectionsSidebar";

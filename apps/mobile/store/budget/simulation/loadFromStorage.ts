@@ -1,7 +1,7 @@
 // apps/mobile/store/simulation/loadFromStorage.ts
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import type { SimulationScenario, SimulationStore } from "@budget/core";
+import type { SimulationScenario, SimulationStore } from "/core";
 import { SIMULATION_STORAGE_KEY } from "./constants";
 import type { SimulationStoreSet } from "./types";
 

@@ -2,7 +2,7 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
 import LanguageSelector from "../LanguageSelector";
-import { colors, spacing, radii } from "@budget/ui-native";
+import { colors, spacing, radii } from "@musti/ui-native";
 import { IconButton } from "./AppIcon";
 
 interface Props {
@@ -10,11 +10,7 @@ interface Props {
   onLanguageChange?: (msg: string) => void;
 }
 
-export function BudgetHeader({
-  onOpenSimulation,
-  onLanguageChange,
-}: Props) {
-
+export function BudgetHeader({ onOpenSimulation, onLanguageChange }: Props) {
   return (
     <View style={styles.headerRow}>
       {/* RIGHT: simulation + language */}

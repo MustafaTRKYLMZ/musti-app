@@ -1,4 +1,4 @@
-import { MText, useTheme } from "@budget/ui-native";
+import { MText, useTheme } from "@musti/ui-native";
 import { Pressable, View, StyleSheet } from "react-native";
 
 export const ItemDots = ({

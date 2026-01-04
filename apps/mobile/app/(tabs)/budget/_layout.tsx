@@ -1,6 +1,6 @@
 import React from "react";
 import { Slot } from "expo-router";
-import { budgetTheme, ThemeProvider } from "@budget/ui-native";
+import { budgetTheme, ThemeProvider } from "/ui-native";
 
 export default function BookshelfTabLayout() {
   return (

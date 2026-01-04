@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { View, StyleSheet, ViewStyle } from "react-native";
 import Svg, { Circle } from "react-native-svg";
-import { MText, bookshelfTheme } from "@budget/ui-native";
+import { MText, bookshelfTheme } from "@musti/ui-native";
 
 const { colors, radii } = bookshelfTheme;
 

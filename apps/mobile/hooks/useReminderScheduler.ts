@@ -3,7 +3,7 @@ import {
   cancelNotificationIds,
   ensureNotificationPermission,
   scheduleCustomReminder,
-} from "@budget/notifications";
+} from "/notifications";
 import { useRemindersStore } from "@/store/reminders/useRemindersStore";
 import type { ReminderItem, ReminderOwner } from "@/store/reminders/types";
 

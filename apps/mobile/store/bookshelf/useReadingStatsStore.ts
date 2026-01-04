@@ -7,7 +7,7 @@ import { dateLTE } from "@/utils/dateLTE";
 import { emptyByMode } from "@/utils/emptyByMode";
 import { makeBookKey } from "@/utils/makeBookKey";
 import { makeTargetKey } from "@/utils/makeTargetKey";
-import { DailyReadingStat,LastEvent,AddPagesInput, ReadingMode} from "@budget/core";
+import { DailyReadingStat,LastEvent,AddPagesInput, ReadingMode} from "/core";
 interface ReadingStatsState {
   byDate: Record<string, DailyReadingStat>;
   byBookDate: Record<string, DailyReadingStat>;

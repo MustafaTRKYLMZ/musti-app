@@ -1,7 +1,7 @@
 StatsSectionHeader;
 import React from "react";
 import { View, StyleSheet } from "react-native";
-import { MText, spacing } from "@budget/ui-native";
+import { MText, spacing } from "/ui-native";
 
 type Props = {
   title: string;

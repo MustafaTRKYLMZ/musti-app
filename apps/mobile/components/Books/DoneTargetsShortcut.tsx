@@ -4,7 +4,7 @@ import {
   MText,
   radii,
   bookshelfTheme,
-} from "@budget/ui-native";
+} from "/ui-native";
 import { Pressable, View, StyleSheet } from "react-native";
 import { IconButton } from "../ui/AppIcon";
 import { FC } from "react";

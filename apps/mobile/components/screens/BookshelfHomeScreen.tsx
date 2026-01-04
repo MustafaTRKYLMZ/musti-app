@@ -19,7 +19,7 @@ import { pickActiveItem } from "@/utils/pickActiveItem";
 import { CreatePlanModal } from "@/components/ui/modals/CreatePlanModal";
 import { AppScreen } from "@/components/AppScreen";
 import { BookshelfHeader } from "@/components/Books/BookshelfHeader";
-import { bookshelfTheme, iconSizes } from "@budget/ui-native";
+import { bookshelfTheme, iconSizes } from "/ui-native";
 import { IconButton } from "@/components/ui/AppIcon";
 import { AppSwitcherButton } from "@/components/AppSwitcherButton";
 import { LastReadBook } from "@/components/Books/LastReadBook";

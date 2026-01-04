@@ -7,7 +7,7 @@ import {
   ActivityIndicator,
   Image,
 } from "react-native";
-import { MText, spacing, radii, useTheme } from "@budget/ui-native";
+import { MText, spacing, radii, useTheme } from "/ui-native";
 import { BaseIcon } from "@/components/ui/AppIcon";
 
 type Props = {

@@ -1,8 +1,8 @@
-import { iconSizes, radii, spacing, useTheme } from "@budget/ui-native";
+import { iconSizes, radii, spacing, useTheme } from "/ui-native";
 import { View, TextInput, StyleSheet } from "react-native";
 import { IconButton } from "../ui/AppIcon";
 import { FC } from "react";
-import { MText } from "@budget/ui-native";
+import { MText } from "/ui-native";
 
 type AddSectionFormProps = {
   title: string;

@@ -1,5 +1,5 @@
 
-import type { SimulationStore } from "@budget/core";
+import type { SimulationStore } from "/core";
 import { persistSimulationState } from "./persistState";
 import type { SimulationStoreSet, SimulationStoreGet } from "./types";
 

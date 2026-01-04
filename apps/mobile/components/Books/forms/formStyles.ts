@@ -1,5 +1,5 @@
 import { StyleSheet } from "react-native";
-import { spacing } from "@budget/ui-native";
+import { spacing } from "/ui-native";
 
 export const formStyles = StyleSheet.create({
   sectionTitle: {

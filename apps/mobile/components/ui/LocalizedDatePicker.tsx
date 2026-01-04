@@ -8,8 +8,8 @@ import {
 } from "react-native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import dayjs from "dayjs";
-import { getLocalizedDateParts, useTranslation } from "@budget/core";
-import { MText, colors, spacing, radii } from "@budget/ui-native";
+import { getLocalizedDateParts, useTranslation } from "@musti/core";
+import { MText, colors, spacing, radii } from "@musti/ui-native";
 import { BaseIcon } from "@/components/ui/AppIcon";
 
 interface Props {

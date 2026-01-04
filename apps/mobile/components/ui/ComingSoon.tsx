@@ -1,18 +1,13 @@
 // apps/mobile/components/ui/ComingSoon.tsx
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { colors } from "@budget/ui-native";
+import { colors } from "@musti/ui-native";
 import { BaseIcon } from "./AppIcon";
-import { iconSizes } from "@budget/ui-native";
 
 export function ComingSoon() {
   return (
     <View style={styles.container}>
-      <BaseIcon
-        name="sparkles-outline"
-        size={50}
-        color={colors.surface}
-      />
+      <BaseIcon name="sparkles-outline" size={50} color={colors.surface} />
       <Text style={styles.title}>Coming soon</Text>
       <Text style={styles.subtitle}>Something cool is on the way.</Text>
     </View>

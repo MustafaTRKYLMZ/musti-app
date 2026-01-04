@@ -5,7 +5,7 @@ import { useRouter } from "expo-router";
 
 import { AppScreen } from "@/components/AppScreen";
 import { IconButton } from "@/components/ui/AppIcon";
-import { spacing, iconSizes, useTheme, MText } from "@budget/ui-native";
+import { spacing, iconSizes, useTheme, MText } from "/ui-native";
 
 import { useReadingStatsStore } from "@/store/bookshelf/useReadingStatsStore";
 import { useReadingEventsStore } from "@/store/bookshelf/useReadingEventsStore";
@@ -13,7 +13,7 @@ import { useReadingEventsStore } from "@/store/bookshelf/useReadingEventsStore";
 import { toNonNegativeInt } from "@/utils/toNonNegativeInt";
 import { formatModeParts } from "@/utils/formatModeParts";
 import { guessNameFromUri } from "@/utils/guessNameFromUri";
-import { ReadingMode } from "@budget/core";
+import { ReadingMode } from "/core";
 
 import { BookRowCard } from "@/components/Books/statsBook/BookRowCard";
 import { EmptyStateCard } from "@/components/Books/statsBook/EmptyStateCard";

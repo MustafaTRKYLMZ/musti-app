@@ -2,9 +2,9 @@ import React from "react";
 import { StyleSheet, ScrollView } from "react-native";
 import { AppScreen } from "@/components/AppScreen";
 import { IconButton } from "@/components/ui/AppIcon";
-import { MText, colors, spacing } from "@budget/ui-native";
+import { MText, colors, spacing } from "/ui-native";
 import { router } from "expo-router";
-import { useTranslation } from "@budget/core";
+import { useTranslation } from "/core";
 
 export default function AboutScreen() {
   const { t } = useTranslation();

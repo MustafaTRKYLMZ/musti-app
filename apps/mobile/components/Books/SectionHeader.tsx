@@ -1,4 +1,4 @@
-import { MText, spacing } from "@budget/ui-native";
+import { MText, spacing } from "/ui-native";
 import { FC } from "react";
 import { View, StyleSheet } from "react-native";
 import { IconButton } from "../ui/AppIcon";

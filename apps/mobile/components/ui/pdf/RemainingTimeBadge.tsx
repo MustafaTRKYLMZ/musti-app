@@ -1,6 +1,6 @@
 import React, { FC, useMemo } from "react";
 import { View, StyleSheet } from "react-native";
-import { MText, useTheme, radii, spacing } from "@budget/ui-native";
+import { MText, useTheme, radii, spacing } from "@musti/ui-native";
 
 import { useReadingPace } from "@/hooks/useReadingPace";
 import { formatDurationShort } from "@/utils/formatDuration";

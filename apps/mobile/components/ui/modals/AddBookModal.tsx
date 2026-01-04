@@ -6,7 +6,7 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from "react-native";
-import { MText, spacing, radii, useTheme } from "@budget/ui-native";
+import { MText, spacing, radii, useTheme } from "/ui-native";
 
 import { useImportPdfController } from "@/components/Books/controllers/useImportPdfController";
 

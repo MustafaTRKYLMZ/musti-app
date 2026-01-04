@@ -1,7 +1,7 @@
 // components/ui/FlagIcon.tsx
 import React from "react";
 import { Image, ImageSourcePropType, StyleProp, ViewStyle } from "react-native";
-import { colors } from "@budget/ui-native";
+import { colors } from "@musti/ui-native";
 import { IconButton } from "./AppIcon";
 
 export type LangCode = "en" | "tr";

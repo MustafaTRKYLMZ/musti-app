@@ -1,5 +1,5 @@
 {
-  "name": "@budget/forms",
+  "name": "@musti/forms",
   "version": "0.0.1",
   "main": "src/index.ts",
   "types": "src/index.ts",
@@ -8,7 +8,7 @@
   "license": "MIT",
   "private": true,
   "dependencies": {
-    "@budget/core": "file:../core",
+    "@musti/core": "file:../core",
     "zod": "^3.23.8"
   },
   "devDependencies": {

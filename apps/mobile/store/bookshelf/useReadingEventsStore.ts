@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { ReadingMode, ReadingEvent } from "@budget/core";
+import { ReadingMode, ReadingEvent } from "/core";
 import { toIntOr } from "@/utils/number";
 
 type AddEventInput = Omit<ReadingEvent, "id">;

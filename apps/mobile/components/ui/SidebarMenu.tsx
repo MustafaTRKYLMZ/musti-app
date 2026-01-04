@@ -1,8 +1,8 @@
 import React from "react";
 import { View, TouchableOpacity, StyleSheet } from "react-native";
 import { router } from "expo-router";
-import { useTranslation } from "@budget/core";
-import { MText, colors, spacing, radii } from "@budget/ui-native";
+import { useTranslation } from "@musti/core";
+import { MText, colors, spacing, radii } from "@musti/ui-native";
 import { BaseIcon, IconButton } from "./AppIcon";
 
 interface Props {

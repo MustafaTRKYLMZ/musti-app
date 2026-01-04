@@ -4,7 +4,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import type { BookProgress } from "@budget/core";
+import type { BookProgress } from "/core";
 
 interface BooksState {
   items: Record<string, BookProgress>;

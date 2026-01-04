@@ -6,8 +6,8 @@ import {
   Alert,
   Platform,
 } from "react-native";
-import { useTranslation } from "@budget/core";
-import { MText, spacing, colors, radii, typography } from "@budget/ui-native";
+import { useTranslation } from "@musti/core";
+import { MText, spacing, colors, radii, typography } from "@musti/ui-native";
 
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
@@ -171,13 +171,11 @@ export const BackupSection = () => {
             text: t("import_data"),
             style: "destructive",
             onPress: () => {
-              // transactions: state'in geri kalanını koru
               useTransactionsStore.setState((state) => ({
                 ...state,
                 transactions,
               }));
 
-              // simulation: state'i koru + persist et
               useSimulationStore.setState((state) => {
                 const next = {
                   ...state,

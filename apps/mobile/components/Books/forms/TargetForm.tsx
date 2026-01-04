@@ -2,7 +2,7 @@ import React from "react";
 import { View } from "react-native";
 import type { Control, FieldErrors } from "react-hook-form";
 
-import type { CreateTargetFormValues } from "@budget/forms";
+import type { CreateTargetFormValues } from "/forms";
 import type { MSelectItemBase } from "@/components/ui/MSelectBottomSheet";
 
 import { TitleField } from "@/components/Books/forms/TitleField";

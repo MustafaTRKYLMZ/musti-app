@@ -4,7 +4,7 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import type { LocalPdfFile } from "@/utils/getPdfsDirectory";
-import type { PlanItemConfig } from "@budget/core";
+import type { PlanItemConfig } from "/core";
 import type { MSelectItemBase } from "@/components/ui/MSelectBottomSheet";
 
 import {
@@ -12,7 +12,7 @@ import {
   createPlanDefaultValues,
   type CreatePlanFormValues, // INPUT: pagesPerDay string
   type CreatePlanParsed,     // OUTPUT: pagesPerDay number
-} from "@budget/forms";
+} from "/forms";
 
 type Plan = {
   id: string;

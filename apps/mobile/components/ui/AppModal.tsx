@@ -1,4 +1,3 @@
-// apps/mobile/components/ui/AppModal.tsx
 import React, { ReactNode } from "react";
 import {
   View,
@@ -8,7 +7,7 @@ import {
   Platform,
 } from "react-native";
 
-import { MText, colors, spacing, radii, iconSizes } from "@budget/ui-native";
+import { MText, colors, spacing, radii, iconSizes } from "@musti/ui-native";
 import { IconButton } from "@/components/ui/AppIcon";
 
 type AppModalProps = {

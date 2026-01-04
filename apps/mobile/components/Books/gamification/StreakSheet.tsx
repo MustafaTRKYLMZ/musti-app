@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { View, StyleSheet, Pressable, ScrollView } from "react-native";
 import dayjs from "dayjs";
-import { MText, bookshelfTheme, iconSizes } from "@budget/ui-native";
+import { MText, bookshelfTheme, iconSizes } from "/ui-native";
 
 import { CircularProgress } from "@/components/ui/CircularProgress";
 import { IconButton } from "@/components/ui/AppIcon";

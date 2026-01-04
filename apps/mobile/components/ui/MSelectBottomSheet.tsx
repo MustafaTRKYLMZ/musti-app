@@ -19,7 +19,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { MText, spacing, radii, iconSizes, useTheme } from "@budget/ui-native";
+import { MText, spacing, radii, iconSizes, useTheme } from "@musti/ui-native";
 import { IconButton, BaseIcon } from "@/components/ui/AppIcon";
 
 export type MSelectItemBase = { id: string; label: string; subLabel?: string };

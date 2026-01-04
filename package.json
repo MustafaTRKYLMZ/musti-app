@@ -7,7 +7,7 @@
   "workspaces": [
     "apps/*",
     "packages/*",
-    "budget-api"
+    "api"
   ],
   "scripts": {
     "dev:web": "npm run dev --workspace web",
@@ -15,7 +15,7 @@
     "dev:mobile": "npm run start --workspace mobile",
     "lint:web": "npm run lint --workspace web",
     "lint:mobile": "eslint apps/mobile",
-    "build:core": "pnpm --filter @budget/core build",
+    "build:core": "pnpm --filter @musti/core build",
     "eas-build-post-install": "pnpm build:core",
     "i18n:watch": "node packages/core/scripts/watch-translations.js",
     "i18n:export": "node packages/core/scripts/export-translations.js",
@@ -27,17 +27,19 @@
   "devDependencies": {
     "@types/babel__template": "^7.4.4",
     "@types/jest": "^30.0.0",
+    "@types/react-native": "^0.72.8",
     "jest": "^30.2.0",
     "ts-jest": "^29.4.6"
   },
   "dependencies": {
+    "@gorhom/bottom-sheet": "^5.2.8",
     "@react-native-async-storage/async-storage": "^2.2.0",
+    "expo": "~54.0.25",
     "expo-document-picker": "~14.0.8",
     "expo-file-system": "~19.0.20",
     "expo-notifications": "~0.32.15",
     "expo-sharing": "~14.0.8",
     "nanoid": "^5.1.6",
-    "expo": "~54.0.25",
     "react": "19.1.0",
     "react-native": "0.81.5"
   }

@@ -12,7 +12,7 @@
     "electron:prod": "npm run build && electron ."
   },
   "dependencies": {
-    "@budget/core": "0.0.1",
+    "@musti/core": "0.0.1",
     "dayjs": "^1.11.19",
     "react": "19.1.0",
   "react-dom": "19.1.0",

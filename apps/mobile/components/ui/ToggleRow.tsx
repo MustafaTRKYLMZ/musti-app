@@ -1,4 +1,4 @@
-import { bookshelfTheme, MText, radii, spacing } from "@budget/ui-native";
+import { bookshelfTheme, MText, radii, spacing } from "@musti/ui-native";
 import {
   Pressable,
   View,

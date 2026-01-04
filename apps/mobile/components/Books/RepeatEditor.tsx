@@ -5,11 +5,11 @@ import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
 import dayjs from "dayjs";
-import { MText, spacing, radii, useTheme } from "@budget/ui-native";
+import { MText, spacing, radii, useTheme } from "/ui-native";
 import { AppChip } from "@/components/ui/AppChip";
-import type { TargetRepeat } from "@budget/core";
+import type { TargetRepeat } from "/core";
 import { WEEKDAYS } from "@/constants/weekdays";
-import { isValidTimeOfDay, normalizeTimeOfDay } from "@budget/forms";
+import { isValidTimeOfDay, normalizeTimeOfDay } from "/forms";
 
 export type RepeatEndKind = "never" | "until" | "count";
 

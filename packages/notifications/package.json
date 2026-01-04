@@ -1,5 +1,5 @@
 {
-    "name": "@budget/notifications",
+    "name": "@musti/notifications",
     "version": "1.0.0",
     "private": true,
     "main": "src/index.ts",

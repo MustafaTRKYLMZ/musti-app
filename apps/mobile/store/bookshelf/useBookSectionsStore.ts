@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createId } from "@/utils/id";
-import { BookSection } from "@budget/core";
+import { BookSection } from "/core";
 import { clampPage } from "@/utils/number";
 
 function normalizeSections(input: BookSection[]): BookSection[] {

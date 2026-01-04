@@ -1,8 +1,7 @@
-// apps/mobile/components/LanguageSelector.tsx
 import React, { useState, useRef, useEffect } from "react";
 import { View, StyleSheet, Animated } from "react-native";
-import { useTranslation } from "@budget/core";
-import { spacing } from "@budget/ui-native";
+import { useTranslation } from "@musti/core";
+import { spacing } from "@musti/ui-native";
 import { FlagIcon, type LangCode } from "@/components/ui/FlagIcon";
 
 type Props = {

@@ -1,6 +1,6 @@
 import React from "react";
 import { StyleSheet } from "react-native";
-import { Card, MText, radii, spacing, useTheme } from "@budget/ui-native";
+import { Card, MText, radii, spacing, useTheme } from "/ui-native";
 
 type Props = { message: string };
 

@@ -5,7 +5,7 @@ import {
   MText,
   radii,
   spacing,
-} from "@budget/ui-native";
+} from "@musti/ui-native";
 import { Pressable, View, StyleSheet } from "react-native";
 
 const { colors } = bookshelfTheme;

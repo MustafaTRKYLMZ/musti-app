@@ -1,7 +1,7 @@
 // apps/mobile/components/Books/LastReadBook.tsx
 import React, { useMemo } from "react";
 import { View, StyleSheet, FlatList, useWindowDimensions } from "react-native";
-import { MText, spacing } from "@budget/ui-native";
+import { MText, spacing } from "/ui-native";
 import type { LocalPdfFile } from "@/utils/getPdfsDirectory";
 import { BookCard } from "./BookCard";
 import { PdfCoverPrewarmer } from "../ui/pdf/PdfCoverPrewarmer";

@@ -1,6 +1,6 @@
 import React from "react";
 import { FlatList } from "react-native";
-import { DayRow, ReadingEvent } from "@budget/core";
+import { DayRow, ReadingEvent } from "/core";
 import { DayRowCardContainer } from "./DayRowCardContainer";
 
 type Props = {

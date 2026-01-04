@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Scope, useTranslation, type LocalTransaction } from "@budget/core";
+import { Scope, useTranslation, type LocalTransaction } from "/core";
 import { useTransactionsStore } from "@/store/budget/transactions/useTransactionsStore";
 import { AppModal } from "@/components/ui/AppModal";
 import { ScopeSheet } from "@/components/transactions/ScopeSheet";

@@ -1,4 +1,4 @@
-import type { TargetType } from "@budget/core";
+import type { TargetType } from "/core";
 
 export type CreateTargetFormValues = {
   title: string;

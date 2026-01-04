@@ -2,9 +2,9 @@ import React from "react";
 import { View, StyleSheet, Pressable } from "react-native";
 
 import { BaseIcon } from "@/components/ui/AppIcon";
-import { Card, MText, radii, spacing, useTheme } from "@budget/ui-native";
+import { Card, MText, radii, spacing, useTheme } from "/ui-native";
 
-import type { ReadingMode } from "@budget/core";
+import type { ReadingMode } from "/core";
 import { EventList } from "./EventList";
 
 type ModePart = {

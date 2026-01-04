@@ -11,7 +11,7 @@ import type { PdfRef } from "react-native-pdf";
 import { captureRef } from "react-native-view-shot";
 import * as FileSystem from "expo-file-system/legacy";
 
-import { spacing, useTheme, iconSizes } from "@budget/ui-native";
+import { spacing, useTheme, iconSizes } from "/ui-native";
 import { IconButton } from "@/components/ui/AppIcon";
 
 import { ReaderBadges } from "@/components/ui/pdf/ReaderBadges";
@@ -22,7 +22,7 @@ import {
 } from "@/components/Books/FloatingPageStrip";
 import { PageStrip } from "@/components/ui/pdf/PageStrip";
 
-import type { BookSection, ReadingMode } from "@budget/core";
+import type { BookSection, ReadingMode } from "/core";
 import type { CropKey } from "@/components/ui/pdf/types";
 
 import { ZOOM_PRESETS } from "@/constants/readerPresets";

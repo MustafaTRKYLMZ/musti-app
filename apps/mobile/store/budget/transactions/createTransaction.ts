@@ -3,7 +3,7 @@
 import {
     createTransactionWithSeries,
     type TransactionDraft,
-  } from "@budget/core";
+  } from "/core";
   import type {
     TransactionsStoreSet,
     TransactionsStoreGet,

@@ -4,7 +4,7 @@ import {
     updateTransactionSeries,
     type LocalTransaction,
     type Scope,
-  } from "@budget/core";
+  } from "/core";
   import type {
     TransactionsStoreSet,
     TransactionsStoreGet,

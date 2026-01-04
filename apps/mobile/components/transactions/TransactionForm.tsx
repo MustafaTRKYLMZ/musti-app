@@ -3,9 +3,9 @@
 import React, { useState } from "react";
 import dayjs from "dayjs";
 import { View, TextInput, TouchableOpacity, StyleSheet } from "react-native";
-import { useTranslation, type LocalTransaction } from "@budget/core";
+import { useTranslation, type LocalTransaction } from "/core";
 import { LocalizedDatePicker } from "@/components/ui/LocalizedDatePicker";
-import { MText, colors, spacing, radii } from "@budget/ui-native";
+import { MText, colors, spacing, radii } from "/ui-native";
 
 type TransactionType = "Income" | "Expense";
 type Transaction = LocalTransaction;

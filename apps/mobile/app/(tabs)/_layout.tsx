@@ -1,6 +1,6 @@
 import React from "react";
 import { Tabs } from "expo-router";
-import { useTranslation } from "@budget/core";
+import { useTranslation } from "/core";
 
 export default function TabLayout() {
   const { t } = useTranslation();

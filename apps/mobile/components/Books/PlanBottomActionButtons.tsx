@@ -4,7 +4,7 @@ import {
   radii,
   spacing,
   useTheme,
-} from "@budget/ui-native";
+} from "/ui-native";
 import { router } from "expo-router";
 import { View, StyleSheet } from "react-native";
 import { IconTile } from "../ui/AppIcon";

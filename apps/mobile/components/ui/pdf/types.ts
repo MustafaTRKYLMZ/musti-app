@@ -1,5 +1,5 @@
 import { StripMode, StripPos } from "@/components/Books/FloatingPageStrip";
-import { ReadingMode } from "@budget/core";
+import { ReadingMode } from "@musti/core";
 
 export type ReadingScrollMode = "horizontal-paged" | "vertical-scroll";
 

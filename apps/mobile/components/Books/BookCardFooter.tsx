@@ -6,7 +6,7 @@ import {
   MText,
   radii,
   spacing,
-} from "@budget/ui-native";
+} from "/ui-native";
 
 const { colors } = bookshelfTheme;
 

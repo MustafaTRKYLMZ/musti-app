@@ -3,7 +3,7 @@
 import {
     deleteTransactionSeries,
     type Scope,
-  } from "@budget/core";
+  } from "/core";
   import type {
     TransactionsStoreSet,
     TransactionsStoreGet,

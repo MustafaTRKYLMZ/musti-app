@@ -18,7 +18,7 @@ import {
   iconSizes,
   useTheme,
   Card,
-} from "@budget/ui-native";
+} from "/ui-native";
 import { IconButton, BaseIcon } from "@/components/ui/AppIcon";
 import { MSelectBottomSheet } from "@/components/ui/MSelectBottomSheet";
 

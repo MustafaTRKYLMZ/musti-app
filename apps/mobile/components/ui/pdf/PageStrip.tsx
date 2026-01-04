@@ -1,4 +1,4 @@
-import { MText, radii, spacing, useTheme } from "@budget/ui-native";
+import { MText, radii, spacing, useTheme } from "/ui-native";
 import { FC, useRef, useState, useEffect, useMemo } from "react";
 import { ScrollView, View, Pressable, StyleSheet } from "react-native";
 

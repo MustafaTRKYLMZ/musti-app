@@ -4,7 +4,7 @@ import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
 import Toast from "react-native-root-toast";
-import { MText, spacing, radii, useTheme } from "@budget/ui-native";
+import { MText, spacing, radii, useTheme } from "/ui-native";
 import { IconButton, IconTile } from "../ui/AppIcon";
 
 type Props = {

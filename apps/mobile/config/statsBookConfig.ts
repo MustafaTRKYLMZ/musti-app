@@ -1,4 +1,4 @@
-import type { ReadingMode } from "@budget/core";
+import type { ReadingMode } from "/core";
 
 export const DEFAULT_EVENTS_DISPLAY_LIMIT = 12;
 

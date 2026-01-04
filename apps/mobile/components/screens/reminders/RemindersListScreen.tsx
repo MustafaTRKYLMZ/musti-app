@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { View, ScrollView, StyleSheet, Pressable } from "react-native";
 import { router } from "expo-router";
-import { MText, spacing, radii, useTheme } from "@budget/ui-native";
+import { MText, spacing, radii, useTheme } from "/ui-native";
 
 import { useRemindersStore } from "@/store/reminders/useRemindersStore";
 import type { ReminderOwner, ReminderItem } from "@/store/reminders/types";

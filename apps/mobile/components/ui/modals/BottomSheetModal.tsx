@@ -14,7 +14,7 @@ import {
   iconSizes,
   bookshelfTheme,
   useTheme,
-} from "@budget/ui-native";
+} from "/ui-native";
 import { IconButton } from "@/components/ui/AppIcon";
 
 type BottomSheetOwner = "budget" | "bookshelf";

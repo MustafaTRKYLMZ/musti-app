@@ -3,7 +3,7 @@ import {
   cancelScheduledByOwner,
   ensureNotificationPermission,
   scheduleDailyReminder,
-} from "@budget/notifications";
+} from "/notifications";
 import { useBudgetNotificationSettingsStore } from "./useNotificationSettingsStore";
 
 export function useBudgetNotificationScheduler() {

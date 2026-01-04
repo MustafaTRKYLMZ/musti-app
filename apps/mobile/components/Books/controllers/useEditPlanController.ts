@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert } from "react-native";
 import { listLocalPdfs, type LocalPdfFile } from "@/utils/getPdfsDirectory";
 import type { MSelectItemBase } from "@/components/ui/MSelectBottomSheet";
-import type { PlanItemConfig } from "@budget/core";
+import type { PlanItemConfig } from "/core";
 
 type EntryState = Record<string, string>;
 type MultiSelectedState = Record<string, boolean>;

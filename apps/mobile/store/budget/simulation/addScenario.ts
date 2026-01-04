@@ -1,7 +1,7 @@
 
 import dayjs from "dayjs";
 import { nanoid } from "nanoid/non-secure";
-import type { SimulationScenario } from "@budget/core";
+import type { SimulationScenario } from "/core";
 import type { SimulationStoreSet } from "./types";
 import { persistSimulationState } from "./persistState";
 

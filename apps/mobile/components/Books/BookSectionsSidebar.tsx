@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { View, StyleSheet, Pressable, Dimensions } from "react-native";
-import { spacing, useTheme } from "@budget/ui-native";
+import { spacing, useTheme } from "/ui-native";
 
 import { useBookSectionsStore } from "@/store/bookshelf/useBookSectionsStore";
 import { useBooksStore } from "@/store/bookshelf/useBooksStore";
@@ -12,7 +12,7 @@ import { SectionList } from "./SectionList";
 import { Divider } from "../ui/Divider";
 import { clampPage } from "@/utils/number";
 import { buildEffectiveRanges } from "@/utils/buildEffectiveRanges";
-import { BookSection } from "@budget/core";
+import { BookSection } from "/core";
 
 type Props = {
   visible: boolean;

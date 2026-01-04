@@ -1,4 +1,4 @@
-import type { NotificationPayload } from "@budget/notifications";
+import type { NotificationPayload } from "/notifications";
 import { useReadingPlanStore } from "@/store/bookshelf/useReadingPlanStore";
 
 export type RouteTo =

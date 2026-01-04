@@ -1,7 +1,7 @@
 // apps/mobile/store/useSettingsStore.ts
 
 import { getZustandStorage } from "@/utils/storage/zustandStorage";
-import { normalizeDate } from "@budget/core";
+import { normalizeDate } from "/core";
 
 interface InitialBalance {
   amount: number;

@@ -14,7 +14,7 @@ import {
   iconSizes,
   MText,
   useTheme,
-} from "@budget/ui-native";
+} from "@musti/ui-native";
 
 export type IconFamily = "ion" | "material-community" | "feather";
 

@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import { View, StyleSheet, Pressable } from "react-native";
 
 import { BaseIcon } from "@/components/ui/AppIcon";
-import { Card, MText, radii, spacing, useTheme } from "@budget/ui-native";
+import { Card, MText, radii, spacing, useTheme } from "/ui-native";
 import { formatModeParts } from "@/utils/formatModeParts";
 import type { BookRow } from "./types";
 

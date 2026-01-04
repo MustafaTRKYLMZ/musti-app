@@ -13,8 +13,8 @@ import {
   ViewToken,
 } from "react-native";
 import dayjs from "dayjs";
-import { LocalizedDateText, type LocalTransaction } from "@budget/core";
-import { MText, colors, spacing, radii } from "@budget/ui-native";
+import { LocalizedDateText, type LocalTransaction } from "/core";
+import { MText, colors, spacing, radii } from "/ui-native";
 
 import { useTransactionsStore } from "../../store/budget/transactions/useTransactionsStore";
 import { CashflowRow } from "@/components/ui/CashflowRow";

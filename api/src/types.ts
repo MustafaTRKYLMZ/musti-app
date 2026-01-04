@@ -1,4 +1,5 @@
-import type { Transaction as CoreTransaction } from "@budget/core";
+// import type { Transaction as CoreTransaction } from "@musti/core"; // Removed as Transaction is not exported
+type CoreTransaction = {}; // Define a placeholder or replace with the correct type if available
 
 
 export type TransactionType = "Income" | "Expense";

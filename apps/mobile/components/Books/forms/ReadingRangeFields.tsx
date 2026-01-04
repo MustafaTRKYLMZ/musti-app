@@ -1,7 +1,7 @@
 import React from "react";
 import { Pressable, StyleSheet, TextInput, View } from "react-native";
 import { Controller, type Control, type FieldErrors } from "react-hook-form";
-import { MText, spacing, radii, useTheme } from "@budget/ui-native";
+import { MText, spacing, radii, useTheme } from "/ui-native";
 
 import { AppChip } from "@/components/ui/AppChip";
 import {
@@ -9,8 +9,8 @@ import {
   type MSelectItemBase,
 } from "@/components/ui/MSelectBottomSheet";
 
-import type { CreateTargetFormValues } from "@budget/forms";
-import type { TargetType } from "@budget/core";
+import type { CreateTargetFormValues } from "/forms";
+import type { TargetType } from "/core";
 import { formStyles } from "@/components/Books/forms/formStyles";
 
 type ChipColors = {

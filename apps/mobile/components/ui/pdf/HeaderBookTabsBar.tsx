@@ -1,6 +1,6 @@
 import React, { FC, useMemo } from "react";
 import { FlatList, Pressable, StyleSheet, View } from "react-native";
-import { MText, radii, spacing, useTheme } from "@budget/ui-native";
+import { MText, radii, spacing, useTheme } from "/ui-native";
 import type { ReaderBookNavItem } from "@/hooks/useReaderBookNav";
 
 type HeaderBookTabsBarProps = {

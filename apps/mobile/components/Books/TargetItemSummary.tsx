@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { View, StyleSheet, ViewStyle } from "react-native";
-import { MText, useTheme } from "@budget/ui-native";
+import { MText, useTheme } from "/ui-native";
 import type { TargetItem } from "@/store/bookshelf/useReadingTargetsStore";
 
 type TargetItemSummaryProps = {

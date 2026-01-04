@@ -1,4 +1,4 @@
-import { spacing } from "@budget/ui-native";
+import { spacing } from "@musti/ui-native";
 import { View, StyleSheet } from "react-native";
 
 export const Divider = () => {

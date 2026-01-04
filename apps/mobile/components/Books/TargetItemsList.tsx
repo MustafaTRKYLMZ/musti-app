@@ -1,6 +1,6 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
-import { MText, spacing, radii, iconSizes, useTheme } from "@budget/ui-native";
+import { MText, spacing, radii, iconSizes, useTheme } from "/ui-native";
 import { IconButton } from "@/components/ui/AppIcon";
 import type { TargetItem } from "@/store/bookshelf/useReadingTargetsStore";
 import { TargetItemSummary } from "./TargetItemSummary";

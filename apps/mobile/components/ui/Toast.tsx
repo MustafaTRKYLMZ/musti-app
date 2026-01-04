@@ -7,7 +7,7 @@ import {
   Modal,
   Platform,
 } from "react-native";
-import { MText, radii, spacing, useTheme } from "@budget/ui-native";
+import { MText, radii, spacing, useTheme } from "@musti/ui-native";
 import type { ToastAction } from "./ToastProvider";
 
 type ToastProps = {

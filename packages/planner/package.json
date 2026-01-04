@@ -1,0 +1,19 @@
+{
+  "name": "@musti/planner",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "react-native": "src/index.ts",
+  "sideEffects": false,
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-native": ">=0.72"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}

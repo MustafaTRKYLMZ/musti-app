@@ -1,4 +1,4 @@
-import { ReadingMode } from "@budget/core";
+import { ReadingMode } from "/core";
 
 export const emptyByMode = (): Record<ReadingMode, number> => ({
     normal: 0,

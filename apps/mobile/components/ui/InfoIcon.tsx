@@ -1,7 +1,7 @@
 import React from "react";
 import { Alert } from "react-native";
 import { IconButton } from "@/components/ui/AppIcon";
-import { bookshelfTheme } from "@budget/ui-native";
+import { bookshelfTheme } from "@musti/ui-native";
 
 const { colors, iconSizes } = bookshelfTheme;
 

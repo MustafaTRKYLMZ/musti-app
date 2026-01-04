@@ -7,11 +7,11 @@ import {
   Scope,
   useTranslation,
   type LocalTransaction,
-} from "@budget/core";
+} from "/core";
 
 import { CustomAlert } from "@/components/CustomAlert";
 
-import { FAB, MText, colors, spacing, radii } from "@budget/ui-native";
+import { FAB, MText, colors, spacing, radii } from "/ui-native";
 import { AppScreen } from "@/components/AppScreen";
 import { BaseIcon } from "@/components/ui/AppIcon";
 import { syncTransactions } from "@/services/syncTransactions";

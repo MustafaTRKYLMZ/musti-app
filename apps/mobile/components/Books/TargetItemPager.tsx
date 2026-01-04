@@ -1,9 +1,9 @@
 import React, { useMemo } from "react";
 import { View, StyleSheet } from "react-native";
-import { MText, radii, spacing, useTheme } from "@budget/ui-native";
+import { MText, radii, spacing, useTheme } from "/ui-native";
 
 import { AppChip } from "@/components/ui/AppChip";
-import { ReadingTarget, TargetItemStatus } from "@budget/core";
+import { ReadingTarget, TargetItemStatus } from "/core";
 
 type TargetItemPagerProps = {
   target: ReadingTarget;

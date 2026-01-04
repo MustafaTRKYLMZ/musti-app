@@ -1,8 +1,7 @@
-// apps/mobile/components/ui/CashflowRow.tsx
 import React from "react";
 import { View, StyleSheet, Pressable } from "react-native";
-import { LocalizedDateText } from "@budget/core";
-import { MText, colors, spacing, radii } from "@budget/ui-native";
+import { LocalizedDateText } from "@musti/core";
+import { MText, colors, spacing, radii } from "@musti/ui-native";
 import { BaseIcon, IconButton } from "@/components/ui/AppIcon";
 
 export interface CashflowRowProps {
@@ -55,7 +54,12 @@ export const CashflowRow: React.FC<CashflowRowProps> = ({
           )}
 
           {statusIconName && (
-            <BaseIcon name={statusIconName} size={13} color={statusIconColor} style={{ marginRight: 4 }} />
+            <BaseIcon
+              name={statusIconName}
+              size={13}
+              color={statusIconColor}
+              style={{ marginRight: 4 }}
+            />
           )}
 
           {category && (
@@ -70,7 +74,12 @@ export const CashflowRow: React.FC<CashflowRowProps> = ({
       <View style={styles.rightCol}>
         <View style={styles.amountRow}>
           {/* Arrow icon → BaseIcon */}
-          <BaseIcon name={arrowIconName} size={16} color={amountColor} style={{ marginRight: 4, marginTop: 1 }} />
+          <BaseIcon
+            name={arrowIconName}
+            size={16}
+            color={amountColor}
+            style={{ marginRight: 4, marginTop: 1 }}
+          />
 
           <MText
             variant="bodyStrong"

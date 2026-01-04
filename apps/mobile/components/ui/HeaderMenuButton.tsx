@@ -1,7 +1,7 @@
 // components/ui/HeaderMenuButton.tsx
 import React from "react";
 import { IconButton } from "./AppIcon";
-import { spacing } from "@budget/ui-native";
+import { spacing } from "@musti/ui-native";
 
 type HeaderMenuButtonProps = {
   onPress?: () => void;

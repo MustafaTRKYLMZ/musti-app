@@ -6,7 +6,7 @@ import {
   PlanBookProgress,
   PlanItemConfig,
   ReadingPlan,
-} from "@budget/core";
+} from "/core";
 import { useReadingGamificationStore } from "./readingGamification/useReadingGamificationStore";
 
 

@@ -11,7 +11,7 @@ import { router } from "expo-router";
 import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
-import { MText, spacing, radii, useTheme, iconSizes } from "@budget/ui-native";
+import { MText, spacing, radii, useTheme, iconSizes } from "/ui-native";
 
 import { useRemindersStore } from "@/store/reminders/useRemindersStore";
 import type {

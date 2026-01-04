@@ -1,4 +1,3 @@
-// components/AppSwitcherMenu.tsx
 import React from "react";
 import { Modal, View, StyleSheet, Pressable } from "react-native";
 import {
@@ -8,7 +7,7 @@ import {
   useTheme,
   budgetTheme,
   bookshelfTheme,
-} from "@budget/ui-native";
+} from "@musti/ui-native";
 import { router } from "expo-router";
 import { IconTile } from "@/components/ui/AppIcon";
 

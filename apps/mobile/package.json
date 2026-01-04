@@ -11,10 +11,11 @@
     "lint": "expo lint"
   },
   "dependencies": {
-    "@budget/core": "0.0.1",
-    "@budget/forms": "*",
-    "@budget/notifications": "*",
-    "@budget/ui-native": "*",
+    "@musti/core": "0.0.1",
+    "@musti/forms": "*",
+    "@musti/notifications": "*",
+    "@musti/ui-native": "*",
+    "@musti/planner": "*",
     "@expo/vector-icons": "^15.0.3",
     "@hookform/resolvers": "^5.2.2",
     "@react-native-async-storage/async-storage": "^2.2.0",

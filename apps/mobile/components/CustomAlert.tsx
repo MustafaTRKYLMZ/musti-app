@@ -1,8 +1,8 @@
 import React, { useEffect, FC, useRef } from "react";
 import { Animated, Text, StyleSheet, View, Dimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { theme } from "@budget/core";
-import { colors } from "@budget/ui-native";
+import { theme } from "@musti/core";
+import { colors } from "@musti/ui-native";
 
 type Props = {
   message: string;

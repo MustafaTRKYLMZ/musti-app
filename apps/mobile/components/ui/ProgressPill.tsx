@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { View, StyleSheet, StyleProp, ViewStyle } from "react-native";
-import { useTheme } from "@budget/ui-native";
+import { useTheme } from "@musti/ui-native";
 
 type Props = {
   value: number;
@@ -8,8 +8,8 @@ type Props = {
   width?: number; // px
   height?: number;
   style?: StyleProp<ViewStyle>;
-  fillColor?: string; // ✅ NEW: dışarıdan renk override
-  trackColor?: string; // ✅ opsiyonel
+  fillColor?: string;
+  trackColor?: string;
 };
 
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x));

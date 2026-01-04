@@ -1,4 +1,4 @@
-import type { ReadingTarget, TargetRepeat } from "@budget/core";
+import type { ReadingTarget, TargetRepeat } from "/core";
 
 function parseTimeOfDay(s?: string) {
   const str = s && /^\d{2}:\d{2}$/.test(s) ? s : "00:00";

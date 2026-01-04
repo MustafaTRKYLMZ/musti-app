@@ -8,7 +8,7 @@ import {
   createPlanDefaultValues,
   type CreatePlanFormValues, 
   type CreatePlanParsed,     
-} from "@budget/forms";
+} from "/forms";
 
 import type { MSelectItemBase } from "@/components/ui/MSelectBottomSheet";
 

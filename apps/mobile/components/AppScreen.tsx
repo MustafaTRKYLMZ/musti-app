@@ -15,7 +15,7 @@ import {
   radii,
   bookshelfTheme,
   budgetTheme,
-} from "@budget/ui-native";
+} from "@musti/ui-native";
 import { AppSwitcherButton } from "@/components/AppSwitcherButton";
 import { HeaderMenuButton } from "@/components/ui/HeaderMenuButton";
 

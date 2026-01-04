@@ -1,4 +1,4 @@
-import { iconSizes, MText, spacing } from "@budget/ui-native";
+import { iconSizes, MText, spacing } from "@musti/ui-native";
 import { TouchableOpacity, StyleSheet } from "react-native";
 import { BaseIcon } from "./ui/AppIcon";
 

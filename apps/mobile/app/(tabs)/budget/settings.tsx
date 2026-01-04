@@ -16,7 +16,7 @@ import dayjs from "dayjs";
 import { useSettingsStore } from "../../../store/budget/useSettingsStore";
 import { useTransactionsStore } from "../../../store/budget/transactions/useTransactionsStore";
 import { syncTransactions } from "../../../services/syncTransactions";
-import { useTranslation } from "@budget/core";
+import { useTranslation } from "/core";
 import { LocalizedDatePicker } from "@/components/ui/LocalizedDatePicker";
 
 import {
@@ -26,7 +26,7 @@ import {
   spacing,
   radii,
   iconSizes,
-} from "@budget/ui-native";
+} from "/ui-native";
 
 import { BackupSection } from "@/components/BackupSection";
 import { IconButton, BaseIcon } from "@/components/ui/AppIcon";

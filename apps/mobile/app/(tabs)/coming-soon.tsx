@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { iconSizes } from "@budget/ui-native";
+import { iconSizes } from "/ui-native";
 
 // Ensure the correct path to the ComingSoon component
 import { ComingSoon } from "../../components/ui/ComingSoon";

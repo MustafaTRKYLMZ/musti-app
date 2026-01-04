@@ -9,7 +9,7 @@ import {
 import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
-import { MText, bookshelfTheme } from "@budget/ui-native";
+import { MText, bookshelfTheme } from "/ui-native";
 
 import { useGamificationSettingsStore } from "@/store/bookshelf/readingGamification/useGamificationSettingsStore";
 import { Stepper } from "./Stepper";

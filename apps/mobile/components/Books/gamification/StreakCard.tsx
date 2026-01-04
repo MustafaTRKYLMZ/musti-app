@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { View, StyleSheet, Pressable, Animated } from "react-native";
 import dayjs from "dayjs";
-import { MText, bookshelfTheme } from "@budget/ui-native";
+import { MText, bookshelfTheme } from "/ui-native";
 
 import { CircularProgress } from "@/components/ui/CircularProgress";
 import { StreakSheet } from "@/components/Books/gamification/StreakSheet";

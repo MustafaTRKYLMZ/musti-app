@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import { MText, spacing, radii, useTheme } from "@budget/ui-native";
+import { MText, spacing, radii, useTheme } from "/ui-native";
 
 import type { LocalPdfFile } from "@/utils/getPdfsDirectory";
 import { useToast } from "@/components/ui/ToastProvider";

@@ -1,4 +1,4 @@
-import { BookSection } from "@budget/core";
+import { BookSection } from "/core";
 import { clampPage, toIntOr } from "./number";
 
 export const buildEffectiveRanges = (

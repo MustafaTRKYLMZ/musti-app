@@ -1,4 +1,4 @@
-import type { ReadingTarget } from "@budget/core";
+import type { ReadingTarget } from "/core";
 
 export function recomputeTargetStatus(t: ReadingTarget): ReadingTarget {
   if (!t.items.length) {

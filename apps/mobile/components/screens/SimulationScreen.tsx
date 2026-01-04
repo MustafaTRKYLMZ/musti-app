@@ -11,7 +11,7 @@ import { DailyBalanceSection } from "@/components/transactions";
 import { CashflowTotals } from "@/components/ui/CashflowTotals";
 import { SimulationList } from "../simulation/SimulationList";
 import { getOccurrencesUntilDate } from "@/helper/getOccurrencesUntilDate";
-import { SimulationScenario, useTranslation } from "@budget/core";
+import { SimulationScenario, useTranslation } from "/core";
 import {
   MText,
   colors,
@@ -20,7 +20,7 @@ import {
   FAB,
   shadows,
   iconSizes,
-} from "@budget/ui-native";
+} from "/ui-native";
 import { useSimulationStore } from "@/store/budget/simulation/useSimulationStore";
 import { BaseIcon, IconButton } from "@/components/ui/AppIcon";
 

@@ -1,6 +1,6 @@
 import { IconButton } from "@/components/ui/AppIcon";
 import { InfoIcon } from "@/components/ui/InfoIcon";
-import { MText, bookshelfTheme, iconSizes, spacing } from "@budget/ui-native";
+import { MText, bookshelfTheme, iconSizes, spacing } from "/ui-native";
 import { FC } from "react";
 import { View, StyleSheet } from "react-native";
 

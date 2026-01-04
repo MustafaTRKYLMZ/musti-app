@@ -1,4 +1,4 @@
-import type { TargetRepeat } from "@budget/core";
+import type { TargetRepeat } from "/core";
 import { isValidTimeOfDay } from "../utils/normalizeTimeOfDay"; 
 
 

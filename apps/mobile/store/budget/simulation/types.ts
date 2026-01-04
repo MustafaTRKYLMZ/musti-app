@@ -1,6 +1,6 @@
 // apps/mobile/store/simulation/types.ts
 
-import type { SimulationStore } from "@budget/core";
+import type { SimulationStore } from "/core";
 
 export type SimulationStoreSet = (
   partial:

@@ -2,8 +2,8 @@ import React, { useMemo } from "react";
 import { View, Pressable, StyleSheet, Platform } from "react-native";
 import Toast from "react-native-root-toast";
 
-import { ensureNotificationPermission } from "@budget/notifications";
-import { MText, spacing, radii, useTheme } from "@budget/ui-native";
+import { ensureNotificationPermission } from "/notifications";
+import { MText, spacing, radii, useTheme } from "/ui-native";
 
 import { NotificationReminderSection } from "./NotificationReminderSection";
 import { useBookshelfNotificationSettingsStore } from "@/store/bookshelf/useNotificationSettingsStore";

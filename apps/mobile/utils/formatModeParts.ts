@@ -1,4 +1,4 @@
-import { ReadingMode } from "@budget/core";
+import { ReadingMode } from "/core";
 import { toNonNegativeInt } from "./toNonNegativeInt";
 
 export const formatModeParts = (pagesByMode: Record<ReadingMode, number>) => {

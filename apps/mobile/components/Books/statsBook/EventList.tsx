@@ -3,9 +3,9 @@ import { View, StyleSheet } from "react-native";
 import dayjs from "dayjs";
 
 import { BaseIcon } from "@/components/ui/AppIcon";
-import { MText, radii, spacing, useTheme } from "@budget/ui-native";
+import { MText, radii, spacing, useTheme } from "/ui-native";
 
-import type { ReadingEvent, ReadingMode } from "@budget/core";
+import type { ReadingEvent, ReadingMode } from "/core";
 import { toNonNegativeInt } from "@/utils/toNonNegativeInt";
 import { getSectionLabel, rangeCount } from "@/utils/statsBookUtils";
 import { modeIcon, modeLabel } from "@/config/statsBookConfig";

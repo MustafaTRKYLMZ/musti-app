@@ -5,7 +5,7 @@ import type {
     BalanceOnDate,
     TransactionDraft,
     Scope,
-  } from "@budget/core";
+  } from "/core";
   
   export interface TransactionsStore {
     transactions: LocalTransaction[];

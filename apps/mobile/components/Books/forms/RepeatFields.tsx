@@ -2,7 +2,7 @@ import React from "react";
 import type { Control, FieldErrors } from "react-hook-form";
 
 import { RepeatEditor } from "@/components/Books/RepeatEditor";
-import type { CreateTargetFormValues } from "@budget/forms";
+import type { CreateTargetFormValues } from "/forms";
 import { formStyles } from "@/components/Books/forms/formStyles";
 
 type ChipColors = {

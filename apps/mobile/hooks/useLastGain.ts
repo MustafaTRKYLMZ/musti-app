@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { ReadingMode } from "@budget/core";
+import type { ReadingMode } from "/core";
 
 export type LastGainKind = "pages" | "planComplete" | "targetComplete";
 

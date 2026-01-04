@@ -12,7 +12,7 @@ import { renameScenarioAction } from "./renameScenario";
 import { setActiveScenarioAction } from "./setActiveScenario";
 import { setScenarioTargetDateAction } from "./setScenarioTargetDate";
 import { useTransactionsStore } from "../transactions/useTransactionsStore";
-import { computeBalanceOnDateWithSimulation, SimulationStore } from "@budget/core";
+import { computeBalanceOnDateWithSimulation, SimulationStore } from "/core";
 
 export const useSimulationStore = create<SimulationStore>((set, get) => ({
   scenarios: [],

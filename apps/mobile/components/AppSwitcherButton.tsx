@@ -1,7 +1,6 @@
-// components/AppSwitcherButton.tsx
 import React, { useRef, useState } from "react";
 import { StyleSheet, StyleProp, ViewStyle, View } from "react-native";
-import { spacing, iconSizes, useTheme } from "@budget/ui-native";
+import { spacing, iconSizes, useTheme } from "@musti/ui-native";
 import { AppSwitcherMenu } from "./AppSwitcherMenu";
 import { IconButton } from "./ui/AppIcon";
 
