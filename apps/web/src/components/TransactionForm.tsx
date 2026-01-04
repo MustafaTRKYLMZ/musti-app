@@ -1,6 +1,6 @@
 import { type FormEvent, useState } from "react";
 import dayjs from "dayjs";
-import type { Transaction, TransactionType } from "/core";
+import type { Transaction, TransactionType } from "@musti/core";
 
 const today = dayjs().format("YYYY-MM-DD");
 

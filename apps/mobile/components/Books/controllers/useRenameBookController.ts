@@ -1,4 +1,3 @@
-// apps/mobile/components/ui/modals/controllers/useRenameBookFormController.ts
 import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 

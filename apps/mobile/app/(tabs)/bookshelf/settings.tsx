@@ -1,7 +1,7 @@
 import React from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { router, Stack } from "expo-router";
-import { MText, radii, spacing, useTheme } from "/ui-native";
+import { MText, radii, spacing, useTheme } from "@musti/ui-native";
 
 import { BookshelfNotificationsSection } from "@/components/settings/BookshelfNotificationsSection";
 import { AppScreen } from "@/components/AppScreen";

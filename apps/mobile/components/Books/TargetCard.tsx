@@ -11,14 +11,14 @@ import {
   findNodeHandle,
   Dimensions,
 } from "react-native";
-import { MText, iconSizes, spacing, radii, useTheme } from "/ui-native";
+import { MText, iconSizes, spacing, radii, useTheme } from "@musti/ui-native";
 import { IconButton, BaseIcon } from "@/components/ui/AppIcon";
 import { ItemDots } from "../ui/ItemDots";
 import { pickActiveItem } from "@/utils/pickActiveItem";
 import { useToast } from "../ui/ToastProvider";
 import { TargetItemSummary } from "./TargetItemSummary";
 import { MenuRow } from "../MenuRow";
-import type { ReadingTarget, TargetItem, TargetRepeatEnd } from "/core";
+import type { ReadingTarget, TargetItem, TargetRepeatEnd } from "@musti/core";
 import { RemainingTimeBadge } from "../ui/pdf/RemainingTimeBadge";
 
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x));

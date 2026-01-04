@@ -5,7 +5,7 @@ import type {
     BalanceOnDate,
     TransactionDraft,
     Scope,
-  } from "/core";
+  } from "@musti/core";
   
   export interface TransactionsStore {
     transactions: LocalTransaction[];

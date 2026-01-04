@@ -1,4 +1,4 @@
-import type { TargetRepeat } from "/core";
+import type { TargetRepeat } from "@musti/core";
 import { isValidTimeOfDay } from "../utils/normalizeTimeOfDay"; 
 
 

@@ -2,9 +2,9 @@ import React, { useMemo } from "react";
 import { View, StyleSheet, Pressable } from "react-native";
 
 import { BaseIcon } from "@/components/ui/AppIcon";
-import { Card, MText, radii, spacing, useTheme } from "/ui-native";
+import { Card, MText, radii, spacing, useTheme } from "@musti/ui-native";
 
-import type { DayRow, ReadingEvent, ReadingMode } from "/core";
+import type { DayRow, ReadingEvent } from "@musti/core";
 import { toNonNegativeInt } from "@/utils/toNonNegativeInt";
 
 import { formatModeParts } from "@/utils/formatModeParts";

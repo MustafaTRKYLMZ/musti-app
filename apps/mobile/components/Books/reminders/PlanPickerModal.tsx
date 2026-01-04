@@ -7,7 +7,7 @@ import {
   TextInput,
   FlatList,
 } from "react-native";
-import { MText, spacing, radii, useTheme, iconSizes } from "/ui-native";
+import { MText, spacing, radii, useTheme, iconSizes } from "@musti/ui-native";
 import { BaseIcon, IconButton } from "@/components/ui/AppIcon";
 import { useReadingPlanStore } from "@/store/bookshelf/useReadingPlanStore";
 

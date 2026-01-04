@@ -8,7 +8,7 @@ import {
   iconSizes,
   shadows,
   useTheme,
-} from "/ui-native";
+} from "@musti/ui-native";
 import { BaseIcon } from "@/components/ui/AppIcon";
 
 export default function LauncherScreen() {

@@ -10,7 +10,7 @@ import {
   ViewStyle,
   ScrollViewProps,
 } from "react-native";
-import { MText, spacing, radii, iconSizes, useTheme } from "/ui-native";
+import { MText, spacing, radii, iconSizes, useTheme } from "@musti/ui-native";
 import { IconButton } from "@/components/ui/AppIcon";
 
 type MCreateModalProps = {

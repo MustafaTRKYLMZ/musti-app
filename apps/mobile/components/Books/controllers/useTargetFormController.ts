@@ -2,13 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-import type { TargetRepeat } from "/core";
+import type { TargetRepeat } from "@musti/core";
 import {
   createTargetSchema,
   createTargetDefaultValues,
   type CreateTargetFormValues,
   buildTargetRepeatFromForm,
-} from "/forms";
+} from "@musti/forms";
 
 import type { MSelectItemBase } from "@/components/ui/MSelectBottomSheet";
 import { clampInt } from "@/utils/number";

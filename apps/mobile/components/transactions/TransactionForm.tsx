@@ -1,11 +1,9 @@
-// apps/mobile/components/TransactionForm.tsx
-
 import React, { useState } from "react";
 import dayjs from "dayjs";
 import { View, TextInput, TouchableOpacity, StyleSheet } from "react-native";
-import { useTranslation, type LocalTransaction } from "/core";
+import { useTranslation, type LocalTransaction } from "@musti/core";
 import { LocalizedDatePicker } from "@/components/ui/LocalizedDatePicker";
-import { MText, colors, spacing, radii } from "/ui-native";
+import { MText, colors, spacing, radii } from "@musti/ui-native";
 
 type TransactionType = "Income" | "Expense";
 type Transaction = LocalTransaction;

@@ -7,7 +7,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { MText, spacing, radii, iconSizes, useTheme } from "/ui-native";
+import { MText, spacing, radii, iconSizes, useTheme } from "@musti/ui-native";
 import { IconButton } from "@/components/ui/AppIcon";
 
 import type { LocalPdfFile } from "@/utils/getPdfsDirectory";

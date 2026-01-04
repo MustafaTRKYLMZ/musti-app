@@ -3,7 +3,7 @@ import { View, StyleSheet, Animated } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import dayjs from "dayjs";
 import type { PdfRef } from "react-native-pdf";
-import { MText, spacing, radii, iconSizes, useTheme } from "/ui-native";
+import { MText, spacing, radii, iconSizes, useTheme } from "@musti/ui-native";
 
 import { useReadingPlanStore } from "@/store/bookshelf/useReadingPlanStore";
 import { IconButton, BaseIcon } from "@/components/ui/AppIcon";

@@ -6,8 +6,8 @@ import type { ReminderItem } from "@/store/reminders/types";
 import {
   scheduleCustomReminder,
   cancelNotificationIds,
-} from "/notifications";
-import type { NotificationPayload } from "/notifications";
+} from "@musti/notifications";
+import type { NotificationPayload } from "@musti/notifications";
 
 /* ------------------------- helpers ------------------------- */
 

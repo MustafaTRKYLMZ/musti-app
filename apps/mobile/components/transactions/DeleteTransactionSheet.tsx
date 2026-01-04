@@ -1,5 +1,5 @@
 import React from "react";
-import { Scope, useTranslation, type LocalTransaction } from "/core";
+import { Scope, useTranslation, type LocalTransaction } from "@musti/core";
 import { ScopeOption, ScopeSheet } from "./ScopeSheet";
 
 interface Props {

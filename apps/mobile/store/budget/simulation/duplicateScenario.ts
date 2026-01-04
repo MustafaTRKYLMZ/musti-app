@@ -2,7 +2,7 @@
 
 import dayjs from "dayjs";
 import { nanoid } from "nanoid/non-secure";
-import type { SimulationItem, SimulationScenario } from "/core";
+import type { SimulationItem, SimulationScenario } from "@musti/core";
 import { persistSimulationState } from "./persistState";
 import type { SimulationStoreSet, SimulationStoreGet } from "./types";
 

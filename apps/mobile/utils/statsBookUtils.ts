@@ -1,5 +1,5 @@
 import { toNonNegativeInt } from "@/utils/toNonNegativeInt";
-import  { ReadingEvent , PageRange } from "/core";
+import  { ReadingEvent , PageRange } from "@musti/core";
 
 
 export const normalizeRange = (from: number, to: number): PageRange => {

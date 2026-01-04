@@ -1,4 +1,4 @@
-import { ReadingMode } from "/core";
+import { ReadingMode } from "@musti/core";
 
 export type DailyTotals = {
   pages: number;

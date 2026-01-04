@@ -1,4 +1,4 @@
-import { MText, spacing } from "/ui-native";
+import { MText, spacing } from "@musti/ui-native";
 import { FC } from "react";
 import { StyleSheet, View } from "react-native";
 import { CropKey, ReaderPrefs, ReadingScrollMode } from "./types";

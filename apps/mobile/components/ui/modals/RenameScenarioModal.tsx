@@ -1,8 +1,8 @@
-import { useTranslation } from "/core";
+import { useTranslation } from "@musti/core";
 import React from "react";
 import { View, TextInput, TouchableOpacity, StyleSheet } from "react-native";
 import { AppModal } from "@/components/ui/AppModal";
-import { MText, colors, spacing, radii } from "/ui-native";
+import { MText, colors, spacing, radii } from "@musti/ui-native";
 
 interface RenameScenarioModalProps {
   visible: boolean;

@@ -1,15 +1,14 @@
-// components/Repeat/RepeatEditor.tsx
 import React from "react";
 import { View, StyleSheet, Pressable, TextInput, Platform } from "react-native";
 import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
 import dayjs from "dayjs";
-import { MText, spacing, radii, useTheme } from "/ui-native";
+import { MText, spacing, radii, useTheme } from "@musti/ui-native";
 import { AppChip } from "@/components/ui/AppChip";
-import type { TargetRepeat } from "/core";
+import type { TargetRepeat } from "@musti/core";
 import { WEEKDAYS } from "@/constants/weekdays";
-import { isValidTimeOfDay, normalizeTimeOfDay } from "/forms";
+import { isValidTimeOfDay, normalizeTimeOfDay } from "@musti/forms";
 
 export type RepeatEndKind = "never" | "until" | "count";
 

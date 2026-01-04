@@ -7,11 +7,11 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { MText, spacing, radii, iconSizes, useTheme } from "/ui-native";
+import { MText, spacing, radii, iconSizes, useTheme } from "@musti/ui-native";
 import { IconButton } from "@/components/ui/AppIcon";
 
 import type { LocalPdfFile } from "@/utils/getPdfsDirectory";
-import type { PlanItemConfig } from "/core";
+import type { PlanItemConfig } from "@musti/core";
 
 import { usePlanFormController } from "@/components/Books/controllers/usePlanFormController";
 import { PlanForm } from "@/components/Books/forms/PlanForm";

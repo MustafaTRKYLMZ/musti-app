@@ -1,4 +1,3 @@
-// apps/mobile/app/(tabs)/bookshelf/index.tsx
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { View, StyleSheet, Alert, ScrollView } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
@@ -19,7 +18,7 @@ import { pickActiveItem } from "@/utils/pickActiveItem";
 import { CreatePlanModal } from "@/components/ui/modals/CreatePlanModal";
 import { AppScreen } from "@/components/AppScreen";
 import { BookshelfHeader } from "@/components/Books/BookshelfHeader";
-import { bookshelfTheme, iconSizes } from "/ui-native";
+import { bookshelfTheme, iconSizes } from "@musti/ui-native";
 import { IconButton } from "@/components/ui/AppIcon";
 import { AppSwitcherButton } from "@/components/AppSwitcherButton";
 import { LastReadBook } from "@/components/Books/LastReadBook";

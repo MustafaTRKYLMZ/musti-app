@@ -1,9 +1,9 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
 import dayjs from "dayjs";
-import { useTranslation } from "/core";
+import { useTranslation } from "@musti/core";
 import { LocalizedDatePicker } from "@/components/ui/LocalizedDatePicker";
-import { MText, colors, spacing, useTheme } from "/ui-native";
+import { MText, colors, spacing, useTheme } from "@musti/ui-native";
 import { AppChip } from "@/components/ui/AppChip";
 
 interface Props {

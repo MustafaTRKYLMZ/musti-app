@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { View, StyleSheet, ViewStyle } from "react-native";
-import { MText, useTheme } from "/ui-native";
-import type { TargetItem } from "@/store/bookshelf/useReadingTargetsStore";
+import { MText, useTheme } from "@musti/ui-native";
+import { TargetItem } from "@musti/core";
 
 type TargetItemSummaryProps = {
   item: TargetItem;

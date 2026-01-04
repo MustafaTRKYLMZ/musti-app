@@ -12,7 +12,7 @@ import {
   MText,
   Card,
   radii,
-} from "/ui-native";
+} from "@musti/ui-native";
 
 import { useReadingStatsStore } from "@/store/bookshelf/useReadingStatsStore";
 import { useReadingEventsStore } from "@/store/bookshelf/useReadingEventsStore";
@@ -22,7 +22,7 @@ import { addDays } from "@/utils/addDays";
 import { TodaySummaryCard } from "@/components/Books/statsBook/TodaySummaryCard";
 import { PeriodCard } from "@/components/Books/statsBook/PeriodCard";
 
-import { ReadingMode } from "/core";
+import { ReadingMode } from "@musti/core";
 import { formatModeParts } from "@/utils/formatModeParts";
 import { guessNameFromUri } from "@/utils/guessNameFromUri";
 import { useLocalBooks } from "@/hooks/useLocalBooks";

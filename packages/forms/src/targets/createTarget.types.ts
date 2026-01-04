@@ -1,4 +1,4 @@
-import type { TargetType } from "/core";
+import type { TargetType } from "@musti/core";
 
 export type CreateTargetFormValues = {
   title: string;

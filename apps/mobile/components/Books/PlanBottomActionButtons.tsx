@@ -1,10 +1,4 @@
-import {
-  bookshelfTheme,
-  iconSizes,
-  radii,
-  spacing,
-  useTheme,
-} from "/ui-native";
+import { bookshelfTheme, iconSizes, radii, spacing } from "@musti/ui-native";
 import { router } from "expo-router";
 import { View, StyleSheet } from "react-native";
 import { IconTile } from "../ui/AppIcon";

@@ -4,14 +4,14 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import type { LocalPdfFile } from "@/utils/getPdfsDirectory";
-import type { PlanItemConfig } from "/core";
+import type { PlanItemConfig } from "@musti/core";
 
 import {
   createPlanSchema,
   createPlanDefaultValues,
   type CreatePlanFormValues, 
   type CreatePlanParsed,   
-} from "/forms";
+} from "@musti/forms";
 
 import type { MSelectItemBase } from "@/components/ui/MSelectBottomSheet";
 

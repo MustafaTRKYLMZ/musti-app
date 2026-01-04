@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import type { ReadingMode } from "/core";
+import type { ReadingMode } from "@musti/core";
 
 import { useReadingGamificationStore } from "@/store/bookshelf/readingGamification/useReadingGamificationStore";
 import { useLastGainStore } from "@/hooks/useLastGain";

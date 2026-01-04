@@ -1,5 +1,5 @@
 
-import type { SimulationStore } from "/core";
+import type { SimulationStore } from "@musti/core";
 import { persistSimulationState } from "./persistState";
 import type { SimulationStoreSet, SimulationStoreGet } from "./types";
 

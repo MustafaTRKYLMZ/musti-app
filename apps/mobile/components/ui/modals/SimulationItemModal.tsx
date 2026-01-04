@@ -9,8 +9,8 @@ import {
   ScrollView,
 } from "react-native";
 import { LocalizedDatePicker } from "@/components/ui/LocalizedDatePicker";
-import { BalanceType, useTranslation } from "/core";
-import { MText, colors, spacing, radii } from "/ui-native";
+import { BalanceType, useTranslation } from "@musti/core";
+import { MText, colors, spacing, radii } from "@musti/ui-native";
 import { BottomSheetModal } from "./BottomSheetModal";
 
 interface Props {

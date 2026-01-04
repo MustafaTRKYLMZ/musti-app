@@ -18,7 +18,7 @@ import {
   iconSizes,
   useTheme,
   Card,
-} from "/ui-native";
+} from "@musti/ui-native";
 import { BaseIcon, IconButton } from "@/components/ui/AppIcon";
 import { ProgressPill, getProgressColor } from "@/components/ui/ProgressPill";
 import { RemainingTimeBadge } from "../ui/pdf/RemainingTimeBadge";

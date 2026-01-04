@@ -1,7 +1,7 @@
 // utils/debugNotifications.ts
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
-import { ANDROID_CHANNEL_ID, type NotificationPayload } from "/notifications";
+import { ANDROID_CHANNEL_ID, type NotificationPayload } from "@musti/notifications";
 
 async function scheduleTest(payload: NotificationPayload, title: string) {
   return Notifications.scheduleNotificationAsync({

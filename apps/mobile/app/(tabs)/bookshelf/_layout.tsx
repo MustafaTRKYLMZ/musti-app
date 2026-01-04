@@ -4,7 +4,7 @@ import {
   BookshelfBackground,
   bookshelfTheme,
   ThemeProvider,
-} from "/ui-native";
+} from "@musti/ui-native";
 
 export default function BookshelfTabLayout() {
   return (

@@ -1,7 +1,6 @@
 import React, { FC } from "react";
 import { View, StyleSheet } from "react-native";
-import { MText, useTheme } from "/ui-native";
-import { IconButton } from "@/components/ui/AppIcon";
+import { MText, useTheme } from "@musti/ui-native";
 
 export const BookshelfHeader = () => {
   const theme = useTheme();

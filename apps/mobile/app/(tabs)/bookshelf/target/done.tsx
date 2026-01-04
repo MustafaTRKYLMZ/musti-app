@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo } from "react";
 import { View, StyleSheet, FlatList } from "react-native";
 import { useRouter } from "expo-router";
-import { MText, bookshelfTheme, iconSizes } from "/ui-native";
+import { MText, bookshelfTheme, iconSizes } from "@musti/ui-native";
 
 import { AppScreen } from "@/components/AppScreen";
 import { IconButton } from "@/components/ui/AppIcon";
@@ -10,7 +10,7 @@ import { TargetCard } from "@/components/Books/TargetCard";
 import { useReadingTargetsStore } from "@/store/bookshelf/useReadingTargetsStore";
 import { AppSwitcherButton } from "@/components/AppSwitcherButton";
 import { useToast } from "@/components/ui/ToastProvider";
-import { ReadingTarget } from "/core";
+import { ReadingTarget } from "@musti/core";
 
 const { colors, spacing, radii } = bookshelfTheme;
 

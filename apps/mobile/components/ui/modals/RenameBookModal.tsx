@@ -9,7 +9,7 @@ import {
   Platform,
 } from "react-native";
 import { Controller } from "react-hook-form";
-import { MText, spacing, radii, useTheme } from "/ui-native";
+import { MText, spacing, radii, useTheme } from "@musti/ui-native";
 import { useRenameBookController } from "@/components/Books/controllers/useRenameBookController";
 
 type Props = {

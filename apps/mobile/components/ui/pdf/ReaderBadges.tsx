@@ -6,7 +6,7 @@ import {
   spacing,
   useTheme,
   bookshelfTheme,
-} from "/ui-native";
+} from "@musti/ui-native";
 
 const { colors: bookshelfColors } = bookshelfTheme;
 

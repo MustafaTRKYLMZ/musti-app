@@ -1,4 +1,4 @@
-import type { ReadingTarget } from "/core";
+import type { ReadingTarget } from "@musti/core";
 
 export function recomputeTargetStatus(t: ReadingTarget): ReadingTarget {
   if (!t.items.length) {

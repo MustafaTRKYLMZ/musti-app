@@ -7,7 +7,7 @@ import Svg, {
   Stop,
   ClipPath,
 } from "react-native-svg";
-import { bookshelfTheme } from "/ui-native";
+import { bookshelfTheme } from "@musti/ui-native";
 
 type ShelfPlankProps = {
   width?: number;

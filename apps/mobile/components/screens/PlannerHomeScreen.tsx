@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { View } from "react-native";
-import { MCalendar } from "@musti/calendar";
+import { MCalendar, MEvent } from "@musti/planner";
 
 export const PlannerHomeScreen = () => {
   const [date, setDate] = useState(new Date());
@@ -8,7 +8,7 @@ export const PlannerHomeScreen = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  const [events, setEvents] = useState<Event[]>([
+  const [events, setEvents] = useState<MEvent[]>([
     {
       id: "1",
       title: "English",

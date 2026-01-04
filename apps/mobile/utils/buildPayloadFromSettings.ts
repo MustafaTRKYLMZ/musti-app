@@ -1,4 +1,4 @@
-import type { NotificationPayload } from "/notifications";
+import type { NotificationPayload } from "@musti/notifications";
 
 /**
  * Store'dan gelen ayarların MINIMUM shape'i.

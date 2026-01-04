@@ -1,7 +1,7 @@
 // apps/mobile/store/simulation/persistState.ts
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import type { SimulationScenario } from "/core";
+import type { SimulationScenario } from "@musti/core";
 import { SIMULATION_STORAGE_KEY } from "./constants";
 
 export async function persistSimulationState(partial: {

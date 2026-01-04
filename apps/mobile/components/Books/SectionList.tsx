@@ -1,9 +1,9 @@
-import { BookSection } from "@/store/bookshelf/useBookSectionsStore";
-import { spacing } from "/ui-native";
+import { spacing } from "@musti/ui-native";
 import React, { FC } from "react";
 import { FlatList, StyleSheet } from "react-native";
 import { Divider } from "../ui/Divider";
 import { Section } from "./Section";
+import { BookSection } from "@musti/core";
 
 type SectionListProps = {
   sections: BookSection[];

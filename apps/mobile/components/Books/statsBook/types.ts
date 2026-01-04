@@ -1,4 +1,4 @@
-import type { ReadingMode } from "/core";
+import type { ReadingMode } from "@musti/core";
 
 export type BookRow = {
   bookUri: string;

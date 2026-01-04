@@ -30,7 +30,7 @@ function parseTimeOfDay(s?: string) {
     return x;
   }
   
-  export function computeNextResetAt(fromMs: number, repeat: import("/core").TargetRepeat): number {
+  export function computeNextResetAt(fromMs: number, repeat: import("@musti/core").TargetRepeat): number {
     const interval = Math.max(1, Math.floor(repeat.interval ?? 1));
     const base = new Date(fromMs);
   

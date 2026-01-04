@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useTheme } from "/ui-native";
+import { useTheme } from "@musti/ui-native";
 
 export const useChipColors=()=> {
   const { colors } = useTheme();

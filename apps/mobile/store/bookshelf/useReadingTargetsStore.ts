@@ -6,7 +6,7 @@ import type {
   TargetRepeat,
   TargetRepeatEnd,
   TargetStatus,
-} from "/core";
+} from "@musti/core";
 
 import { useReadingGamificationStore } from "./readingGamification/useReadingGamificationStore";
 import { recomputeTargetStatus } from "@/utils/targetStatus";

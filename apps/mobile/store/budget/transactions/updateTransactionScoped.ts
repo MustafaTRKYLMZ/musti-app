@@ -4,7 +4,7 @@ import {
     updateTransactionSeries,
     type LocalTransaction,
     type Scope,
-  } from "/core";
+  } from "@musti/core";
   import type {
     TransactionsStoreSet,
     TransactionsStoreGet,

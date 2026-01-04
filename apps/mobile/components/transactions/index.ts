@@ -1,4 +1,3 @@
-// apps/mobile/features/transactions/index.ts
 export * from "./TransactionList";
 export * from "./TransactionForm";
 export * from "./DailyBalanceSection";

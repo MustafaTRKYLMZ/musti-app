@@ -1,6 +1,6 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
-import { MText, colors, spacing, radii, iconSizes } from "/ui-native";
+import { MText, colors, spacing, radii, iconSizes } from "@musti/ui-native";
 import { IconButton } from "@/components/ui/AppIcon";
 
 interface Props {

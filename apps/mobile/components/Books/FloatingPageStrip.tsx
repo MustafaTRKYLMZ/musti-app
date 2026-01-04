@@ -7,7 +7,7 @@ import {
   Dimensions,
 } from "react-native";
 import { IconButton } from "@/components/ui/AppIcon";
-import { spacing, useTheme, radii, iconSizes } from "/ui-native";
+import { spacing, useTheme, radii, iconSizes } from "@musti/ui-native";
 
 export type StripMode = "vertical" | "horizontal";
 export type StripPos = { x: number; y: number };

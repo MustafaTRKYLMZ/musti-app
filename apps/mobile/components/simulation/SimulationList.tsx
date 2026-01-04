@@ -2,8 +2,8 @@ import React from "react";
 import { View, StyleSheet } from "react-native";
 import { CashflowRow } from "@/components/ui/CashflowRow";
 import { getOccurrencesUntilDate } from "@/helper/getOccurrencesUntilDate";
-import { SimulationItem } from "/core";
-import { colors, spacing, radii } from "/ui-native";
+import { SimulationItem } from "@musti/core";
+import { colors, spacing, radii } from "@musti/ui-native";
 
 interface SimulationListProps {
   items: SimulationItem[];

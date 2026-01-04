@@ -6,7 +6,7 @@ import {
   PlanBookProgress,
   PlanItemConfig,
   ReadingPlan,
-} from "/core";
+} from "@musti/core";
 import { useReadingGamificationStore } from "./readingGamification/useReadingGamificationStore";
 
 

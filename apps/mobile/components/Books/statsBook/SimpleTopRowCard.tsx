@@ -2,7 +2,7 @@ import React from "react";
 import { View, StyleSheet, Pressable } from "react-native";
 
 import { BaseIcon } from "@/components/ui/AppIcon";
-import { Card, MText, radii, spacing, useTheme } from "/ui-native";
+import { Card, MText, radii, spacing, useTheme } from "@musti/ui-native";
 import type { SimpleTopRow } from "./types";
 
 type Props = {

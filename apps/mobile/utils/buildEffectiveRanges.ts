@@ -1,4 +1,4 @@
-import { BookSection } from "/core";
+import { BookSection } from "@musti/core";
 import { clampPage, toIntOr } from "./number";
 
 export const buildEffectiveRanges = (

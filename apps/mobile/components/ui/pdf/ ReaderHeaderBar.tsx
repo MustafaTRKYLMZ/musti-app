@@ -1,6 +1,6 @@
 import React, { FC, useMemo, useState } from "react";
 import { View, StyleSheet } from "react-native";
-import { iconSizes, radii, spacing, useTheme } from "@budget/ui-native";
+import { iconSizes, radii, spacing, useTheme } from "@musti/ui-native";
 import { IconButton } from "@/components/ui/AppIcon";
 import type { ReaderBookNavItem } from "@/hooks/useReaderBookNav";
 import { ReaderHeaderTitleToggle } from "@/components/ui/pdf/ReaderHeaderTitleToggle";

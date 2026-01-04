@@ -3,7 +3,7 @@ import {
   cancelScheduledByOwner,
   ensureNotificationPermission,
   scheduleDailyReminder,
-} from "/notifications";
+} from "@musti/notifications";
 import { useBookshelfNotificationSettingsStore } from "./useNotificationSettingsStore";
 
 export function useBookshelfNotificationScheduler() {

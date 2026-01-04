@@ -1,7 +1,7 @@
 import React from "react";
 import { View } from "react-native";
 import Toast from "react-native-root-toast";
-import { ensureNotificationPermission } from "/notifications";
+import { ensureNotificationPermission } from "@musti/notifications";
 
 import { NotificationReminderSection } from "./NotificationReminderSection";
 import { useBudgetNotificationSettingsStore } from "@/store/budget/notification/useNotificationSettingsStore";

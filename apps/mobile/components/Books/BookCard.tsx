@@ -20,7 +20,7 @@ import {
   useTheme,
   Card,
   bookshelfTheme,
-} from "/ui-native";
+} from "@musti/ui-native";
 import { IconButton, BaseIcon } from "@/components/ui/AppIcon";
 import type { LocalPdfFile } from "@/utils/getPdfsDirectory";
 import { usePdfCoverFromCache } from "@/hooks/usePdfCoverFromCache";

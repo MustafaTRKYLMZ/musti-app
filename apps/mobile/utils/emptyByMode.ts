@@ -1,4 +1,4 @@
-import { ReadingMode } from "/core";
+import { ReadingMode } from "@musti/core";
 
 export const emptyByMode = (): Record<ReadingMode, number> => ({
     normal: 0,

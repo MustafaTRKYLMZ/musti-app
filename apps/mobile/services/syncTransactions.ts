@@ -1,6 +1,6 @@
 // apps/mobile/services/syncTransactions.ts
 
-import { LocalTransaction } from "/core";
+import { LocalTransaction } from "@musti/core";
 import { apiConfig } from "../constants/apiConfig";
 import { useTransactionsStore } from "../store/budget/transactions/useTransactionsStore";
 // adjust import path if needed

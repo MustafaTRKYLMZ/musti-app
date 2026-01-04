@@ -1,4 +1,4 @@
-export type Event = {
+export type MEvent = {
     id: string;
     title: string;
     start: string; // ISO datetime

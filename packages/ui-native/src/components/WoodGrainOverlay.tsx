@@ -1,7 +1,7 @@
 import React, { FC, useMemo } from "react";
 import { StyleSheet } from "react-native";
 import Svg, { Defs, LinearGradient, Stop, Rect, Path } from "react-native-svg";
-import { bookshelfTheme } from "/ui-native";
+import { bookshelfTheme } from "@musti/ui-native";
 
 type WoodGrainOverlayProps = {
   opacity?: number; // genel damar opacity

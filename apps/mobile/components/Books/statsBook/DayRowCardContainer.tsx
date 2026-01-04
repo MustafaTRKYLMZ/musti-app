@@ -2,10 +2,10 @@ import React, { useMemo } from "react";
 import { View, StyleSheet, Pressable } from "react-native";
 import dayjs from "dayjs";
 
-import { Card, MText, radii, spacing, useTheme } from "/ui-native";
+import { Card, MText, radii, spacing, useTheme } from "@musti/ui-native";
 import { BaseIcon } from "@/components/ui/AppIcon";
 
-import { DayRow, ReadingEvent } from "/core";
+import { DayRow, ReadingEvent } from "@musti/core";
 import { toNonNegativeInt } from "@/utils/toNonNegativeInt";
 import { formatModeParts } from "@/utils/formatModeParts";
 import { modeIcon, modeLabel } from "@/config/statsBookConfig";

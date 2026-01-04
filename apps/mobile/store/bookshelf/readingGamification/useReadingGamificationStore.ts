@@ -3,7 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import dayjs from "dayjs";
 import type { DailyTotals, GamificationState, XPState, LastGain } from "./types";
 import { xpForNextLevel } from "@/constants/xp";
-import { ReadingMode } from "/core";
+import { ReadingMode } from "@musti/core";
 import { useGamificationSettingsStore } from "./useGamificationSettingsStore";
 import { clampInt } from "@/utils/number";
 

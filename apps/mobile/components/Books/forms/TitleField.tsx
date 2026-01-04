@@ -1,9 +1,9 @@
 import React from "react";
 import { StyleSheet, TextInput } from "react-native";
 import { Controller, type Control, type FieldErrors } from "react-hook-form";
-import { MText, radii, spacing, useTheme } from "/ui-native";
+import { MText, radii, spacing, useTheme } from "@musti/ui-native";
 
-import type { CreateTargetFormValues } from "/forms";
+import type { CreateTargetFormValues } from "@musti/forms";
 import { formStyles } from "@/components/Books/forms/formStyles";
 
 type Props = {

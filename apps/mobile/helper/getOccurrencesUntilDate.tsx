@@ -1,4 +1,4 @@
-import { SimulationItem } from "/core";
+import { SimulationItem } from "@musti/core";
 import dayjs from "dayjs";
 
 export const getOccurrencesUntilDate = (

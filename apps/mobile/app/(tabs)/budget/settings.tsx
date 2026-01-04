@@ -1,5 +1,3 @@
-// apps/mobile/app/(tabs)/settings.tsx
-
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -16,7 +14,7 @@ import dayjs from "dayjs";
 import { useSettingsStore } from "../../../store/budget/useSettingsStore";
 import { useTransactionsStore } from "../../../store/budget/transactions/useTransactionsStore";
 import { syncTransactions } from "../../../services/syncTransactions";
-import { useTranslation } from "/core";
+import { useTranslation } from "@musti/core";
 import { LocalizedDatePicker } from "@/components/ui/LocalizedDatePicker";
 
 import {
@@ -26,7 +24,7 @@ import {
   spacing,
   radii,
   iconSizes,
-} from "/ui-native";
+} from "@musti/ui-native";
 
 import { BackupSection } from "@/components/BackupSection";
 import { IconButton, BaseIcon } from "@/components/ui/AppIcon";

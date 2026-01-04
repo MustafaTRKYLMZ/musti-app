@@ -1,5 +1,5 @@
 // app/utils/buildPayloadFromReminder.ts
-import type { NotificationPayload } from "/notifications";
+import type { NotificationPayload } from "@musti/notifications";
 import type { ReminderItem } from "@/store/reminders/types";
 
 

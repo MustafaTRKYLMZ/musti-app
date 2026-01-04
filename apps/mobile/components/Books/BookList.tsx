@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { View, StyleSheet, useWindowDimensions } from "react-native";
-import { MText, spacing } from "/ui-native";
+import { MText, spacing } from "@musti/ui-native";
 import type { LocalPdfFile } from "@/utils/getPdfsDirectory";
 import { BookCard } from "./BookCard";
 import { IconButton } from "../ui/AppIcon";

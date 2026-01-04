@@ -2,7 +2,7 @@ import dayjs from "dayjs";
 import * as Notifications from "expo-notifications";
 import { useReadingGamificationStore } from "@/store/bookshelf/readingGamification/useReadingGamificationStore";
 import { useGamificationSettingsStore } from "@/store/bookshelf/readingGamification/useGamificationSettingsStore";
-import { scheduleCustomReminder } from "/notifications";
+import { scheduleCustomReminder } from "@musti/notifications";
 
 const MOTIVATION_ID = "motivation-nudge-v1";
 

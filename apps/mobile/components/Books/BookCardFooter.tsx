@@ -1,12 +1,6 @@
-// apps/mobile/components/ui/Books/BookCardFooter.tsx
 import React, { FC, useMemo } from "react";
 import { View, StyleSheet } from "react-native";
-import {
-  bookshelfTheme,
-  MText,
-  radii,
-  spacing,
-} from "/ui-native";
+import { bookshelfTheme, MText, radii, spacing } from "@musti/ui-native";
 
 const { colors } = bookshelfTheme;
 

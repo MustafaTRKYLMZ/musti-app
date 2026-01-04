@@ -1,4 +1,4 @@
-import { ReadingMode } from "/core";
+import { ReadingMode } from "@musti/core";
 import { toNonNegativeInt } from "./toNonNegativeInt";
 
 export const formatModeParts = (pagesByMode: Record<ReadingMode, number>) => {

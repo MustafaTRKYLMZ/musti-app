@@ -1,7 +1,7 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
-import { useTranslation } from "/core";
-import { MText, colors, radii, spacing } from "/ui-native";
+import { useTranslation } from "@musti/core";
+import { MText, colors, radii, spacing } from "@musti/ui-native";
 
 interface Props {
   income: number;

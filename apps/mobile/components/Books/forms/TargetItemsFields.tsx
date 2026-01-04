@@ -1,6 +1,6 @@
 import React from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import { MText, spacing, radii, useTheme } from "/ui-native";
+import { MText, spacing, radii, useTheme } from "@musti/ui-native";
 
 import { TargetItemsList } from "@/components/Books/TargetItemsList";
 

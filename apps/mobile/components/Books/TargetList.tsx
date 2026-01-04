@@ -8,7 +8,7 @@ import {
   spacing,
   radii,
   iconSizes,
-} from "/ui-native";
+} from "@musti/ui-native";
 import { IconButton } from "@/components/ui/AppIcon";
 
 import { useReadingTargetsStore } from "@/store/bookshelf/useReadingTargetsStore";
@@ -18,7 +18,7 @@ import { useReadingEventsStore } from "@/store/bookshelf/useReadingEventsStore";
 import { TargetCard } from "./TargetCard";
 import { EditTargetModal } from "@/components/ui/modals/EditTargetModal";
 import { DoneTargetsShortcut } from "./DoneTargetsShortcut";
-import type { ReadingTarget, ReadingEvent, ReadingMode } from "/core";
+import type { ReadingTarget, ReadingEvent, ReadingMode } from "@musti/core";
 
 const { colors } = bookshelfTheme;
 

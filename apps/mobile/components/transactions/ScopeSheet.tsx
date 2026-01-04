@@ -1,6 +1,6 @@
 import React from "react";
 import { View, TouchableOpacity, StyleSheet } from "react-native";
-import { MText, colors, spacing, radii } from "/ui-native";
+import { MText, colors, spacing, radii } from "@musti/ui-native";
 
 export type Scope = "this" | "thisAndFuture" | "all";
 

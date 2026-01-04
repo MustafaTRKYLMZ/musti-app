@@ -8,7 +8,7 @@ import {
   deleteTransactionApi as coreDeleteTransaction,
   type ApiConfig,
   type Transaction,
-} from "/core";
+} from "@musti/core";
 
 /**
  * Resolve base API URL depending on platform and env vars.
