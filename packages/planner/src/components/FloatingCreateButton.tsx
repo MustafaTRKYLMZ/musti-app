@@ -1,6 +1,6 @@
 import React from "react";
-import { Pressable, StyleSheet, View } from "react-native";
-import { FAB, spacing } from "@musti/ui-native";
+import { StyleSheet, View } from "react-native";
+import { FAB, getTheme, spacing } from "@musti/ui-native";
 
 export function FloatingCreateButton({
   onPress,
@@ -12,14 +12,7 @@ export function FloatingCreateButton({
   return (
     <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
       <View pointerEvents="box-none" style={styles.pos}>
-        <Pressable
-          onPress={onPress}
-          onLongPress={onLongPress}
-          delayLongPress={350}
-          hitSlop={12}
-        >
-          <FAB onPress={() => {}} offsetBottom={0} />
-        </Pressable>
+        <FAB owner="planner" getTheme={getTheme} onPress={onPress} />
       </View>
     </View>
   );

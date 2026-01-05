@@ -9,8 +9,8 @@ import {
 import { addDays } from "../engine/helpers";
 import { DraggableEventBlock } from "./DraggableEventBlock";
 import { BlockedTime, MEvent, WeekViewConfig } from "../types";
-import { sizes, plannerTheme } from "@musti/ui-native";
-import { RenderHorizontalLines } from "./renderHorizontalLines";
+import { plannerTheme } from "@musti/ui-native";
+import { RenderHorizontalLines } from "./RenderHorizontalLines";
 
 type GridEventsProps = {
   weekStart: Date;
