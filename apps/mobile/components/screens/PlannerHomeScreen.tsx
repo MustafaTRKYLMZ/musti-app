@@ -166,8 +166,8 @@ export const PlannerHomeScreen = () => {
           weekView={{
             stepMinutes: 15,
             pxPerMinute: 1.15,
-            startHour: 7,
-            endHour: 23,
+            startHour: 1,
+            endHour: 24,
           }}
           onPressDay={(d) => openDay(d)}
           onCreate={(day, startMinute) => onCreate(day, startMinute, 30)}
