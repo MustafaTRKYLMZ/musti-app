@@ -122,7 +122,11 @@ export function MCalendar(props: {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background },
+  root: {
+    flex: 1,
+    backgroundColor: colors.background,
+    paddingBottom: spacing["3xl"],
+  },
   lettersRow: {
     flexDirection: "row",
     backgroundColor: colors.background,

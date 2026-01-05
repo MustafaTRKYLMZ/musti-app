@@ -75,6 +75,27 @@ export const MonthContainer: FC<MonthContainerProps> = ({
 
   const panStartAgenda = useRef(0);
 
+  const closeAgenda = () => {
+    const targetAgenda = 0;
+    const targetGrid = Math.max(0, monthAreaH.current - targetAgenda - 1);
+
+    Animated.spring(agendaH, {
+      toValue: targetAgenda,
+      useNativeDriver: false,
+      bounciness: 0,
+      speed: 18,
+    }).start();
+
+    Animated.spring(gridH, {
+      toValue: targetGrid,
+      useNativeDriver: false,
+      bounciness: 0,
+      speed: 18,
+    }).start();
+
+    agendaValueRef.current = targetAgenda;
+  };
+
   const panResponder = useMemo(
     () =>
       PanResponder.create({
@@ -127,12 +148,11 @@ export const MonthContainer: FC<MonthContainerProps> = ({
   const isCollapsed = agendaValueRef.current <= 1;
 
   return (
-    <View
-      style={styles.wrap}
-      onLayout={onMonthLayout}
-      {...panResponder.panHandlers}
-    >
-      <Animated.View style={[styles.gridWrap, { height: gridH }]}>
+    <View style={styles.wrap} onLayout={onMonthLayout}>
+      <Animated.View
+        style={[styles.gridWrap, { height: gridH }]}
+        {...panResponder.panHandlers}
+      >
         <MonthView
           date={date}
           config={config}
@@ -141,7 +161,7 @@ export const MonthContainer: FC<MonthContainerProps> = ({
           collapsed={isCollapsed}
           onChangeDate={onChangeDate}
           onPressDay={onPressDay}
-          maxMarkers={4}
+          maxMarkers={2}
           maxInlineItems={2}
           gridHeightAnim={gridH}
         />
@@ -155,10 +175,14 @@ export const MonthContainer: FC<MonthContainerProps> = ({
           pointerEvents={isCollapsed ? "none" : "auto"}
         >
           <MText style={styles.agendaTitle}>{monthLabel}</MText>
+
           <MonthDayEventsList
             date={date}
             events={events}
             onPressEvent={onPressEvent}
+            onTop={() => {
+              closeAgenda();
+            }}
           />
         </View>
       </Animated.View>
@@ -170,6 +194,7 @@ const styles = StyleSheet.create({
   wrap: {
     flex: 1,
     backgroundColor: colors.background,
+    paddingBottom: spacing.md,
   },
   gridWrap: {
     overflow: "hidden",
