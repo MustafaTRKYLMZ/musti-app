@@ -1,4 +1,3 @@
-// components/FAB.tsx
 import React, { FC, ReactNode, useMemo } from "react";
 import {
   TouchableOpacity,
@@ -6,6 +5,7 @@ import {
   GestureResponderEvent,
   ViewStyle,
   StyleProp,
+  Insets,
 } from "react-native";
 import { spacing, iconSizes } from "../theme";
 import { BaseIcon } from "./AppIcon";
@@ -27,6 +27,10 @@ export type FABTheme = {
 
 export type FABProps = {
   onPress?: (e: GestureResponderEvent) => void;
+  onLongPress?: (e: GestureResponderEvent) => void;
+
+  delayLongPress?: number;
+  hitSlop?: number | Insets;
 
   placement?: FABPlacement;
   offsetVertical?: number;
@@ -52,6 +56,9 @@ export type FABProps = {
 
 export const FAB: FC<FABProps> = ({
   onPress,
+  onLongPress,
+  delayLongPress = 350,
+  hitSlop = 12,
 
   placement = "bottom-right",
   offsetVertical = spacing["xl"] * 3,
@@ -101,6 +108,9 @@ export const FAB: FC<FABProps> = ({
     <TouchableOpacity
       activeOpacity={0.85}
       onPress={onPress}
+      onLongPress={onLongPress}
+      delayLongPress={delayLongPress}
+      hitSlop={hitSlop}
       style={[
         styles.base,
         {

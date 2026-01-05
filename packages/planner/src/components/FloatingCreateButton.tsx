@@ -12,7 +12,14 @@ export function FloatingCreateButton({
   return (
     <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
       <View pointerEvents="box-none" style={styles.pos}>
-        <FAB owner="planner" getTheme={getTheme} onPress={onPress} />
+        <FAB
+          owner="planner"
+          getTheme={getTheme}
+          onPress={onPress}
+          onLongPress={onLongPress}
+          delayLongPress={350}
+          hitSlop={12}
+        />
       </View>
     </View>
   );
