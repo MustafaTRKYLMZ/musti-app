@@ -1,17 +1,20 @@
-// MonthView.tsx (horizontal scroll için onScrollEndDrag yerine onMomentumScrollEnd kullan)
-import React, { useEffect, useMemo, useRef } from "react";
+// MonthView.tsx
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   StyleSheet,
   ScrollView,
   NativeSyntheticEvent,
   NativeScrollEvent,
+  Animated,
 } from "react-native";
 import type { CalendarConfig, MEvent } from "../types";
 import { addDays, startOfWeek, sameDay } from "../engine/helpers";
 import { plannerTheme, spacing } from "@musti/ui-native";
 import { Day } from "./components/Day";
 import { eventToStartDate } from "../engine/eventToStartDate";
+import { eventToTitle } from "../engine";
+import { eventToTimeLabel } from "../engine/eventToTimeLabel";
 
 const { colors } = plannerTheme;
 
@@ -20,6 +23,9 @@ const WEEKS_IN_GRID = 6;
 const TOTAL_DAYS = DAYS_IN_WEEK * WEEKS_IN_GRID;
 
 const startOfMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
+const pad2 = (n: number) => String(n).padStart(2, "0");
+const dayKey = (d: Date) =>
+  `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 
 const addMonths = (d: Date, delta: number) => {
   const day = d.getDate();
@@ -33,24 +39,47 @@ const addMonths = (d: Date, delta: number) => {
   return base;
 };
 
-const pad2 = (n: number) => String(n).padStart(2, "0");
-const dayKey = (d: Date) =>
-  `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-
 export function MonthView(props: {
   date: Date;
   config: CalendarConfig;
   colWidth: number;
   events: MEvent[];
+  collapsed: boolean;
   onChangeDate: (nextDate: Date) => void;
   onPressDay?: (d: Date) => void;
+  maxMarkers?: number;
+  maxInlineItems?: number;
+  gridHeightAnim?: Animated.Value;
 }) {
   const scrollRef = useRef<ScrollView | null>(null);
 
   const weekStartsOn = props.config.weekStartsOn ?? 1;
   const today = useMemo(() => new Date(), []);
+
   const pageWidth = props.colWidth * 7;
   const centerOffset = pageWidth;
+
+  const [cellH, setCellH] = useState(42);
+
+  useEffect(() => {
+    if (!props.gridHeightAnim) return;
+
+    let raf = 0;
+    const subId = props.gridHeightAnim.addListener(({ value }) => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        const h = Math.max(0, value);
+        const next = Math.max(32, Math.floor(h / WEEKS_IN_GRID));
+        setCellH(next);
+      });
+    });
+
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+      props.gridHeightAnim?.removeListener(subId);
+    };
+  }, [props.gridHeightAnim]);
 
   const months = useMemo(() => {
     const prev = addMonths(props.date, -1);
@@ -59,33 +88,54 @@ export function MonthView(props: {
     return [prev, cur, next];
   }, [props.date]);
 
-  const didInit = useRef(false);
   useEffect(() => {
-    didInit.current = false;
-  }, [props.date.getFullYear(), props.date.getMonth(), pageWidth]);
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({ x: centerOffset, animated: false });
+    });
+  }, [
+    centerOffset,
+    props.date.getFullYear(),
+    props.date.getMonth(),
+    pageWidth,
+  ]);
 
-  const onLayout = () => {
-    if (didInit.current) return;
-    didInit.current = true;
-    scrollRef.current?.scrollTo({ x: centerOffset, animated: false });
-  };
+  const { markersByDayKey, inlineByDayKey } = useMemo(() => {
+    const markers: Record<string, string[]> = {};
+    const inline: Record<
+      string,
+      { color: string; title: string; t: number }[]
+    > = {};
 
-  const markersByDayKey = useMemo(() => {
-    const map: Record<string, string[]> = {};
     for (const ev of props.events) {
       const sd = eventToStartDate(ev as any);
       if (!sd) continue;
+
       const k = dayKey(sd);
       const c = (ev as any)?.color ?? colors.primary;
-      (map[k] ||= []).push(c);
+
+      (markers[k] ||= []).push(c);
+
+      const tt = eventToTimeLabel(ev as any);
+      const title = eventToTitle(ev as any);
+      const label = tt ? `${tt} ${title}` : title;
+
+      (inline[k] ||= []).push({ color: c, title: label, t: sd.getTime() });
     }
-    return map;
+
+    for (const k of Object.keys(inline)) inline[k].sort((a, b) => a.t - b.t);
+
+    const inlineFlat: Record<string, { color: string; title: string }[]> = {};
+    for (const k of Object.keys(inline)) {
+      inlineFlat[k] = inline[k].map(({ color, title }) => ({ color, title }));
+    }
+
+    return { markersByDayKey: markers, inlineByDayKey: inlineFlat };
   }, [props.events]);
 
-  const monthPages = useMemo(() => {
-    return months.map((m) => {
-      const monthIndex = m.getMonth();
-      const mStart = startOfMonth(m);
+  const buildMonthGrid = useMemo(() => {
+    return (baseDate: Date) => {
+      const monthIndex = baseDate.getMonth();
+      const mStart = startOfMonth(baseDate);
       const gridStart = startOfWeek(mStart, weekStartsOn);
       const gridDays = Array.from({ length: TOTAL_DAYS }, (_, i) =>
         addDays(gridStart, i)
@@ -94,8 +144,13 @@ export function MonthView(props: {
         gridDays.slice(w * 7, w * 7 + 7)
       );
       return { monthIndex, weeks };
-    });
-  }, [months, weekStartsOn]);
+    };
+  }, [weekStartsOn]);
+
+  const pages = useMemo(
+    () => months.map(buildMonthGrid),
+    [months, buildMonthGrid]
+  );
 
   const handleMomentumEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const x = e.nativeEvent.contentOffset.x;
@@ -104,49 +159,63 @@ export function MonthView(props: {
 
     const delta = pageIndex - 1;
     props.onChangeDate(addMonths(props.date, delta));
-    scrollRef.current?.scrollTo({ x: centerOffset, animated: false });
+
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({ x: centerOffset, animated: false });
+    });
   };
 
   return (
-    <View style={styles.container} onLayout={onLayout}>
+    <View style={styles.container}>
       <ScrollView
         ref={(r) => {
           scrollRef.current = r;
         }}
         horizontal
+        nestedScrollEnabled
+        directionalLockEnabled
         showsHorizontalScrollIndicator={false}
         bounces={false}
         decelerationRate="fast"
         snapToInterval={pageWidth}
         snapToAlignment="start"
         onMomentumScrollEnd={handleMomentumEnd}
+        scrollEventThrottle={16}
         contentContainerStyle={{ width: pageWidth * 3 }}
       >
-        {monthPages.map((mp, mi) => (
+        {pages.map((p, pi) => (
           <View
-            key={`m-${mi}`}
+            key={`page-${pi}`}
             style={{ width: pageWidth, alignItems: "center" }}
           >
-            {mp.weeks.map((weekDays, wi) => (
-              <View key={`w-${mi}-${wi}`} style={styles.weekRow}>
+            {p.weeks.map((weekDays, wi) => (
+              <View
+                key={`week-${pi}-${wi}`}
+                style={[styles.weekRow, { width: pageWidth }]}
+              >
                 {weekDays.map((d, di) => {
                   const k = dayKey(d);
+
                   return (
                     <Day
-                      key={`${d.toISOString()}-${mi}-${wi}-${di}`}
+                      key={`${d.toISOString()}-${pi}-${wi}-${di}`}
                       date={d}
                       width={props.colWidth}
-                      height={34 + spacing.xs * 2}
+                      height={cellH}
                       isToday={sameDay(d, today)}
                       isSelected={sameDay(d, props.date)}
-                      isOutside={d.getMonth() !== mp.monthIndex}
-                      markers={markersByDayKey[k]}
-                      maxMarkers={2}
-                      markerMode="stack"
+                      isOutside={d.getMonth() !== p.monthIndex}
                       onPress={(dd) => {
                         props.onChangeDate(dd);
                         props.onPressDay?.(dd);
                       }}
+                      markers={props.collapsed ? undefined : markersByDayKey[k]}
+                      maxMarkers={props.maxMarkers ?? 4}
+                      markerMode="stack"
+                      inlineItems={
+                        props.collapsed ? inlineByDayKey[k] : undefined
+                      }
+                      maxInlineItems={props.maxInlineItems ?? 2}
                     />
                   );
                 })}

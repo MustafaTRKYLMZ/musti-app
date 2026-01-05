@@ -1,3 +1,4 @@
+// Day.tsx
 import React, { FC } from "react";
 import {
   Pressable,
@@ -11,6 +12,8 @@ import {
 import { plannerTheme, radii, typography } from "@musti/ui-native";
 
 const { colors } = plannerTheme;
+
+export type DayInlineItem = { color: string; title: string };
 
 export type DayProps = {
   date: Date;
@@ -27,6 +30,9 @@ export type DayProps = {
   maxMarkers?: number;
 
   markerMode?: "stack" | "row";
+
+  inlineItems?: DayInlineItem[];
+  maxInlineItems?: number;
 
   containerStyle?: StyleProp<ViewStyle>;
   pillStyle?: StyleProp<ViewStyle>;
@@ -47,13 +53,19 @@ export const Day: FC<DayProps> = ({
   date,
   width,
   height,
+
   isToday = false,
   isSelected = false,
   isOutside = false,
   onPress,
+
   markers,
   maxMarkers = 4,
   markerMode = "stack",
+
+  inlineItems,
+  maxInlineItems = 2,
+
   containerStyle,
   pillStyle,
   textStyle,
@@ -62,17 +74,24 @@ export const Day: FC<DayProps> = ({
   outsidePillStyle,
   outsideTextStyle,
   selectedStyle,
+
   cellBg,
 }) => {
   const count = markers?.length ?? 0;
   const shown = count ? markers!.slice(0, maxMarkers) : [];
   const overflow = count > maxMarkers ? count - maxMarkers : 0;
 
+  const inCount = inlineItems?.length ?? 0;
+  const inShown = inCount ? inlineItems!.slice(0, maxInlineItems) : [];
+  const inOverflow = inCount > maxInlineItems ? inCount - maxInlineItems : 0;
+
   const markerW =
     markerMode === "stack" ? Math.max(10, Math.floor(width * 0.55)) : 10;
 
   return (
     <Pressable
+      // delayPressIn is not a valid prop for Pressable, so it has been removed
+      pressRetentionOffset={{ top: 12, left: 12, bottom: 12, right: 12 }}
       onPress={onPress ? () => onPress(date) : undefined}
       style={[
         styles.cell,
@@ -83,7 +102,7 @@ export const Day: FC<DayProps> = ({
     >
       {isSelected && (
         <View
-          pointerEvents="none"
+          //   pointerEvents="none"
           style={[styles.selectedOverlay, selectedStyle]}
         />
       )}
@@ -112,7 +131,23 @@ export const Day: FC<DayProps> = ({
         </Text>
       </View>
 
-      {!!shown.length && (
+      {!!inShown.length && (
+        <View style={styles.inlineWrap}>
+          {inShown.map((it, i) => (
+            <View key={`${it.title}-${i}`} style={styles.inlineRow}>
+              <View style={[styles.inlineBar, { backgroundColor: it.color }]} />
+              <Text style={styles.inlineText} numberOfLines={1}>
+                {it.title}
+              </Text>
+            </View>
+          ))}
+          {inOverflow > 0 && (
+            <Text style={styles.inlineMore}>{`+${inOverflow}`}</Text>
+          )}
+        </View>
+      )}
+
+      {!inShown.length && !!shown.length && (
         <View
           style={[
             styles.markersWrap,
@@ -187,6 +222,39 @@ const styles = StyleSheet.create({
     color: colors.textSecondary ?? colors.textPrimary,
   },
 
+  inlineWrap: {
+    width: "100%",
+    marginTop: 4,
+    paddingHorizontal: 2,
+  },
+
+  inlineRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 3,
+  },
+
+  inlineBar: {
+    width: 3,
+    height: 10,
+    borderRadius: 2,
+    marginRight: 4,
+  },
+
+  inlineText: {
+    flex: 1,
+    fontSize: 10,
+    color: colors.textPrimary,
+    opacity: 0.95,
+  },
+
+  inlineMore: {
+    fontSize: 10,
+    color: colors.textSecondary ?? colors.textPrimary,
+    opacity: 0.9,
+    marginTop: 1,
+  },
+
   markersWrap: {
     marginTop: 2,
     alignItems: "center",
@@ -194,26 +262,16 @@ const styles = StyleSheet.create({
     minHeight: 8,
   },
 
-  markersStack: {
-    flexDirection: "column",
-  },
-
-  markersRow: {
-    flexDirection: "row",
-  },
+  markersStack: { flexDirection: "column" },
+  markersRow: { flexDirection: "row" },
 
   marker: {
     height: 3,
     borderRadius: 2,
   },
 
-  markerStack: {
-    marginBottom: 2,
-  },
-
-  markerRow: {
-    marginRight: 3,
-  },
+  markerStack: { marginBottom: 2 },
+  markerRow: { marginRight: 3 },
 
   overflowText: {
     fontSize: 9,
