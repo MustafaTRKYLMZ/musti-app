@@ -24,10 +24,11 @@ import {
   spacing,
   radii,
   iconSizes,
+  IconButton,
+  BaseIcon,
 } from "@musti/ui-native";
 
 import { BackupSection } from "@/components/BackupSection";
-import { IconButton, BaseIcon } from "@/components/ui/AppIcon";
 
 export default function SettingsScreen() {
   const { t } = useTranslation();

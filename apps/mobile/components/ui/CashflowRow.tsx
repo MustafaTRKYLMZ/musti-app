@@ -2,7 +2,7 @@ import React from "react";
 import { View, StyleSheet, Pressable } from "react-native";
 import { LocalizedDateText } from "@musti/core";
 import { MText, colors, spacing, radii } from "@musti/ui-native";
-import { BaseIcon, IconButton } from "@/components/ui/AppIcon";
+import { BaseIcon, IconButton } from "@musti/ui-native";
 
 export interface CashflowRowProps {
   title: string;

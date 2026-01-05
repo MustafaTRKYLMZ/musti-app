@@ -20,7 +20,7 @@ import type {
   ReminderTarget,
 } from "@/store/reminders/types";
 import { AppScreen } from "@/components/AppScreen";
-import { BaseIcon, IconButton, IconTile } from "@/components/ui/AppIcon";
+import { BaseIcon, IconButton, IconTile } from "@musti/ui-native";
 import { BookPickerModal } from "@/components/Books/reminders/BookPickerModal";
 import { PlanPickerModal } from "@/components/Books/reminders/PlanPickerModal";
 import { TargetPickerModal } from "@/components/Books/reminders/TargetPickerModal";

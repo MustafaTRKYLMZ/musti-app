@@ -6,7 +6,7 @@ import type { PdfRef } from "react-native-pdf";
 import { MText, spacing, radii, iconSizes, useTheme } from "@musti/ui-native";
 
 import { useReadingPlanStore } from "@/store/bookshelf/useReadingPlanStore";
-import { IconButton, BaseIcon } from "@/components/ui/AppIcon";
+import { IconButton, BaseIcon } from "@musti/ui-native";
 import { useReadingGamificationStore } from "@/store/bookshelf/readingGamification/useReadingGamificationStore";
 import { useLastGainStore } from "@/hooks/useLastGain";
 import { scheduleMotivationNudgeIfNeeded } from "@/utils/motivation";

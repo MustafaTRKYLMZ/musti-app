@@ -1,6 +1,6 @@
 import { iconSizes, MText, spacing } from "@musti/ui-native";
 import { TouchableOpacity, StyleSheet } from "react-native";
-import { BaseIcon } from "./ui/AppIcon";
+import { BaseIcon } from "@musti/ui-native/src/components/AppIcon";
 
 export const MenuRow = ({
   icon,

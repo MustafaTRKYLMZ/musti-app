@@ -38,7 +38,7 @@ export function snapMinutes(mins: number, step: number) {
     return d;
   }
   
-  export function formatTime(iso: string, locale = "tr-TR") {
+  export function formatTime(iso: string, locale = "en-EN") {
     const d = new Date(iso);
     return d.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
   }
@@ -49,5 +49,21 @@ export function snapMinutes(mins: number, step: number) {
     d.setUTCDate(d.getUTCDate() + 4 - dayNum);
     const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
     return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  }
+  
+  export function getWeekdayLetter(
+    d: Date,
+    locale: string = "en"
+  ): string {
+    const day = d.getDay(); // 0 = Sunday
+  
+    if (locale.startsWith("tr")) {
+      // Paz, Pzt, Sal, Çar, Per, Cum, Cmt
+      return ["P", "P", "S", "Ç", "P", "C", "C"][day];
+    }
+  
+    // ✅ Default EN
+    // Sun Mon Tue Wed Thu Fri Sat
+    return ["S", "M", "T", "W", "T", "F", "S"][day];
   }
   

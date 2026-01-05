@@ -1,7 +1,7 @@
 import React from "react";
 import { StyleSheet, ScrollView } from "react-native";
 import { AppScreen } from "@/components/AppScreen";
-import { IconButton } from "@/components/ui/AppIcon";
+import { IconButton } from "@musti/ui-native";
 import { MText, colors, spacing } from "@musti/ui-native";
 import { router } from "expo-router";
 import { useTranslation } from "@musti/core";

@@ -1,6 +1,6 @@
 // components/ui/HeaderMenuButton.tsx
 import React from "react";
-import { IconButton } from "./AppIcon";
+import { IconButton } from "@musti/ui-native/src/components/AppIcon";
 import { spacing } from "@musti/ui-native";
 
 type HeaderMenuButtonProps = {

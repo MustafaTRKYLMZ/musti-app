@@ -20,7 +20,7 @@ import { useTransactionsStore } from "../../store/budget/transactions/useTransac
 import { CashflowRow } from "@/components/ui/CashflowRow";
 import { findSectionIndexForDate } from "@/utils/findSectionIndexForDate";
 import { AnimatedFutureRow } from "../ui/AnimatedFutureRow";
-import { BaseIcon } from "@/components/ui/AppIcon";
+import { BaseIcon } from "@musti/ui-native";
 
 interface TransactionListProps {
   transactions: LocalTransaction[];

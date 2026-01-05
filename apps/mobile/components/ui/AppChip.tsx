@@ -7,7 +7,7 @@ import {
   ViewStyle,
 } from "react-native";
 import { MText, spacing, radii } from "@musti/ui-native";
-import { BaseIcon } from "@/components/ui/AppIcon";
+import { BaseIcon } from "@musti/ui-native";
 
 type ChipColors = {
   bg: string;

@@ -1,7 +1,7 @@
 import { MText, spacing } from "@musti/ui-native";
 import { FC } from "react";
 import { View, StyleSheet } from "react-native";
-import { IconButton } from "../ui/AppIcon";
+import { IconButton } from "@musti/ui-native/src/components/AppIcon";
 
 type SectionHeaderProps = {
   title: string;

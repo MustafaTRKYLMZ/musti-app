@@ -11,7 +11,7 @@ import {
   ScrollViewProps,
 } from "react-native";
 import { MText, spacing, radii, iconSizes, useTheme } from "@musti/ui-native";
-import { IconButton } from "@/components/ui/AppIcon";
+import { IconButton } from "@musti/ui-native";
 
 type MCreateModalProps = {
   visible: boolean;

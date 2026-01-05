@@ -8,7 +8,7 @@ import {
 } from "react-native";
 
 import { MText, colors, spacing, radii, iconSizes } from "@musti/ui-native";
-import { IconButton } from "@/components/ui/AppIcon";
+import { IconButton } from "@musti/ui-native";
 
 type AppModalProps = {
   visible: boolean;

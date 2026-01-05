@@ -1,6 +1,6 @@
 import { iconSizes, radii, spacing, useTheme } from "@musti/ui-native";
 import { View, TextInput, StyleSheet } from "react-native";
-import { IconButton } from "../ui/AppIcon";
+import { IconButton } from "@musti/ui-native/src/components/AppIcon";
 import { FC } from "react";
 import { MText } from "@musti/ui-native";
 

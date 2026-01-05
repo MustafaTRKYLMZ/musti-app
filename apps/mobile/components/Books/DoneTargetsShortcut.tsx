@@ -6,7 +6,7 @@ import {
   bookshelfTheme,
 } from "@musti/ui-native";
 import { Pressable, View, StyleSheet } from "react-native";
-import { IconButton } from "../ui/AppIcon";
+import { IconButton } from "@musti/ui-native/src/components/AppIcon";
 import { FC } from "react";
 
 type DoneTargetsShortcutProps = {

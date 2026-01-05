@@ -1,15 +1,15 @@
 import React, { useMemo, useRef } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import BottomSheet from "@gorhom/bottom-sheet"; // Adjust the import path if necessary
-import type { Event } from "../../types";
+import type { MEvent } from "../../types";
 import { formatTime } from "../../engine/helpers";
 
 export function BottomDaySheet(props: {
   date: Date;
-  events: Event[];
+  events: MEvent[];
   locale?: string;
   onCreate: () => void;
-  onPressEvent: (e: Event) => void;
+  onPressEvent: (e: MEvent) => void;
   onClose?: () => void;
 }) {
   const ref = useRef<BottomSheet>(null);

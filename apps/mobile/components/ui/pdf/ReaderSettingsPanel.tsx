@@ -2,7 +2,7 @@ import { MText, spacing } from "@musti/ui-native";
 import { FC } from "react";
 import { StyleSheet, View } from "react-native";
 import { CropKey, ReaderPrefs, ReadingScrollMode } from "./types";
-import { IconButton } from "../AppIcon";
+import { IconButton } from "@musti/ui-native/src/components/AppIcon";
 import { clampBetween } from "@/utils/number";
 import { ZOOM_PRESETS } from "@/constants/readerPresets";
 

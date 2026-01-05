@@ -4,7 +4,7 @@ import { useRouter } from "expo-router";
 import { MText, bookshelfTheme, iconSizes } from "@musti/ui-native";
 
 import { AppScreen } from "@/components/AppScreen";
-import { IconButton } from "@/components/ui/AppIcon";
+import { IconButton } from "@musti/ui-native";
 import { TargetCard } from "@/components/Books/TargetCard";
 
 import { useReadingTargetsStore } from "@/store/bookshelf/useReadingTargetsStore";

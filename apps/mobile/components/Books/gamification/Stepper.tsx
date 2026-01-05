@@ -1,4 +1,4 @@
-import { IconButton } from "@/components/ui/AppIcon";
+import { IconButton } from "@musti/ui-native";
 import { InfoIcon } from "@/components/ui/InfoIcon";
 import { MText, bookshelfTheme, iconSizes, spacing } from "@musti/ui-native";
 import { FC } from "react";

@@ -6,7 +6,7 @@ import { iconSizes } from "@musti/ui-native";
 
 // Ensure the correct path to the ComingSoon component
 import { ComingSoon } from "../../components/ui/ComingSoon";
-import { IconButton } from "@/components/ui/AppIcon";
+import { IconButton } from "@musti/ui-native";
 
 export default function ComingSoonScreen() {
   const handleBack = () => {

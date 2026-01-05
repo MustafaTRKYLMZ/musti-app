@@ -10,7 +10,7 @@ import DateTimePickerModal from "react-native-modal-datetime-picker";
 import dayjs from "dayjs";
 import { getLocalizedDateParts, useTranslation } from "@musti/core";
 import { MText, colors, spacing, radii } from "@musti/ui-native";
-import { BaseIcon } from "@/components/ui/AppIcon";
+import { BaseIcon } from "@musti/ui-native";
 
 interface Props {
   value: string; // "YYYY-MM-DD"

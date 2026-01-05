@@ -5,7 +5,7 @@ import { MText, radii, spacing, useTheme } from "@musti/ui-native";
 
 import { BookshelfNotificationsSection } from "@/components/settings/BookshelfNotificationsSection";
 import { AppScreen } from "@/components/AppScreen";
-import { IconButton } from "@/components/ui/AppIcon";
+import { IconButton } from "@musti/ui-native";
 import { GamificationSettingsCard } from "@/components/Books/gamification/GamificationSettingsCard";
 
 export default function BookshelfSettingsScreen() {

@@ -8,7 +8,7 @@ import {
   Image,
 } from "react-native";
 import { MText, spacing, radii, useTheme } from "@musti/ui-native";
-import { BaseIcon } from "@/components/ui/AppIcon";
+import { BaseIcon } from "@musti/ui-native";
 
 type Props = {
   visible: boolean;

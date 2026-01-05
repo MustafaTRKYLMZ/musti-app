@@ -9,7 +9,7 @@ import {
   bookshelfTheme,
 } from "@musti/ui-native";
 import { router } from "expo-router";
-import { IconTile } from "@/components/ui/AppIcon";
+import { IconTile } from "@musti/ui-native";
 
 type Props = {
   visible: boolean;
@@ -28,6 +28,10 @@ export function AppSwitcherMenu({ visible, onClose }: Props) {
   const goBookshelf = () => {
     onClose();
     router.push("/(tabs)/bookshelf");
+  };
+  const goPlanner = () => {
+    onClose();
+    router.push("/(tabs)/planner");
   };
 
   return (
@@ -63,6 +67,14 @@ export function AppSwitcherMenu({ visible, onClose }: Props) {
               color={bookshelfTheme.colors.success}
               labelColor={colors.textInverse}
               onPress={goBookshelf}
+              style={{ backgroundColor: colors.backgroundBackdrop }}
+            />
+            <IconTile
+              name="calendar-outline"
+              label="Planner"
+              color={bookshelfTheme.colors.success}
+              labelColor={colors.textInverse}
+              onPress={goPlanner}
               style={{ backgroundColor: colors.backgroundBackdrop }}
             />
           </View>

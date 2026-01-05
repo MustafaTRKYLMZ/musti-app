@@ -8,7 +8,7 @@ import {
   Platform,
 } from "react-native";
 import { MText, spacing, radii, iconSizes, useTheme } from "@musti/ui-native";
-import { IconButton } from "@/components/ui/AppIcon";
+import { IconButton } from "@musti/ui-native";
 
 import type { LocalPdfFile } from "@/utils/getPdfsDirectory";
 import type { PlanItemConfig } from "@musti/core";

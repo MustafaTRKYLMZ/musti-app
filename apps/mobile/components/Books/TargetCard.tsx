@@ -12,7 +12,7 @@ import {
   Dimensions,
 } from "react-native";
 import { MText, iconSizes, spacing, radii, useTheme } from "@musti/ui-native";
-import { IconButton, BaseIcon } from "@/components/ui/AppIcon";
+import { IconButton, BaseIcon } from "@musti/ui-native";
 import { ItemDots } from "../ui/ItemDots";
 import { pickActiveItem } from "@/utils/pickActiveItem";
 import { useToast } from "../ui/ToastProvider";

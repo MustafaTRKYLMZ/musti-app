@@ -1,5 +1,10 @@
-import React from "react";
-import { View, StyleSheet, TouchableOpacity } from "react-native";
+import React, { useMemo } from "react";
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  useWindowDimensions,
+} from "react-native";
 import { useRouter } from "expo-router";
 import {
   MText,
@@ -8,25 +13,49 @@ import {
   iconSizes,
   shadows,
   useTheme,
+  BaseIcon,
 } from "@musti/ui-native";
-import { BaseIcon } from "@/components/ui/AppIcon";
+
+type CardItem = {
+  title: string;
+  description: string;
+  icon: string;
+  onPress: () => void;
+};
 
 export default function LauncherScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { width } = useWindowDimensions();
 
-  const handleOpenBudget = () => {
-    router.push("/(tabs)/budget");
-  };
+  // ✅ responsive columns: phone=2, wide=3
+  const columns = width >= 420 ? 3 : 2;
+  const cardBasis = columns === 3 ? "31.5%" : "48%";
 
-  const handleOpenBookshelf = () => {
-    router.push("/(tabs)/bookshelf");
-  };
-
-  // ✅ Planner route (create this tab/stack)
-  const handleOpenPlanner = () => {
-    router.push("/(tabs)/planner");
-  };
+  const items: CardItem[] = useMemo(
+    () => [
+      {
+        title: "Budget",
+        description: "Track income, expenses and run simulations.",
+        icon: "wallet-outline",
+        onPress: () => router.push("/(tabs)/budget"),
+      },
+      {
+        title: "Bookshelf",
+        description: "Read PDFs and follow your daily reading plan.",
+        icon: "book-outline",
+        onPress: () => router.push("/(tabs)/bookshelf"),
+      },
+      {
+        title: "Planner",
+        description:
+          "Plan your week, manage events, and sync with Google Calendar.",
+        icon: "calendar-outline",
+        onPress: () => router.push("/(tabs)/planner"),
+      },
+    ],
+    [router]
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -40,101 +69,47 @@ export default function LauncherScreen() {
       </View>
 
       <View style={styles.grid}>
-        {/* Budget card */}
-        <TouchableOpacity
-          style={[styles.card, { backgroundColor: colors.surface }]}
-          activeOpacity={0.9}
-          onPress={handleOpenBudget}
-        >
-          <View
-            style={[styles.iconWrapper, { backgroundColor: colors.surface }]}
+        {items.map((it) => (
+          <TouchableOpacity
+            key={it.title}
+            activeOpacity={0.9}
+            onPress={it.onPress}
+            style={[
+              styles.card,
+              { backgroundColor: colors.surface, flexBasis: cardBasis },
+            ]}
           >
-            <BaseIcon
-              family="ion"
-              name="wallet-outline"
-              size={iconSizes.xl}
-              color={colors.success}
-            />
-          </View>
+            <View style={styles.iconWrapper}>
+              <BaseIcon
+                family="ion"
+                name={it.icon}
+                size={iconSizes.xl}
+                color={colors.success}
+              />
+            </View>
 
-          <MText
-            variant="heading3"
-            style={[styles.cardTitle, { color: colors.textPrimary }]}
-          >
-            Budget
-          </MText>
-          <MText
-            variant="body"
-            color="textSecondary"
-            style={styles.cardDescription}
-          >
-            Track income, expenses and run simulations.
-          </MText>
-        </TouchableOpacity>
+            <View style={styles.cardContent}>
+              <MText
+                variant="heading3"
+                style={[styles.cardTitle, { color: colors.textPrimary }]}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {it.title}
+              </MText>
 
-        {/* Bookshelf card */}
-        <TouchableOpacity
-          style={[styles.card, { backgroundColor: colors.surface }]}
-          activeOpacity={0.9}
-          onPress={handleOpenBookshelf}
-        >
-          <View
-            style={[styles.iconWrapper, { backgroundColor: colors.surface }]}
-          >
-            <BaseIcon
-              family="ion"
-              name="book-outline"
-              size={iconSizes.xl}
-              color={colors.success}
-            />
-          </View>
-
-          <MText
-            variant="heading3"
-            style={[styles.cardTitle, { color: colors.textPrimary }]}
-          >
-            Bookshelf
-          </MText>
-          <MText
-            variant="body"
-            color="textSecondary"
-            style={styles.cardDescription}
-          >
-            Read PDFs and follow your daily reading plan.
-          </MText>
-        </TouchableOpacity>
-
-        {/* ✅ Planner card */}
-        <TouchableOpacity
-          style={[styles.card, { backgroundColor: colors.surface }]}
-          activeOpacity={0.9}
-          onPress={handleOpenPlanner}
-        >
-          <View
-            style={[styles.iconWrapper, { backgroundColor: colors.surface }]}
-          >
-            <BaseIcon
-              family="ion"
-              name="calendar-outline"
-              size={iconSizes.xl}
-              color={colors.success}
-            />
-          </View>
-
-          <MText
-            variant="heading3"
-            style={[styles.cardTitle, { color: colors.textPrimary }]}
-          >
-            Planner
-          </MText>
-          <MText
-            variant="body"
-            color="textSecondary"
-            style={styles.cardDescription}
-          >
-            Plan your week, manage events, and sync with Google Calendar.
-          </MText>
-        </TouchableOpacity>
+              <MText
+                variant="body"
+                color="textSecondary"
+                style={styles.cardDescription}
+                numberOfLines={3}
+                ellipsizeMode="tail"
+              >
+                {it.description}
+              </MText>
+            </View>
+          </TouchableOpacity>
+        ))}
       </View>
     </View>
   );
@@ -143,49 +118,64 @@ export default function LauncherScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "flex-start",
     paddingTop: spacing["6xl"],
+    paddingHorizontal: spacing.lg,
   },
   header: {
     marginTop: spacing["2xl"],
     marginBottom: spacing["2xl"],
     alignItems: "center",
+    gap: spacing.xs,
   },
-  title: {
-    marginBottom: spacing.xs,
-  },
-  subtitle: {
-    maxWidth: 260,
-  },
+  title: { marginBottom: spacing.xs },
+  subtitle: { maxWidth: 280, textAlign: "center" },
+
   grid: {
     flexDirection: "row",
     flexWrap: "wrap",
+    justifyContent: "space-between",
     gap: spacing.md,
+    width: "100%",
   },
+
   card: {
-    flexBasis: "48%",
+    flexGrow: 0,
+    flexShrink: 0,
+    flexDirection: "row",
+    alignItems: "flex-start",
     padding: spacing.lg,
     borderRadius: radii.xl,
     shadowColor: shadows.card.shadowColor,
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
+    minHeight: 104,
   },
+
+  // ✅ fixed size icon (no flex, no %)
   iconWrapper: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: radii.lg,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: spacing.sm,
+    marginRight: spacing.md,
   },
+
+  // ✅ key fix: minWidth:0 allows text to shrink in row layouts
+  cardContent: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+
   cardTitle: {
-    marginBottom: spacing.xs,
+    marginBottom: 2,
   },
+
   cardDescription: {
     fontSize: 12,
+    lineHeight: 16,
   },
 });

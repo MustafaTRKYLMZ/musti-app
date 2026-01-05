@@ -8,7 +8,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { MText, spacing, radii, useTheme } from "@musti/ui-native";
-import { IconButton, BaseIcon } from "@/components/ui/AppIcon";
+import { IconButton, BaseIcon } from "@musti/ui-native";
 import { iconSizes } from "@musti/ui-native";
 
 type PlanOptionsMenuProps = {

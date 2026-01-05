@@ -1,10 +1,10 @@
-import type { Event, WeekViewConfig } from "../types";
+import type { MEvent, WeekViewConfig } from "../types";
 import { addDays, minutesOfDay, sameDay, startOfWeek, toDate } from "./helpers";
 import { placeOverlaps } from "./overlap";
 
 export type WeekBlock = {
   id: string;
-  event: Event;
+  event: MEvent;
   dayIndex: number; // 0..6
   top: number;
   height: number;
@@ -14,14 +14,14 @@ export type WeekBlock = {
 
 export function layoutWeek(
   date: Date,
-  events: Event[],
+  events: MEvent[],
   config: { weekStartsOn: number },
   week: WeekViewConfig
 ): { weekStart: Date; blocks: WeekBlock[] } {
   const weekStart = startOfWeek(date, config.weekStartsOn);
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
-  const dayBuckets: Event[][] = Array.from({ length: 7 }, () => []);
+  const dayBuckets: MEvent[][] = Array.from({ length: 7 }, () => []);
   for (const e of events) {
     const s = toDate(e.start);
     const dayIndex = days.findIndex((d) => sameDay(d, s));

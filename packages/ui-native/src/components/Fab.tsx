@@ -1,4 +1,3 @@
-// packages/ui/src/components/FAB.tsx
 import React, { ReactNode } from "react";
 import {
   TouchableOpacity,
@@ -7,12 +6,12 @@ import {
   ViewStyle,
   StyleProp,
 } from "react-native";
-import { spacing, radii } from "../theme";
+import { spacing, radii, iconSizes } from "../theme";
 import { useTheme } from "../theme/ThemeContext";
+import { BaseIcon } from "./AppIcon";
 
 interface FABProps {
   onPress?: (e: GestureResponderEvent) => void;
-  icon: ReactNode;
   style?: StyleProp<ViewStyle>;
   placement?: "bottom-right" | "bottom-left";
   offsetBottom?: number;
@@ -22,7 +21,6 @@ interface FABProps {
 
 export const FAB: React.FC<FABProps> = ({
   onPress,
-  icon,
   style,
   placement = "bottom-right",
   offsetBottom = spacing["xl"] * 3,
@@ -50,7 +48,7 @@ export const FAB: React.FC<FABProps> = ({
         style,
       ]}
     >
-      {icon}
+      <BaseIcon name="add" size={iconSizes.xl} color={colors.textInverse} />
     </TouchableOpacity>
   );
 };

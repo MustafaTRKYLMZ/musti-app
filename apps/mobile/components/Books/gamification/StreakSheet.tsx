@@ -4,7 +4,7 @@ import dayjs from "dayjs";
 import { MText, bookshelfTheme, iconSizes } from "@musti/ui-native";
 
 import { CircularProgress } from "@/components/ui/CircularProgress";
-import { IconButton } from "@/components/ui/AppIcon";
+import { IconButton } from "@musti/ui-native";
 
 import { useReadingGamificationStore } from "@/store/bookshelf/readingGamification/useReadingGamificationStore";
 import { useGamificationSettingsStore } from "@/store/bookshelf/readingGamification/useGamificationSettingsStore";

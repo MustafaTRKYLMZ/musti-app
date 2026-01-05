@@ -1,7 +1,7 @@
 import { bookshelfTheme, iconSizes, radii, spacing } from "@musti/ui-native";
 import { router } from "expo-router";
 import { View, StyleSheet } from "react-native";
-import { IconTile } from "../ui/AppIcon";
+import { IconTile } from "@musti/ui-native/src/components/AppIcon";
 import { FC } from "react";
 
 const { colors } = bookshelfTheme;

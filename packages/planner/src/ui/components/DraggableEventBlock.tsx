@@ -7,7 +7,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 
-import type { Event, WeekViewConfig } from "../../types";
+import type { MEvent, WeekViewConfig } from "../../types";
 import { snapMinutes, clamp, withDayAndMinutes } from "../../engine/helpers";
 
 type Props = {
@@ -19,14 +19,14 @@ type Props = {
   left: number;
   width: number;
 
-  event: Event;
+  event: MEvent;
 
   minMinute: number;
   maxMinute: number;
   dayDate: Date;
 
-  onPress?: (e: Event) => void;
-  onChange?: (next: Event) => void;
+  onPress?: (e: MEvent) => void;
+  onChange?: (next: MEvent) => void;
 };
 
 export function DraggableEventBlock(p: Props) {

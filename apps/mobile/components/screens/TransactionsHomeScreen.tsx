@@ -13,7 +13,6 @@ import { CustomAlert } from "@/components/CustomAlert";
 
 import { FAB, MText, colors, spacing, radii } from "@musti/ui-native";
 import { AppScreen } from "@/components/AppScreen";
-import { BaseIcon } from "@/components/ui/AppIcon";
 import { syncTransactions } from "@/services/syncTransactions";
 import { useTransactionsStore } from "@/store/budget/transactions/useTransactionsStore";
 import { useSettingsStore } from "@/store/budget/useSettingsStore";
@@ -285,7 +284,6 @@ export function TransactionsHomeScreen() {
               params: { mode: "create" },
             })
           }
-          icon={<BaseIcon name="add" size={30} color={colors.textInverse} />}
         />
         <SidebarMenu open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         <DeleteTransactionSheet

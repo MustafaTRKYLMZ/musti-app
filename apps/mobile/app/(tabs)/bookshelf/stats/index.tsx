@@ -4,7 +4,7 @@ import dayjs from "dayjs";
 import { useRouter } from "expo-router";
 
 import { AppScreen } from "@/components/AppScreen";
-import { IconButton } from "@/components/ui/AppIcon";
+import { IconButton } from "@musti/ui-native";
 import { spacing, iconSizes, useTheme, MText } from "@musti/ui-native";
 
 import { useReadingStatsStore } from "@/store/bookshelf/useReadingStatsStore";

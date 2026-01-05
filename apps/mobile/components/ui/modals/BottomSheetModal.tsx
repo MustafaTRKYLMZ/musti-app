@@ -15,7 +15,7 @@ import {
   bookshelfTheme,
   useTheme,
 } from "@musti/ui-native";
-import { IconButton } from "@/components/ui/AppIcon";
+import { IconButton } from "@musti/ui-native";
 
 type BottomSheetOwner = "budget" | "bookshelf";
 

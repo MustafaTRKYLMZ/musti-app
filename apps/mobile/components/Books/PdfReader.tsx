@@ -12,7 +12,7 @@ import { captureRef } from "react-native-view-shot";
 import * as FileSystem from "expo-file-system/legacy";
 
 import { spacing, useTheme, iconSizes } from "@musti/ui-native";
-import { IconButton } from "@/components/ui/AppIcon";
+import { IconButton } from "@musti/ui-native";
 
 import { ReaderBadges } from "@/components/ui/pdf/ReaderBadges";
 import { ReaderSettingsPanel } from "@/components/ui/pdf/ReaderSettingsPanel";

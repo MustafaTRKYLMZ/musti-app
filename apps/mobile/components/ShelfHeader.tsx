@@ -1,6 +1,6 @@
 import { bookshelfTheme, MText } from "@musti/ui-native";
 import { View, StyleSheet } from "react-native";
-import { IconButton } from "./ui/AppIcon";
+import { IconButton } from "@musti/ui-native/src/components/AppIcon";
 import { FC } from "react";
 
 const { colors, spacing, radii } = bookshelfTheme;

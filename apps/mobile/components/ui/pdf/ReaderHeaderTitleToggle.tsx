@@ -1,7 +1,7 @@
 import React, { FC } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { MText, spacing, useTheme } from "@musti/ui-native";
-import { BaseIcon } from "@/components/ui/AppIcon";
+import { BaseIcon } from "@musti/ui-native";
 
 type ReaderHeaderTitleToggleProps = {
   title: string;

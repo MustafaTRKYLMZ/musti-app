@@ -19,10 +19,10 @@ import {
   radii,
   FAB,
   shadows,
-  iconSizes,
+  BaseIcon,
+  IconButton,
 } from "@musti/ui-native";
 import { useSimulationStore } from "@/store/budget/simulation/useSimulationStore";
-import { BaseIcon, IconButton } from "@/components/ui/AppIcon";
 
 export function SimulationScreen() {
   const {
@@ -251,9 +251,6 @@ export function SimulationScreen() {
       {/* FAB */}
       <FAB
         onPress={() => setShowAddModal(true)}
-        icon={
-          <BaseIcon name="add" size={iconSizes.xl} color={colors.textInverse} />
-        }
         offsetBottom={spacing["4xl"] * 2}
       />
 

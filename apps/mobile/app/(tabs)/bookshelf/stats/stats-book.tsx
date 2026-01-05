@@ -4,7 +4,6 @@ import dayjs from "dayjs";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { AppScreen } from "@/components/AppScreen";
-import { IconButton, BaseIcon } from "@/components/ui/AppIcon";
 import {
   spacing,
   iconSizes,
@@ -12,6 +11,8 @@ import {
   MText,
   Card,
   radii,
+  BaseIcon,
+  IconButton,
 } from "@musti/ui-native";
 
 import { useReadingStatsStore } from "@/store/bookshelf/useReadingStatsStore";

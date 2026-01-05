@@ -20,5 +20,5 @@ export type MEvent = {
     pxPerMinute: number;   // zoom
   };
   
-  export type CalendarView = "week"; 
+  export type CalendarView = "week"|"month"; 
   

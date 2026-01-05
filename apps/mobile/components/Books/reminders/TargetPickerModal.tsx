@@ -8,7 +8,7 @@ import {
   FlatList,
 } from "react-native";
 import { MText, spacing, radii, useTheme, iconSizes } from "@musti/ui-native";
-import { BaseIcon, IconButton } from "@/components/ui/AppIcon";
+import { BaseIcon, IconButton } from "@musti/ui-native";
 import { useReadingTargetsStore } from "@/store/bookshelf/useReadingTargetsStore";
 
 type TargetRow = {

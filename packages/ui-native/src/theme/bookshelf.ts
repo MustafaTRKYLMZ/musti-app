@@ -31,14 +31,12 @@ const bookshelfColorsBase = {
   primaryDark: "#7F1D1D",
   primaryLight: "#F97373",
 
-  // ✅ zemin – daha koyu, ama hâlâ kullanılabilir
-  background: "#D2B48C",          // tan / warm parchment
+  background: "#D2B48C",         
   backgroundSecondary: "#C4A679",
   backgroundHover: "#D9B891",
 
   backgroundBackdrop: "rgba(22, 12, 6, 0.78)",
 
-  // ✅ kart yüzeyleri
   surface: "#E5C9A8",
   surfaceElevated: "#EAD4B6",
   surfaceStrong: "#D9B891",

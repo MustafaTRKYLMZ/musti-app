@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import { View, StyleSheet, Pressable } from "react-native";
 import { MText, bookshelfTheme, iconSizes } from "@musti/ui-native";
-import { IconButton } from "@/components/ui/AppIcon";
+import { IconButton } from "@musti/ui-native";
 import { useReadingTargetsStore } from "@/store/bookshelf/useReadingTargetsStore";
 
 const { colors, spacing, radii } = bookshelfTheme;

@@ -3,7 +3,7 @@ import { View, TouchableOpacity, StyleSheet } from "react-native";
 import { router } from "expo-router";
 import { useTranslation } from "@musti/core";
 import { MText, colors, spacing, radii } from "@musti/ui-native";
-import { BaseIcon, IconButton } from "./AppIcon";
+import { BaseIcon, IconButton } from "@musti/ui-native/src/components/AppIcon";
 
 interface Props {
   open: boolean;

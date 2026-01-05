@@ -3,7 +3,7 @@ import { View, StyleSheet, useWindowDimensions } from "react-native";
 import { MText, spacing } from "@musti/ui-native";
 import type { LocalPdfFile } from "@/utils/getPdfsDirectory";
 import { BookCard } from "./BookCard";
-import { IconButton } from "../ui/AppIcon";
+import { IconButton } from "@musti/ui-native/src/components/AppIcon";
 import { PdfCoverPrewarmer } from "@/components/ui/pdf/PdfCoverPrewarmer";
 import { ShelfPlank } from "./ShelfPlank";
 

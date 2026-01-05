@@ -2,7 +2,7 @@ import React, { useRef, useState } from "react";
 import { StyleSheet, StyleProp, ViewStyle, View } from "react-native";
 import { spacing, iconSizes, useTheme } from "@musti/ui-native";
 import { AppSwitcherMenu } from "./AppSwitcherMenu";
-import { IconButton } from "./ui/AppIcon";
+import { IconButton } from "@musti/ui-native/src/components/AppIcon";
 
 type Props = { style?: StyleProp<ViewStyle> };
 

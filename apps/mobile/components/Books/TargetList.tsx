@@ -9,7 +9,7 @@ import {
   radii,
   iconSizes,
 } from "@musti/ui-native";
-import { IconButton } from "@/components/ui/AppIcon";
+import { IconButton } from "@musti/ui-native";
 
 import { useReadingTargetsStore } from "@/store/bookshelf/useReadingTargetsStore";
 import { useReadingStatsStore } from "@/store/bookshelf/useReadingStatsStore";

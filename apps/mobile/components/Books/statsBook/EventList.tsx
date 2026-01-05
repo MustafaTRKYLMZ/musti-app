@@ -2,7 +2,7 @@ import React from "react";
 import { View, StyleSheet } from "react-native";
 import dayjs from "dayjs";
 
-import { BaseIcon } from "@/components/ui/AppIcon";
+import { BaseIcon } from "@musti/ui-native";
 import { MText, radii, spacing, useTheme } from "@musti/ui-native";
 
 import type { ReadingEvent, ReadingMode } from "@musti/core";

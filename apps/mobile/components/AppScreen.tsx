@@ -15,11 +15,12 @@ import {
   radii,
   bookshelfTheme,
   budgetTheme,
+  plannerTheme,
 } from "@musti/ui-native";
 import { AppSwitcherButton } from "@/components/AppSwitcherButton";
 import { HeaderMenuButton } from "@/components/ui/HeaderMenuButton";
 
-type AppScreenVariant = "default" | "bookshelf" | "budget";
+type AppScreenVariant = "default" | "bookshelf" | "budget" | "planner";
 
 type AppScreenProps = {
   title?: string;
@@ -45,6 +46,8 @@ function getThemeByVariant(variant: AppScreenVariant) {
       return budgetTheme;
     case "bookshelf":
       return bookshelfTheme;
+    case "planner":
+      return plannerTheme;
     case "default":
     default:
       return bookshelfTheme;

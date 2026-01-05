@@ -19,7 +19,7 @@ import { CreatePlanModal } from "@/components/ui/modals/CreatePlanModal";
 import { AppScreen } from "@/components/AppScreen";
 import { BookshelfHeader } from "@/components/Books/BookshelfHeader";
 import { bookshelfTheme, iconSizes } from "@musti/ui-native";
-import { IconButton } from "@/components/ui/AppIcon";
+import { IconButton } from "@musti/ui-native";
 import { AppSwitcherButton } from "@/components/AppSwitcherButton";
 import { LastReadBook } from "@/components/Books/LastReadBook";
 import { PlanList } from "@/components/Books/PlanList";

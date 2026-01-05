@@ -8,7 +8,7 @@ import {
   Pressable,
 } from "react-native";
 
-import type { Event, CalendarConfig, WeekViewConfig } from "../types";
+import type { MEvent, CalendarConfig, WeekViewConfig } from "../types";
 import { layoutWeek } from "../engine/weekLayout";
 import {
   addDays,
@@ -17,38 +17,36 @@ import {
   clamp,
 } from "../engine/helpers";
 import { DaysHeader } from "./components/DaysHeader";
-import { DraggableEventBlock } from "./components/ DraggableEventBlock";
+import { DraggableEventBlock } from "./components/DraggableEventBlock";
+import { plannerTheme, spacing, typography } from "@musti/ui-native";
 
-const TIME_COL_WIDTH = 56;
+const TIME_COL_WIDTH = 24;
 const BOTTOM_PADDING_MINUTES = 60;
-
+const { colors } = plannerTheme;
 type Density = "compact" | "expanded";
 
 export function WeekView(props: {
   date: Date;
-  events: Event[];
+  events: MEvent[];
   config: CalendarConfig;
   weekView: WeekViewConfig;
   locale?: string;
-
-  onPressEvent?: (e: Event) => void;
-
-  // Samsung flow:
+  onPressEvent?: (e: MEvent) => void;
   onPressDay?: (day: Date) => void; // open bottom sheet
   onCreate?: (day: Date, startMinute?: number) => void;
+  onEventChange?: (next: MEvent) => void;
 
-  // commit on release:
-  onEventChange?: (next: Event) => void;
+  onChangeDate?: (nextDate: Date) => void;
 }) {
   const { width: SCREEN_WIDTH } = useWindowDimensions();
   const weekStartsOn = props.config.weekStartsOn ?? 1;
 
   const [density, setDensity] = useState<Density>("compact");
 
-  const daysWidth = SCREEN_WIDTH - TIME_COL_WIDTH;
-  const columnWidth = daysWidth / 7;
+  const daysWidth = Math.max(0, SCREEN_WIDTH - TIME_COL_WIDTH);
 
-  const weekNumber = getISOWeekNumber(props.date);
+  const columnWidth = Math.floor(daysWidth / 7);
+  const gridWidth = columnWidth * 7;
 
   const { weekStart, blocks } = useMemo(() => {
     return layoutWeek(
@@ -84,62 +82,49 @@ export function WeekView(props: {
       );
       props.onCreate?.(dayDate, clampedMin);
     },
-    [weekStart, props.weekView, startMinVis, endMinVis]
+    [weekStart, props.weekView, startMinVis, endMinVis, props.onCreate]
   );
 
   return (
-    <View style={{ flex: 1 }}>
-      <Text style={styles.weekNumber}>Week {weekNumber}</Text>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       <DaysHeader
         date={props.date}
         weekStartsOn={weekStartsOn}
         locale={props.locale}
+        onChangeDate={(d) => props.onChangeDate?.(d)}
       />
 
-      <ScrollView horizontal>
-        <View style={{ flexDirection: "row" }}>
-          {/* Time labels */}
-          <View style={[styles.timeColumn, { width: TIME_COL_WIDTH }]}>
-            {Array.from({
-              length: props.weekView.endHour - props.weekView.startHour + 1,
-            }).map((_, i) => {
-              const h = props.weekView.startHour + i;
+      <View style={{ flexDirection: "row" }}>
+        {/* Time labels */}
+        <View style={[styles.timeColumn, { width: TIME_COL_WIDTH }]}>
+          {Array.from({
+            length: props.weekView.endHour - props.weekView.startHour + 1,
+          }).map((_, i) => {
+            const h = props.weekView.startHour + i;
+            return (
+              <Text key={h} style={[styles.timeLabel, { height: 60 }]}>
+                {String(h).padStart(2, "0")}
+              </Text>
+            );
+          })}
+        </View>
+
+        {/* Vertical scroll grid */}
+        <ScrollView onScroll={onVerticalScroll} scrollEventThrottle={16}>
+          <View style={{ width: gridWidth, height: totalHeight }}>
+            {/* One overlay per day column: 
+                - short press: open day
+                - long press / press position: create at snapped time */}
+            {Array.from({ length: 7 }).map((_, dayIndex) => {
+              const dayDate = addDays(weekStart, dayIndex);
               return (
-                <Text key={h} style={[styles.timeLabel, { height: 60 }]}>
-                  {String(h).padStart(2, "0")}:00
-                </Text>
-              );
-            })}
-          </View>
-
-          {/* Vertical scroll grid */}
-          <ScrollView onScroll={onVerticalScroll} scrollEventThrottle={16}>
-            <View style={{ width: daysWidth, height: totalHeight }}>
-              {/* Tap a day column -> open bottom sheet */}
-              {Array.from({ length: 7 }).map((_, dayIndex) => {
-                const dayDate = addDays(weekStart, dayIndex);
-                return (
-                  <Pressable
-                    key={`day-press-${dayIndex}`}
-                    onPress={() => props.onPressDay?.(dayDate)}
-                    style={{
-                      position: "absolute",
-                      left: dayIndex * columnWidth,
-                      top: 0,
-                      width: columnWidth,
-                      height: totalHeight,
-                    }}
-                  />
-                );
-              })}
-
-              {/* Tap position -> create */}
-              {Array.from({ length: 7 }).map((_, dayIndex) => (
                 <Pressable
-                  key={`slot-press-${dayIndex}`}
-                  onPress={(evt) =>
+                  key={`day-col-${dayIndex}`}
+                  onPress={() => props.onPressDay?.(dayDate)}
+                  onLongPress={(evt) =>
                     handleTapGrid(dayIndex, evt.nativeEvent.locationY)
                   }
+                  delayLongPress={180}
                   style={{
                     position: "absolute",
                     left: dayIndex * columnWidth,
@@ -148,39 +133,39 @@ export function WeekView(props: {
                     height: totalHeight,
                   }}
                 />
-              ))}
+              );
+            })}
 
-              {/* Grid lines */}
-              {renderGridLines(props.weekView, daysWidth)}
+            {/* Grid lines */}
+            {renderGridLines(props.weekView, gridWidth)}
 
-              {/* Events */}
-              {blocks.map((b) => {
-                const left =
-                  b.dayIndex * columnWidth + (b.col * columnWidth) / b.colCount;
-                const w = columnWidth / b.colCount;
+            {/* Events */}
+            {blocks.map((b) => {
+              const left =
+                b.dayIndex * columnWidth + (b.col * columnWidth) / b.colCount;
+              const w = columnWidth / b.colCount;
 
-                return (
-                  <DraggableEventBlock
-                    key={b.id}
-                    density={density}
-                    weekView={props.weekView}
-                    top={b.top}
-                    height={b.height}
-                    left={left}
-                    width={w}
-                    event={b.event}
-                    dayDate={addDays(weekStart, b.dayIndex)}
-                    minMinute={startMinVis}
-                    maxMinute={endMinVis}
-                    onPress={props.onPressEvent}
-                    onChange={props.onEventChange}
-                  />
-                );
-              })}
-            </View>
-          </ScrollView>
-        </View>
-      </ScrollView>
+              return (
+                <DraggableEventBlock
+                  key={b.id}
+                  density={density}
+                  weekView={props.weekView}
+                  top={b.top}
+                  height={b.height}
+                  left={left}
+                  width={w}
+                  event={b.event}
+                  dayDate={addDays(weekStart, b.dayIndex)}
+                  minMinute={startMinVis}
+                  maxMinute={endMinVis}
+                  onPress={props.onPressEvent}
+                  onChange={props.onEventChange}
+                />
+              );
+            })}
+          </View>
+        </ScrollView>
+      </View>
     </View>
   );
 }
@@ -202,19 +187,19 @@ function renderGridLines(week: WeekViewConfig, width: number) {
 
 const styles = StyleSheet.create({
   weekNumber: {
-    paddingLeft: 12,
-    paddingVertical: 6,
+    paddingLeft: spacing.md,
+    paddingVertical: spacing.sm,
     fontSize: 12,
-    fontWeight: "800",
-    color: "#444",
-    backgroundColor: "#fff",
+    fontWeight: typography.bodyStrong.fontWeight,
+    color: colors.textPrimary,
+    backgroundColor: colors.background,
   },
-  timeColumn: { backgroundColor: "#fff" },
-  timeLabel: { fontSize: 12, color: "#666", paddingTop: 2 },
+  timeColumn: { backgroundColor: colors.background },
+  timeLabel: { fontSize: 12, color: colors.textPrimary, paddingTop: 2 },
   gridLine: {
     position: "absolute",
-    left: 0,
+    left: spacing.md,
     height: 1,
-    backgroundColor: "#eee",
+    backgroundColor: colors.borderSubtle,
   },
 });

@@ -19,6 +19,19 @@ export const iconSizes = {
     "5xl": 64,
     "6xl": 80,
   } as const;
+  export const sizes = {
+    xs: 8,
+    sm: 12,
+    md: 14,
+    lg: 16,
+    xl: 18,
+    "2xl": 20,
+    "3xl": 24,
+    "4xl": 28,
+    "5xl": 32,
+    "6xl": 36,
+
+  } as const;
   
   export const radii = {
     sm: 8,

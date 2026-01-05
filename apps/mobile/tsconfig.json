@@ -13,5 +13,5 @@
     "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
-, "../../packages/core/src/i18n/components/LocalizedDateText.tsx", "../../packages/forms/src/utils/mergeDateWithTimeOfDay.ts", "../../packages/forms/src/utils/normalizeTimeOfDay.ts"  ]
+, "../../packages/core/src/i18n/components/LocalizedDateText.tsx", "../../packages/forms/src/utils/mergeDateWithTimeOfDay.ts", "../../packages/forms/src/utils/normalizeTimeOfDay.ts", "../../packages/ui-native/src/components/AppIcon.tsx"  ]
 }

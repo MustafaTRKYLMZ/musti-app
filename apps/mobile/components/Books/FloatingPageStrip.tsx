@@ -6,7 +6,7 @@ import {
   PanResponder,
   Dimensions,
 } from "react-native";
-import { IconButton } from "@/components/ui/AppIcon";
+import { IconButton } from "@musti/ui-native";
 import { spacing, useTheme, radii, iconSizes } from "@musti/ui-native";
 
 export type StripMode = "vertical" | "horizontal";

@@ -1,7 +1,7 @@
 import { MText, radii, shadows, spacing, useTheme } from "@musti/ui-native";
 import React, { FC, useMemo, useState } from "react";
 import { View, StyleSheet, TextInput, TouchableOpacity } from "react-native";
-import { IconButton } from "../ui/AppIcon";
+import { IconButton } from "@musti/ui-native/src/components/AppIcon";
 
 type SectionProps = {
   id: string;

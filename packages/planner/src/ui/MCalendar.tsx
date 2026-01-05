@@ -1,7 +1,7 @@
 import React from "react";
 import type {
   CalendarConfig,
-  Event,
+  MEvent,
   WeekViewConfig,
   CalendarView,
 } from "../types";
@@ -10,20 +10,21 @@ import { WeekView } from "./WeekView";
 export function MCalendar(props: {
   view: CalendarView; // "week"
   date: Date;
-  events: Event[];
+  events: MEvent[];
   config?: CalendarConfig;
   locale?: string;
 
   weekView?: Partial<WeekViewConfig>;
 
-  onPressEvent?: (e: Event) => void;
+  onPressEvent?: (e: MEvent) => void;
   onPressDay?: (d: Date) => void;
 
   onCreate?: (day: Date, startMinute?: number) => void;
-  onEventChange?: (next: Event) => void;
+  onEventChange?: (next: MEvent) => void;
+  setDate: (nextDate: Date) => void;
 }) {
   const config: CalendarConfig = {
-    locale: "tr",
+    locale: "en",
     weekStartsOn: 1,
     ...props.config,
   };
@@ -43,6 +44,7 @@ export function MCalendar(props: {
           ...props.weekView,
         } as WeekViewConfig
       }
+      onChangeDate={props.setDate}
       onPressEvent={props.onPressEvent}
       onPressDay={props.onPressDay}
       onCreate={props.onCreate}

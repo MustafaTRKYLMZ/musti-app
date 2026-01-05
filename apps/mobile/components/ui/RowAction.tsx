@@ -1,4 +1,4 @@
-import { BaseIcon } from "@/components/ui/AppIcon";
+import { BaseIcon } from "@musti/ui-native";
 import {
   bookshelfTheme,
   iconSizes,

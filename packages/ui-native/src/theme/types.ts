@@ -52,6 +52,7 @@ export type ThemeColors = {
     radii: typeof import("./tokens").radii;
     typography: Typography;
     shadows: typeof import("./tokens").shadows;
+    sizes: typeof import("./tokens").sizes;
   };
   
   export type Theme = ThemeTokens & {

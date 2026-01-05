@@ -2,7 +2,7 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { colors } from "@musti/ui-native";
-import { BaseIcon } from "./AppIcon";
+import { BaseIcon } from "@musti/ui-native/src/components/AppIcon";
 
 export function ComingSoon() {
   return (

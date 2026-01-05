@@ -3,7 +3,7 @@ import { View, StyleSheet, Pressable } from "react-native";
 import dayjs from "dayjs";
 
 import { Card, MText, radii, spacing, useTheme } from "@musti/ui-native";
-import { BaseIcon } from "@/components/ui/AppIcon";
+import { BaseIcon } from "@musti/ui-native";
 
 import { DayRow, ReadingEvent } from "@musti/core";
 import { toNonNegativeInt } from "@/utils/toNonNegativeInt";
