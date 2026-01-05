@@ -1,21 +1,13 @@
 import React, { FC, JSX, useMemo } from "react";
-import { View, Pressable, Text, StyleSheet } from "react-native";
+import { View, Pressable, StyleSheet } from "react-native";
 import { addDays } from "../../engine/helpers";
 import { DraggableEventBlock } from "./DraggableEventBlock";
-import { WeekViewConfig } from "../../types";
+import { BlockedTime, WeekViewConfig } from "../../types";
 import { sizes, plannerTheme } from "@musti/ui-native";
 
 type GridEventsProps = {
   weekStart: Date;
-  blocks: {
-    id: string;
-    dayIndex: number;
-    col: number;
-    colCount: number;
-    top: number;
-    height: number;
-    event: any;
-  }[];
+  blocks: BlockedTime[];
   weekView: WeekViewConfig;
 
   gridWidth: number;

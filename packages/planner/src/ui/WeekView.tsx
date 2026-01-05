@@ -21,6 +21,7 @@ import { DaysHeader } from "./components/DaysHeader";
 import { plannerTheme } from "@musti/ui-native";
 import { TimeColumn } from "./components/TimeColumn";
 import { GridEvents } from "./components/GridEvents";
+import { DayNumbersRow } from "./components/DayNumbersRow";
 
 const TIME_COL_WIDTH = 48;
 const BOTTOM_PADDING_MINUTES = 60;
@@ -152,6 +153,7 @@ export function WeekView(props: {
         weekStartsOn={weekStartsOn}
         locale={props.locale}
         onChangeDate={(d) => props.onChangeDate?.(d)}
+        timeColWidth={TIME_COL_WIDTH}
       />
 
       <ScrollView

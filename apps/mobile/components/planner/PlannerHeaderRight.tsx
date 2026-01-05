@@ -18,10 +18,9 @@ export const PlannerHeaderRight = ({
         style={[styles.pill, { borderColor: colors.borderSubtle }]}
       >
         <MText variant="caption" style={{ color: colors.textPrimary }}>
-          {view === "week" ? "Month" : "Week"}
+          {view === "week" ? "Week" : "Month"}
         </MText>
       </TouchableOpacity>
-
       <View style={styles.switcher}>
         <AppSwitcherButton />
       </View>

@@ -6,7 +6,16 @@ export type MEvent = {
     color?: string;
     meta?: Record<string, any>;
   };
-  
+  export type BlockedTime = 
+    {
+      id: string;
+      dayIndex: number;
+      col: number;
+      colCount: number;
+      top: number;
+      height: number;
+      event: any;
+    }
   export type CalendarConfig = {
     locale?: string;
     weekStartsOn?: 0 | 1 | 2 | 3 | 4 | 5 | 6; 

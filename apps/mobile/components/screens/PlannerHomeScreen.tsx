@@ -37,8 +37,6 @@ const clampDay = (d: Date) =>
 const makeEventId = () => String(Date.now() + Math.floor(Math.random() * 999));
 
 export const PlannerHomeScreen = () => {
-  const { colors } = useTheme();
-
   const [view, setView] = useState<CalendarView>("week");
   const [date, setDate] = useState(new Date());
 
