@@ -11,10 +11,9 @@ import {
 import type { CalendarConfig, MEvent } from "../types";
 import { addDays, startOfWeek, sameDay } from "../engine/helpers";
 import { plannerTheme, spacing } from "@musti/ui-native";
-import { Day } from "./components/Day";
+import { DayCard, DayInlineItem } from "./components/DayCard";
 import { eventToStartDate } from "../engine/eventToStartDate";
 import { eventToTitle } from "../engine";
-import { eventToTimeLabel } from "../engine/eventToTimeLabel";
 
 const { colors } = plannerTheme;
 
@@ -39,17 +38,20 @@ const addMonths = (d: Date, delta: number) => {
   return base;
 };
 
+const stripLeadingTime = (s: string) =>
+  s.replace(/^\s*\d{1,2}:\d{2}\s+/, "").trim();
+
 export function MonthView(props: {
   date: Date;
   config: CalendarConfig;
   colWidth: number;
   events: MEvent[];
-  collapsed: boolean;
+  expanded: boolean;
+  gridHeightAnim?: Animated.Value;
   onChangeDate: (nextDate: Date) => void;
   onPressDay?: (d: Date) => void;
   maxMarkers?: number;
   maxInlineItems?: number;
-  gridHeightAnim?: Animated.Value;
 }) {
   const scrollRef = useRef<ScrollView | null>(null);
 
@@ -115,16 +117,16 @@ export function MonthView(props: {
 
       (markers[k] ||= []).push(c);
 
-      const tt = eventToTimeLabel(ev as any);
-      const title = eventToTitle(ev as any);
-      const label = tt ? `${tt} ${title}` : title;
+      const rawTitle =
+        (ev as any)?.title ?? (ev as any)?.name ?? eventToTitle(ev as any);
+      const label = stripLeadingTime(String(rawTitle ?? ""));
 
       (inline[k] ||= []).push({ color: c, title: label, t: sd.getTime() });
     }
 
     for (const k of Object.keys(inline)) inline[k].sort((a, b) => a.t - b.t);
 
-    const inlineFlat: Record<string, { color: string; title: string }[]> = {};
+    const inlineFlat: Record<string, DayInlineItem[]> = {};
     for (const k of Object.keys(inline)) {
       inlineFlat[k] = inline[k].map(({ color, title }) => ({ color, title }));
     }
@@ -197,7 +199,7 @@ export function MonthView(props: {
                   const k = dayKey(d);
 
                   return (
-                    <Day
+                    <DayCard
                       key={`${d.toISOString()}-${pi}-${wi}-${di}`}
                       date={d}
                       width={props.colWidth}
@@ -209,11 +211,11 @@ export function MonthView(props: {
                         props.onChangeDate(dd);
                         props.onPressDay?.(dd);
                       }}
-                      markers={props.collapsed ? undefined : markersByDayKey[k]}
+                      markers={props.expanded ? undefined : markersByDayKey[k]}
                       maxMarkers={props.maxMarkers ?? 4}
                       markerMode="stack"
                       inlineItems={
-                        props.collapsed ? inlineByDayKey[k] : undefined
+                        props.expanded ? inlineByDayKey[k] : undefined
                       }
                       maxInlineItems={props.maxInlineItems ?? 2}
                     />

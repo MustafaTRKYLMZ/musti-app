@@ -43,7 +43,6 @@ export const MonthDayEventsList: FC<MonthDayEventsListProps> = ({
   }, [events, date]);
 
   const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    console.log("scroll");
     if (!onTop) return;
     const y = e.nativeEvent.contentOffset.y;
     if (y <= 0) onTop();

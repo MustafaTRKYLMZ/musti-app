@@ -1,4 +1,4 @@
-// Day.tsx
+// components/DayCard.tsx
 import React, { FC } from "react";
 import {
   Pressable,
@@ -9,13 +9,13 @@ import {
   ViewStyle,
   TextStyle,
 } from "react-native";
-import { plannerTheme, radii, typography } from "@musti/ui-native";
+import { MText, plannerTheme, radii, typography } from "@musti/ui-native";
 
 const { colors } = plannerTheme;
 
 export type DayInlineItem = { color: string; title: string };
 
-export type DayProps = {
+export type DayCardProps = {
   date: Date;
   width: number;
   height?: number;
@@ -49,7 +49,7 @@ export type DayProps = {
   cellBg?: string;
 };
 
-export const Day: FC<DayProps> = ({
+export const DayCard: FC<DayCardProps> = ({
   date,
   width,
   height,
@@ -90,7 +90,6 @@ export const Day: FC<DayProps> = ({
 
   return (
     <Pressable
-      // delayPressIn is not a valid prop for Pressable, so it has been removed
       pressRetentionOffset={{ top: 12, left: 12, bottom: 12, right: 12 }}
       onPress={onPress ? () => onPress(date) : undefined}
       style={[
@@ -100,12 +99,7 @@ export const Day: FC<DayProps> = ({
         containerStyle,
       ]}
     >
-      {isSelected && (
-        <View
-          //   pointerEvents="none"
-          style={[styles.selectedOverlay, selectedStyle]}
-        />
-      )}
+      {isSelected && <View style={[styles.selectedOverlay, selectedStyle]} />}
 
       <View
         style={[
@@ -165,7 +159,7 @@ export const Day: FC<DayProps> = ({
             />
           ))}
           {overflow > 0 && (
-            <Text style={styles.overflowText}>{`+${overflow}`}</Text>
+            <MText style={styles.overflowText}>{`+${overflow}`}</MText>
           )}
         </View>
       )}
@@ -175,7 +169,7 @@ export const Day: FC<DayProps> = ({
 
 const styles = StyleSheet.create({
   cell: {
-    alignItems: "center",
+    alignItems: "stretch",
     justifyContent: "flex-start",
     paddingVertical: 2,
     paddingHorizontal: 2,
@@ -190,6 +184,7 @@ const styles = StyleSheet.create({
   },
 
   pill: {
+    alignSelf: "center",
     minWidth: 16,
     minHeight: 16,
     borderRadius: radii.md,

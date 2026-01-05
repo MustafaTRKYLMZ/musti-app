@@ -3,7 +3,7 @@ import React, { FC } from "react";
 import { View, StyleSheet, StyleProp, ViewStyle } from "react-native";
 import { sameDay } from "../../engine/helpers";
 import { spacing } from "@musti/ui-native";
-import { Day } from "./Day";
+import { DayCard } from "./DayCard";
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 const dayKey = (d: Date) =>
@@ -32,7 +32,6 @@ export const DayNumbersRow: FC<DayNumbersRowProps> = ({
   onPressDay,
   selectedDate,
   markersByDayKey,
-  maxMarkers = 4,
   containerStyle,
 }) => {
   return (
@@ -50,7 +49,7 @@ export const DayNumbersRow: FC<DayNumbersRowProps> = ({
               { width: colWidth, marginRight: isLastInWeek ? 0 : gap },
             ]}
           >
-            <Day
+            <DayCard
               date={d}
               width={colWidth}
               isToday={sameDay(d, today)}

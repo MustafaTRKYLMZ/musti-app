@@ -1,5 +1,5 @@
 // MonthContainer.tsx
-import React, { FC, useMemo, useRef } from "react";
+import React, { FC, useMemo, useRef, useState } from "react";
 import {
   View,
   StyleSheet,
@@ -47,6 +47,13 @@ export const MonthContainer: FC<MonthContainerProps> = ({
   const monthAreaH = useRef(0);
   const gridH = useRef(new Animated.Value(0)).current;
 
+  const [expanded, setExpanded] = useState(false);
+
+  const setExpandedFromAgenda = (agendaValue: number) => {
+    const next = agendaValue <= 1;
+    setExpanded((prev) => (prev === next ? prev : next));
+  };
+
   const monthLabel = useMemo(() => {
     const d = date;
     const day = d.getDate();
@@ -67,6 +74,8 @@ export const MonthContainer: FC<MonthContainerProps> = ({
 
     const monthGridExpanded = Math.max(0, containerH - maxAgenda - 1);
     gridH.setValue(monthGridExpanded);
+
+    setExpandedFromAgenda(maxAgenda);
   };
 
   const onMonthLayout = (e: LayoutChangeEvent) => {
@@ -75,8 +84,7 @@ export const MonthContainer: FC<MonthContainerProps> = ({
 
   const panStartAgenda = useRef(0);
 
-  const closeAgenda = () => {
-    const targetAgenda = 0;
+  const animateTo = (targetAgenda: number) => {
     const targetGrid = Math.max(0, monthAreaH.current - targetAgenda - 1);
 
     Animated.spring(agendaH, {
@@ -94,7 +102,10 @@ export const MonthContainer: FC<MonthContainerProps> = ({
     }).start();
 
     agendaValueRef.current = targetAgenda;
+    setExpandedFromAgenda(targetAgenda);
   };
+
+  const closeAgenda = () => animateTo(0);
 
   const panResponder = useMemo(
     () =>
@@ -118,34 +129,19 @@ export const MonthContainer: FC<MonthContainerProps> = ({
 
           const nextGrid = Math.max(0, monthAreaH.current - nextAgenda - 1);
           gridH.setValue(nextGrid);
+
+          setExpandedFromAgenda(nextAgenda);
         },
         onPanResponderRelease: (_, g) => {
           const threshold = expandedAgendaH.current * 0.5;
           const shouldOpen = agendaValueRef.current > threshold || g.vy < -0.3;
+
           const targetAgenda = shouldOpen ? expandedAgendaH.current : 0;
-          const targetGrid = Math.max(0, monthAreaH.current - targetAgenda - 1);
-
-          Animated.spring(agendaH, {
-            toValue: targetAgenda,
-            useNativeDriver: false,
-            bounciness: 0,
-            speed: 18,
-          }).start();
-
-          Animated.spring(gridH, {
-            toValue: targetGrid,
-            useNativeDriver: false,
-            bounciness: 0,
-            speed: 18,
-          }).start();
-
-          agendaValueRef.current = targetAgenda;
+          animateTo(targetAgenda);
         },
       }),
     [agendaH, gridH]
   );
-
-  const isCollapsed = agendaValueRef.current <= 1;
 
   return (
     <View style={styles.wrap} onLayout={onMonthLayout}>
@@ -158,12 +154,12 @@ export const MonthContainer: FC<MonthContainerProps> = ({
           config={config}
           colWidth={colWidth}
           events={events}
-          collapsed={isCollapsed}
+          expanded={expanded}
+          gridHeightAnim={gridH}
           onChangeDate={onChangeDate}
           onPressDay={onPressDay}
           maxMarkers={2}
           maxInlineItems={2}
-          gridHeightAnim={gridH}
         />
       </Animated.View>
 
@@ -172,17 +168,14 @@ export const MonthContainer: FC<MonthContainerProps> = ({
       <Animated.View style={[styles.agenda, { height: agendaH }]}>
         <View
           style={styles.agendaInner}
-          pointerEvents={isCollapsed ? "none" : "auto"}
+          pointerEvents={expanded ? "none" : "auto"}
         >
           <MText style={styles.agendaTitle}>{monthLabel}</MText>
-
           <MonthDayEventsList
             date={date}
             events={events}
             onPressEvent={onPressEvent}
-            onTop={() => {
-              closeAgenda();
-            }}
+            onTop={() => closeAgenda()}
           />
         </View>
       </Animated.View>
@@ -194,7 +187,6 @@ const styles = StyleSheet.create({
   wrap: {
     flex: 1,
     backgroundColor: colors.background,
-    paddingBottom: spacing.md,
   },
   gridWrap: {
     overflow: "hidden",
