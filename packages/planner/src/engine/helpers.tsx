@@ -90,3 +90,8 @@ export const renderGridLines = (
   }
   return lines;
 };
+
+export const eventToTitle = (e: any): string => {
+  return e?.title ?? e?.name ?? e?.summary ?? e?.text ?? e?.label ?? "Event";
+};
+export const pad2 = (n: number) => String(n).padStart(2, "0");

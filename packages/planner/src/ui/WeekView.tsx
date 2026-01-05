@@ -16,20 +16,17 @@ import {
 
 import type { MEvent, CalendarConfig, WeekViewConfig } from "../types";
 import { layoutWeek } from "../engine/weekLayout";
-import { addDays, snapMinutes, clamp, sameDay } from "../engine/helpers";
+import { addDays, snapMinutes, clamp, sameDay, pad2 } from "../engine/helpers";
 import { DaysHeader } from "./components/DaysHeader";
 import { plannerTheme } from "@musti/ui-native";
 import { TimeColumn } from "./components/TimeColumn";
 import { GridEvents } from "./components/GridEvents";
-import { DayNumbersRow } from "./components/DayNumbersRow";
+import { TIME_COL_WIDTH, BOTTOM_PADDING_MINUTES } from "../config/timeConfigs";
 
-const TIME_COL_WIDTH = 48;
-const BOTTOM_PADDING_MINUTES = 60;
 const { colors } = plannerTheme;
 
 type Density = "compact" | "expanded";
 
-const pad2 = (n: number) => String(n).padStart(2, "0");
 const clampNum = (v: number, a: number, b: number) =>
   Math.max(a, Math.min(b, v));
 

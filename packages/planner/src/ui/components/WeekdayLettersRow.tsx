@@ -6,7 +6,7 @@ import { plannerTheme, sizes, spacing } from "@musti/ui-native";
 const { colors } = plannerTheme;
 
 export type WeekdayLettersRowProps = {
-  days: Date[]; // genelde 7 gün
+  days: Date[];
   locale?: string;
   colWidth: number;
   gap: number;

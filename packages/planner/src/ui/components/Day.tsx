@@ -1,4 +1,3 @@
-// components/Day.tsx
 import React, { FC } from "react";
 import {
   Pressable,
@@ -24,6 +23,11 @@ export type DayProps = {
 
   onPress?: (d: Date) => void;
 
+  markers?: string[];
+  maxMarkers?: number;
+
+  markerMode?: "stack" | "row";
+
   containerStyle?: StyleProp<ViewStyle>;
   pillStyle?: StyleProp<ViewStyle>;
   textStyle?: StyleProp<TextStyle>;
@@ -35,6 +39,8 @@ export type DayProps = {
   outsideTextStyle?: StyleProp<TextStyle>;
 
   selectedStyle?: StyleProp<ViewStyle>;
+
+  cellBg?: string;
 };
 
 export const Day: FC<DayProps> = ({
@@ -45,7 +51,9 @@ export const Day: FC<DayProps> = ({
   isSelected = false,
   isOutside = false,
   onPress,
-
+  markers,
+  maxMarkers = 4,
+  markerMode = "stack",
   containerStyle,
   pillStyle,
   textStyle,
@@ -54,18 +62,32 @@ export const Day: FC<DayProps> = ({
   outsidePillStyle,
   outsideTextStyle,
   selectedStyle,
+  cellBg,
 }) => {
+  const count = markers?.length ?? 0;
+  const shown = count ? markers!.slice(0, maxMarkers) : [];
+  const overflow = count > maxMarkers ? count - maxMarkers : 0;
+
+  const markerW =
+    markerMode === "stack" ? Math.max(10, Math.floor(width * 0.55)) : 10;
+
   return (
     <Pressable
       onPress={onPress ? () => onPress(date) : undefined}
       style={[
         styles.cell,
         { width, height: height ?? undefined },
+        cellBg ? { backgroundColor: cellBg } : null,
         containerStyle,
-        isSelected && styles.selected,
-        isSelected && selectedStyle,
       ]}
     >
+      {isSelected && (
+        <View
+          pointerEvents="none"
+          style={[styles.selectedOverlay, selectedStyle]}
+        />
+      )}
+
       <View
         style={[
           styles.pill,
@@ -89,6 +111,29 @@ export const Day: FC<DayProps> = ({
           {date.getDate()}
         </Text>
       </View>
+
+      {!!shown.length && (
+        <View
+          style={[
+            styles.markersWrap,
+            markerMode === "row" ? styles.markersRow : styles.markersStack,
+          ]}
+        >
+          {shown.map((c, i) => (
+            <View
+              key={`${c}-${i}`}
+              style={[
+                styles.marker,
+                { backgroundColor: c, width: markerW },
+                markerMode === "row" ? styles.markerRow : styles.markerStack,
+              ]}
+            />
+          ))}
+          {overflow > 0 && (
+            <Text style={styles.overflowText}>{`+${overflow}`}</Text>
+          )}
+        </View>
+      )}
     </Pressable>
   );
 };
@@ -96,36 +141,85 @@ export const Day: FC<DayProps> = ({
 const styles = StyleSheet.create({
   cell: {
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "flex-start",
+    paddingVertical: 2,
+    paddingHorizontal: 2,
+    borderRadius: radii.sm,
   },
-  selected: {
-    borderWidth: 1,
-    borderColor: colors.textPrimary,
-    borderRadius: radii.lg,
+
+  selectedOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    borderRadius: radii.sm,
   },
+
   pill: {
-    minWidth: 34,
-    minHeight: 34,
+    minWidth: 16,
+    minHeight: 16,
     borderRadius: radii.md,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 6,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
   },
+
   pillToday: {
     backgroundColor: colors.backgroundSecondary,
   },
+
   pillOutside: {
     opacity: 0.5,
   },
+
   text: {
     fontSize: typography.heading4.fontSize,
     fontWeight: typography.heading4.fontWeight,
     color: colors.textPrimary,
+    lineHeight: typography.heading4.fontSize,
   },
+
   todayText: {
     color: colors.primary,
   },
+
   outsideText: {
     color: colors.textSecondary ?? colors.textPrimary,
+  },
+
+  markersWrap: {
+    marginTop: 2,
+    alignItems: "center",
+    justifyContent: "flex-start",
+    minHeight: 8,
+  },
+
+  markersStack: {
+    flexDirection: "column",
+  },
+
+  markersRow: {
+    flexDirection: "row",
+  },
+
+  marker: {
+    height: 3,
+    borderRadius: 2,
+  },
+
+  markerStack: {
+    marginBottom: 2,
+  },
+
+  markerRow: {
+    marginRight: 3,
+  },
+
+  overflowText: {
+    fontSize: 9,
+    fontWeight: "600",
+    color: colors.textSecondary ?? colors.textPrimary,
+    opacity: 0.9,
+    marginTop: 0,
   },
 });
