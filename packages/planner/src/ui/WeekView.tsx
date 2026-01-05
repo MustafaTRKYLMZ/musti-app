@@ -1,18 +1,15 @@
-import React, { useMemo, useState, useCallback, JSX } from "react";
+import React, { useMemo, useState, useCallback, useEffect } from "react";
 import {
   View,
-  Text,
   ScrollView,
   StyleSheet,
   useWindowDimensions,
-  Pressable,
 } from "react-native";
 
 import type { MEvent, CalendarConfig, WeekViewConfig } from "../types";
 import { layoutWeek } from "../engine/weekLayout";
-import { addDays, snapMinutes, clamp } from "../engine/helpers";
+import { addDays, snapMinutes, clamp, sameDay } from "../engine/helpers";
 import { DaysHeader } from "./components/DaysHeader";
-import { DraggableEventBlock } from "./components/DraggableEventBlock";
 import { plannerTheme } from "@musti/ui-native";
 import { TimeColumn } from "./components/TimeColumn";
 import { GridEvents } from "./components/GridEvents";
@@ -22,6 +19,8 @@ const BOTTOM_PADDING_MINUTES = 60;
 const { colors } = plannerTheme;
 
 type Density = "compact" | "expanded";
+
+const pad2 = (n: number) => String(n).padStart(2, "0");
 
 export function WeekView(props: {
   date: Date;
@@ -40,6 +39,12 @@ export function WeekView(props: {
   const weekStartsOn = props.config.weekStartsOn ?? 1;
 
   const [density, setDensity] = useState<Density>("compact");
+
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 30 * 1000);
+    return () => clearInterval(id);
+  }, []);
 
   const daysWidth = Math.max(0, SCREEN_WIDTH - TIME_COL_WIDTH);
   const columnWidth = Math.floor(daysWidth / 7);
@@ -84,6 +89,26 @@ export function WeekView(props: {
     [weekStart, props.weekView, startMinVis, endMinVis, props.onCreate]
   );
 
+  // ✅ BUGÜN HANGİ SÜTUN?
+  const todayIndex = useMemo(() => {
+    for (let i = 0; i < 7; i++) {
+      if (sameDay(addDays(weekStart, i), now)) return i;
+    }
+    return -1;
+  }, [weekStart, now]);
+
+  const nowInfo = useMemo(() => {
+    if (todayIndex < 0) return null;
+
+    const minutes = now.getHours() * 60 + now.getMinutes();
+    if (minutes < startMinVis || minutes > endMinVis) return null;
+
+    const y = (minutes - startMinVis) * props.weekView.pxPerMinute;
+    const label = `${pad2(now.getHours() % 24)}:${pad2(now.getMinutes())}`;
+
+    return { y, label, todayIndex };
+  }, [now, todayIndex, startMinVis, endMinVis, props.weekView.pxPerMinute]);
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <DaysHeader
@@ -98,15 +123,24 @@ export function WeekView(props: {
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
       >
-        <View style={{ flexDirection: "row", height: totalHeight }}>
-          {/* ===== TIME COLUMN (FIXED LABELS) ===== */}
+        <View
+          style={{
+            flexDirection: "row",
+            height: totalHeight,
+            overflow: "visible",
+          }}
+        >
+          {/* LEFT: TIME COLUMN + NOW LABEL */}
           <TimeColumn
             TIME_COL_WIDTH={TIME_COL_WIDTH}
             weekView={props.weekView}
             hourHeight={hourHeight}
+            nowY={nowInfo?.y ?? null}
+            nowLabel={nowInfo?.label ?? null}
+            nowColor={plannerTheme.colors.warning ?? "#EF4444"}
           />
-          {/* ===== GRID + EVENTS ===== */}
-          // WeekView.tsx içinde çağırma (TAM)
+
+          {/* RIGHT: GRID + EVENTS + NOW LINE (today column only) */}
           <GridEvents
             gridWidth={gridWidth}
             totalHeight={totalHeight}
@@ -124,6 +158,9 @@ export function WeekView(props: {
             bottomPaddingMinutes={BOTTOM_PADDING_MINUTES}
             gridLineStyle={styles.gridLine}
             gridLineStrongStyle={styles.gridLineStrong}
+            nowColor={plannerTheme.colors.warning}
+            todayIndex={nowInfo?.todayIndex ?? -1}
+            nowY={nowInfo?.y ?? null}
           />
         </View>
       </ScrollView>
@@ -133,13 +170,11 @@ export function WeekView(props: {
 
 const styles = StyleSheet.create({
   gridLine: {
-    position: "absolute",
-    backgroundColor: colors.borderSubtle, // minor
+    backgroundColor: colors.borderSubtle,
     opacity: 0.35,
   },
   gridLineStrong: {
-    position: "absolute",
-    backgroundColor: colors.borderSubtle, // major
+    backgroundColor: colors.borderSubtle,
     opacity: 0.8,
   },
 });

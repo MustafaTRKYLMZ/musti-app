@@ -2,7 +2,7 @@ import React, { FC, JSX } from "react";
 import { View, Pressable } from "react-native";
 import { addDays } from "../../engine/helpers";
 import { DraggableEventBlock } from "./DraggableEventBlock";
-import { MEvent, WeekViewConfig } from "../../types";
+import { WeekViewConfig } from "../../types";
 
 type GridEventsProps = {
   weekStart: Date;
@@ -13,24 +13,28 @@ type GridEventsProps = {
     colCount: number;
     top: number;
     height: number;
-    event: MEvent;
+    event: any;
   }[];
   weekView: WeekViewConfig;
   gridWidth: number;
   totalHeight: number;
   density: "compact" | "expanded";
-  onPressEvent?: (e: MEvent) => void;
+  onPressEvent?: (e: any) => void;
   onPressDay?: (day: Date) => void;
-  onEventChange?: (next: MEvent) => void;
+  onEventChange?: (next: any) => void;
   handleTapGrid: (dayIndex: number, y: number) => void;
   columnWidth: number;
   startMinVis: number;
   endMinVis: number;
   bottomPaddingMinutes: number;
 
-  // styles
-  gridLineStyle: any; // base (minor)
-  gridLineStrongStyle?: any; // major (hour)
+  gridLineStyle: any;
+  gridLineStrongStyle?: any;
+
+  // ✅ now line inputs (WeekView'den geliyor)
+  nowColor?: string;
+  todayIndex: number; // -1 if not in this week
+  nowY: number | null; // null if out of visible range
 };
 
 export const GridEvents: FC<GridEventsProps> = ({
@@ -50,6 +54,9 @@ export const GridEvents: FC<GridEventsProps> = ({
   bottomPaddingMinutes,
   gridLineStyle,
   gridLineStrongStyle,
+  nowColor = "#EF4444",
+  todayIndex,
+  nowY,
 }) => {
   return (
     <View style={{ width: gridWidth, height: totalHeight }}>
@@ -82,9 +89,10 @@ export const GridEvents: FC<GridEventsProps> = ({
           style={[
             gridLineStyle,
             {
+              position: "absolute",
               top: 0,
               left: i * columnWidth,
-              width: 3,
+              width: 1,
               height: totalHeight,
             },
           ]}
@@ -98,6 +106,23 @@ export const GridEvents: FC<GridEventsProps> = ({
         bottomPaddingMinutes,
         gridLineStyle,
         gridLineStrongStyle
+      )}
+
+      {/* ✅ NOW LINE (only today column) */}
+      {todayIndex >= 0 && nowY != null && (
+        <View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            left: todayIndex * columnWidth,
+            top: nowY,
+            width: columnWidth,
+            height: 2,
+            backgroundColor: nowColor,
+            borderRadius: 2,
+            zIndex: 999,
+          }}
+        />
       )}
 
       {/* === EVENTS === */}
@@ -146,7 +171,6 @@ function renderHorizontalLines(
     const minuteFromStart = i * weekView.stepMinutes;
     const y = minuteFromStart * weekView.pxPerMinute;
 
-    // ✅ hour boundary? (e.g. 0, 60, 120...)
     const isHourLine = minuteFromStart % 60 === 0;
 
     lines.push(
@@ -155,6 +179,7 @@ function renderHorizontalLines(
         style={[
           isHourLine ? majorStyle ?? minorStyle : minorStyle,
           {
+            position: "absolute",
             top: y,
             left: 0,
             width,

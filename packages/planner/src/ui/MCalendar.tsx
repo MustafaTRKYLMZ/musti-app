@@ -38,7 +38,7 @@ export function MCalendar(props: {
       weekView={
         {
           startHour: 7,
-          endHour: 23,
+          endHour: 24,
           stepMinutes: 30,
           pxPerMinute: 1.2,
           ...props.weekView,
