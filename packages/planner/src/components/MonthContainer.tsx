@@ -10,7 +10,7 @@ import {
 import type { CalendarConfig, MEvent } from "../types";
 import { plannerTheme, spacing, typography } from "@musti/ui-native";
 import { MonthView } from "./MonthView";
-import { MonthDayEventsList } from "./components/MonthDayEventsList";
+import { MonthDayEventsList } from "./MonthDayEventsList";
 import { MText } from "@musti/ui-native";
 
 const { colors } = plannerTheme;

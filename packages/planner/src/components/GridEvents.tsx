@@ -6,9 +6,9 @@ import {
   RegisteredStyle,
   ViewStyle,
 } from "react-native";
-import { addDays } from "../../engine/helpers";
+import { addDays } from "../engine/helpers";
 import { DraggableEventBlock } from "./DraggableEventBlock";
-import { BlockedTime, MEvent, WeekViewConfig } from "../../types";
+import { BlockedTime, MEvent, WeekViewConfig } from "../types";
 import { sizes, plannerTheme } from "@musti/ui-native";
 import { RenderHorizontalLines } from "./renderHorizontalLines";
 

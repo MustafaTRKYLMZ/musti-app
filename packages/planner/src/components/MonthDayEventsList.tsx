@@ -8,10 +8,10 @@ import {
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from "react-native";
-import { eventToTitle, sameDay } from "../../engine";
-import { MEvent } from "../../types";
-import { eventToStartDate } from "../../engine/eventToStartDate";
-import { eventToTimeLabel } from "../../engine/eventToTimeLabel";
+import { eventToTitle, sameDay } from "../engine";
+import { MEvent } from "../types";
+import { eventToStartDate } from "../engine/eventToStartDate";
+import { eventToTimeLabel } from "../engine/eventToTimeLabel";
 import { MText, plannerTheme } from "@musti/ui-native";
 
 const { colors, spacing } = plannerTheme;

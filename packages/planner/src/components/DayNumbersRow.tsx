@@ -1,7 +1,7 @@
 // components/DayNumbersRow.tsx
 import React, { FC } from "react";
 import { View, StyleSheet, StyleProp, ViewStyle } from "react-native";
-import { sameDay } from "../../engine/helpers";
+import { sameDay } from "../engine/helpers";
 import { spacing } from "@musti/ui-native";
 import { DayCard } from "./DayCard";
 

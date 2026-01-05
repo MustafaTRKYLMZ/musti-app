@@ -7,7 +7,7 @@ import type {
   CalendarView,
 } from "../types";
 import { WeekView } from "./WeekView";
-import { WeekdayLettersRow } from "./components/WeekdayLettersRow";
+import { WeekdayLettersRow } from "./WeekdayLettersRow";
 import { addDays, startOfWeek } from "../engine/helpers";
 import { plannerTheme, spacing } from "@musti/ui-native";
 import { MonthContainer } from "./MonthContainer";

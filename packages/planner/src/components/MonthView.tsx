@@ -11,7 +11,7 @@ import {
 import type { CalendarConfig, MEvent } from "../types";
 import { addDays, startOfWeek, sameDay } from "../engine/helpers";
 import { plannerTheme, spacing } from "@musti/ui-native";
-import { DayCard, DayInlineItem } from "./components/DayCard";
+import { DayCard, DayInlineItem } from "./DayCard";
 import { eventToStartDate } from "../engine/eventToStartDate";
 import { eventToTitle } from "../engine";
 

@@ -1,5 +1,5 @@
 import { View } from "react-native";
-import { WeekViewConfig } from "../../types";
+import { WeekViewConfig } from "../types";
 import React from "react";
 
 export type RenderHorizontalLinesProps = {

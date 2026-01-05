@@ -17,10 +17,10 @@ import {
 import type { MEvent, CalendarConfig, WeekViewConfig } from "../types";
 import { layoutWeek } from "../engine/weekLayout";
 import { addDays, snapMinutes, clamp, sameDay, pad2 } from "../engine/helpers";
-import { DaysHeader } from "./components/DaysHeader";
+import { DaysHeader } from "./DaysHeader";
 import { plannerTheme } from "@musti/ui-native";
-import { TimeColumn } from "./components/TimeColumn";
-import { GridEvents } from "./components/GridEvents";
+import { TimeColumn } from "./TimeColumn";
+import { GridEvents } from "./GridEvents";
 import { TIME_COL_WIDTH, BOTTOM_PADDING_MINUTES } from "../config/timeConfigs";
 
 const { colors } = plannerTheme;

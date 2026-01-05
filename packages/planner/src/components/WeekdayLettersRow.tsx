@@ -1,6 +1,6 @@
 import React, { FC } from "react";
 import { View, Text, StyleSheet, StyleProp, ViewStyle } from "react-native";
-import { getWeekdayLetter } from "../../engine/helpers";
+import { getWeekdayLetter } from "../engine/helpers";
 import { plannerTheme, sizes, spacing } from "@musti/ui-native";
 
 const { colors } = plannerTheme;

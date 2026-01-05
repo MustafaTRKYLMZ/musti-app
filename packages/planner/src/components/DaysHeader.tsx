@@ -8,7 +8,7 @@ import {
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from "react-native";
-import { addDays, startOfWeek } from "../../engine/helpers";
+import { addDays, startOfWeek } from "../engine/helpers";
 import { plannerTheme } from "@musti/ui-native";
 import { DayNumbersRow } from "./DayNumbersRow";
 
