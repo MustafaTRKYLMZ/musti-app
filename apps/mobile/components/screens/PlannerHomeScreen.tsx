@@ -51,9 +51,9 @@ export const PlannerHomeScreen = () => {
     {
       id: "1",
       title: "English",
-      start: new Date().toISOString(),
-      end: new Date(Date.now() + 45 * 60 * 1000).toISOString(),
-      color: "#2F6FED",
+      start: "23:00:00.000Z",
+      end: "00:30:00.000Z",
+      color: "red",
     },
   ]);
 

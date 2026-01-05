@@ -1,8 +1,9 @@
-import React, { FC, JSX } from "react";
-import { View, Pressable } from "react-native";
+import React, { FC, JSX, useMemo } from "react";
+import { View, Pressable, Text, StyleSheet } from "react-native";
 import { addDays } from "../../engine/helpers";
 import { DraggableEventBlock } from "./DraggableEventBlock";
 import { WeekViewConfig } from "../../types";
+import { sizes, plannerTheme } from "@musti/ui-native";
 
 type GridEventsProps = {
   weekStart: Date;
@@ -16,25 +17,30 @@ type GridEventsProps = {
     event: any;
   }[];
   weekView: WeekViewConfig;
+
   gridWidth: number;
   totalHeight: number;
-  density: "compact" | "expanded";
-  onPressEvent?: (e: any) => void;
-  onPressDay?: (day: Date) => void;
-  onEventChange?: (next: any) => void;
-  handleTapGrid: (dayIndex: number, y: number) => void;
   columnWidth: number;
+
+  density: "compact" | "expanded";
   startMinVis: number;
   endMinVis: number;
   bottomPaddingMinutes: number;
 
-  gridLineStyle: any;
-  gridLineStrongStyle?: any;
+  onPressEvent?: (e: any) => void;
+  onPressDay?: (day: Date) => void;
+  onEventChange?: (next: any) => void;
+  handleTapGrid: (dayIndex: number, y: number) => void;
 
-  nowColor?: string;
+  gridLineStyle: any; // minor
+  gridLineStrongStyle?: any; // major (hour)
+
   todayIndex: number; // -1 if not in this week
-  nowY: number | null; // null if out of visible range
+  nowY: number | null;
+  nowColor?: string;
 };
+
+const { colors } = plannerTheme;
 
 export const GridEvents: FC<GridEventsProps> = ({
   gridWidth,
@@ -53,13 +59,18 @@ export const GridEvents: FC<GridEventsProps> = ({
   bottomPaddingMinutes,
   gridLineStyle,
   gridLineStrongStyle,
-  nowColor = "#EF4444",
   todayIndex,
   nowY,
+  nowColor = "#EF4444",
 }) => {
+  const nowX = useMemo(() => {
+    if (todayIndex < 0) return null;
+    return todayIndex * columnWidth;
+  }, [todayIndex, columnWidth]);
+
   return (
     <View style={{ width: gridWidth, height: totalHeight }}>
-      {/* === DAY PRESS / CREATE LAYER === */}
+      {/* === PRESS LAYER === */}
       {Array.from({ length: 7 }).map((_, dayIndex) => {
         const dayDate = addDays(weekStart, dayIndex);
         return (
@@ -81,7 +92,7 @@ export const GridEvents: FC<GridEventsProps> = ({
         );
       })}
 
-      {/* === VERTICAL DAY GRID LINES === */}
+      {/* === VERTICAL LINES (days) === */}
       {Array.from({ length: 8 }).map((_, i) => (
         <View
           key={`v-line-${i}`}
@@ -98,7 +109,7 @@ export const GridEvents: FC<GridEventsProps> = ({
         />
       ))}
 
-      {/* === HORIZONTAL TIME GRID LINES (minor + major) === */}
+      {/* === HORIZONTAL LINES (time) === */}
       {renderHorizontalLines(
         weekView,
         gridWidth,
@@ -107,22 +118,37 @@ export const GridEvents: FC<GridEventsProps> = ({
         gridLineStrongStyle
       )}
 
-      {/* ✅ NOW LINE (only today column) */}
-      {todayIndex >= 0 && nowY != null && (
+      {/* ✅ NOW LINE: sadece bugünün sütununda */}
+      {nowX != null && nowY != null ? (
         <View
           pointerEvents="none"
           style={{
             position: "absolute",
-            left: todayIndex * columnWidth,
+            left: nowX,
             top: nowY,
             width: columnWidth,
-            height: 2,
+            height: 1,
             backgroundColor: nowColor,
-            borderRadius: 2,
-            zIndex: 999,
+            opacity: 0.95,
           }}
         />
-      )}
+      ) : null}
+
+      {/* ✅ NOW DOT (solda küçük nokta gibi, sadece bugünün sütununda) */}
+      {nowX != null && nowY != null ? (
+        <View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            left: nowX + 2,
+            top: nowY - 3,
+            width: 6,
+            height: 6,
+            borderRadius: 6,
+            backgroundColor: nowColor,
+          }}
+        />
+      ) : null}
 
       {/* === EVENTS === */}
       {blocks.map((b) => {
@@ -191,3 +217,11 @@ function renderHorizontalLines(
 
   return lines;
 }
+
+const styles = StyleSheet.create({
+  nowText: {
+    fontSize: sizes.sm,
+    fontWeight: "800",
+    color: colors.textPrimary,
+  },
+});

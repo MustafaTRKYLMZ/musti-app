@@ -27,6 +27,7 @@ const BOTTOM_PADDING_MINUTES = 60;
 const { colors } = plannerTheme;
 
 type Density = "compact" | "expanded";
+
 const pad2 = (n: number) => String(n).padStart(2, "0");
 const clampNum = (v: number, a: number, b: number) =>
   Math.max(a, Math.min(b, v));
@@ -51,10 +52,7 @@ export function WeekView(props: {
   const [now, setNow] = useState(() => new Date());
 
   const vRef = useRef<ScrollView | null>(null);
-  const [scrollY, setScrollY] = useState(0);
   const [viewportH, setViewportH] = useState(0);
-
-  const [userHasScrolled, setUserHasScrolled] = useState(false);
 
   const autoScrollingRef = useRef(false);
 
@@ -85,6 +83,16 @@ export function WeekView(props: {
 
   const contentHeight = totalMinutes * props.weekView.pxPerMinute;
   const hourHeight = 60 * props.weekView.pxPerMinute;
+
+  const onVerticalScroll = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const y = e.nativeEvent.contentOffset.y;
+      if (!autoScrollingRef.current) {
+        setDensity(y > 40 ? "expanded" : "compact");
+      }
+    },
+    []
+  );
 
   const handleTapGrid = useCallback(
     (dayIndex: number, yPx: number) => {
@@ -120,52 +128,22 @@ export function WeekView(props: {
     return { y, label, todayIndex };
   }, [now, todayIndex, startMinVis, endMinVis, props.weekView.pxPerMinute]);
 
-  const bottomVisible = useMemo(() => {
-    if (viewportH <= 0) return false;
-    return scrollY + viewportH >= contentHeight - 2;
-  }, [scrollY, viewportH, contentHeight]);
-
-  const nowLabelY = useMemo(() => {
-    if (!nowInfo) return null;
-
-    if (userHasScrolled) return nowInfo.y;
-
-    if (!bottomVisible) return scrollY + 6;
-    return nowInfo.y;
-  }, [nowInfo, userHasScrolled, bottomVisible, scrollY]);
-
   useEffect(() => {
-    setUserHasScrolled(false);
     if (!nowInfo) return;
     if (!viewportH) return;
 
-    const target = clampNum(
-      nowInfo.y - 6,
-      0,
-      Math.max(0, contentHeight - viewportH)
-    );
+    const maxScroll = Math.max(0, contentHeight - viewportH);
+
+    const target = clampNum(nowInfo.y - hourHeight, 0, maxScroll);
 
     autoScrollingRef.current = true;
     requestAnimationFrame(() => {
       vRef.current?.scrollTo({ y: target, animated: false });
-
       requestAnimationFrame(() => {
         autoScrollingRef.current = false;
       });
     });
   }, [weekStart.getTime(), viewportH]);
-
-  const onVerticalScroll = useCallback(
-    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const y = e.nativeEvent.contentOffset.y;
-      setScrollY(y);
-
-      if (!autoScrollingRef.current) setUserHasScrolled(true);
-
-      setDensity(y > 40 ? "expanded" : "compact");
-    },
-    []
-  );
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -184,7 +162,6 @@ export function WeekView(props: {
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
         onLayout={(e) => setViewportH(e.nativeEvent.layout.height)}
-        onScrollBeginDrag={() => setUserHasScrolled(true)}
       >
         <View style={{ flexDirection: "row", height: contentHeight }}>
           <TimeColumn
@@ -192,7 +169,7 @@ export function WeekView(props: {
             weekView={props.weekView}
             hourHeight={hourHeight}
             bottomPaddingMinutes={BOTTOM_PADDING_MINUTES}
-            nowY={nowLabelY}
+            nowY={nowInfo?.y ?? null}
             nowLabel={nowInfo?.label ?? null}
             nowColor={plannerTheme.colors.primary ?? "#EF4444"}
           />
@@ -201,22 +178,22 @@ export function WeekView(props: {
             gridWidth={gridWidth}
             totalHeight={contentHeight}
             weekStart={weekStart}
-            onPressDay={props.onPressDay}
-            handleTapGrid={handleTapGrid}
             columnWidth={columnWidth}
             blocks={blocks}
             density={density}
             weekView={props.weekView}
             startMinVis={startMinVis}
             endMinVis={endMinVis}
-            onPressEvent={props.onPressEvent}
-            onEventChange={props.onEventChange}
             bottomPaddingMinutes={BOTTOM_PADDING_MINUTES}
             gridLineStyle={styles.gridLine}
             gridLineStrongStyle={styles.gridLineStrong}
-            nowColor={plannerTheme.colors.primary ?? "#EF4444"}
+            onPressDay={props.onPressDay}
+            handleTapGrid={handleTapGrid}
+            onPressEvent={props.onPressEvent}
+            onEventChange={props.onEventChange}
             todayIndex={nowInfo?.todayIndex ?? -1}
-            nowY={nowInfo?.y ?? null} // grid çizgisi her zaman gerçek
+            nowY={nowInfo?.y ?? null}
+            nowColor={plannerTheme.colors.primary ?? "#EF4444"}
           />
         </View>
       </ScrollView>
