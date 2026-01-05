@@ -31,7 +31,6 @@ type GridEventsProps = {
   gridLineStyle: any;
   gridLineStrongStyle?: any;
 
-  // ✅ now line inputs (WeekView'den geliyor)
   nowColor?: string;
   todayIndex: number; // -1 if not in this week
   nowY: number | null; // null if out of visible range
