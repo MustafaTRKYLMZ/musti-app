@@ -1,7 +1,7 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
 import { CashflowRow } from "@/components/ui/CashflowRow";
-import { getOccurrencesUntilDate } from "@/helper/getOccurrencesUntilDate";
+import { getOccurrencesUntilDate } from "@/utils/getOccurrencesUntilDate";
 import { SimulationItem } from "@musti/core";
 import { colors, spacing, radii } from "@musti/ui-native";
 

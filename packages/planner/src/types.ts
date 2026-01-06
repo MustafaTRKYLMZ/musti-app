@@ -1,11 +1,26 @@
 export type MEvent = {
-    id: string;
-    title: string;
-    start: string; // ISO datetime
-    end: string;   // ISO datetime
-    color?: string;
-    meta?: Record<string, any>;
-  };
+  id: string;
+
+  title: string;
+
+  start: string; // ISO 8601
+  end: string;
+
+  timezone?: string; 
+
+  allDay?: boolean;
+
+  color?: string;
+  notes?: string;
+  location?: string;
+
+  source?: "planner" | "google" | string;
+  externalId?: string;
+
+  meta?: Record<string, any>;
+};
+
+
   export type BlockedTime = 
     {
       id: string;

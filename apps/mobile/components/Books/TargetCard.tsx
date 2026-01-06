@@ -17,7 +17,7 @@ import { ItemDots } from "../ui/ItemDots";
 import { pickActiveItem } from "@/utils/pickActiveItem";
 import { useToast } from "../ui/ToastProvider";
 import { TargetItemSummary } from "./TargetItemSummary";
-import { MenuRow } from "../MenuRow";
+import { MenuRow } from "../ui/MenuRow";
 import type { ReadingTarget, TargetItem, TargetRepeatEnd } from "@musti/core";
 import { RemainingTimeBadge } from "../ui/pdf/RemainingTimeBadge";
 

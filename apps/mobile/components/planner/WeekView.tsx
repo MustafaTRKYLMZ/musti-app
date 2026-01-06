@@ -14,14 +14,25 @@ import {
   NativeScrollEvent,
 } from "react-native";
 
-import type { MEvent, CalendarConfig, WeekViewConfig } from "../types";
-import { layoutWeek } from "../engine/weekLayout";
-import { addDays, snapMinutes, clamp, sameDay, pad2 } from "../engine/helpers";
+import type {
+  MEvent,
+  CalendarConfig,
+  WeekViewConfig,
+} from "@musti/planner/src/types";
+
 import { DaysHeader } from "./DaysHeader";
 import { plannerTheme } from "@musti/ui-native";
 import { TimeColumn } from "./TimeColumn";
 import { GridEvents } from "./GridEvents";
-import { TIME_COL_WIDTH, BOTTOM_PADDING_MINUTES } from "../config/timeConfigs";
+import { BOTTOM_PADDING_MINUTES, TIME_COL_WIDTH } from "@/config/timeConfigs";
+import {
+  addDays,
+  clamp,
+  layoutWeek,
+  pad2,
+  sameDay,
+  snapMinutes,
+} from "@musti/planner";
 
 const { colors } = plannerTheme;
 

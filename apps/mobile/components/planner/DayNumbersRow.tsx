@@ -1,11 +1,9 @@
-// components/DayNumbersRow.tsx
 import React, { FC } from "react";
 import { View, StyleSheet, StyleProp, ViewStyle } from "react-native";
-import { sameDay } from "../engine/helpers";
 import { spacing } from "@musti/ui-native";
 import { DayCard } from "./DayCard";
+import { pad2, sameDay } from "@musti/planner";
 
-const pad2 = (n: number) => String(n).padStart(2, "0");
 const dayKey = (d: Date) =>
   `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 

@@ -1,6 +1,6 @@
 import React, { FC, useMemo } from "react";
 import { View, StyleSheet } from "react-native";
-import { MText, plannerTheme, sizes } from "@musti/ui-native";
+import { MText, plannerTheme, sizes, spacing } from "@musti/ui-native";
 
 type Props = {
   TIME_COL_WIDTH: number;
@@ -18,6 +18,10 @@ type Props = {
 
 const { colors } = plannerTheme;
 
+// Samsung hissi için mikro ayarlar
+const LABEL_OFFSET_Y = 6; // çizginin üstüne kayma
+const LABEL_FONT_SIZE = sizes.md;
+
 export const TimeColumn: FC<Props> = ({
   TIME_COL_WIDTH,
   weekView,
@@ -33,13 +37,11 @@ export const TimeColumn: FC<Props> = ({
   const overlap = useMemo(() => {
     if (nowY == null) return { hideIndex: -1 };
 
-    const rawIndex = nowY / hourHeight; // 0..N
+    const rawIndex = nowY / hourHeight;
     const nearest = Math.round(rawIndex);
-
     const hourLineY = nearest * hourHeight;
 
-    const thresholdPx = 12;
-
+    const thresholdPx = 14; // Samsung daha tight
     const collides = Math.abs(nowY - hourLineY) <= thresholdPx;
 
     return { hideIndex: collides ? nearest : -1 };
@@ -47,34 +49,42 @@ export const TimeColumn: FC<Props> = ({
 
   return (
     <View style={[styles.col, { width: TIME_COL_WIDTH, minWidth: 44 }]}>
-      {Array.from({ length: hoursCount }).map((_, i) => {
-        const hour = weekView.startHour + i;
-        const displayHour = hour % 24;
+      {/* Saat label’ları */}
+      <View style={{ height: hoursCount * hourHeight }}>
+        {Array.from({ length: hoursCount }).map((_, i) => {
+          const hour = weekView.startHour + i;
+          const displayHour = hour % 24;
+          const hideThis = i === overlap.hideIndex;
 
-        const hideThis = i === overlap.hideIndex;
+          const lineY = i * hourHeight;
 
-        return (
-          <MText
-            key={`${hour}-${i}`}
-            style={[
-              styles.timeLabel,
-              { height: hourHeight, opacity: hideThis ? 0 : 1 },
-            ]}
-          >
-            {String(displayHour).padStart(2, "0")}
-          </MText>
-        );
-      })}
+          return (
+            <MText
+              key={`${hour}-${i}`}
+              style={[
+                styles.timeLabel,
+                {
+                  top: lineY - LABEL_OFFSET_Y - LABEL_FONT_SIZE / 2, // ✅ Samsung hizası
+                  height: LABEL_FONT_SIZE + 2,
+                  opacity: hideThis ? 0 : 1,
+                },
+              ]}
+            >
+              {String(displayHour).padStart(2, "0")}
+            </MText>
+          );
+        })}
+      </View>
 
       {!!bottomSpacerHeight && <View style={{ height: bottomSpacerHeight }} />}
 
-      {/* ✅ NOW label */}
+      {/* NOW etiketi */}
       {nowY != null && nowLabel ? (
         <View pointerEvents="none" style={[styles.nowWrap, { top: nowY - 7 }]}>
-          <View style={[styles.nowTick, { backgroundColor: nowColor }]} />
           <MText style={[styles.nowText, { color: nowColor }]}>
             {nowLabel}
           </MText>
+          <View style={[styles.nowTick, { backgroundColor: nowColor }]} />
         </View>
       ) : null}
     </View>
@@ -85,19 +95,22 @@ const styles = StyleSheet.create({
   col: {
     position: "relative",
   },
+
   timeLabel: {
-    fontSize: 11,
+    position: "absolute",
+    right: spacing.sm,
+    fontSize: LABEL_FONT_SIZE,
     color: colors.textPrimary,
-    paddingTop: 2,
+    fontWeight: "500",
     textAlign: "right",
-    paddingRight: 6,
   },
+
   nowWrap: {
     position: "absolute",
-    right: 2,
+    right: 0,
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: spacing.xs,
     zIndex: 999,
   },
   nowTick: {

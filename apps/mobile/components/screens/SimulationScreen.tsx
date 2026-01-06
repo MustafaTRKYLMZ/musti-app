@@ -10,7 +10,7 @@ import { RenameScenarioModal } from "@/components/ui/modals/RenameScenarioModal"
 import { DailyBalanceSection } from "@/components/transactions";
 import { CashflowTotals } from "@/components/ui/CashflowTotals";
 import { SimulationList } from "../simulation/SimulationList";
-import { getOccurrencesUntilDate } from "@/helper/getOccurrencesUntilDate";
+import { getOccurrencesUntilDate } from "@/utils/getOccurrencesUntilDate";
 import { SimulationScenario, useTranslation } from "@musti/core";
 import {
   MText,
@@ -251,7 +251,7 @@ export function SimulationScreen() {
       {/* FAB */}
       <FAB
         onPress={() => setShowAddModal(true)}
-        offsetBottom={spacing["4xl"] * 2}
+        style={{ marginBottom: spacing["4xl"] * 2 }}
       />
 
       {/* ADD ITEM MODAL */}

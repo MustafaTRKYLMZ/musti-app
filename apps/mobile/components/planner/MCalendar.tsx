@@ -5,17 +5,15 @@ import type {
   MEvent,
   WeekViewConfig,
   CalendarView,
-} from "../types";
+} from "@musti/planner/src/types";
 import { WeekView } from "./WeekView";
 import { WeekdayLettersRow } from "./WeekdayLettersRow";
-import { addDays, startOfWeek } from "../engine/helpers";
 import { plannerTheme, spacing } from "@musti/ui-native";
 import { MonthContainer } from "./MonthContainer";
+import { DAYS_IN_WEEK, TIME_COL_WIDTH } from "@/config/timeConfigs";
+import { addDays, startOfWeek } from "@musti/planner";
 
 const { colors } = plannerTheme;
-
-const TIME_COL_WIDTH = 48;
-const DAYS_IN_WEEK = 7;
 
 export function MCalendar(props: {
   view: CalendarView;
@@ -59,7 +57,7 @@ export function MCalendar(props: {
       : colWidth * DAYS_IN_WEEK + gap * (DAYS_IN_WEEK - 1);
 
   const weekStart = useMemo(
-    () => startOfWeek(props.date, config.weekStartsOn),
+    () => startOfWeek(props.date, config.weekStartsOn ?? 0),
     [props.date, config.weekStartsOn]
   );
 

@@ -4,18 +4,16 @@ import dayjs from "dayjs";
 import "dayjs/locale/tr";
 import weekOfYear from "dayjs/plugin/weekOfYear";
 import isoWeek from "dayjs/plugin/isoWeek";
-import {
-  BottomDaySheet,
-  eventsForDay,
-  FloatingCreateButton,
-  MCalendar,
-  MEvent,
-} from "@musti/planner";
+
 import { AppScreen } from "../AppScreen";
-import { spacing, useTheme, radii } from "@musti/ui-native";
+import { spacing, radii } from "@musti/ui-native";
 import { PlannerHeaderCenter } from "../planner/PlannerHeaderCenter";
 import { PlannerHeaderRight } from "../planner/PlannerHeaderRight";
 import { PlannerHeaderLeft } from "../planner/PlannerHeaderLeft";
+import { MEvent, eventsForDay } from "@musti/planner";
+import { BottomDaySheet } from "../planner/BottomDaySheet";
+import { FloatingCreateButton } from "../planner/FloatingCreateButton";
+import { MCalendar } from "../planner/MCalendar";
 
 dayjs.extend(weekOfYear);
 dayjs.extend(isoWeek);
@@ -67,7 +65,6 @@ export const PlannerHomeScreen = () => {
   }, [selectedDate, events]);
 
   const pickColor = useCallback(() => {
-    // rotate based on event count, looks consistent
     return EVENT_COLORS[events.length % EVENT_COLORS.length];
   }, [events.length]);
 

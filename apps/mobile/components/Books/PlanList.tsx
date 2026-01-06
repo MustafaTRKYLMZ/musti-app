@@ -2,7 +2,7 @@ import React, { FC, useEffect, useMemo } from "react";
 import { View, FlatList, StyleSheet } from "react-native";
 import dayjs from "dayjs";
 import { bookshelfTheme, MText, radii, spacing } from "@musti/ui-native";
-import { ShelfHeader } from "../ShelfHeader";
+import { ShelfHeader } from "./ShelfHeader";
 import { PlanCard, PlanInfo } from "@/components/Books/PlanCard";
 import { useReadingEventsStore } from "@/store/bookshelf/useReadingEventsStore";
 import { useBooksStore } from "@/store/bookshelf/useBooksStore";

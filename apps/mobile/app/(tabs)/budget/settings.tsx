@@ -28,7 +28,7 @@ import {
   BaseIcon,
 } from "@musti/ui-native";
 
-import { BackupSection } from "@/components/BackupSection";
+import { BackupSection } from "@/components/Books/BackupSection";
 
 export default function SettingsScreen() {
   const { t } = useTranslation();

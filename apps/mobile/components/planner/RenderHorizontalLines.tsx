@@ -1,6 +1,6 @@
 import { View } from "react-native";
-import { WeekViewConfig } from "../types";
-import React from "react";
+import { WeekViewConfig } from "@musti/planner/src/types";
+import React, { FC } from "react";
 
 export type RenderHorizontalLinesProps = {
   weekView: WeekViewConfig;
@@ -9,7 +9,7 @@ export type RenderHorizontalLinesProps = {
   minorStyle: any;
   majorStyle?: any;
 };
-export const RenderHorizontalLines = ({
+export const RenderHorizontalLines: FC<RenderHorizontalLinesProps> = ({
   weekView,
   width,
   bottomPaddingMinutes,

@@ -6,11 +6,11 @@ import {
   RegisteredStyle,
   ViewStyle,
 } from "react-native";
-import { addDays } from "../engine/helpers";
 import { DraggableEventBlock } from "./DraggableEventBlock";
-import { BlockedTime, MEvent, WeekViewConfig } from "../types";
+import { BlockedTime, MEvent, WeekViewConfig } from "@musti/planner/src/types";
 import { plannerTheme } from "@musti/ui-native";
 import { RenderHorizontalLines } from "./RenderHorizontalLines";
+import { addDays } from "@musti/planner";
 
 type GridEventsProps = {
   weekStart: Date;

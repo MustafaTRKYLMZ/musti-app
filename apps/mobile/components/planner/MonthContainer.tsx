@@ -7,15 +7,14 @@ import {
   Animated,
   LayoutChangeEvent,
 } from "react-native";
-import type { CalendarConfig, MEvent } from "../types";
+import type { CalendarConfig, MEvent } from "@musti/planner/src/types";
 import { plannerTheme, spacing, typography } from "@musti/ui-native";
 import { MonthView } from "./MonthView";
 import { MonthDayEventsList } from "./MonthDayEventsList";
 import { MText } from "@musti/ui-native";
+import { clamp } from "@musti/planner";
 
 const { colors } = plannerTheme;
-
-const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 
 export type MonthContainerProps = {
   date: Date;

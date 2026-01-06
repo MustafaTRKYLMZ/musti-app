@@ -8,9 +8,9 @@ import {
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from "react-native";
-import { addDays, startOfWeek } from "../engine/helpers";
 import { plannerTheme } from "@musti/ui-native";
 import { DayNumbersRow } from "./DayNumbersRow";
+import { startOfWeek, addDays } from "@musti/planner";
 
 const DAYS_IN_WEEK = 7;
 const WEEKS_WINDOW = 3;

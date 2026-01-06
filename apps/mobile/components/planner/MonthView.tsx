@@ -1,4 +1,3 @@
-// MonthView.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
@@ -8,18 +7,19 @@ import {
   NativeScrollEvent,
   Animated,
 } from "react-native";
-import type { CalendarConfig, MEvent } from "../types";
-import { addDays, startOfWeek, sameDay } from "../engine/helpers";
+import type { CalendarConfig, MEvent } from "@musti/planner/src/types";
+
 import { plannerTheme, spacing } from "@musti/ui-native";
 import { DayCard, DayInlineItem } from "./DayCard";
-import { eventToStartDate } from "../engine/eventToStartDate";
-import { eventToTitle } from "../engine";
-
+import { TOTAL_DAYS, WEEKS_IN_GRID } from "@/config/timeConfigs";
+import {
+  eventToStartDate,
+  eventToTitle,
+  startOfWeek,
+  addDays,
+  sameDay,
+} from "@musti/planner";
 const { colors } = plannerTheme;
-
-const DAYS_IN_WEEK = 7;
-const WEEKS_IN_GRID = 6;
-const TOTAL_DAYS = DAYS_IN_WEEK * WEEKS_IN_GRID;
 
 const startOfMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
 const pad2 = (n: number) => String(n).padStart(2, "0");

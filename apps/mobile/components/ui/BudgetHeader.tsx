@@ -1,7 +1,7 @@
 // components/ui/BudgetHeader.tsx
 import React from "react";
 import { View, StyleSheet } from "react-native";
-import LanguageSelector from "../LanguageSelector";
+import LanguageSelector from "./LanguageSelector";
 import { colors, spacing, radii } from "@musti/ui-native";
 import { IconButton } from "@musti/ui-native/src/components/AppIcon";
 

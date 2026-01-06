@@ -1,5 +1,5 @@
 import type { MEvent } from "../types";
-import { sameDay, toDate } from "./helpers";
+import { sameDay, toDate } from "./date";
 
 export function eventsForDay(day: Date, events: MEvent[]) {
   return events

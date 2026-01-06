@@ -1,5 +1,5 @@
 import type { MEvent, WeekViewConfig } from "../types";
-import { addDays, minutesOfDay, sameDay, startOfWeek, toDate } from "./helpers";
+import { addDays, minutesOfDay, sameDay, startOfWeek, toDate } from "./date";
 import { placeOverlaps } from "./overlap";
 
 export type WeekBlock = {
