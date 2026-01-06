@@ -20,6 +20,22 @@ export type MEvent = {
   meta?: Record<string, any>;
 };
 
+export type EventCreate = {
+  title: string;
+
+  // UI state
+  allDay: boolean;
+
+  // UI inputs (HH:mm)
+  startTime: string; // "09:00"
+  endTime: string;   // "10:00"
+
+  // optional fields
+  color?: string;
+  location?: string;
+  notes?: string;
+};
+
 
   export type BlockedTime = 
     {

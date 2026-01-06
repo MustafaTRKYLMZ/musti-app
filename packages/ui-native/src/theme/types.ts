@@ -28,6 +28,9 @@ export type ThemeColors = {
     statusActive: string;
     statusDone: string;
     statusPending: string;
+    backdrop: string;
+    border: string;
+    shadow: string;
   };
   
   export type TypographyVariant = {

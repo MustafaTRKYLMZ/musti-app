@@ -65,6 +65,7 @@ export type IconButtonProps = {
   iconNode?: React.ReactNode;
   size?: number;
   accessibilityLabel?: string;
+  disabled?: boolean; // ✅ NEW
 };
 
 export const IconButton = React.forwardRef<View, IconButtonProps>(
@@ -82,6 +83,7 @@ export const IconButton = React.forwardRef<View, IconButtonProps>(
       rounded = true,
       iconNode,
       accessibilityLabel,
+      disabled = false,
     },
     ref
   ) {
@@ -89,10 +91,18 @@ export const IconButton = React.forwardRef<View, IconButtonProps>(
     const palette = theme?.colors ?? defaultColors;
     const [hovered, setHovered] = useState(false);
 
-    const finalColor = color ?? palette.textPrimary;
+    const finalColor = disabled
+      ? palette.textSecondary ?? palette.textPrimary
+      : color ?? palette.textPrimary;
+
     const finalBackgroundColor = backgroundColor ?? "transparent";
     const rippleColor = palette.borderSubtle ?? defaultColors.borderSubtle;
-    const hoverBackground = hovered ? palette.background : finalBackgroundColor;
+
+    const hoverBackground = disabled
+      ? finalBackgroundColor
+      : hovered
+      ? palette.background
+      : finalBackgroundColor;
 
     const content =
       iconNode ??
@@ -103,19 +113,25 @@ export const IconButton = React.forwardRef<View, IconButtonProps>(
     return (
       <Pressable
         ref={ref}
-        onPress={onPress}
+        onPress={disabled ? undefined : onPress}
         hitSlop={hitSlop}
-        onHoverIn={() => setHovered(true)}
-        onHoverOut={() => setHovered(false)}
-        android_ripple={{ color: rippleColor, radius: 22 }}
+        disabled={disabled}
+        accessibilityRole="button"
+        accessibilityState={{ disabled }}
         accessibilityLabel={accessibilityLabel}
+        onHoverIn={disabled ? undefined : () => setHovered(true)}
+        onHoverOut={disabled ? undefined : () => setHovered(false)}
+        android_ripple={
+          disabled ? undefined : { color: rippleColor, radius: 22 }
+        }
         style={[
           styles.button,
           {
             padding,
             borderRadius: rounded ? radii.full : radii.md,
             backgroundColor: hoverBackground,
-            transform: [{ scale: hovered ? 1.08 : 1 }],
+            opacity: disabled ? 0.4 : 1,
+            transform: [{ scale: hovered && !disabled ? 1.08 : 1 }],
           },
           style,
         ]}
@@ -126,7 +142,7 @@ export const IconButton = React.forwardRef<View, IconButtonProps>(
   }
 );
 
-// ---------- IconTile (icon + label, launcher ) ----------
+// ---------- IconTile ----------
 export type IconTileProps = {
   family?: IconFamily;
   name: string;
@@ -138,6 +154,7 @@ export type IconTileProps = {
   backgroundColor?: string;
   iconBackgroundColor?: string;
   labelColor?: string;
+  disabled?: boolean; // ✅ NEW
 };
 
 export function IconTile({
@@ -151,29 +168,39 @@ export function IconTile({
   backgroundColor,
   iconBackgroundColor,
   labelColor,
+  disabled = false,
 }: IconTileProps) {
   const theme = useTheme?.();
   const palette = theme?.colors ?? defaultColors;
   const [hovered, setHovered] = useState(false);
 
-  const Wrapper: any = onPress ? Pressable : View;
+  const Wrapper: any = onPress && !disabled ? Pressable : View;
 
   const tileBackground = backgroundColor ?? palette.background;
   const tileIconBackground = iconBackgroundColor ?? palette.background;
-  const finalIconColor = color ?? palette.primary;
-  const finalLabelColor = labelColor ?? palette.textPrimary;
+
+  const finalIconColor = disabled
+    ? palette.textSecondary ?? palette.textPrimary
+    : color ?? palette.primary;
+
+  const finalLabelColor = disabled
+    ? palette.textSecondary ?? palette.textPrimary
+    : labelColor ?? palette.textPrimary;
 
   return (
     <Wrapper
-      onPress={onPress}
-      onHoverIn={() => setHovered(true)}
-      onHoverOut={() => setHovered(false)}
+      onPress={disabled ? undefined : onPress}
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      onHoverIn={disabled ? undefined : () => setHovered(true)}
+      onHoverOut={disabled ? undefined : () => setHovered(false)}
       style={[
         styles.tile,
         {
           backgroundColor: tileBackground,
-          transform: [{ scale: hovered ? 1.04 : 1 }],
-          shadowOpacity: hovered ? 0.24 : 0.12,
+          opacity: disabled ? 0.45 : 1,
+          transform: [{ scale: hovered && !disabled ? 1.04 : 1 }],
+          shadowOpacity: hovered && !disabled ? 0.24 : 0.12,
         },
         style,
       ]}
@@ -182,9 +209,8 @@ export function IconTile({
         style={[
           styles.tileIconWrapper,
           {
-            backgroundColor: hovered
-              ? palette.borderSubtle
-              : tileIconBackground,
+            backgroundColor:
+              hovered && !disabled ? palette.borderSubtle : tileIconBackground,
           },
         ]}
       >
