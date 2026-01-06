@@ -26,7 +26,7 @@ const clampDay = (d: Date) =>
   new Date(d.getFullYear(), d.getMonth(), d.getDate());
 
 export const PlannerHomeScreen = () => {
-  const [view, setView] = useState<CalendarView>("week");
+  const [view, setView] = useState<CalendarView>("month");
   const [date, setDate] = useState(new Date());
 
   const events = useCalendarEventsStore((s) => s.events);
@@ -36,8 +36,7 @@ export const PlannerHomeScreen = () => {
   );
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  // ✅ FAB -> MCalendar modal açma token’ı
-  const [openCreateToken, setOpenCreateToken] = useState(0);
+  const [openCreateToken, setOpenCreateToken] = useState<number | null>(null);
 
   const weekNumber = useMemo(() => dayjs(date).isoWeek(), [date]);
 
@@ -56,7 +55,7 @@ export const PlannerHomeScreen = () => {
 
   const onPressFab = useCallback(() => {
     const day = selectedDate ?? clampDay(date);
-    setOpenCreateToken((x) => x + 1);
+    setOpenCreateToken((x) => (x ?? 0) + 1);
     openDay(day);
   }, [selectedDate, date, openDay]);
 
@@ -106,7 +105,7 @@ export const PlannerHomeScreen = () => {
             openDay(new Date(d.getFullYear(), d.getMonth(), d.getDate()));
           }}
           onEventChange={() => {}}
-          openCreateToken={openCreateToken}
+          openCreateToken={openCreateToken ?? undefined}
           openCreateDay={selectedDate ?? clampDay(date)}
         />
 
@@ -116,7 +115,7 @@ export const PlannerHomeScreen = () => {
           <BottomDaySheet
             date={selectedDate}
             events={selectedEvents}
-            onCreate={() => setOpenCreateToken((x) => x + 1)}
+            onCreate={() => setOpenCreateToken((x) => (x ?? 0) + 1)}
             onPressEvent={(e) => {
               console.log("event", e.id);
             }}

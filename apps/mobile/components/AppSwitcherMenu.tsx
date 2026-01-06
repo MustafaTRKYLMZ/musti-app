@@ -40,6 +40,7 @@ export function AppSwitcherMenu({ visible, onClose }: Props) {
       transparent
       animationType="fade"
       onRequestClose={onClose}
+      onStartShouldSetResponder={() => true}
     >
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable
@@ -56,26 +57,26 @@ export function AppSwitcherMenu({ visible, onClose }: Props) {
               name="wallet-outline"
               label="Budget"
               color={budgetTheme.colors.success}
-              labelColor={colors.textInverse}
+              labelColor={colors.textPrimary}
               onPress={goBudget}
-              style={{ backgroundColor: colors.backgroundBackdrop }}
+              style={{ backgroundColor: colors.surfaceStrong }}
             />
 
             <IconTile
               name="book-outline"
               label="Bookshelf"
               color={bookshelfTheme.colors.success}
-              labelColor={colors.textInverse}
+              labelColor={colors.textPrimary}
               onPress={goBookshelf}
-              style={{ backgroundColor: colors.backgroundBackdrop }}
+              style={{ backgroundColor: colors.surfaceStrong }}
             />
             <IconTile
               name="calendar-outline"
               label="Planner"
               color={bookshelfTheme.colors.success}
-              labelColor={colors.textInverse}
+              labelColor={colors.textPrimary}
               onPress={goPlanner}
-              style={{ backgroundColor: colors.backgroundBackdrop }}
+              style={{ backgroundColor: colors.surfaceStrong }}
             />
           </View>
         </Pressable>
