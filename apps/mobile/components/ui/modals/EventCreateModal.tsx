@@ -196,7 +196,7 @@ export const EventCreateModal = ({
       visible={visible}
       title={title}
       onClose={onClose}
-      variant="center"
+      variant="full"
       actions={{
         onCancel: onClose,
         onSave: submit,

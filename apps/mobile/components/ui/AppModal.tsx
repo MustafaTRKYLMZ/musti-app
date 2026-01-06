@@ -9,6 +9,7 @@ import {
   ScrollView,
   ScrollViewProps,
   ViewStyle,
+  useWindowDimensions,
 } from "react-native";
 import {
   MText,
@@ -18,6 +19,7 @@ import {
   useTheme,
   colors as defaultColors,
   IconButton,
+  ThemeColors,
 } from "@musti/ui-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -72,7 +74,7 @@ export type AppModalProps = {
 
   /** center sizing */
   centerMaxWidth?: number;
-  centerMaxHeightPct?: number; // default 82
+  centerMaxHeightPct?: number;
 };
 
 export function AppModal({
@@ -92,8 +94,8 @@ export function AppModal({
   variant = "sheet",
   heightPct = 86,
 
-  centerMaxWidth = 460, // ⬅️ biraz geniş
-  centerMaxHeightPct = 92, // ⬅️ ciddi fark
+  centerMaxWidth = 460,
+  centerMaxHeightPct = 92,
 }: AppModalProps) {
   const insets = useSafeAreaInsets();
 
@@ -102,26 +104,28 @@ export function AppModal({
 
   const palette = useMemo(() => {
     const backdrop =
-      (colors as any).backdropStrong ??
-      (colors as any).backdrop ??
+      (colors as ThemeColors).backdropStrong ??
+      (colors as ThemeColors).backdrop ??
       "rgba(0,0,0,0.55)";
 
     const surface =
-      (colors as any).surface ??
-      (colors as any).surfaceStrong ??
-      (colors as any).backgroundSecondary ??
-      (colors as any).background ??
+      (colors as ThemeColors).surface ??
+      (colors as ThemeColors).surfaceStrong ??
+      (colors as ThemeColors).backgroundSecondary ??
+      (colors as ThemeColors).background ??
       "#FFF";
 
     const border =
-      (colors as any).borderSubtle ??
-      (colors as any).border ??
+      (colors as ThemeColors).borderSubtle ??
+      (colors as ThemeColors).border ??
       "rgba(0,0,0,0.12)";
 
     const shadow =
-      (colors as any).shadowStrong ?? (colors as any).shadow ?? "#000";
+      (colors as ThemeColors).shadowStrong ??
+      (colors as ThemeColors).shadow ??
+      "#000";
 
-    const primary = (colors as any).primary ?? "#2F6FED";
+    const primary = (colors as ThemeColors).primary ?? "#2F6FED";
 
     return { backdrop, surface, border, shadow, primary };
   }, [colors]);
@@ -142,15 +146,21 @@ export function AppModal({
   const onSave = actions?.onSave;
   const saveDisabled = actions?.saveDisabled ?? false;
 
-  const bottomBarH = showActions ? 64 : 0; // ⬅️ biraz daha rahat
+  const bottomBarH = showActions ? 64 : 0;
   const bottomPad = bottomBarH + Math.max(insets.bottom, spacing.md);
 
   const isCenter = variant === "center";
   const isSheet = variant === "sheet";
   const isFull = variant === "full";
 
-  if (!visible) return null;
+  const { height: SCREEN_H } = useWindowDimensions();
 
+  const centerMinHeight = useMemo(() => {
+    const raw = Math.floor(SCREEN_H * 0.62);
+    return Math.max(360, Math.min(560, raw));
+  }, [SCREEN_H]);
+
+  if (!visible) return null;
   return (
     <Modal
       visible={visible}
@@ -209,7 +219,7 @@ export function AppModal({
               isCenter && {
                 maxWidth: centerMaxWidth,
                 maxHeight: `${centerMaxHeightPct}%`,
-                minHeight: "70%",
+                minHeight: centerMinHeight,
               },
 
               cardStyle,
@@ -316,7 +326,6 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
 
-  // presentations
   centerWrap: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: "center",
