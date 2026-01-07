@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useCallback } from "react";
+import { useEffect, useMemo, useCallback, useState } from "react";
 import { useForm } from "react-hook-form";
 import dayjs from "dayjs";
 import { pad2, type MEvent, type EventCreate } from "@musti/planner";
@@ -10,7 +10,6 @@ type Args = {
   startMinute?: number;
   timezone?: string;
   locale?: string;
-  color?: string;
   onClose: () => void;
   onSubmit: (e: Omit<MEvent, "id">) => void;
 };
@@ -46,19 +45,54 @@ function clampTimeOrder(start: string, end: string) {
   return { start, end };
 }
 
+function clampDay(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function isBeforeDay(a: Date, b: Date) {
+  return clampDay(a).getTime() < clampDay(b).getTime();
+}
+
 export function useEventFormController({
-  mode,
   visible,
   day,
   startMinute,
   timezone,
-  color,
   onClose,
   onSubmit,
 }: Args) {
+  const [startDay, _setStartDay] = useState<Date>(() => clampDay(day));
+  const [endDay, _setEndDay] = useState<Date>(() => clampDay(day));
+
+  useEffect(() => {
+    if (!visible) return;
+    const d = clampDay(day);
+    _setStartDay(d);
+    _setEndDay(d);
+  }, [visible, day]);
+
+  const setStartDay = useCallback((d: Date) => {
+    const nextStart = clampDay(d);
+    _setStartDay(nextStart);
+
+    _setEndDay((curEnd) => {
+      const cur = clampDay(curEnd);
+      return isBeforeDay(cur, nextStart) ? nextStart : cur;
+    });
+  }, []);
+
+  const setEndDay = useCallback(
+    (d: Date) => {
+      const nextEnd = clampDay(d);
+      _setEndDay(isBeforeDay(nextEnd, startDay) ? clampDay(startDay) : nextEnd);
+    },
+    [startDay]
+  );
+
   const defaultValues = useMemo<EventCreate>(() => {
     const m = startMinute ?? 9 * 60;
     const snapped = Math.round(m / 15) * 15;
+
     const startTime = minuteToHHmm(
       Math.max(0, Math.min(23 * 60 + 59, snapped))
     );
@@ -73,11 +107,11 @@ export function useEventFormController({
       allDay: false,
       startTime,
       endTime,
-      color: color ?? undefined,
+      color: undefined,
       location: "",
       notes: "",
     };
-  }, [startMinute,color]);
+  }, [startMinute]);
 
   const form = useForm<EventCreate>({
     defaultValues,
@@ -89,42 +123,71 @@ export function useEventFormController({
     form.reset(defaultValues);
   }, [visible, defaultValues, form]);
 
-  // start/end order fix (watch ile)
+  // ✅ WATCH'ları burada tut (reactive)
+  const title = form.watch("title");
+  const allDay = form.watch("allDay");
   const startTime = form.watch("startTime");
   const endTime = form.watch("endTime");
-  
+
   useEffect(() => {
     if (!visible) return;
     const fixed = clampTimeOrder(startTime, endTime);
-    if (fixed.start !== startTime) form.setValue("startTime", fixed.start);
-    if (fixed.end !== endTime) form.setValue("endTime", fixed.end);
+
+    if (fixed.start !== startTime) {
+      form.setValue("startTime", fixed.start, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+    if (fixed.end !== endTime) {
+      form.setValue("endTime", fixed.end, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
   }, [visible, startTime, endTime, form]);
 
+  useEffect(() => {
+    if (!visible) return;
+    if (!allDay) return;
+    _setEndDay(clampDay(startDay));
+  }, [visible, allDay, startDay]);
 
-  const title = form.watch("title");
-  const allDay = form.watch("allDay");
-  
-
+  // ✅ canSave artık title/allDay ile birlikte güncellenir
   const canSave = useMemo(() => {
-    if (!title?.trim()) return false;
+    const cleanTitle = (title ?? "").trim();
+    if (!cleanTitle) return false;
+
     if (allDay) return true;
-  
+
     const s = parseHHmm(startTime);
     const e = parseHHmm(endTime);
     if (!s || !e) return false;
-  
-    return e.h * 60 + e.m > s.h * 60 + s.m;
-  }, [title, allDay, startTime, endTime]);
+
+    const startDt = dayjs(startDay)
+      .hour(s.h)
+      .minute(s.m)
+      .second(0)
+      .millisecond(0);
+
+    const endDt = dayjs(endDay)
+      .hour(e.h)
+      .minute(e.m)
+      .second(0)
+      .millisecond(0);
+
+    return endDt.isAfter(startDt);
+  }, [title, allDay, startTime, endTime, startDay, endDay]);
 
   const save = useCallback(() => {
     const v = form.getValues();
-    if (!v.title?.trim()) return;
-
-    const cleanTitle = v.title.trim();
+    const cleanTitle = (v.title ?? "").trim();
+    if (!cleanTitle) return;
 
     if (v.allDay) {
-      const start = dayjs(day).startOf("day").toISOString();
-      const end = dayjs(day).add(1, "day").startOf("day").toISOString();
+      const d = clampDay(startDay);
+      const start = dayjs(d).startOf("day").toISOString();
+      const end = dayjs(d).add(1, "day").startOf("day").toISOString();
 
       onSubmit({
         title: cleanTitle,
@@ -146,24 +209,26 @@ export function useEventFormController({
     const e = parseHHmm(v.endTime);
     if (!s || !e) return;
 
-    const start = dayjs(day)
+    let startDt = dayjs(startDay)
       .hour(s.h)
       .minute(s.m)
       .second(0)
-      .millisecond(0)
-      .toISOString();
+      .millisecond(0);
 
-    const end = dayjs(day)
+    let endDt = dayjs(endDay)
       .hour(e.h)
       .minute(e.m)
       .second(0)
-      .millisecond(0)
-      .toISOString();
+      .millisecond(0);
+
+    if (!endDt.isAfter(startDt)) {
+      endDt = startDt.add(30, "minute");
+    }
 
     onSubmit({
       title: cleanTitle,
-      start,
-      end,
+      start: startDt.toISOString(),
+      end: endDt.toISOString(),
       timezone,
       allDay: false,
       color: v.color,
@@ -173,7 +238,7 @@ export function useEventFormController({
     });
 
     onClose();
-  }, [form, day, timezone, onClose, onSubmit]);
+  }, [form, startDay, endDay, timezone, onClose, onSubmit]);
 
   const toggleAllDay = useCallback(() => {
     const cur = form.getValues("allDay");
@@ -186,6 +251,11 @@ export function useEventFormController({
     setValue: form.setValue,
     watch: form.watch,
     getValues: form.getValues,
+
+    startDay,
+    endDay,
+    setStartDay,
+    setEndDay,
 
     canSave,
     save,

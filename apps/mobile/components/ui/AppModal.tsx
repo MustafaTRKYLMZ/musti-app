@@ -27,13 +27,13 @@ type AppModalActions = {
   showCancel?: boolean;
   showSave?: boolean;
 
-  cancelLabel?: string; // default "Cancel"
-  saveLabel?: string; // default "Save"
+  cancelLabel?: string;
+  saveLabel?: string;
 
-  cancelIcon?: string; // default "close-outline"
-  saveIcon?: string; // default "checkmark-outline"
+  cancelIcon?: string;
+  saveIcon?: string;
 
-  onCancel?: () => void; // default onClose
+  onCancel?: () => void;
   onSave?: () => void;
 
   saveDisabled?: boolean;
@@ -48,33 +48,22 @@ export type AppModalProps = {
   onClose: () => void;
   children: ReactNode;
 
-  /** top right extra controls before close button */
   headerRight?: ReactNode;
-
-  /** Optional content below children but still scrolls */
   footer?: ReactNode;
-
-  /** Fixed bottom actions (Samsung style) */
   actions?: AppModalActions;
 
-  /** Close when tapping backdrop */
   closeOnBackdrop?: boolean;
 
-  /** scroll props */
   contentContainerStyle?: ScrollViewProps["contentContainerStyle"];
-
-  /** card styling */
   cardStyle?: ViewStyle;
 
-  /** "center" | "sheet" | "full" */
   variant?: AppModalVariant;
-
-  /** for sheet */
   heightPct?: number;
 
-  /** center sizing */
   centerMaxWidth?: number;
   centerMaxHeightPct?: number;
+
+  showClose?: boolean; // ✅ NEW: default true
 };
 
 export function AppModal({
@@ -96,6 +85,8 @@ export function AppModal({
 
   centerMaxWidth = 460,
   centerMaxHeightPct = 92,
+
+  showClose = true,
 }: AppModalProps) {
   const insets = useSafeAreaInsets();
 
@@ -161,6 +152,7 @@ export function AppModal({
   }, [SCREEN_H]);
 
   if (!visible) return null;
+
   return (
     <Modal
       visible={visible}
@@ -207,25 +199,20 @@ export function AppModal({
                 : isSheet
                 ? styles.sheetCard
                 : styles.centerCard,
-
               {
                 backgroundColor: palette.surface,
                 borderColor: palette.border,
                 shadowColor: palette.shadow,
               },
-
               isSheet ? { height: `${heightPct}%` } : null,
-
               isCenter && {
                 maxWidth: centerMaxWidth,
                 maxHeight: `${centerMaxHeightPct}%`,
                 minHeight: centerMinHeight,
               },
-
               cardStyle,
             ]}
           >
-            {/* HEADER */}
             <View style={styles.headerRow}>
               <View style={styles.titleWrapper}>
                 {!!title && (
@@ -237,16 +224,19 @@ export function AppModal({
 
               <View style={styles.headerRight}>
                 {headerRight}
-                <IconButton
-                  name="close-outline"
-                  size={iconSizes.lg}
-                  onPress={onClose}
-                  style={{ padding: spacing.xs }}
-                />
+
+                {showClose ? (
+                  <IconButton
+                    name="close-outline"
+                    size={iconSizes.lg}
+                    onPress={onClose}
+                    style={{ padding: spacing.xs }}
+                    accessibilityLabel="Close"
+                  />
+                ) : null}
               </View>
             </View>
 
-            {/* BODY */}
             <ScrollView
               style={{ flex: 1 }}
               keyboardShouldPersistTaps="handled"
@@ -260,7 +250,6 @@ export function AppModal({
               {footer && <View style={styles.footer}>{footer}</View>}
             </ScrollView>
 
-            {/* ACTIONS */}
             {showActions && (
               <View
                 style={[
@@ -319,7 +308,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "flex-end",
     marginTop: spacing.lg,
-
     marginBottom: spacing["4xl"],
   },
   backdropTouchable: {
@@ -339,7 +327,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  // cards
   centerCard: {
     width: "100%",
     borderRadius: radii.lg,
@@ -389,9 +376,6 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
   },
 
-  body: {
-    marginTop: spacing.xs,
-  },
   footer: {
     marginTop: spacing.md,
   },

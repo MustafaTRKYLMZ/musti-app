@@ -1,4 +1,4 @@
-import React, { memo, useMemo } from "react";
+import React, { memo, useMemo, useState, useCallback } from "react";
 import { View, StyleSheet, TextInput, Pressable } from "react-native";
 import { Controller, type Control, type FieldErrors } from "react-hook-form";
 import type { EventCreate } from "@musti/planner";
@@ -10,17 +10,27 @@ import {
   IconButton,
   iconSizes,
   ThemeColors,
+  BaseIcon,
+  Divider,
+  sizes,
 } from "@musti/ui-native";
+import { TimeField } from "./TimeField";
+import { DateField } from "./DateField";
 
 type EventFormProps = {
   control: Control<EventCreate>;
   errors: FieldErrors<EventCreate>;
+
   allDay: boolean;
   onToggleAllDay: () => void;
 
-  // ✅ NEW
-  colorValue?: string;
-  onOpenColor: () => void;
+  startDay: Date;
+  endDay: Date;
+  onChangeStartDay: (d: Date) => void;
+  onChangeEndDay: (d: Date) => void;
+
+  color?: string;
+  onOpenColors: () => void;
 };
 
 export const EventForm = memo(function EventForm({
@@ -28,8 +38,14 @@ export const EventForm = memo(function EventForm({
   errors,
   allDay,
   onToggleAllDay,
-  colorValue,
-  onOpenColor,
+
+  startDay,
+  endDay,
+  onChangeStartDay,
+  onChangeEndDay,
+
+  color,
+  onOpenColors,
 }: EventFormProps) {
   const { colors } = useTheme();
 
@@ -42,7 +58,6 @@ export const EventForm = memo(function EventForm({
     () => [
       styles.input,
       {
-        borderColor: colors.borderSubtle,
         backgroundColor: surface,
         color: colors.textPrimary,
       },
@@ -50,29 +65,71 @@ export const EventForm = memo(function EventForm({
     [colors, surface]
   );
 
-  return (
-    <View>
-      <View style={styles.field}>
-        <MText variant="label" color="textSecondary">
-          Title
-        </MText>
+  const [startLabelH, setStartLabelH] = useState(0);
+  const [startStackH, setStartStackH] = useState(0);
 
-        <Controller
-          control={control}
-          name="title"
-          rules={{ required: true }}
-          render={({ field: { value, onChange } }) => (
-            <TextInput
-              value={value}
-              onChangeText={onChange}
-              placeholder="Add title"
-              placeholderTextColor={colors.textSecondary}
-              style={inputBase}
-              autoFocus
-              returnKeyType="done"
+  const onStartLabelLayout = useCallback(
+    (e: any) => setStartLabelH(e?.nativeEvent?.layout?.height ?? 0),
+    []
+  );
+  const onStartStackLayout = useCallback(
+    (e: any) => setStartStackH(e?.nativeEvent?.layout?.height ?? 0),
+    []
+  );
+
+  const arrowSize = iconSizes.md ?? 16;
+  const arrowOffsetX = spacing.sm;
+  const arrowTop = Math.max(0, startLabelH + startStackH / 2 - arrowSize / 2);
+
+  return (
+    <View style={styles.form}>
+      <View style={styles.field}>
+        <View style={[styles.rowBox, { backgroundColor: surface }]}>
+          <View style={styles.rowIcon}>
+            <BaseIcon
+              name="text-outline"
+              size={sizes["2xl"]}
+              color={colors.textSecondary}
             />
-          )}
-        />
+          </View>
+
+          <Controller
+            control={control}
+            name="title"
+            rules={{ required: true }}
+            render={({ field: { value, onChange } }) => (
+              <TextInput
+                value={value}
+                onChangeText={onChange}
+                placeholder="Add title"
+                placeholderTextColor={colors.textSecondary}
+                style={[inputBase, styles.rowInput, styles.titleInput]}
+                autoFocus
+              />
+            )}
+          />
+
+          <View style={styles.headerRight}>
+            <Pressable onPress={onOpenColors} hitSlop={8}>
+              <View
+                style={[
+                  styles.colorDot,
+                  {
+                    backgroundColor: color ?? "transparent",
+                    borderColor: color ? "transparent" : colors.borderSubtle,
+                  },
+                ]}
+              />
+            </Pressable>
+
+            <IconButton
+              name="color-palette-outline"
+              size={iconSizes.md}
+              onPress={onOpenColors}
+              style={{ padding: 4 }}
+            />
+          </View>
+        </View>
 
         {!!errors.title && (
           <MText variant="caption" style={{ color: colors.danger }}>
@@ -81,208 +138,268 @@ export const EventForm = memo(function EventForm({
         )}
       </View>
 
-      <Pressable
-        onPress={onToggleAllDay}
-        style={[
-          styles.toggleRow,
-          { borderColor: colors.borderSubtle, backgroundColor: surface },
-        ]}
-      >
-        <MText variant="bodyStrong" color="textPrimary">
-          All day
-        </MText>
+      <Divider inset={spacing.lg} thickness={1} />
 
-        <IconButton
-          name={allDay ? "checkmark-circle-outline" : "ellipse-outline"}
-          size={iconSizes.lg}
+      <View style={styles.field}>
+        <Pressable
           onPress={onToggleAllDay}
-          style={{ padding: spacing.xs }}
-          accessibilityLabel="Toggle all-day"
-        />
-      </Pressable>
-
-      {!allDay && (
-        <View style={styles.row2}>
-          <View style={{ flex: 1 }}>
-            <MText variant="label" color="textSecondary">
-              Start
-            </MText>
-
-            <Controller
-              control={control}
-              name="startTime"
-              render={({ field: { value, onChange } }) => (
-                <TextInput
-                  value={value}
-                  onChangeText={onChange}
-                  placeholder="HH:mm"
-                  placeholderTextColor={colors.textSecondary}
-                  style={inputBase}
-                  keyboardType="numbers-and-punctuation"
-                />
-              )}
+          style={[styles.rowBox, { backgroundColor: surface }]}
+        >
+          <View style={styles.rowIcon}>
+            <BaseIcon
+              name="calendar-outline"
+              size={18}
+              color={colors.textSecondary}
             />
           </View>
 
-          <View style={{ width: spacing.md }} />
+          <MText variant="bodyStrong" style={{ flex: 1 }}>
+            All day
+          </MText>
 
-          <View style={{ flex: 1 }}>
+          <IconButton
+            name={allDay ? "checkmark-circle-outline" : "ellipse-outline"}
+            size={iconSizes.md}
+            onPress={onToggleAllDay}
+            style={{ padding: 4 }}
+          />
+        </Pressable>
+      </View>
+
+      <View style={styles.twoColWrap}>
+        <View style={styles.twoColRow}>
+          <View style={styles.col}>
+            <MText
+              variant="label"
+              color="textSecondary"
+              onLayout={onStartLabelLayout}
+            >
+              Start
+            </MText>
+
+            <View onLayout={onStartStackLayout} style={styles.stack}>
+              <DateField value={startDay} onChange={onChangeStartDay} />
+
+              {!allDay && (
+                <Controller
+                  control={control}
+                  name="startTime"
+                  render={({ field }) => (
+                    <TimeField value={field.value} onChange={field.onChange} />
+                  )}
+                />
+              )}
+            </View>
+          </View>
+
+          <View style={styles.col}>
             <MText variant="label" color="textSecondary">
               End
             </MText>
 
-            <Controller
-              control={control}
-              name="endTime"
-              render={({ field: { value, onChange } }) => (
-                <TextInput
-                  value={value}
-                  onChangeText={onChange}
-                  placeholder="HH:mm"
-                  placeholderTextColor={colors.textSecondary}
-                  style={inputBase}
-                  keyboardType="numbers-and-punctuation"
+            <View style={styles.stack}>
+              <DateField value={endDay} onChange={onChangeEndDay} />
+
+              {!allDay && (
+                <Controller
+                  control={control}
+                  name="endTime"
+                  render={({ field }) => (
+                    <TimeField value={field.value} onChange={field.onChange} />
+                  )}
                 />
               )}
-            />
+            </View>
           </View>
         </View>
-      )}
 
-      <View style={styles.field}>
-        <MText variant="label" color="textSecondary">
-          Location
-        </MText>
-
-        <Controller
-          control={control}
-          name="location"
-          render={({ field: { value, onChange } }) => (
-            <TextInput
-              value={value ?? ""}
-              onChangeText={onChange}
-              placeholder="Add location"
-              placeholderTextColor={colors.textSecondary}
-              style={inputBase}
-            />
-          )}
-        />
-      </View>
-
-      <View style={styles.field}>
-        <MText variant="label" color="textSecondary">
-          Notes
-        </MText>
-
-        <Controller
-          control={control}
-          name="notes"
-          render={({ field: { value, onChange } }) => (
-            <TextInput
-              value={value ?? ""}
-              onChangeText={onChange}
-              placeholder="Add notes"
-              placeholderTextColor={colors.textSecondary}
-              multiline
-              style={[inputBase, styles.notes]}
-            />
-          )}
-        />
-      </View>
-
-      {/* ✅ Color picker row (opens modal) */}
-      <View style={styles.field}>
-        <MText variant="label" color="textSecondary">
-          Color
-        </MText>
-
-        <Controller
-          control={control}
-          name="color"
-          render={() => (
-            <Pressable
-              onPress={onOpenColor}
+        {!allDay && (
+          <View pointerEvents="none" style={styles.arrowOverlay}>
+            <View
+              pointerEvents="none"
               style={[
-                styles.colorPickRow,
-                { borderColor: colors.borderSubtle, backgroundColor: surface },
+                styles.arrowInner,
+                {
+                  top: arrowTop,
+                  left: "50%",
+                  marginLeft: -(arrowSize / 2),
+                  transform: [{ translateX: -arrowOffsetX }],
+                },
               ]}
             >
-              <View style={styles.colorLeft}>
-                <View
-                  style={[
-                    styles.colorPreview,
-                    {
-                      backgroundColor: colorValue ?? "transparent",
-                      borderColor: colorValue
-                        ? "transparent"
-                        : colors.borderSubtle,
-                    },
-                  ]}
-                />
-                <MText variant="body" color="textSecondary">
-                  {colorValue ? colorValue : "Default"}
-                </MText>
-              </View>
-
-              <IconButton
-                name="chevron-forward-outline"
-                size={iconSizes.md}
-                onPress={onOpenColor}
-                style={{ padding: spacing.xs }}
-                accessibilityLabel="Pick color"
+              <BaseIcon
+                name="arrow-forward-outline"
+                size={arrowSize}
+                color={colors.textSecondary}
               />
-            </Pressable>
-          )}
-        />
+            </View>
+          </View>
+        )}
+      </View>
+
+      <Divider inset={spacing.lg} thickness={1} />
+
+      <View style={styles.field}>
+        <View style={[styles.rowBox, { backgroundColor: surface }]}>
+          <View style={styles.rowIcon}>
+            <BaseIcon
+              name="location-outline"
+              size={18}
+              color={colors.textSecondary}
+            />
+          </View>
+
+          <Controller
+            control={control}
+            name="location"
+            render={({ field }) => (
+              <TextInput
+                value={field.value ?? ""}
+                onChangeText={field.onChange}
+                placeholder="Add location"
+                placeholderTextColor={colors.textSecondary}
+                style={[inputBase, styles.rowInput]}
+              />
+            )}
+          />
+        </View>
+      </View>
+
+      <Divider inset={spacing.lg} thickness={1} />
+
+      <View style={styles.field}>
+        <View
+          style={[
+            styles.rowBox,
+            styles.notesRowBox,
+            { backgroundColor: surface },
+          ]}
+        >
+          <View style={[styles.rowIcon, styles.rowIconTop]}>
+            <BaseIcon
+              name="document-text-outline"
+              size={18}
+              color={colors.textSecondary}
+            />
+          </View>
+
+          <Controller
+            control={control}
+            name="notes"
+            render={({ field }) => (
+              <TextInput
+                value={field.value ?? ""}
+                onChangeText={field.onChange}
+                placeholder="Add notes"
+                placeholderTextColor={colors.textSecondary}
+                multiline
+                style={[inputBase, styles.rowInput, styles.notes]}
+              />
+            )}
+          />
+        </View>
       </View>
     </View>
   );
 });
 
 const styles = StyleSheet.create({
-  field: { marginBottom: spacing.md, gap: spacing.xs },
-  row2: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: spacing.md,
+  form: {
+    gap: spacing.xs,
+    paddingTop: spacing.xs,
   },
-  input: {
-    borderWidth: 1,
-    borderRadius: radii.lg,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  notes: { height: 110, textAlignVertical: "top" },
-  toggleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderWidth: 1,
-    borderRadius: radii.lg,
-    marginBottom: spacing.md,
-  },
+  field: {},
 
-  // color row
-  colorPickRow: {
-    borderWidth: 1,
-    borderRadius: radii.lg,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  colorLeft: {
+  rowBox: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
   },
-  colorPreview: {
-    width: 18,
-    height: 18,
+
+  rowIcon: {
+    width: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  rowIconTop: {
+    alignSelf: "flex-start",
+    marginTop: 4,
+  },
+
+  rowInput: {
+    flex: 1,
+    paddingVertical: 2,
+    paddingHorizontal: 0,
+    fontSize: 15,
+    lineHeight: 18,
+  },
+
+  titleInput: {
+    fontSize: 16,
+    lineHeight: 20,
+  },
+
+  input: {
+    borderWidth: 0,
+  },
+
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+  },
+
+  colorDot: {
+    width: 14,
+    height: 14,
     borderRadius: 999,
     borderWidth: 1,
+  },
+
+  notesRowBox: {
+    alignItems: "flex-start",
+  },
+
+  notes: {
+    height: 96,
+    paddingTop: 4,
+    textAlignVertical: "top",
+  },
+
+  twoColWrap: {
+    position: "relative",
+    marginVertical: spacing.sm,
+  },
+
+  twoColRow: {
+    flexDirection: "row",
+    gap: spacing.lg,
+    overflow: "visible",
+  },
+
+  col: {
+    flex: 1,
+    minWidth: 0,
+    gap: spacing.sm,
+    zIndex: 1,
+  },
+
+  stack: {
+    gap: spacing.sm,
+  },
+
+  arrowOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    pointerEvents: "none",
+    zIndex: -1,
+  },
+
+  arrowInner: {
+    position: "absolute",
+    pointerEvents: "none",
   },
 });

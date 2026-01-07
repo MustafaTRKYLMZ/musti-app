@@ -1,11 +1,11 @@
-import React, { useMemo, useState, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import type { MEvent } from "@musti/planner";
-import { StyleSheet } from "react-native";
+import { spacing } from "@musti/ui-native";
 
 import { AppModal } from "../AppModal";
 import { useEventFormController } from "@/components/planner/controllers/useEventFormController";
-import { EventColorPickerModal } from "@/components/ui/modals/EventColorPickerModal";
 import { EventForm } from "@/components/planner/EventForm";
+import { EventColorPickerModal } from "./EventColorPickerModal";
 
 type Props = {
   visible: boolean;
@@ -28,14 +28,6 @@ export function EventCreateModal({
 }: Props) {
   const [colorOpen, setColorOpen] = useState(false);
 
-  const title = useMemo(() => {
-    return day.toLocaleDateString(locale ?? "en-EN", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-    });
-  }, [day, locale]);
-
   const c = useEventFormController({
     mode: "create",
     visible,
@@ -57,12 +49,12 @@ export function EventCreateModal({
     <>
       <AppModal
         visible={visible}
-        title={title}
-        onClose={onClose}
-        variant="full"
+        onClose={() => {}}
+        variant="center"
         closeOnBackdrop={false}
+        showClose={false}
+        contentContainerStyle={{ paddingTop: spacing.xs }}
         actions={{
-          onCancel: onClose,
           onSave: c.save,
           saveDisabled: !c.canSave,
           cancelLabel: "Cancel",
@@ -74,8 +66,12 @@ export function EventCreateModal({
           errors={c.errors}
           allDay={allDay}
           onToggleAllDay={c.toggleAllDay}
-          colorValue={selectedColor}
-          onOpenColor={openColors}
+          startDay={c.startDay}
+          endDay={c.endDay}
+          onChangeStartDay={c.setStartDay}
+          onChangeEndDay={c.setEndDay}
+          color={selectedColor}
+          onOpenColors={openColors}
         />
       </AppModal>
 
