@@ -10,6 +10,7 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 
 import type { MEvent, WeekViewConfig } from "@musti/planner/src/types";
 import { withDayAndMinutes, snapMinutes } from "@musti/planner";
+import { colors } from "@musti/ui-native";
 
 type Props = {
   density: "compact" | "expanded";
@@ -176,6 +177,6 @@ const styles = StyleSheet.create({
     height: 14,
     marginTop: 6,
     borderRadius: 8,
-    backgroundColor: "rgba(255,255,255,0.35)",
+    backgroundColor: colors.backgroundSecondary,
   },
 });

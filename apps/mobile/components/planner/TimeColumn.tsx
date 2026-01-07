@@ -18,8 +18,7 @@ type Props = {
 
 const { colors } = plannerTheme;
 
-// Samsung hissi için mikro ayarlar
-const LABEL_OFFSET_Y = 6; // çizginin üstüne kayma
+const LABEL_OFFSET_Y = 6;
 const LABEL_FONT_SIZE = sizes.md;
 
 export const TimeColumn: FC<Props> = ({
@@ -41,7 +40,7 @@ export const TimeColumn: FC<Props> = ({
     const nearest = Math.round(rawIndex);
     const hourLineY = nearest * hourHeight;
 
-    const thresholdPx = 14; // Samsung daha tight
+    const thresholdPx = 14;
     const collides = Math.abs(nowY - hourLineY) <= thresholdPx;
 
     return { hideIndex: collides ? nearest : -1 };
@@ -49,7 +48,6 @@ export const TimeColumn: FC<Props> = ({
 
   return (
     <View style={[styles.col, { width: TIME_COL_WIDTH, minWidth: 44 }]}>
-      {/* Saat label’ları */}
       <View style={{ height: hoursCount * hourHeight }}>
         {Array.from({ length: hoursCount }).map((_, i) => {
           const hour = weekView.startHour + i;
@@ -64,7 +62,7 @@ export const TimeColumn: FC<Props> = ({
               style={[
                 styles.timeLabel,
                 {
-                  top: lineY - LABEL_OFFSET_Y - LABEL_FONT_SIZE / 2, // ✅ Samsung hizası
+                  top: lineY - LABEL_OFFSET_Y - LABEL_FONT_SIZE / 2,
                   height: LABEL_FONT_SIZE + 2,
                   opacity: hideThis ? 0 : 1,
                 },
@@ -78,7 +76,7 @@ export const TimeColumn: FC<Props> = ({
 
       {!!bottomSpacerHeight && <View style={{ height: bottomSpacerHeight }} />}
 
-      {/* NOW etiketi */}
+      {/* NOW  */}
       {nowY != null && nowLabel ? (
         <View pointerEvents="none" style={[styles.nowWrap, { top: nowY - 7 }]}>
           <MText style={[styles.nowText, { color: nowColor }]}>

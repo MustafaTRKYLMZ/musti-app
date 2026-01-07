@@ -39,8 +39,6 @@ type GridEventsProps = {
   nowColor?: string;
 };
 
-const { colors } = plannerTheme;
-
 export const GridEvents: FC<GridEventsProps> = ({
   gridWidth,
   totalHeight,
