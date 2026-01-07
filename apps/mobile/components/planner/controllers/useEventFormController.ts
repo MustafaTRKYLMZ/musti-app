@@ -153,7 +153,6 @@ export function useEventFormController({
     _setEndDay(clampDay(startDay));
   }, [visible, allDay, startDay]);
 
-  // ✅ canSave artık title/allDay ile birlikte güncellenir
   const canSave = useMemo(() => {
     const cleanTitle = (title ?? "").trim();
     if (!cleanTitle) return false;

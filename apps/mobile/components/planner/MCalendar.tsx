@@ -30,7 +30,6 @@ export type MCalendarProps = {
   onEventChange?: (next: MEvent) => void;
   setDate: (nextDate: Date) => void;
 
-  // ✅ FAB gibi dış tetikleyiciler için
   openCreateToken?: number;
   openCreateDay?: Date;
 };
@@ -155,7 +154,6 @@ export const MCalendar: FC<MCalendarProps> = ({
               onPressDay?.(d);
               setCreateDay(d);
               setCreateStartMinute(undefined);
-              setCreateOpen(true);
             }}
             onPressEvent={onPressEvent}
           />

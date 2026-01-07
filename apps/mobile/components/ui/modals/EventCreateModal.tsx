@@ -49,7 +49,7 @@ export function EventCreateModal({
     <>
       <AppModal
         visible={visible}
-        onClose={() => {}}
+        onClose={onClose}
         variant="center"
         closeOnBackdrop={false}
         showClose={false}
@@ -59,6 +59,7 @@ export function EventCreateModal({
           saveDisabled: !c.canSave,
           cancelLabel: "Cancel",
           saveLabel: "Save",
+          onCancel: onClose,
         }}
       >
         <EventForm
