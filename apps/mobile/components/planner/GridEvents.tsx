@@ -1,16 +1,10 @@
 import React, { FC, useMemo } from "react";
-import {
-  View,
-  Pressable,
-  StyleSheet,
-  RegisteredStyle,
-  ViewStyle,
-} from "react-native";
+import { View, Pressable, RegisteredStyle, ViewStyle } from "react-native";
 import { DraggableEventBlock } from "./DraggableEventBlock";
 import { BlockedTime, MEvent, WeekViewConfig } from "@musti/planner/src/types";
-import { plannerTheme } from "@musti/ui-native";
 import { RenderHorizontalLines } from "./RenderHorizontalLines";
 import { addDays } from "@musti/planner";
+import { useCalendarUiStore } from "@/store/calendar/useCalendarUiStore";
 
 type GridEventsProps = {
   weekStart: Date;
@@ -26,15 +20,13 @@ type GridEventsProps = {
   endMinVis: number;
   bottomPaddingMinutes: number;
 
-  onPressEvent?: (e: MEvent) => void;
-  onPressDay?: (day: Date) => void;
   onEventChange?: (next: MEvent) => void;
   handleTapGrid: (dayIndex: number, y: number) => void;
 
-  gridLineStyle: ViewStyle | RegisteredStyle<ViewStyle>; // minor
-  gridLineStrongStyle?: ViewStyle | RegisteredStyle<ViewStyle>; // major (hour)
+  gridLineStyle: ViewStyle | RegisteredStyle<ViewStyle>;
+  gridLineStrongStyle?: ViewStyle | RegisteredStyle<ViewStyle>;
 
-  todayIndex: number; // -1 if not in this week
+  todayIndex: number;
   nowY: number | null;
   nowColor?: string;
 };
@@ -43,7 +35,6 @@ export const GridEvents: FC<GridEventsProps> = ({
   gridWidth,
   totalHeight,
   weekStart,
-  onPressDay,
   handleTapGrid,
   columnWidth,
   blocks,
@@ -51,7 +42,6 @@ export const GridEvents: FC<GridEventsProps> = ({
   weekView,
   startMinVis,
   endMinVis,
-  onPressEvent,
   onEventChange,
   bottomPaddingMinutes,
   gridLineStyle,
@@ -60,6 +50,9 @@ export const GridEvents: FC<GridEventsProps> = ({
   nowY,
   nowColor,
 }) => {
+  const openDay = useCalendarUiStore((s) => s.openDay);
+  const pressEvent = useCalendarUiStore((s) => s.pressEvent);
+
   const nowX = useMemo(() => {
     if (todayIndex < 0) return null;
     return todayIndex * columnWidth;
@@ -67,13 +60,12 @@ export const GridEvents: FC<GridEventsProps> = ({
 
   return (
     <View style={{ width: gridWidth, height: totalHeight }}>
-      {/* === PRESS LAYER === */}
       {Array.from({ length: 7 }).map((_, dayIndex) => {
         const dayDate = addDays(weekStart, dayIndex);
         return (
           <Pressable
             key={`day-${dayIndex}`}
-            onPress={() => onPressDay?.(dayDate)}
+            onPress={() => openDay(dayDate)}
             onLongPress={(evt) =>
               handleTapGrid(dayIndex, evt.nativeEvent.locationY)
             }
@@ -89,7 +81,6 @@ export const GridEvents: FC<GridEventsProps> = ({
         );
       })}
 
-      {/* === VERTICAL LINES (days) === */}
       {Array.from({ length: 8 }).map((_, i) => (
         <View
           key={`v-line-${i}`}
@@ -106,7 +97,6 @@ export const GridEvents: FC<GridEventsProps> = ({
         />
       ))}
 
-      {/* === HORIZONTAL LINES (time) === */}
       <RenderHorizontalLines
         weekView={weekView}
         width={gridWidth}
@@ -145,7 +135,6 @@ export const GridEvents: FC<GridEventsProps> = ({
         />
       ) : null}
 
-      {/* === EVENTS === */}
       {blocks.map((b) => {
         const left =
           b.dayIndex * columnWidth + (b.col * columnWidth) / b.colCount;
@@ -164,7 +153,7 @@ export const GridEvents: FC<GridEventsProps> = ({
             dayDate={addDays(weekStart, b.dayIndex)}
             minMinute={startMinVis}
             maxMinute={endMinVis}
-            onPress={onPressEvent}
+            onPress={(e) => pressEvent(e.id, e.start)}
             onChange={onEventChange}
           />
         );

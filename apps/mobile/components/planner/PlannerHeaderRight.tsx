@@ -1,19 +1,17 @@
 import { useTheme, MText, spacing } from "@musti/ui-native";
 import { View, TouchableOpacity, StyleSheet } from "react-native";
 import { AppSwitcherButton } from "../AppSwitcherButton";
+import { useCalendarUiStore } from "@/store/calendar/useCalendarUiStore";
 
-export const PlannerHeaderRight = ({
-  view,
-  onToggleView,
-}: {
-  view: "week" | "month";
-  onToggleView: () => void;
-}) => {
+export const PlannerHeaderRight = () => {
   const { colors } = useTheme();
+  const view = useCalendarUiStore((s) => s.view);
+  const setView = useCalendarUiStore((s) => s.setView);
+
   return (
     <View style={styles.hRightWrap}>
       <TouchableOpacity
-        onPress={onToggleView}
+        onPress={() => setView(view === "week" ? "month" : "week")}
         activeOpacity={0.85}
         style={[styles.pill, { borderColor: colors.borderSubtle }]}
       >
@@ -21,12 +19,14 @@ export const PlannerHeaderRight = ({
           {view === "week" ? "Week" : "Month"}
         </MText>
       </TouchableOpacity>
+
       <View style={styles.switcher}>
         <AppSwitcherButton />
       </View>
     </View>
   );
 };
+
 const styles = StyleSheet.create({
   pill: {
     paddingHorizontal: 10,
@@ -34,9 +34,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
   },
-  switcher: {
-    marginLeft: 2,
-  },
+  switcher: { marginLeft: 2 },
   hRightWrap: {
     flexDirection: "row",
     alignItems: "center",

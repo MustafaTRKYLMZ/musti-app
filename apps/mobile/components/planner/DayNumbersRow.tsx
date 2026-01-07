@@ -1,8 +1,9 @@
-import React, { FC, useState } from "react";
+import React, { FC } from "react";
 import { View, StyleSheet, StyleProp, ViewStyle } from "react-native";
 import { spacing } from "@musti/ui-native";
 import { DayCard } from "./DayCard";
 import { pad2, sameDay } from "@musti/planner";
+import { useCalendarUiStore } from "@/store/calendar/useCalendarUiStore";
 
 const dayKey = (d: Date) =>
   `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
@@ -13,12 +14,11 @@ export type DayNumbersRowProps = {
   colWidth: number;
   gap: number;
 
-  onPressDay?: (d: Date) => void;
-
   markersByDayKey?: Record<string, string[]>;
   maxMarkers?: number;
-  selectedDate?: Date;
+
   containerStyle?: StyleProp<ViewStyle>;
+  onPressDay?: (d: Date) => void;
 };
 
 export const DayNumbersRow: FC<DayNumbersRowProps> = ({
@@ -26,11 +26,12 @@ export const DayNumbersRow: FC<DayNumbersRowProps> = ({
   today,
   colWidth,
   gap,
-  onPressDay,
   markersByDayKey,
   containerStyle,
-  selectedDate,
+  onPressDay,
 }) => {
+  const selectedDate = useCalendarUiStore((s) => s.selectedDate);
+
   return (
     <View style={[styles.row, containerStyle]}>
       {days.map((d, i) => {
@@ -50,11 +51,11 @@ export const DayNumbersRow: FC<DayNumbersRowProps> = ({
               date={d}
               width={colWidth}
               isToday={sameDay(d, today)}
-              isSelected={selectedDate ? sameDay(d, selectedDate) : false}
-              onPress={onPressDay}
+              isSelected={sameDay(d, selectedDate)}
               markers={markers}
               maxMarkers={4}
               markerMode="row"
+              onPress={onPressDay}
             />
           </View>
         );
@@ -64,9 +65,7 @@ export const DayNumbersRow: FC<DayNumbersRowProps> = ({
 };
 
 const styles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-  },
+  row: { flexDirection: "row" },
   slot: {
     alignItems: "center",
     justifyContent: "center",

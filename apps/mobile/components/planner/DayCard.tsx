@@ -1,4 +1,3 @@
-// components/DayCard.tsx
 import React, { FC } from "react";
 import {
   Pressable,
@@ -10,6 +9,7 @@ import {
   TextStyle,
 } from "react-native";
 import { MText, plannerTheme, radii, typography } from "@musti/ui-native";
+import { useCalendarUiStore } from "@/store/calendar/useCalendarUiStore";
 
 const { colors } = plannerTheme;
 
@@ -57,6 +57,7 @@ export const DayCard: FC<DayCardProps> = ({
   isToday = false,
   isSelected = false,
   isOutside = false,
+
   onPress,
 
   markers,
@@ -77,6 +78,8 @@ export const DayCard: FC<DayCardProps> = ({
 
   cellBg,
 }) => {
+  const openDay = useCalendarUiStore((s) => s.openDay);
+
   const count = markers?.length ?? 0;
   const shown = count ? markers!.slice(0, maxMarkers) : [];
   const overflow = count > maxMarkers ? count - maxMarkers : 0;
@@ -91,7 +94,7 @@ export const DayCard: FC<DayCardProps> = ({
   return (
     <Pressable
       pressRetentionOffset={{ top: 12, left: 12, bottom: 12, right: 12 }}
-      onPress={onPress ? () => onPress(date) : undefined}
+      onPress={() => (onPress ? onPress(date) : openDay(date))}
       style={[
         styles.cell,
         { width, height: height ?? undefined },
@@ -209,40 +212,18 @@ const styles = StyleSheet.create({
     lineHeight: typography.heading4.fontSize,
   },
 
-  todayText: {
-    color: colors.primary,
-  },
+  todayText: { color: colors.primary },
+  outsideText: { color: colors.textSecondary ?? colors.textPrimary },
 
-  outsideText: {
-    color: colors.textSecondary ?? colors.textPrimary,
-  },
-
-  inlineWrap: {
-    width: "100%",
-    marginTop: 4,
-    paddingHorizontal: 2,
-  },
-
-  inlineRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 3,
-  },
-
-  inlineBar: {
-    width: 3,
-    height: 10,
-    borderRadius: 2,
-    marginRight: 4,
-  },
-
+  inlineWrap: { width: "100%", marginTop: 4, paddingHorizontal: 2 },
+  inlineRow: { flexDirection: "row", alignItems: "center", marginBottom: 3 },
+  inlineBar: { width: 3, height: 10, borderRadius: 2, marginRight: 4 },
   inlineText: {
     flex: 1,
     fontSize: 10,
     color: colors.textPrimary,
     opacity: 0.95,
   },
-
   inlineMore: {
     fontSize: 10,
     color: colors.textSecondary ?? colors.textPrimary,
@@ -256,15 +237,10 @@ const styles = StyleSheet.create({
     justifyContent: "flex-start",
     minHeight: 8,
   },
-
   markersStack: { flexDirection: "column" },
   markersRow: { flexDirection: "row" },
 
-  marker: {
-    height: 3,
-    borderRadius: 2,
-  },
-
+  marker: { height: 3, borderRadius: 2 },
   markerStack: { marginBottom: 2 },
   markerRow: { marginRight: 3 },
 

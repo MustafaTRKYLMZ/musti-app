@@ -1,3 +1,4 @@
+// DaysHeader.tsx
 import React, { useEffect, useMemo, useRef } from "react";
 import {
   View,
@@ -23,8 +24,6 @@ export function DaysHeader(props: {
   locale?: string;
   onChangeDate: (nextDate: Date) => void;
   timeColWidth: number;
-
-  selectedDate: Date;
   onPressDay?: (d: Date) => void;
 }) {
   const { width } = useWindowDimensions();
@@ -64,14 +63,11 @@ export function DaysHeader(props: {
     scrollRef.current?.scrollTo({ x: centerOffset, animated: false });
   };
 
-  // ✅ Tap’lerde 1 hafta atlama bug’ını kesin çözen hesap
-  const handleMomentumEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+  const handleEndDrag = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const x = e.nativeEvent.contentOffset.x;
-
-    const deltaWeeks = Math.round((x - centerOffset) / weekWidthPx);
-    if (deltaWeeks === 0) return;
-
-    props.onChangeDate(addDays(props.date, deltaWeeks * 7));
+    const weekIndex = Math.round(x / weekWidthPx);
+    if (weekIndex === 1) return;
+    props.onChangeDate(addDays(props.date, (weekIndex - 1) * 7));
     scrollRef.current?.scrollTo({ x: centerOffset, animated: false });
   };
 
@@ -91,15 +87,14 @@ export function DaysHeader(props: {
             snapToInterval={weekWidthPx}
             snapToAlignment="start"
             contentContainerStyle={{ width: contentWidth }}
-            onMomentumScrollEnd={handleMomentumEnd} // ✅ değişti
+            onScrollEndDrag={handleEndDrag}
           >
             <DayNumbersRow
               days={days}
               today={today}
               colWidth={colWidth}
               gap={gap}
-              selectedDate={props.selectedDate}
-              onPressDay={props.onPressDay} // ✅ ekli
+              onPressDay={props.onPressDay}
             />
           </ScrollView>
         </View>
@@ -109,12 +104,6 @@ export function DaysHeader(props: {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flexDirection: "row",
-    backgroundColor: colors.background,
-  },
-  gridBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.textPrimary,
-  },
+  container: { flexDirection: "row", backgroundColor: colors.background },
+  gridBorder: { borderBottomWidth: 1, borderBottomColor: colors.textPrimary },
 });

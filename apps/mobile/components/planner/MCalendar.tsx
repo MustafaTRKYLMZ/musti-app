@@ -1,10 +1,9 @@
-import React, { FC, useEffect, useMemo, useState } from "react";
+import React, { FC, useMemo } from "react";
 import { View, StyleSheet, useWindowDimensions } from "react-native";
 import {
   CalendarConfig,
   MEvent,
   WeekViewConfig,
-  CalendarView,
   addDays,
   startOfWeek,
 } from "@musti/planner";
@@ -15,49 +14,37 @@ import { MonthContainer } from "./MonthContainer";
 import { DAYS_IN_WEEK, TIME_COL_WIDTH } from "@/config/timeConfigs";
 import { EventCreateModal } from "../ui/modals/EventCreateModal";
 import { useCalendarEventsStore } from "@/store/calendar/useCalendarEventsStore";
+import { useCalendarUiStore } from "@/store/calendar/useCalendarUiStore";
 
 const { colors } = plannerTheme;
 
 export type MCalendarProps = {
-  view: CalendarView;
-  date: Date;
   config?: CalendarConfig;
   locale?: string;
   weekView?: Partial<WeekViewConfig>;
-  onPressEvent?: (e: MEvent) => void;
-  onPressDay?: (d: Date) => void;
-  onCreate?: (day: Date, startMinute?: number) => void;
   onEventChange?: (next: MEvent) => void;
-  setDate: (nextDate: Date) => void;
-
-  openCreateToken?: number;
-  openCreateDay?: Date;
 };
 
 export const MCalendar: FC<MCalendarProps> = ({
-  view,
-  date,
   config: configProp,
   locale,
   weekView,
-  onPressEvent,
-  onPressDay,
-  onCreate,
   onEventChange,
-  setDate,
-  openCreateToken,
-  openCreateDay,
 }) => {
   const { width } = useWindowDimensions();
 
-  const addEvent = useCalendarEventsStore((s) => s.addEvent);
   const events = useCalendarEventsStore((s) => s.events);
+  const addEvent = useCalendarEventsStore((s) => s.addEvent);
 
-  const [createOpen, setCreateOpen] = useState(false);
-  const [createDay, setCreateDay] = useState<Date>(new Date());
-  const [createStartMinute, setCreateStartMinute] = useState<
-    number | undefined
-  >(undefined);
+  const view = useCalendarUiStore((s) => s.view);
+  const date = useCalendarUiStore((s) => s.date);
+  const closeCreate = useCalendarUiStore((s) => s.closeCreate);
+
+  const createOpen = useCalendarUiStore((s) => s.createOpen);
+  const createDay = useCalendarUiStore((s) => s.createDay);
+  const createStartMinute = useCalendarUiStore((s) => s.createStartMinute);
+
+  const pressEvent = useCalendarUiStore((s) => s.pressEvent);
 
   const config: CalendarConfig = {
     locale: "en",
@@ -70,7 +57,6 @@ export const MCalendar: FC<MCalendarProps> = ({
 
   const baseCol = Math.floor(daysAreaWidth / DAYS_IN_WEEK);
   const leftover = daysAreaWidth - baseCol * DAYS_IN_WEEK;
-
   const gap = view === "week" ? Math.floor(leftover / (DAYS_IN_WEEK - 1)) : 0;
 
   const colWidth =
@@ -91,16 +77,6 @@ export const MCalendar: FC<MCalendarProps> = ({
     [weekStart]
   );
 
-  // ✅ dışarıdan token gelince modal aç
-  useEffect(() => {
-    if (openCreateToken == null) return;
-    const d = openCreateDay ?? date;
-
-    setCreateDay(d);
-    setCreateStartMinute(undefined);
-    setCreateOpen(true);
-  }, [openCreateToken]);
-
   return (
     <View style={styles.root}>
       <View style={styles.lettersRow}>
@@ -117,7 +93,6 @@ export const MCalendar: FC<MCalendarProps> = ({
 
       {view === "week" && (
         <WeekView
-          date={date}
           events={events}
           config={config}
           locale={locale ?? config.locale}
@@ -128,15 +103,6 @@ export const MCalendar: FC<MCalendarProps> = ({
             pxPerMinute: 1.2,
             ...weekView,
           }}
-          onChangeDate={setDate}
-          onPressEvent={onPressEvent}
-          onPressDay={onPressDay}
-          onCreate={(day, startMinute) => {
-            onCreate?.(day, startMinute);
-            setCreateDay(day);
-            setCreateStartMinute(startMinute);
-            setCreateOpen(true);
-          }}
           onEventChange={onEventChange}
         />
       )}
@@ -144,18 +110,11 @@ export const MCalendar: FC<MCalendarProps> = ({
       {view === "month" && (
         <View style={{ flex: 1 }}>
           <MonthContainer
-            date={date}
             config={config}
             colWidth={colWidth}
             events={events}
             locale={locale ?? config.locale}
-            onChangeDate={setDate}
-            onPressDay={(d) => {
-              onPressDay?.(d);
-              setCreateDay(d);
-              setCreateStartMinute(undefined);
-            }}
-            onPressEvent={onPressEvent}
+            onPressEvent={(e) => pressEvent(e.id, e.start)}
           />
         </View>
       )}
@@ -166,10 +125,10 @@ export const MCalendar: FC<MCalendarProps> = ({
         startMinute={createStartMinute}
         locale={locale ?? config.locale}
         timezone={config.timezone}
-        onClose={() => setCreateOpen(false)}
+        onClose={closeCreate}
         onSubmit={(payload) => {
           addEvent(payload);
-          setCreateOpen(false);
+          closeCreate();
         }}
       />
     </View>
