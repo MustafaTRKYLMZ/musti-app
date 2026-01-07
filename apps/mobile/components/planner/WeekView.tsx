@@ -41,6 +41,9 @@ type Density = "compact" | "expanded";
 const clampNum = (v: number, a: number, b: number) =>
   Math.max(a, Math.min(b, v));
 
+const clampDay = (d: Date) =>
+  new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
 export function WeekView(props: {
   date: Date;
   events: MEvent[];
@@ -59,6 +62,23 @@ export function WeekView(props: {
 
   const [density, setDensity] = useState<Density>("compact");
   const [now, setNow] = useState(() => new Date());
+
+  const [selectedDate, setSelectedDate] = useState<Date | null>(
+    clampDay(props.date)
+  );
+
+  useEffect(() => {
+    setSelectedDate(clampDay(props.date));
+  }, [props.date]);
+
+  const handlePres = useCallback(
+    (d: Date) => {
+      const dd = clampDay(d);
+      setSelectedDate(dd);
+      props.onPressDay?.(dd);
+    },
+    [props.onPressDay]
+  );
 
   const vRef = useRef<ScrollView | null>(null);
   const [viewportH, setViewportH] = useState(0);
@@ -142,7 +162,6 @@ export function WeekView(props: {
     if (!viewportH) return;
 
     const maxScroll = Math.max(0, contentHeight - viewportH);
-
     const target = clampNum(nowInfo.y - hourHeight, 0, maxScroll);
 
     autoScrollingRef.current = true;
@@ -162,6 +181,8 @@ export function WeekView(props: {
         locale={props.locale}
         onChangeDate={(d) => props.onChangeDate?.(d)}
         timeColWidth={TIME_COL_WIDTH}
+        onPressDay={handlePres}
+        selectedDate={selectedDate ?? clampDay(props.date)}
       />
 
       <ScrollView
@@ -197,7 +218,7 @@ export function WeekView(props: {
             bottomPaddingMinutes={BOTTOM_PADDING_MINUTES}
             gridLineStyle={styles.gridLine}
             gridLineStrongStyle={styles.gridLineStrong}
-            onPressDay={props.onPressDay}
+            onPressDay={handlePres}
             handleTapGrid={handleTapGrid}
             onPressEvent={props.onPressEvent}
             onEventChange={props.onEventChange}

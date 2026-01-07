@@ -1,4 +1,3 @@
-// DaysHeader.tsx
 import React, { useEffect, useMemo, useRef } from "react";
 import {
   View,
@@ -24,6 +23,9 @@ export function DaysHeader(props: {
   locale?: string;
   onChangeDate: (nextDate: Date) => void;
   timeColWidth: number;
+
+  selectedDate: Date;
+  onPressDay?: (d: Date) => void;
 }) {
   const { width } = useWindowDimensions();
   const scrollRef = useRef<ScrollView | null>(null);
@@ -62,11 +64,14 @@ export function DaysHeader(props: {
     scrollRef.current?.scrollTo({ x: centerOffset, animated: false });
   };
 
-  const handleEndDrag = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+  // ✅ Tap’lerde 1 hafta atlama bug’ını kesin çözen hesap
+  const handleMomentumEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const x = e.nativeEvent.contentOffset.x;
-    const weekIndex = Math.round(x / weekWidthPx);
-    if (weekIndex === 1) return;
-    props.onChangeDate(addDays(props.date, (weekIndex - 1) * 7));
+
+    const deltaWeeks = Math.round((x - centerOffset) / weekWidthPx);
+    if (deltaWeeks === 0) return;
+
+    props.onChangeDate(addDays(props.date, deltaWeeks * 7));
     scrollRef.current?.scrollTo({ x: centerOffset, animated: false });
   };
 
@@ -86,13 +91,15 @@ export function DaysHeader(props: {
             snapToInterval={weekWidthPx}
             snapToAlignment="start"
             contentContainerStyle={{ width: contentWidth }}
-            onScrollEndDrag={handleEndDrag}
+            onMomentumScrollEnd={handleMomentumEnd} // ✅ değişti
           >
             <DayNumbersRow
               days={days}
               today={today}
               colWidth={colWidth}
               gap={gap}
+              selectedDate={props.selectedDate}
+              onPressDay={props.onPressDay} // ✅ ekli
             />
           </ScrollView>
         </View>

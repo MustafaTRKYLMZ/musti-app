@@ -1,4 +1,4 @@
-import React, { FC } from "react";
+import React, { FC, useState } from "react";
 import { View, StyleSheet, StyleProp, ViewStyle } from "react-native";
 import { spacing } from "@musti/ui-native";
 import { DayCard } from "./DayCard";
@@ -14,11 +14,10 @@ export type DayNumbersRowProps = {
   gap: number;
 
   onPressDay?: (d: Date) => void;
-  selectedDate?: Date;
 
   markersByDayKey?: Record<string, string[]>;
   maxMarkers?: number;
-
+  selectedDate?: Date;
   containerStyle?: StyleProp<ViewStyle>;
 };
 
@@ -28,9 +27,9 @@ export const DayNumbersRow: FC<DayNumbersRowProps> = ({
   colWidth,
   gap,
   onPressDay,
-  selectedDate,
   markersByDayKey,
   containerStyle,
+  selectedDate,
 }) => {
   return (
     <View style={[styles.row, containerStyle]}>
