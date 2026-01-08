@@ -24,9 +24,9 @@ export const PlannerHeaderRight = () => {
 
   const options = useMemo<DropdownOption<CalendarView>[]>(
     () => [
-      { key: "week", label: "Week", icon: "calendar-outline" },
-      { key: "month", label: "Month", icon: "grid-outline" },
       { key: "day", label: "Day", icon: "today-outline" },
+      { key: "week", label: "Week", icon: "grid-outline" },
+      { key: "month", label: "Month", icon: "calendar-outline" },
     ],
     []
   );
