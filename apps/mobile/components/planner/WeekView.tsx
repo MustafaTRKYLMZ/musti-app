@@ -34,6 +34,7 @@ import {
   snapMinutes,
 } from "@musti/planner";
 import { useCalendarUiStore } from "@/store/calendar/useCalendarUiStore";
+import { useCalendar } from "@/hooks/useCalendar";
 
 const { colors } = plannerTheme;
 
@@ -43,7 +44,6 @@ const clampNum = (v: number, a: number, b: number) =>
   Math.max(a, Math.min(b, v));
 
 export function WeekView(props: {
-  events: MEvent[];
   config: CalendarConfig;
   weekView: WeekViewConfig;
   locale?: string;
@@ -52,11 +52,7 @@ export function WeekView(props: {
 }) {
   const { width: SCREEN_WIDTH } = useWindowDimensions();
   const weekStartsOn = props.config.weekStartsOn ?? 1;
-
-  const date = useCalendarUiStore((s) => s.date);
-  const setDate = useCalendarUiStore((s) => s.setDate);
-  const openDay = useCalendarUiStore((s) => s.openDay);
-  const openCreate = useCalendarUiStore((s) => s.openCreate);
+  const { events, date, setDate, openCreate } = useCalendar();
 
   const [density, setDensity] = useState<Density>("compact");
   const [now, setNow] = useState(() => new Date());
@@ -75,8 +71,8 @@ export function WeekView(props: {
   const gridWidth = columnWidth * 7;
 
   const { weekStart, blocks } = useMemo(() => {
-    return layoutWeek(date, props.events, { weekStartsOn }, props.weekView);
-  }, [date, props.events, props.weekView, weekStartsOn]);
+    return layoutWeek(date, events, { weekStartsOn }, props.weekView);
+  }, [date, events, props.weekView, weekStartsOn]);
 
   const startMinVis = props.weekView.startHour * 60;
   const endMinVis = props.weekView.endHour * 60;
@@ -152,12 +148,10 @@ export function WeekView(props: {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <DaysHeader
-        date={date}
         weekStartsOn={weekStartsOn}
         locale={props.locale}
         onChangeDate={(d) => setDate(d)}
         timeColWidth={TIME_COL_WIDTH}
-        onPressDay={(d) => openDay(d)}
       />
 
       <ScrollView

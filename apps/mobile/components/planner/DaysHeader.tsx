@@ -1,4 +1,3 @@
-// DaysHeader.tsx
 import React, { useEffect, useMemo, useRef } from "react";
 import {
   View,
@@ -11,6 +10,7 @@ import {
 import { plannerTheme } from "@musti/ui-native";
 import { DayNumbersRow } from "./DayNumbersRow";
 import { startOfWeek, addDays } from "@musti/planner";
+import { useCalendar } from "@/hooks/useCalendar";
 
 const DAYS_IN_WEEK = 7;
 const WEEKS_WINDOW = 3;
@@ -19,19 +19,18 @@ const TOTAL_DAYS = DAYS_IN_WEEK * WEEKS_WINDOW;
 const { colors } = plannerTheme;
 
 export function DaysHeader(props: {
-  date: Date;
   weekStartsOn: number;
   locale?: string;
   onChangeDate: (nextDate: Date) => void;
   timeColWidth: number;
-  onPressDay?: (d: Date) => void;
 }) {
+  const { date } = useCalendar();
   const { width } = useWindowDimensions();
   const scrollRef = useRef<ScrollView | null>(null);
 
   const baseWeekStart = useMemo(
-    () => startOfWeek(props.date, props.weekStartsOn),
-    [props.date, props.weekStartsOn]
+    () => startOfWeek(date, props.weekStartsOn),
+    [date, props.weekStartsOn]
   );
 
   const today = useMemo(() => new Date(), []);
@@ -67,7 +66,7 @@ export function DaysHeader(props: {
     const x = e.nativeEvent.contentOffset.x;
     const weekIndex = Math.round(x / weekWidthPx);
     if (weekIndex === 1) return;
-    props.onChangeDate(addDays(props.date, (weekIndex - 1) * 7));
+    props.onChangeDate(addDays(date, (weekIndex - 1) * 7));
     scrollRef.current?.scrollTo({ x: centerOffset, animated: false });
   };
 
@@ -94,7 +93,6 @@ export function DaysHeader(props: {
               today={today}
               colWidth={colWidth}
               gap={gap}
-              onPressDay={props.onPressDay}
             />
           </ScrollView>
         </View>

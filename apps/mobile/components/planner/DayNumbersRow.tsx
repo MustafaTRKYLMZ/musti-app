@@ -4,6 +4,7 @@ import { spacing } from "@musti/ui-native";
 import { DayCard } from "./DayCard";
 import { pad2, sameDay } from "@musti/planner";
 import { useCalendarUiStore } from "@/store/calendar/useCalendarUiStore";
+import { useCalendar } from "@/hooks/useCalendar";
 
 const dayKey = (d: Date) =>
   `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
@@ -28,10 +29,8 @@ export const DayNumbersRow: FC<DayNumbersRowProps> = ({
   gap,
   markersByDayKey,
   containerStyle,
-  onPressDay,
 }) => {
-  const selectedDate = useCalendarUiStore((s) => s.selectedDate);
-
+  const { selectedDate, openDay } = useCalendar();
   return (
     <View style={[styles.row, containerStyle]}>
       {days.map((d, i) => {
@@ -55,7 +54,7 @@ export const DayNumbersRow: FC<DayNumbersRowProps> = ({
               markers={markers}
               maxMarkers={4}
               markerMode="row"
-              onPress={onPressDay}
+              onPress={(d) => openDay(d)}
             />
           </View>
         );

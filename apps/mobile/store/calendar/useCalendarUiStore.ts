@@ -102,14 +102,16 @@ export const useCalendarUiStore = create<CalendarUiState>((set, get) => ({
   openCreate: (day, startMinute) => {
     const dd = clampDay(day);
     set({
-      createOpen: true,
-      createDay: dd,
-      createStartMinute: startMinute,
-
-      editOpen: false,
-      editEventId: null,
-      deleteConfirmOpen: false,
-      deleteEventId: null,
+        selectedDate: dd,
+        date: dd,
+        createOpen: true,
+        createDay: dd,
+        createStartMinute: startMinute,
+        editOpen: false,
+        editEventId: null,
+        deleteConfirmOpen: false,
+        deleteEventId: null,
+     
     });
   },
 

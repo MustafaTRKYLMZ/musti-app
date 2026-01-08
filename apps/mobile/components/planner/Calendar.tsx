@@ -14,18 +14,18 @@ import { MonthContainer } from "./MonthContainer";
 import { DAYS_IN_WEEK, TIME_COL_WIDTH } from "@/config/timeConfigs";
 import { EventCreateModal } from "../ui/modals/EventCreateModal";
 import { useCalendarEventsStore } from "@/store/calendar/useCalendarEventsStore";
-import { useCalendarUiStore } from "@/store/calendar/useCalendarUiStore";
+import { useCalendar } from "@/hooks/useCalendar";
 
 const { colors } = plannerTheme;
 
-export type MCalendarProps = {
+export type CalendarProps = {
   config?: CalendarConfig;
   locale?: string;
   weekView?: Partial<WeekViewConfig>;
   onEventChange?: (next: MEvent) => void;
 };
 
-export const MCalendar: FC<MCalendarProps> = ({
+export const Calendar: FC<CalendarProps> = ({
   config: configProp,
   locale,
   weekView,
@@ -33,18 +33,16 @@ export const MCalendar: FC<MCalendarProps> = ({
 }) => {
   const { width } = useWindowDimensions();
 
-  const events = useCalendarEventsStore((s) => s.events);
+  const {
+    view,
+    date,
+    closeCreate,
+    createOpen,
+    createDay,
+    createStartMinute,
+    pressEvent,
+  } = useCalendar();
   const addEvent = useCalendarEventsStore((s) => s.addEvent);
-
-  const view = useCalendarUiStore((s) => s.view);
-  const date = useCalendarUiStore((s) => s.date);
-  const closeCreate = useCalendarUiStore((s) => s.closeCreate);
-
-  const createOpen = useCalendarUiStore((s) => s.createOpen);
-  const createDay = useCalendarUiStore((s) => s.createDay);
-  const createStartMinute = useCalendarUiStore((s) => s.createStartMinute);
-
-  const pressEvent = useCalendarUiStore((s) => s.pressEvent);
 
   const config: CalendarConfig = {
     locale: "en",
@@ -76,7 +74,6 @@ export const MCalendar: FC<MCalendarProps> = ({
     () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
     [weekStart]
   );
-
   return (
     <View style={styles.root}>
       <View style={styles.lettersRow}>
@@ -93,7 +90,6 @@ export const MCalendar: FC<MCalendarProps> = ({
 
       {view === "week" && (
         <WeekView
-          events={events}
           config={config}
           locale={locale ?? config.locale}
           weekView={{
@@ -112,7 +108,6 @@ export const MCalendar: FC<MCalendarProps> = ({
           <MonthContainer
             config={config}
             colWidth={colWidth}
-            events={events}
             locale={locale ?? config.locale}
             onPressEvent={(e) => pressEvent(e.id, e.start)}
           />

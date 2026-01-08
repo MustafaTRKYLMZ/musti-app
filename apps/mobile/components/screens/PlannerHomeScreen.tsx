@@ -12,31 +12,26 @@ import { PlannerHeaderRight } from "../planner/PlannerHeaderRight";
 import { PlannerHeaderLeft } from "../planner/PlannerHeaderLeft";
 import { BottomDaySheet } from "../planner/BottomDaySheet";
 import { FloatingCreateButton } from "../planner/FloatingCreateButton";
-import { MCalendar } from "../planner/MCalendar";
-
-import { useCalendarEventsStore } from "@/store/calendar/useCalendarEventsStore";
-import { useCalendarUiStore } from "@/store/calendar/useCalendarUiStore";
-import { eventsForDay, type MEvent } from "@musti/planner";
+import { Calendar } from "../planner/Calendar";
+import { eventsForDay, MEvent } from "@musti/planner";
+import { useCalendar } from "@/hooks/useCalendar";
 
 dayjs.extend(weekOfYear);
 dayjs.extend(isoWeek);
 dayjs.locale("en");
 
 export const PlannerHomeScreen = () => {
-  const view = useCalendarUiStore((s) => s.view);
-  const date = useCalendarUiStore((s) => s.date);
-  const selectedDate = useCalendarUiStore((s) => s.selectedDate);
-  const daySheetOpen = useCalendarUiStore((s) => s.daySheetOpen);
-
-  const setView = useCalendarUiStore((s) => s.setView);
-  const setDate = useCalendarUiStore((s) => s.setDate);
-  const openDay = useCalendarUiStore((s) => s.openDay);
-  const closeDaySheet = useCalendarUiStore((s) => s.closeDaySheet);
-  const openCreate = useCalendarUiStore((s) => s.openCreate);
-
-  const pressEvent = useCalendarUiStore((s) => s.pressEvent);
-
-  const events = useCalendarEventsStore((s) => s.events);
+  const {
+    date,
+    selectedDate,
+    daySheetOpen,
+    setDate,
+    openDay,
+    closeDaySheet,
+    openCreate,
+    pressEvent,
+    events,
+  } = useCalendar();
 
   const weekNumber = useMemo(() => dayjs(date).isoWeek(), [date]);
   const selectedLabel = useMemo(() => dayjs(date).format("MMMM"), [date]);
@@ -47,8 +42,7 @@ export const PlannerHomeScreen = () => {
 
   const onPressFab = useCallback(() => {
     openCreate(selectedDate);
-    openDay(selectedDate);
-  }, [openCreate, openDay, selectedDate]);
+  }, [openCreate, selectedDate]);
 
   const onPressToday = useCallback(() => {
     const today = new Date();
@@ -69,7 +63,7 @@ export const PlannerHomeScreen = () => {
       headerRight={<PlannerHeaderRight />}
     >
       <View style={styles.body}>
-        <MCalendar
+        <Calendar
           config={{ weekStartsOn: 1, locale: "en" }}
           weekView={{
             stepMinutes: 15,

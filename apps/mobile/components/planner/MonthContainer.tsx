@@ -13,13 +13,13 @@ import { MonthView } from "./MonthView";
 import { MonthDayEventsList } from "./MonthDayEventsList";
 import { clamp } from "@musti/planner";
 import { useCalendarUiStore } from "@/store/calendar/useCalendarUiStore";
+import { useCalendar } from "@/hooks/useCalendar";
 
 const { colors } = plannerTheme;
 
 export type MonthContainerProps = {
   config: CalendarConfig;
   colWidth: number;
-  events: MEvent[];
   locale?: string;
   onPressEvent?: (e: MEvent) => void;
 };
@@ -27,13 +27,10 @@ export type MonthContainerProps = {
 export const MonthContainer: FC<MonthContainerProps> = ({
   config,
   colWidth,
-  events,
   locale,
   onPressEvent,
 }) => {
-  const date = useCalendarUiStore((s) => s.date);
-  const setDate = useCalendarUiStore((s) => s.setDate);
-  const openDay = useCalendarUiStore((s) => s.openDay);
+  const { date, setDate, openDay, events } = useCalendar();
 
   const expandedAgendaH = useRef(0);
   const agendaValueRef = useRef(0);
