@@ -2,7 +2,7 @@ import { create } from "zustand";
 import dayjs from "dayjs";
 import { useCalendarEventsStore } from "@/store/calendar/useCalendarEventsStore";
 
-export type CalendarView = "week" | "month" | "day";
+export type CalendarView = "week" | "month" | "day" | "year";
 
 const clampDay = (d: Date) =>
   new Date(d.getFullYear(), d.getMonth(), d.getDate());

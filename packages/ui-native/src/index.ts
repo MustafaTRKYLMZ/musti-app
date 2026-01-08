@@ -8,6 +8,7 @@ export * from "./components/Fab";
 export * from "./components/AppIcon";
 export * from "./components/Spinner";
 export * from "./components/Divider";
+export * from "./components/DropdownMenu";
 
 export * from "./components/BookshelfBackground";
 export * from "./theme/ThemeContext";
