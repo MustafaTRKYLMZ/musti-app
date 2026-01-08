@@ -4,7 +4,7 @@ import { MText, spacing, radii, useTheme } from "@musti/ui-native";
 
 import type { LocalPdfFile } from "@/utils/getPdfsDirectory";
 import { useToast } from "@/components/ui/ToastProvider";
-import { MCreateModal } from "@/components/ui/modals/MCreateModal";
+import { CreateModal } from "@/components/ui/modals/CreateModal";
 import { TargetForm } from "@/components/Books/forms/TargetForm";
 
 import { useReadingTargetsStore } from "@/store/bookshelf/useReadingTargetsStore";
@@ -80,7 +80,7 @@ export const CreateTargetModal = ({
   };
 
   return (
-    <MCreateModal
+    <CreateModal
       visible={visible}
       onClose={handleClose}
       title={c.targetId ? "Edit Target" : "New Target"}
@@ -150,7 +150,7 @@ export const CreateTargetModal = ({
           onOpenChapters,
         })}
       />
-    </MCreateModal>
+    </CreateModal>
   );
 };
 

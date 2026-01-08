@@ -1,4 +1,3 @@
-// hooks/useCalendar.ts
 import { useCalendarUiStore } from "@/store/calendar/useCalendarUiStore";
 import { useCalendarEventsStore } from "@/store/calendar/useCalendarEventsStore";
 import { useShallow } from "zustand/react/shallow";
@@ -28,6 +27,7 @@ export const useCalendar=()=> {
       createStartMinute: s.createStartMinute,
 
       editOpen: s.editOpen,
+      closeEdit: s.closeEdit,
       editEventId: s.editEventId,
 
       deleteConfirmOpen: s.deleteConfirmOpen,

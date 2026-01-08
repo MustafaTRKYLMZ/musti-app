@@ -12,8 +12,7 @@ import { WeekdayLettersRow } from "./WeekdayLettersRow";
 import { plannerTheme, spacing } from "@musti/ui-native";
 import { MonthContainer } from "./MonthContainer";
 import { DAYS_IN_WEEK, TIME_COL_WIDTH } from "@/config/timeConfigs";
-import { EventCreateModal } from "../ui/modals/EventCreateModal";
-import { useCalendarEventsStore } from "@/store/calendar/useCalendarEventsStore";
+import { UpsertEventModal } from "../ui/modals/UpsertEventModal";
 import { useCalendar } from "@/hooks/useCalendar";
 
 const { colors } = plannerTheme;
@@ -36,13 +35,26 @@ export const Calendar: FC<CalendarProps> = ({
   const {
     view,
     date,
-    closeCreate,
+
+    // create
     createOpen,
     createDay,
     createStartMinute,
+    closeCreate,
+
+    editOpen,
+    editEventId,
+    closeEdit,
+    resetModals,
+
+    // events
+    events,
+    addEvent,
+    updateEvent,
+
+    // actions
     pressEvent,
   } = useCalendar();
-  const addEvent = useCalendarEventsStore((s) => s.addEvent);
 
   const config: CalendarConfig = {
     locale: "en",
@@ -74,6 +86,11 @@ export const Calendar: FC<CalendarProps> = ({
     () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
     [weekStart]
   );
+
+  const editEvent = useMemo(() => {
+    if (!editOpen || !editEventId) return null;
+    return (events ?? []).find((e) => e.id === editEventId) ?? null;
+  }, [events, editOpen, editEventId]);
   return (
     <View style={styles.root}>
       <View style={styles.lettersRow}>
@@ -100,6 +117,8 @@ export const Calendar: FC<CalendarProps> = ({
             ...weekView,
           }}
           onEventChange={onEventChange}
+          // Eğer WeekView event press callback’i destekliyorsa:
+          // onPressEvent={(e) => pressEvent(e.id, e.start)}
         />
       )}
 
@@ -114,7 +133,9 @@ export const Calendar: FC<CalendarProps> = ({
         </View>
       )}
 
-      <EventCreateModal
+      {/* CREATE */}
+      <UpsertEventModal
+        mode="create"
         visible={createOpen}
         day={createDay}
         startMinute={createStartMinute}
@@ -126,6 +147,23 @@ export const Calendar: FC<CalendarProps> = ({
           closeCreate();
         }}
       />
+
+      {/* EDIT (store-driven) */}
+      {editEvent ? (
+        <UpsertEventModal
+          mode="edit"
+          visible={editOpen}
+          day={new Date(editEvent.start)}
+          event={editEvent}
+          locale={locale ?? config.locale}
+          timezone={config.timezone}
+          onClose={resetModals}
+          onSubmit={(id, patch) => {
+            updateEvent(id, patch);
+            resetModals();
+          }}
+        />
+      ) : null}
     </View>
   );
 };

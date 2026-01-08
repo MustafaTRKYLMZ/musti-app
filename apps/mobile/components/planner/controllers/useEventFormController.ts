@@ -3,16 +3,26 @@ import { useForm } from "react-hook-form";
 import dayjs from "dayjs";
 import { pad2, type MEvent, type EventCreate } from "@musti/planner";
 
-type Args = {
-  mode: "create";
+type BaseArgs = {
   visible: boolean;
-  day: Date;
+  day: Date; // fallback / create day
   startMinute?: number;
   timezone?: string;
   locale?: string;
   onClose: () => void;
+};
+
+type CreateArgs = BaseArgs & {
+  mode: "create";
   onSubmit: (e: Omit<MEvent, "id">) => void;
 };
+
+type EditArgs = BaseArgs & {
+  mode: "edit";
+  event: MEvent;
+  onSubmit: (id: string, patch: Partial<MEvent>) => void;
+};
+type Args = CreateArgs | EditArgs;
 
 function minuteToHHmm(min: number) {
   const h = Math.floor(min / 60);
@@ -53,23 +63,40 @@ function isBeforeDay(a: Date, b: Date) {
   return clampDay(a).getTime() < clampDay(b).getTime();
 }
 
-export function useEventFormController({
-  visible,
-  day,
-  startMinute,
-  timezone,
-  onClose,
-  onSubmit,
-}: Args) {
-  const [startDay, _setStartDay] = useState<Date>(() => clampDay(day));
-  const [endDay, _setEndDay] = useState<Date>(() => clampDay(day));
+function isoToDayAndTime(iso?: string) {
+  if (!iso) return null;
+  const d = dayjs(iso);
+  if (!d.isValid()) return null;
+  return {
+    day: clampDay(d.toDate()),
+    time: minuteToHHmm(d.hour() * 60 + d.minute()),
+  };
+}
+
+export function useEventFormController(args: Args) {
+  const { visible, startMinute, timezone, onClose } = args;
+
+  const initialDays = useMemo(() => {
+    if (args.mode === "edit") {
+      const s = dayjs(args.event.start);
+      const e = dayjs(args.event.end);
+      return {
+        startDay: clampDay(s.toDate()),
+        endDay: clampDay(e.toDate()),
+      };
+    }
+    const d = clampDay(args.day);
+    return { startDay: d, endDay: d };
+  }, [args]);
+
+  const [startDay, _setStartDay] = useState<Date>(() => initialDays.startDay);
+  const [endDay, _setEndDay] = useState<Date>(() => initialDays.endDay);
 
   useEffect(() => {
     if (!visible) return;
-    const d = clampDay(day);
-    _setStartDay(d);
-    _setEndDay(d);
-  }, [visible, day]);
+    _setStartDay(initialDays.startDay);
+    _setEndDay(initialDays.endDay);
+  }, [visible, initialDays]);
 
   const setStartDay = useCallback((d: Date) => {
     const nextStart = clampDay(d);
@@ -90,6 +117,31 @@ export function useEventFormController({
   );
 
   const defaultValues = useMemo<EventCreate>(() => {
+    // ---- EDIT DEFAULTS ----
+    if (args.mode === "edit") {
+      const ev = args.event;
+
+      const startParts = isoToDayAndTime(ev.start);
+      const endParts = isoToDayAndTime(ev.end);
+
+      const startTime = ev.allDay
+        ? "09:00"
+        : startParts?.time ?? "09:00";
+
+      const endTime = ev.allDay ? "10:00" : endParts?.time ?? "10:00";
+
+      return {
+        title: ev.title ?? "",
+        allDay: !!ev.allDay,
+        startTime,
+        endTime,
+        color: ev.color,
+        location: ev.location ?? "",
+        notes: ev.notes ?? "",
+      };
+    }
+
+    // ---- CREATE DEFAULTS ----
     const m = startMinute ?? 9 * 60;
     const snapped = Math.round(m / 15) * 15;
 
@@ -111,7 +163,7 @@ export function useEventFormController({
       location: "",
       notes: "",
     };
-  }, [startMinute]);
+  }, [args, startMinute]);
 
   const form = useForm<EventCreate>({
     defaultValues,
@@ -123,7 +175,6 @@ export function useEventFormController({
     form.reset(defaultValues);
   }, [visible, defaultValues, form]);
 
-  // ✅ WATCH'ları burada tut (reactive)
   const title = form.watch("title");
   const allDay = form.watch("allDay");
   const startTime = form.watch("startTime");
@@ -178,17 +229,17 @@ export function useEventFormController({
     return endDt.isAfter(startDt);
   }, [title, allDay, startTime, endTime, startDay, endDay]);
 
-  const save = useCallback(() => {
+  const buildPayload = useCallback((): Omit<MEvent, "id"> | null => {
     const v = form.getValues();
     const cleanTitle = (v.title ?? "").trim();
-    if (!cleanTitle) return;
+    if (!cleanTitle) return null;
 
     if (v.allDay) {
       const d = clampDay(startDay);
       const start = dayjs(d).startOf("day").toISOString();
       const end = dayjs(d).add(1, "day").startOf("day").toISOString();
 
-      onSubmit({
+      return {
         title: cleanTitle,
         start,
         end,
@@ -198,15 +249,12 @@ export function useEventFormController({
         location: v.location?.trim() || undefined,
         notes: v.notes?.trim() || undefined,
         source: "planner",
-      });
-
-      onClose();
-      return;
+      };
     }
 
     const s = parseHHmm(v.startTime);
     const e = parseHHmm(v.endTime);
-    if (!s || !e) return;
+    if (!s || !e) return null;
 
     let startDt = dayjs(startDay)
       .hour(s.h)
@@ -224,7 +272,7 @@ export function useEventFormController({
       endDt = startDt.add(30, "minute");
     }
 
-    onSubmit({
+    return {
       title: cleanTitle,
       start: startDt.toISOString(),
       end: endDt.toISOString(),
@@ -234,10 +282,23 @@ export function useEventFormController({
       location: v.location?.trim() || undefined,
       notes: v.notes?.trim() || undefined,
       source: "planner",
-    });
+    };
+  }, [form, startDay, endDay, timezone]);
 
+  const save = useCallback(() => {
+    const payload = buildPayload();
+    if (!payload) return;
+
+    if (args.mode === "create") {
+      args.onSubmit(payload);
+      onClose();
+      return;
+    }
+    const patch: Partial<MEvent> = payload;
+
+    args.onSubmit(args.event.id, patch);
     onClose();
-  }, [form, startDay, endDay, timezone, onClose, onSubmit]);
+  }, [args, buildPayload, onClose]);
 
   const toggleAllDay = useCallback(() => {
     const cur = form.getValues("allDay");
@@ -258,6 +319,7 @@ export function useEventFormController({
 
     canSave,
     save,
+    buildPayload,
     toggleAllDay,
     close: onClose,
   };

@@ -16,22 +16,23 @@ import {
   eventToTitle,
   sameDay,
 } from "@musti/planner";
+import { useCalendar } from "@/hooks/useCalendar";
 
 const { colors, spacing } = plannerTheme;
 
 export type MonthDayEventsListProps = {
   date: Date;
   events: MEvent[];
-  onPressEvent?: (e: MEvent) => void;
   onTop?: () => void;
 };
 
 export const MonthDayEventsList: FC<MonthDayEventsListProps> = ({
   date,
   events,
-  onPressEvent,
   onTop,
 }) => {
+  const { pressEvent } = useCalendar();
+
   const dayEvents = useMemo(() => {
     const filtered = events.filter((ev) => {
       const sd = eventToStartDate(ev as any);
@@ -79,8 +80,8 @@ export const MonthDayEventsList: FC<MonthDayEventsListProps> = ({
 
         return (
           <Pressable
-            key={(ev as any)?.id ? String((ev as any).id) : `${i}`}
-            onPress={() => onPressEvent?.(ev)}
+            key={(ev as MEvent)?.id ? String((ev as MEvent).id) : `${i}`}
+            onPress={() => pressEvent?.(ev.id, (ev as MEvent).start)}
             style={styles.row}
           >
             <MText style={styles.time}>{time ?? ""}</MText>

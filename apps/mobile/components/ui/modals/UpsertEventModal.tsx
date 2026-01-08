@@ -7,49 +7,66 @@ import { useEventFormController } from "@/components/planner/controllers/useEven
 import { EventForm } from "@/components/planner/EventForm";
 import { EventColorPickerModal } from "./EventColorPickerModal";
 
-type Props = {
+type BaseProps = {
   visible: boolean;
   day: Date;
   startMinute?: number;
   timezone?: string;
   locale?: string;
   onClose: () => void;
+};
+
+type CreateProps = BaseProps & {
+  mode: "create";
   onSubmit: (e: Omit<MEvent, "id">) => void;
 };
 
-export function EventCreateModal({
-  visible,
-  day,
-  startMinute,
-  timezone,
-  locale,
-  onClose,
-  onSubmit,
-}: Props) {
-  const [colorOpen, setColorOpen] = useState(false);
+type EditProps = BaseProps & {
+  mode: "edit";
+  event: MEvent;
+  onSubmit: (id: string, patch: Partial<MEvent>) => void; // ✅ store signature
+};
 
-  const c = useEventFormController({
-    mode: "create",
-    visible,
-    day,
-    startMinute,
-    timezone,
-    locale,
-    onClose,
-    onSubmit,
-  });
+type Props = CreateProps | EditProps;
+
+export function UpsertEventModal(props: Props) {
+  const [colorOpen, setColorOpen] = useState(false);
+  const openColors = useCallback(() => setColorOpen(true), []);
+  const closeColors = useCallback(() => setColorOpen(false), []);
+
+  const c = useEventFormController(
+    props.mode === "edit"
+      ? {
+          mode: "edit",
+          visible: props.visible,
+          day: props.day,
+          startMinute: props.startMinute,
+          timezone: props.timezone,
+          locale: props.locale,
+          onClose: props.onClose,
+          event: props.event,
+          onSubmit: props.onSubmit, // (id, patch)
+        }
+      : {
+          mode: "create",
+          visible: props.visible,
+          day: props.day,
+          startMinute: props.startMinute,
+          timezone: props.timezone,
+          locale: props.locale,
+          onClose: props.onClose,
+          onSubmit: props.onSubmit, // (payload)
+        }
+  );
 
   const selectedColor = c.watch("color");
   const allDay = !!c.watch("allDay");
 
-  const openColors = useCallback(() => setColorOpen(true), []);
-  const closeColors = useCallback(() => setColorOpen(false), []);
-
   return (
     <>
       <AppModal
-        visible={visible}
-        onClose={onClose}
+        visible={props.visible}
+        onClose={props.onClose}
         variant="center"
         closeOnBackdrop={false}
         showClose={false}
@@ -58,8 +75,8 @@ export function EventCreateModal({
           onSave: c.save,
           saveDisabled: !c.canSave,
           cancelLabel: "Cancel",
-          saveLabel: "Save",
-          onCancel: onClose,
+          saveLabel: props.mode === "edit" ? "Update" : "Save",
+          onCancel: props.onClose,
         }}
       >
         <EventForm
