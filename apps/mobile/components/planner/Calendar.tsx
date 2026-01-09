@@ -1,10 +1,9 @@
-import React, { FC, useEffect, useMemo, useState } from "react";
+import React, { FC, useCallback, useMemo } from "react";
 import { View, StyleSheet, useWindowDimensions } from "react-native";
 import {
   CalendarConfig,
   MEvent,
   WeekViewConfig,
-  CalendarView,
   addDays,
   startOfWeek,
 } from "@musti/planner";
@@ -13,51 +12,59 @@ import { WeekdayLettersRow } from "./WeekdayLettersRow";
 import { plannerTheme, spacing } from "@musti/ui-native";
 import { MonthContainer } from "./MonthContainer";
 import { DAYS_IN_WEEK, TIME_COL_WIDTH } from "@/config/timeConfigs";
-import { EventCreateModal } from "../ui/modals/EventCreateModal";
+import { UpsertEventModal } from "../ui/modals/UpsertEventModal";
+import { useCalendar } from "@/hooks/useCalendar";
+
 import { useCalendarEventsStore } from "@/store/calendar/useCalendarEventsStore";
+import { useToast } from "../ui/ToastProvider";
 
 const { colors } = plannerTheme;
 
-export type MCalendarProps = {
-  view: CalendarView;
-  date: Date;
+export type CalendarProps = {
   config?: CalendarConfig;
   locale?: string;
   weekView?: Partial<WeekViewConfig>;
-  onPressEvent?: (e: MEvent) => void;
-  onPressDay?: (d: Date) => void;
-  onCreate?: (day: Date, startMinute?: number) => void;
   onEventChange?: (next: MEvent) => void;
-  setDate: (nextDate: Date) => void;
-
-  openCreateToken?: number;
-  openCreateDay?: Date;
 };
 
-export const MCalendar: FC<MCalendarProps> = ({
-  view,
-  date,
+export const Calendar: FC<CalendarProps> = ({
   config: configProp,
   locale,
   weekView,
-  onPressEvent,
-  onPressDay,
-  onCreate,
   onEventChange,
-  setDate,
-  openCreateToken,
-  openCreateDay,
 }) => {
   const { width } = useWindowDimensions();
 
-  const addEvent = useCalendarEventsStore((s) => s.addEvent);
-  const events = useCalendarEventsStore((s) => s.events);
+  const {
+    view,
+    date,
 
-  const [createOpen, setCreateOpen] = useState(false);
-  const [createDay, setCreateDay] = useState<Date>(new Date());
-  const [createStartMinute, setCreateStartMinute] = useState<
-    number | undefined
-  >(undefined);
+    // create
+    createOpen,
+    createDay,
+    createStartMinute,
+    closeCreate,
+
+    // edit
+    editOpen,
+    editEventId,
+    closeEdit,
+
+    // events
+    events,
+    addEvent,
+    updateEvent,
+
+    // actions
+    pressEvent,
+  } = useCalendar();
+
+  const { showToast, hideToast } = useToast();
+
+  const deleteEventWithUndo = useCalendarEventsStore(
+    (s) => s.deleteEventWithUndo
+  );
+  const undoDelete = useCalendarEventsStore((s) => s.undoDelete);
 
   const config: CalendarConfig = {
     locale: "en",
@@ -70,7 +77,6 @@ export const MCalendar: FC<MCalendarProps> = ({
 
   const baseCol = Math.floor(daysAreaWidth / DAYS_IN_WEEK);
   const leftover = daysAreaWidth - baseCol * DAYS_IN_WEEK;
-
   const gap = view === "week" ? Math.floor(leftover / (DAYS_IN_WEEK - 1)) : 0;
 
   const colWidth =
@@ -91,15 +97,55 @@ export const MCalendar: FC<MCalendarProps> = ({
     [weekStart]
   );
 
-  // ✅ dışarıdan token gelince modal aç
-  useEffect(() => {
-    if (openCreateToken == null) return;
-    const d = openCreateDay ?? date;
+  const editEvent = useMemo(() => {
+    if (!editOpen || !editEventId) return null;
+    return (events ?? []).find((e) => e.id === editEventId) ?? null;
+  }, [events, editOpen, editEventId]);
 
-    setCreateDay(d);
-    setCreateStartMinute(undefined);
-    setCreateOpen(true);
-  }, [openCreateToken]);
+  const confirmDeleteToast = useCallback(
+    (eventId: string) => {
+      showToast(
+        {
+          title: "Delete event?",
+          message: "You can undo for a few seconds.",
+          variant: "danger",
+          duration: 6000,
+          actions: [
+            {
+              label: "Cancel",
+              onPress: () => hideToast(),
+            },
+            {
+              label: "Delete",
+              destructive: true,
+              onPress: () => {
+                hideToast();
+
+                deleteEventWithUndo(eventId, 4000);
+
+                showToast(
+                  {
+                    message: "Event deleted",
+                    variant: "danger",
+                    duration: 4000,
+                    actions: [
+                      {
+                        label: "Undo",
+                        onPress: () => undoDelete(),
+                      },
+                    ],
+                  },
+                  4000
+                );
+              },
+            },
+          ],
+        },
+        6000
+      );
+    },
+    [showToast, hideToast, deleteEventWithUndo, undoDelete]
+  );
 
   return (
     <View style={styles.root}>
@@ -117,8 +163,6 @@ export const MCalendar: FC<MCalendarProps> = ({
 
       {view === "week" && (
         <WeekView
-          date={date}
-          events={events}
           config={config}
           locale={locale ?? config.locale}
           weekView={{
@@ -128,15 +172,6 @@ export const MCalendar: FC<MCalendarProps> = ({
             pxPerMinute: 1.2,
             ...weekView,
           }}
-          onChangeDate={setDate}
-          onPressEvent={onPressEvent}
-          onPressDay={onPressDay}
-          onCreate={(day, startMinute) => {
-            onCreate?.(day, startMinute);
-            setCreateDay(day);
-            setCreateStartMinute(startMinute);
-            setCreateOpen(true);
-          }}
           onEventChange={onEventChange}
         />
       )}
@@ -144,34 +179,49 @@ export const MCalendar: FC<MCalendarProps> = ({
       {view === "month" && (
         <View style={{ flex: 1 }}>
           <MonthContainer
-            date={date}
             config={config}
             colWidth={colWidth}
-            events={events}
             locale={locale ?? config.locale}
-            onChangeDate={setDate}
-            onPressDay={(d) => {
-              onPressDay?.(d);
-              setCreateDay(d);
-              setCreateStartMinute(undefined);
-            }}
-            onPressEvent={onPressEvent}
+            onPressEvent={(e) => pressEvent(e.id, e.start)}
           />
         </View>
       )}
 
-      <EventCreateModal
+      {/* CREATE */}
+      <UpsertEventModal
+        mode="create"
         visible={createOpen}
         day={createDay}
         startMinute={createStartMinute}
         locale={locale ?? config.locale}
         timezone={config.timezone}
-        onClose={() => setCreateOpen(false)}
+        onClose={closeCreate}
         onSubmit={(payload) => {
           addEvent(payload);
-          setCreateOpen(false);
+          closeCreate();
         }}
       />
+
+      {/* EDIT */}
+      {editEvent ? (
+        <UpsertEventModal
+          mode="edit"
+          visible={editOpen}
+          day={new Date(editEvent.start)}
+          event={editEvent}
+          locale={locale ?? config.locale}
+          timezone={config.timezone}
+          onClose={closeEdit}
+          onSubmit={(id, patch) => {
+            updateEvent(id, patch);
+            closeEdit();
+          }}
+          onDelete={() => {
+            closeEdit();
+            confirmDeleteToast(editEvent.id);
+          }}
+        />
+      ) : null}
     </View>
   );
 };

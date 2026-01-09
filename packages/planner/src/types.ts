@@ -60,5 +60,5 @@ export type EventCreate = {
     pxPerMinute: number;   // zoom
   };
   
-  export type CalendarView = "week"|"month"; 
+  export type CalendarView = "year"|"week"|"month"|"day"; 
   

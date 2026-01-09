@@ -1,7 +1,7 @@
 import React, { memo, useMemo } from "react";
 import { View, StyleSheet, Pressable } from "react-native";
 import { MText, spacing, radii, useTheme, ThemeColors } from "@musti/ui-native";
-import { AppModal } from "../AppModal";
+import { AppModal } from "@musti/ui-native";
 import { DEFAULT_EVENT_COLORS } from "@/config/defaultEvetColors";
 
 type Props = {

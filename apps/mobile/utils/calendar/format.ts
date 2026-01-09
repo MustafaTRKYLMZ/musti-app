@@ -1,5 +1,3 @@
-// apps/mobile/src/calendar/ui/format.ts
-
 export function formatTime(iso: string, locale = "en-EN") {
     const d = new Date(iso);
     return d.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });

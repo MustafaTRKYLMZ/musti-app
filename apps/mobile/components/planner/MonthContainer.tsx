@@ -1,4 +1,3 @@
-// MonthContainer.tsx
 import React, { FC, useMemo, useRef, useState } from "react";
 import {
   View,
@@ -8,36 +7,29 @@ import {
   LayoutChangeEvent,
 } from "react-native";
 import type { CalendarConfig, MEvent } from "@musti/planner/src/types";
-import { plannerTheme, spacing, typography } from "@musti/ui-native";
+import { plannerTheme, spacing, typography, MText } from "@musti/ui-native";
 import { MonthView } from "./MonthView";
 import { MonthDayEventsList } from "./MonthDayEventsList";
-import { MText } from "@musti/ui-native";
 import { clamp } from "@musti/planner";
+import { useCalendar } from "@/hooks/useCalendar";
 
 const { colors } = plannerTheme;
 
 export type MonthContainerProps = {
-  date: Date;
   config: CalendarConfig;
   colWidth: number;
-  events: MEvent[];
   locale?: string;
-
-  onChangeDate: (d: Date) => void;
-  onPressDay?: (d: Date) => void;
   onPressEvent?: (e: MEvent) => void;
 };
 
 export const MonthContainer: FC<MonthContainerProps> = ({
-  date,
   config,
   colWidth,
-  events,
   locale,
-  onChangeDate,
-  onPressDay,
   onPressEvent,
 }) => {
+  const { date, setDate, openDay, events } = useCalendar();
+
   const expandedAgendaH = useRef(0);
   const agendaValueRef = useRef(0);
 
@@ -149,16 +141,16 @@ export const MonthContainer: FC<MonthContainerProps> = ({
         {...panResponder.panHandlers}
       >
         <MonthView
-          date={date}
           config={config}
           colWidth={colWidth}
           events={events}
           expanded={expanded}
           gridHeightAnim={gridH}
-          onChangeDate={onChangeDate}
-          onPressDay={onPressDay}
-          maxMarkers={2}
-          maxInlineItems={2}
+          locale={locale}
+          onPressDay={(d) => {
+            setDate(d);
+            openDay(d);
+          }}
         />
       </Animated.View>
 
@@ -173,7 +165,6 @@ export const MonthContainer: FC<MonthContainerProps> = ({
           <MonthDayEventsList
             date={date}
             events={events}
-            onPressEvent={onPressEvent}
             onTop={() => closeAgenda()}
           />
         </View>
@@ -183,20 +174,13 @@ export const MonthContainer: FC<MonthContainerProps> = ({
 };
 
 const styles = StyleSheet.create({
-  wrap: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  gridWrap: {
-    overflow: "hidden",
-  },
+  wrap: { flex: 1, backgroundColor: colors.background },
+  gridWrap: { overflow: "hidden" },
   bottomDivider: {
     borderBottomWidth: 1,
     borderBottomColor: colors.textPrimary,
   },
-  agenda: {
-    backgroundColor: colors.background,
-  },
+  agenda: { backgroundColor: colors.background },
   agendaInner: {
     flex: 1,
     paddingHorizontal: spacing.md,

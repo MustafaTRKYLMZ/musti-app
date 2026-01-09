@@ -2,9 +2,9 @@ import React, { useMemo, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Scope, useTranslation, type LocalTransaction } from "@musti/core";
 import { useTransactionsStore } from "@/store/budget/transactions/useTransactionsStore";
-import { AppModal } from "@/components/ui/AppModal";
 import { ScopeSheet } from "@/components/transactions/ScopeSheet";
 import TransactionForm from "@/components/transactions/TransactionForm";
+import { AppModal } from "@musti/ui-native";
 
 export function TransactionModalScreen() {
   const router = useRouter();

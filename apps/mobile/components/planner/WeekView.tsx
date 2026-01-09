@@ -33,6 +33,8 @@ import {
   sameDay,
   snapMinutes,
 } from "@musti/planner";
+import { useCalendarUiStore } from "@/store/calendar/useCalendarUiStore";
+import { useCalendar } from "@/hooks/useCalendar";
 
 const { colors } = plannerTheme;
 
@@ -41,48 +43,22 @@ type Density = "compact" | "expanded";
 const clampNum = (v: number, a: number, b: number) =>
   Math.max(a, Math.min(b, v));
 
-const clampDay = (d: Date) =>
-  new Date(d.getFullYear(), d.getMonth(), d.getDate());
-
 export function WeekView(props: {
-  date: Date;
-  events: MEvent[];
   config: CalendarConfig;
   weekView: WeekViewConfig;
   locale?: string;
 
-  onPressEvent?: (e: MEvent) => void;
-  onPressDay?: (day: Date) => void;
-  onCreate?: (day: Date, startMinute?: number) => void;
   onEventChange?: (next: MEvent) => void;
-  onChangeDate?: (nextDate: Date) => void;
 }) {
   const { width: SCREEN_WIDTH } = useWindowDimensions();
   const weekStartsOn = props.config.weekStartsOn ?? 1;
+  const { events, date, setDate, openCreate } = useCalendar();
 
   const [density, setDensity] = useState<Density>("compact");
   const [now, setNow] = useState(() => new Date());
 
-  const [selectedDate, setSelectedDate] = useState<Date | null>(
-    clampDay(props.date)
-  );
-
-  useEffect(() => {
-    setSelectedDate(clampDay(props.date));
-  }, [props.date]);
-
-  const handlePres = useCallback(
-    (d: Date) => {
-      const dd = clampDay(d);
-      setSelectedDate(dd);
-      props.onPressDay?.(dd);
-    },
-    [props.onPressDay]
-  );
-
   const vRef = useRef<ScrollView | null>(null);
   const [viewportH, setViewportH] = useState(0);
-
   const autoScrollingRef = useRef(false);
 
   useEffect(() => {
@@ -95,13 +71,8 @@ export function WeekView(props: {
   const gridWidth = columnWidth * 7;
 
   const { weekStart, blocks } = useMemo(() => {
-    return layoutWeek(
-      props.date,
-      props.events,
-      { weekStartsOn },
-      props.weekView
-    );
-  }, [props.date, props.events, props.weekView, weekStartsOn]);
+    return layoutWeek(date, events, { weekStartsOn }, props.weekView);
+  }, [date, events, props.weekView, weekStartsOn]);
 
   const startMinVis = props.weekView.startHour * 60;
   const endMinVis = props.weekView.endHour * 60;
@@ -133,9 +104,10 @@ export function WeekView(props: {
         startMinVis,
         endMinVis - props.weekView.stepMinutes
       );
-      props.onCreate?.(dayDate, clampedMin);
+
+      openCreate(dayDate, clampedMin);
     },
-    [weekStart, props.weekView, startMinVis, endMinVis, props.onCreate]
+    [weekStart, props.weekView, startMinVis, endMinVis, openCreate]
   );
 
   const todayIndex = useMemo(() => {
@@ -176,13 +148,10 @@ export function WeekView(props: {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <DaysHeader
-        date={props.date}
         weekStartsOn={weekStartsOn}
         locale={props.locale}
-        onChangeDate={(d) => props.onChangeDate?.(d)}
+        onChangeDate={(d) => setDate(d)}
         timeColWidth={TIME_COL_WIDTH}
-        onPressDay={handlePres}
-        selectedDate={selectedDate ?? clampDay(props.date)}
       />
 
       <ScrollView
@@ -194,7 +163,13 @@ export function WeekView(props: {
         showsVerticalScrollIndicator={false}
         onLayout={(e) => setViewportH(e.nativeEvent.layout.height)}
       >
-        <View style={styles.weekViewContent}>
+        <View
+          style={{
+            flexDirection: "row",
+            marginTop: spacing.md,
+            height: contentHeight,
+          }}
+        >
           <TimeColumn
             TIME_COL_WIDTH={TIME_COL_WIDTH}
             weekView={props.weekView}
@@ -218,10 +193,7 @@ export function WeekView(props: {
             bottomPaddingMinutes={BOTTOM_PADDING_MINUTES}
             gridLineStyle={styles.gridLine}
             gridLineStrongStyle={styles.gridLineStrong}
-            onPressDay={handlePres}
             handleTapGrid={handleTapGrid}
-            onPressEvent={props.onPressEvent}
-            onEventChange={props.onEventChange}
             todayIndex={nowInfo?.todayIndex ?? -1}
             nowY={nowInfo?.y ?? null}
             nowColor={plannerTheme.colors.primary ?? "#EF4444"}
@@ -233,16 +205,6 @@ export function WeekView(props: {
 }
 
 const styles = StyleSheet.create({
-  weekViewContent: {
-    flexDirection: "row",
-    marginTop: spacing.sm,
-  },
-  gridLine: {
-    backgroundColor: colors.borderSubtle,
-    opacity: 0.35,
-  },
-  gridLineStrong: {
-    backgroundColor: colors.borderSubtle,
-    opacity: 0.8,
-  },
+  gridLine: { backgroundColor: colors.borderSubtle, opacity: 0.35 },
+  gridLineStrong: { backgroundColor: colors.borderSubtle, opacity: 0.8 },
 });

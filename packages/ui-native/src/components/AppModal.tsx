@@ -1,4 +1,4 @@
-import React, { ReactNode, useMemo } from "react";
+import { ReactNode, useMemo } from "react";
 import {
   Modal,
   View,
@@ -25,18 +25,23 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type AppModalActions = {
   showCancel?: boolean;
+  showDelete?: boolean;
   showSave?: boolean;
 
   cancelLabel?: string;
+  deleteLabel?: string;
   saveLabel?: string;
 
   cancelIcon?: string;
+  deleteIcon?: string;
   saveIcon?: string;
 
   onCancel?: () => void;
+  onDelete?: () => void;
   onSave?: () => void;
 
   saveDisabled?: boolean;
+  deleteDisabled?: boolean;
 };
 
 export type AppModalVariant = "center" | "sheet" | "full";
@@ -63,7 +68,7 @@ export type AppModalProps = {
   centerMaxWidth?: number;
   centerMaxHeightPct?: number;
 
-  showClose?: boolean; // ✅ NEW: default true
+  showClose?: boolean;
 };
 
 export function AppModal({
@@ -118,24 +123,42 @@ export function AppModal({
 
     const primary = (colors as ThemeColors).primary ?? "#2F6FED";
 
-    return { backdrop, surface, border, shadow, primary };
+    const danger =
+      (colors as any).danger ??
+      (colors as any).error ??
+      (colors as any).destructive ??
+      "#EF4444";
+
+    return { backdrop, surface, border, shadow, primary, danger };
   }, [colors]);
 
   const showActions =
-    !!actions && (actions.showCancel !== false || actions.showSave !== false);
+    !!actions &&
+    (actions.showCancel !== false ||
+      actions.showDelete === true ||
+      actions.showSave !== false ||
+      !!actions.onDelete);
 
   const showCancel = showActions && (actions?.showCancel ?? true);
   const showSave = showActions && (actions?.showSave ?? true);
 
+  const showDelete =
+    showActions && ((actions?.showDelete ?? false) || !!actions?.onDelete);
+
   const cancelLabel = actions?.cancelLabel ?? "Cancel";
+  const deleteLabel = actions?.deleteLabel ?? "Delete";
   const saveLabel = actions?.saveLabel ?? "Save";
 
   const cancelIcon = actions?.cancelIcon ?? "close-outline";
+  const deleteIcon = actions?.deleteIcon ?? "trash-outline";
   const saveIcon = actions?.saveIcon ?? "checkmark-outline";
 
   const onCancel = actions?.onCancel ?? onClose;
+  const onDelete = actions?.onDelete;
   const onSave = actions?.onSave;
+
   const saveDisabled = actions?.saveDisabled ?? false;
+  const deleteDisabled = actions?.deleteDisabled ?? false;
 
   const bottomBarH = showActions ? 64 : 0;
   const bottomPad = bottomBarH + Math.max(insets.bottom, spacing.md);
@@ -269,6 +292,28 @@ export function AppModal({
                         onPress={onCancel}
                       />
                       <MText variant="caption">{cancelLabel}</MText>
+                    </View>
+                  )}
+
+                  {showDelete && (
+                    <View
+                      style={[
+                        styles.actionBtn,
+                        { opacity: deleteDisabled ? 0.35 : 1 },
+                      ]}
+                    >
+                      <IconButton
+                        name={deleteIcon}
+                        size={iconSizes.lg}
+                        onPress={deleteDisabled ? undefined : onDelete}
+                        color={palette.danger}
+                      />
+                      <MText
+                        variant="caption"
+                        style={{ color: palette.danger }}
+                      >
+                        {deleteLabel}
+                      </MText>
                     </View>
                   )}
 

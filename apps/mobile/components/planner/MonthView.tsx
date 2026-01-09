@@ -19,6 +19,8 @@ import {
   addDays,
   sameDay,
 } from "@musti/planner";
+import { useCalendarUiStore } from "@/store/calendar/useCalendarUiStore";
+
 const { colors } = plannerTheme;
 
 const startOfMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
@@ -42,18 +44,21 @@ const stripLeadingTime = (s: string) =>
   s.replace(/^\s*\d{1,2}:\d{2}\s+/, "").trim();
 
 export function MonthView(props: {
-  date: Date;
   config: CalendarConfig;
   colWidth: number;
   events: MEvent[];
   expanded: boolean;
+  locale?: string;
   gridHeightAnim?: Animated.Value;
-  onChangeDate: (nextDate: Date) => void;
   onPressDay?: (d: Date) => void;
   maxMarkers?: number;
   maxInlineItems?: number;
 }) {
   const scrollRef = useRef<ScrollView | null>(null);
+
+  const date = useCalendarUiStore((s) => s.date);
+  const selectedDate = useCalendarUiStore((s) => s.selectedDate);
+  const setDate = useCalendarUiStore((s) => s.setDate);
 
   const weekStartsOn = props.config.weekStartsOn ?? 1;
   const today = useMemo(() => new Date(), []);
@@ -84,22 +89,17 @@ export function MonthView(props: {
   }, [props.gridHeightAnim]);
 
   const months = useMemo(() => {
-    const prev = addMonths(props.date, -1);
-    const cur = props.date;
-    const next = addMonths(props.date, +1);
+    const prev = addMonths(date, -1);
+    const cur = date;
+    const next = addMonths(date, +1);
     return [prev, cur, next];
-  }, [props.date]);
+  }, [date]);
 
   useEffect(() => {
     requestAnimationFrame(() => {
       scrollRef.current?.scrollTo({ x: centerOffset, animated: false });
     });
-  }, [
-    centerOffset,
-    props.date.getFullYear(),
-    props.date.getMonth(),
-    pageWidth,
-  ]);
+  }, [centerOffset, date.getFullYear(), date.getMonth(), pageWidth]);
 
   const { markersByDayKey, inlineByDayKey } = useMemo(() => {
     const markers: Record<string, string[]> = {};
@@ -160,7 +160,7 @@ export function MonthView(props: {
     if (pageIndex === 1) return;
 
     const delta = pageIndex - 1;
-    props.onChangeDate(addMonths(props.date, delta));
+    setDate(addMonths(date, delta));
 
     requestAnimationFrame(() => {
       scrollRef.current?.scrollTo({ x: centerOffset, animated: false });
@@ -205,10 +205,10 @@ export function MonthView(props: {
                       width={props.colWidth}
                       height={cellH}
                       isToday={sameDay(d, today)}
-                      isSelected={sameDay(d, props.date)}
+                      isSelected={sameDay(d, selectedDate)}
                       isOutside={d.getMonth() !== p.monthIndex}
                       onPress={(dd) => {
-                        props.onChangeDate(dd);
+                        setDate(dd);
                         props.onPressDay?.(dd);
                       }}
                       markers={props.expanded ? undefined : markersByDayKey[k]}
@@ -235,7 +235,5 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     paddingVertical: spacing.sm,
   },
-  weekRow: {
-    flexDirection: "row",
-  },
+  weekRow: { flexDirection: "row" },
 });

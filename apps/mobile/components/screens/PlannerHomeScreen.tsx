@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from "react";
+import React, { useMemo, useCallback } from "react";
 import { View, StyleSheet } from "react-native";
 import dayjs from "dayjs";
 import "dayjs/locale/tr";
@@ -10,65 +10,45 @@ import { spacing, radii } from "@musti/ui-native";
 import { PlannerHeaderCenter } from "../planner/PlannerHeaderCenter";
 import { PlannerHeaderRight } from "../planner/PlannerHeaderRight";
 import { PlannerHeaderLeft } from "../planner/PlannerHeaderLeft";
-import { MEvent, eventsForDay } from "@musti/planner";
 import { BottomDaySheet } from "../planner/BottomDaySheet";
 import { FloatingCreateButton } from "../planner/FloatingCreateButton";
-import { MCalendar } from "../planner/MCalendar";
-import { useCalendarEventsStore } from "@/store/calendar/useCalendarEventsStore";
+import { Calendar } from "../planner/Calendar";
+import { eventsForDay, MEvent } from "@musti/planner";
+import { useCalendar } from "@/hooks/useCalendar";
 
 dayjs.extend(weekOfYear);
 dayjs.extend(isoWeek);
 dayjs.locale("en");
 
-type CalendarView = "week" | "month";
-
-const clampDay = (d: Date) =>
-  new Date(d.getFullYear(), d.getMonth(), d.getDate());
-
 export const PlannerHomeScreen = () => {
-  const [view, setView] = useState<CalendarView>("month");
-  const [date, setDate] = useState(new Date());
-
-  const events = useCalendarEventsStore((s) => s.events);
-
-  const [selectedDate, setSelectedDate] = useState<Date | null>(
-    clampDay(new Date())
-  );
-  const [sheetOpen, setSheetOpen] = useState(false);
-
-  const [openCreateToken, setOpenCreateToken] = useState<number | null>(null);
+  const {
+    date,
+    selectedDate,
+    daySheetOpen,
+    setDate,
+    openDay,
+    closeDaySheet,
+    openCreate,
+    pressEvent,
+    events,
+  } = useCalendar();
 
   const weekNumber = useMemo(() => dayjs(date).isoWeek(), [date]);
-
   const selectedLabel = useMemo(() => dayjs(date).format("MMMM"), [date]);
 
   const selectedEvents = useMemo(() => {
-    if (!selectedDate) return [];
     return eventsForDay(selectedDate, events);
   }, [selectedDate, events]);
 
-  const openDay = useCallback((d: Date) => {
-    const dd = clampDay(d);
-    setSelectedDate(dd);
-    setSheetOpen(true);
-  }, []);
-
   const onPressFab = useCallback(() => {
-    const day = selectedDate ?? clampDay(date);
-    setOpenCreateToken((x) => (x ?? 0) + 1);
-    openDay(day);
-  }, [selectedDate, date, openDay]);
+    openCreate(selectedDate);
+  }, [openCreate, selectedDate]);
 
   const onPressToday = useCallback(() => {
     const today = new Date();
     setDate(today);
     openDay(today);
-  }, [openDay]);
-
-  const effectiveSelectedDate =
-    selectedDate && dayjs(selectedDate).isSame(date, "week")
-      ? selectedDate
-      : clampDay(date);
+  }, [setDate, openDay]);
 
   return (
     <AppScreen
@@ -80,18 +60,10 @@ export const PlannerHomeScreen = () => {
           label={selectedLabel}
         />
       }
-      headerRight={
-        <PlannerHeaderRight
-          view={view}
-          onToggleView={() => setView((v) => (v === "week" ? "month" : "week"))}
-        />
-      }
+      headerRight={<PlannerHeaderRight />}
     >
       <View style={styles.body}>
-        <MCalendar
-          setDate={setDate}
-          view={view}
-          date={date}
+        <Calendar
           config={{ weekStartsOn: 1, locale: "en" }}
           weekView={{
             stepMinutes: 15,
@@ -99,27 +71,17 @@ export const PlannerHomeScreen = () => {
             startHour: 1,
             endHour: 24,
           }}
-          onPressDay={(d) => openDay(d)}
-          onPressEvent={(e: MEvent) => {
-            const d = new Date(e.start);
-            openDay(new Date(d.getFullYear(), d.getMonth(), d.getDate()));
-          }}
           onEventChange={() => {}}
-          openCreateToken={openCreateToken ?? undefined}
-          openCreateDay={selectedDate ?? clampDay(date)}
         />
 
         <FloatingCreateButton onPress={onPressFab} />
-
-        {effectiveSelectedDate && sheetOpen && selectedDate && (
+        {daySheetOpen && (
           <BottomDaySheet
             date={selectedDate}
             events={selectedEvents}
-            onCreate={() => setOpenCreateToken((x) => (x ?? 0) + 1)}
-            onPressEvent={(e) => {
-              console.log("event", e.id);
-            }}
-            onClose={() => setSheetOpen(false)}
+            onCreate={() => openCreate(selectedDate)}
+            onPressEvent={(e: MEvent) => pressEvent(e.id, e.start)}
+            onClose={closeDaySheet}
           />
         )}
       </View>
