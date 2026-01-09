@@ -5,12 +5,15 @@ import { placeOverlaps } from "./overlap";
 export type WeekBlock = {
   id: string;
   event: MEvent;
-  dayIndex: number; // 0..6
+  dayIndex: number;
   top: number;
   height: number;
   col: number;
   colCount: number;
 };
+
+const DAY_START = 0;
+const DAY_END = 24 * 60; // 1440
 
 export function layoutWeek(
   date: Date,
@@ -21,29 +24,43 @@ export function layoutWeek(
   const weekStart = startOfWeek(date, config.weekStartsOn);
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
-  const dayBuckets: MEvent[][] = Array.from({ length: 7 }, () => []);
-  for (const e of events) {
-    const s = toDate(e.start);
-    const dayIndex = days.findIndex((d) => sameDay(d, s));
-    if (dayIndex >= 0) dayBuckets[dayIndex].push(e);
-  }
-
-  const startMinVis = week.startHour * 60;
-  const endMinVis = week.endHour * 60;
+  const viewStart = week.startHour * 60;
+  const viewEnd = week.endHour * 60;
 
   const blocks: WeekBlock[] = [];
 
   for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
-    const dayEvents = dayBuckets[dayIndex];
+    const day = days[dayIndex];
+    const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, 0, 0, 0);
+    const nextDayStart = addDays(dayStart, 1);
+
+    const dayEvents = events.filter((e) => {
+      const s = toDate(e.start);
+      const en = toDate(e.end);
+      return en > dayStart && s < nextDayStart;
+    });
 
     const intervals = dayEvents
       .map((e) => {
-        const s = minutesOfDay(toDate(e.start));
-        const en = minutesOfDay(toDate(e.end));
+        const s = toDate(e.start);
+        const en = toDate(e.end);
+
+        const startsToday = sameDay(s, dayStart);
+        const endsToday = sameDay(en, dayStart);
+
+        // ✅ Gün hesabı 00:00 referanslı
+        const dayStartMin = startsToday ? minutesOfDay(s) : DAY_START;
+        const dayEndMin = endsToday ? minutesOfDay(en) : DAY_END;
+
+        // ✅ UI kırpması en sonda
+        const startMin = Math.max(dayStartMin, viewStart);
+        const endMin = Math.min(dayEndMin, viewEnd);
+
         return {
-          id: e.id,
-          startMin: Math.max(s, startMinVis),
-          endMin: Math.min(en, endMinVis),
+          id: `${e.id}__${dayIndex}`,
+          eventId: e.id,
+          startMin,
+          endMin,
         };
       })
       .filter((x) => x.endMin > x.startMin);
@@ -51,17 +68,15 @@ export function layoutWeek(
     const overlap = placeOverlaps(intervals);
 
     for (const it of intervals) {
-      const ov = overlap.find((o) => o.id === it.id) ?? { id: it.id, col: 0, colCount: 1 };
-      const top = (it.startMin - startMinVis) * week.pxPerMinute;
-      const height = (it.endMin - it.startMin) * week.pxPerMinute;
-      const event = dayEvents.find((e) => e.id === it.id)!;
+      const ov =
+        overlap.find((o) => o.id === it.id) ?? { id: it.id, col: 0, colCount: 1 };
 
       blocks.push({
         id: it.id,
-        event,
+        event: events.find((e) => e.id === it.eventId)!,
         dayIndex,
-        top,
-        height,
+        top: (it.startMin - viewStart) * week.pxPerMinute,
+        height: (it.endMin - it.startMin) * week.pxPerMinute,
         col: ov.col,
         colCount: ov.colCount,
       });

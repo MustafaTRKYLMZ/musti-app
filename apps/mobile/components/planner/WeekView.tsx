@@ -33,7 +33,6 @@ import {
   sameDay,
   snapMinutes,
 } from "@musti/planner";
-import { useCalendarUiStore } from "@/store/calendar/useCalendarUiStore";
 import { useCalendar } from "@/hooks/useCalendar";
 
 const { colors } = plannerTheme;
@@ -43,11 +42,81 @@ type Density = "compact" | "expanded";
 const clampNum = (v: number, a: number, b: number) =>
   Math.max(a, Math.min(b, v));
 
+type SegEvent = MEvent & { __seg?: true; __parentId?: string };
+
+const dayStart = (d: Date) =>
+  new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+
+const addMinutes = (d: Date, min: number) =>
+  new Date(d.getTime() + min * 60 * 1000);
+
+const maxDate = (a: Date, b: Date) => (a > b ? a : b);
+const minDate = (a: Date, b: Date) => (a < b ? a : b);
+
+const ymd = (d: Date) => d.toISOString().slice(0, 10);
+
+function segmentEventsForWeek(
+  events: MEvent[],
+  weekStart: Date,
+  startMinVis: number,
+  endMinVis: number
+): SegEvent[] {
+  const weekEndExclusive = addDays(weekStart, 7);
+  const out: SegEvent[] = [];
+
+  for (const e of events) {
+    const s = new Date(e.start);
+    const en = new Date(e.end);
+
+    if (en <= weekStart || s >= weekEndExclusive) continue;
+
+    const sW = maxDate(s, weekStart);
+    const eW = minDate(en, weekEndExclusive);
+
+    const endMinus1ms = new Date(eW.getTime() - 1);
+    const isMultiDay =
+      dayStart(sW).getTime() !== dayStart(endMinus1ms).getTime();
+
+    if (!isMultiDay) {
+      out.push(e as SegEvent);
+      continue;
+    }
+
+    let curDay = dayStart(sW);
+    while (curDay < eW) {
+      const nextDay = addDays(curDay, 1);
+
+      const daySegStart = maxDate(sW, curDay);
+      const daySegEnd = minDate(eW, nextDay);
+
+      const visStart = addMinutes(curDay, startMinVis);
+      const visEnd = addMinutes(curDay, endMinVis);
+
+      const segStart = maxDate(daySegStart, visStart);
+      const segEnd = minDate(daySegEnd, visEnd);
+
+      if (segEnd > segStart) {
+        out.push({
+          ...(e as any),
+          __seg: true,
+          __parentId: e.id,
+          id: `${e.id}__${ymd(curDay)}`,
+          start: segStart.toISOString(),
+          end: segEnd.toISOString(),
+        });
+      }
+
+      curDay = nextDay;
+    }
+  }
+
+  return out;
+}
+
 export function WeekView(props: {
   config: CalendarConfig;
   weekView: WeekViewConfig;
   locale?: string;
-
   onEventChange?: (next: MEvent) => void;
 }) {
   const { width: SCREEN_WIDTH } = useWindowDimensions();
@@ -70,10 +139,6 @@ export function WeekView(props: {
   const columnWidth = Math.floor(daysWidth / 7);
   const gridWidth = columnWidth * 7;
 
-  const { weekStart, blocks } = useMemo(() => {
-    return layoutWeek(date, events, { weekStartsOn }, props.weekView);
-  }, [date, events, props.weekView, weekStartsOn]);
-
   const startMinVis = props.weekView.startHour * 60;
   const endMinVis = props.weekView.endHour * 60;
 
@@ -93,6 +158,19 @@ export function WeekView(props: {
     },
     []
   );
+
+  const { weekStart, blocks } = useMemo(() => {
+    const prelim = layoutWeek(date, events, { weekStartsOn }, props.weekView);
+
+    const segged = segmentEventsForWeek(
+      events,
+      prelim.weekStart,
+      startMinVis,
+      endMinVis
+    );
+
+    return layoutWeek(date, segged as any, { weekStartsOn }, props.weekView);
+  }, [date, events, props.weekView, weekStartsOn, startMinVis, endMinVis]);
 
   const handleTapGrid = useCallback(
     (dayIndex: number, yPx: number) => {
@@ -197,6 +275,7 @@ export function WeekView(props: {
             todayIndex={nowInfo?.todayIndex ?? -1}
             nowY={nowInfo?.y ?? null}
             nowColor={plannerTheme.colors.primary ?? "#EF4444"}
+            onEventChange={props.onEventChange}
           />
         </View>
       </ScrollView>

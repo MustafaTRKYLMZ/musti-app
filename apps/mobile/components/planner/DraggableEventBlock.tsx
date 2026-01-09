@@ -26,8 +26,9 @@ type Props = {
   maxMinute: number;
   dayDate: Date;
 
+  draggable?: boolean;
   onPress?: (e: MEvent) => void;
-  onChange?: (next: MEvent) => void; // commit (store update)
+  onChange?: (next: MEvent) => void;
 };
 
 function fmtHHmm(minuteOfDay: number) {
@@ -41,15 +42,15 @@ export function DraggableEventBlock(p: Props) {
   const pxPerMin = p.weekView.pxPerMinute;
   const step = p.weekView.stepMinutes;
 
+  const canDrag = p.draggable !== false;
+
   const tY = useSharedValue(0);
   const hY = useSharedValue(0);
 
   const baseTop = useSharedValue(p.top);
   const baseHeight = useSharedValue(p.height);
 
-  // ✅ prevents tap while scrolling/dragging
   const moved = useSharedValue(false);
-
   const [previewRange, setPreviewRange] = useState<string>("");
 
   useEffect(() => {
@@ -81,16 +82,15 @@ export function DraggableEventBlock(p: Props) {
 
   const clearPreviewJS = useCallback(() => setPreviewRange(""), []);
 
-  // --- Tap: ignore if finger moved (scroll), and fail if moved too much ---
   const tapGesture = useMemo(() => {
     const maxDist = p.density === "expanded" ? 5 : 8;
 
     return Gesture.Tap()
       .maxDuration(220)
-      .maxDistance(maxDist) // ✅ scrolling cancels tap
+      .maxDistance(maxDist)
       .onEnd((_e, success) => {
         if (!success) return;
-        if (moved.value) return; // ✅ extra safety
+        if (moved.value) return;
         if (p.onPress) runOnJS(p.onPress)(p.event);
       });
   }, [p.density, p.onPress, p.event]);
@@ -98,7 +98,7 @@ export function DraggableEventBlock(p: Props) {
   const moveGesture = useMemo(
     () =>
       Gesture.Pan()
-        .enabled(p.density === "expanded")
+        .enabled(canDrag && p.density === "expanded")
         .onBegin(() => {
           moved.value = false;
 
@@ -107,7 +107,6 @@ export function DraggableEventBlock(p: Props) {
           runOnJS(setPreviewJS)(startMin, durMin);
         })
         .onChange((e) => {
-          // mark movement (prevents tap)
           if (Math.abs(e.translationY) > 4) moved.value = true;
 
           tY.value = e.translationY;
@@ -118,7 +117,6 @@ export function DraggableEventBlock(p: Props) {
           const rawStart = p.minMinute + nextTopPx / pxPerMin;
           const rawDur = nextHeightPx / pxPerMin;
 
-          // snap (worklet-safe)
           const snappedStart = Math.round(rawStart / step) * step;
           const snappedDur = Math.round(rawDur / step) * step;
 
@@ -137,6 +135,8 @@ export function DraggableEventBlock(p: Props) {
           runOnJS(setPreviewJS)(clampedStart, clampedDur);
         })
         .onEnd(() => {
+          if (!canDrag) return;
+
           const nextTopPx = baseTop.value + tY.value;
           const nextHeightPx = baseHeight.value + hY.value;
 
@@ -165,6 +165,7 @@ export function DraggableEventBlock(p: Props) {
           runOnJS(clearPreviewJS)();
         }),
     [
+      canDrag,
       p.density,
       p.minMinute,
       p.maxMinute,
@@ -183,7 +184,7 @@ export function DraggableEventBlock(p: Props) {
   const resizeGesture = useMemo(
     () =>
       Gesture.Pan()
-        .enabled(p.density === "expanded")
+        .enabled(canDrag && p.density === "expanded")
         .onBegin(() => {
           moved.value = false;
 
@@ -220,6 +221,8 @@ export function DraggableEventBlock(p: Props) {
           runOnJS(setPreviewJS)(clampedStart, clampedDur);
         })
         .onEnd(() => {
+          if (!canDrag) return;
+
           const nextTopPx = baseTop.value + tY.value;
           const nextHeightPx = baseHeight.value + hY.value;
 
@@ -248,6 +251,7 @@ export function DraggableEventBlock(p: Props) {
           runOnJS(clearPreviewJS)();
         }),
     [
+      canDrag,
       p.density,
       p.minMinute,
       p.maxMinute,
@@ -347,7 +351,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  // thin border-style resize handle
   resizeStrip: {
     height: 14,
     marginTop: 6,
