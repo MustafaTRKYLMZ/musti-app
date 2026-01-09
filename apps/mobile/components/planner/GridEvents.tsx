@@ -5,6 +5,7 @@ import { BlockedTime, MEvent, WeekViewConfig } from "@musti/planner/src/types";
 import { RenderHorizontalLines } from "./RenderHorizontalLines";
 import { addDays } from "@musti/planner";
 import { useCalendarUiStore } from "@/store/calendar/useCalendarUiStore";
+import { useCalendar } from "@/hooks/useCalendar";
 
 type GridEventsProps = {
   weekStart: Date;
@@ -50,8 +51,7 @@ export const GridEvents: FC<GridEventsProps> = ({
   nowY,
   nowColor,
 }) => {
-  const openDay = useCalendarUiStore((s) => s.openDay);
-  const pressEvent = useCalendarUiStore((s) => s.pressEvent);
+  const { updateEvent, openDay, pressEvent } = useCalendar();
 
   const nowX = useMemo(() => {
     if (todayIndex < 0) return null;
@@ -153,8 +153,13 @@ export const GridEvents: FC<GridEventsProps> = ({
             dayDate={addDays(weekStart, b.dayIndex)}
             minMinute={startMinVis}
             maxMinute={endMinVis}
-            onPress={(e) => pressEvent(e.id, e.start)}
-            onChange={onEventChange}
+            onPress={(e) => {
+              pressEvent(e.id, e.start);
+            }}
+            onChange={(next) => {
+              updateEvent(next.id, { start: next.start, end: next.end });
+              onEventChange?.(next);
+            }}
           />
         );
       })}

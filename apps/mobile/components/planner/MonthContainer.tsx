@@ -1,4 +1,3 @@
-// MonthContainer.tsx
 import React, { FC, useMemo, useRef, useState } from "react";
 import {
   View,
@@ -12,7 +11,6 @@ import { plannerTheme, spacing, typography, MText } from "@musti/ui-native";
 import { MonthView } from "./MonthView";
 import { MonthDayEventsList } from "./MonthDayEventsList";
 import { clamp } from "@musti/planner";
-import { useCalendarUiStore } from "@/store/calendar/useCalendarUiStore";
 import { useCalendar } from "@/hooks/useCalendar";
 
 const { colors } = plannerTheme;
@@ -167,7 +165,6 @@ export const MonthContainer: FC<MonthContainerProps> = ({
           <MonthDayEventsList
             date={date}
             events={events}
-            onPressEvent={onPressEvent}
             onTop={() => closeAgenda()}
           />
         </View>

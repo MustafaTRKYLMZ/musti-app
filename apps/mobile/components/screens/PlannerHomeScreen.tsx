@@ -75,7 +75,6 @@ export const PlannerHomeScreen = () => {
         />
 
         <FloatingCreateButton onPress={onPressFab} />
-
         {daySheetOpen && (
           <BottomDaySheet
             date={selectedDate}

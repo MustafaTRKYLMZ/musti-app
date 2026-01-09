@@ -1,15 +1,14 @@
-import React, { useMemo } from "react";
-import { Pressable, Text, View, StyleSheet } from "react-native";
+import React, { useMemo, useEffect, useState, useCallback } from "react";
+import { Text, View, StyleSheet } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   runOnJS,
-  clamp,
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 
 import type { MEvent, WeekViewConfig } from "@musti/planner/src/types";
-import { withDayAndMinutes, snapMinutes } from "@musti/planner";
+import { withDayAndMinutes, pad2 } from "@musti/planner";
 import { colors } from "@musti/ui-native";
 
 type Props = {
@@ -28,8 +27,15 @@ type Props = {
   dayDate: Date;
 
   onPress?: (e: MEvent) => void;
-  onChange?: (next: MEvent) => void;
+  onChange?: (next: MEvent) => void; // commit (store update)
 };
+
+function fmtHHmm(minuteOfDay: number) {
+  const m = Math.max(0, Math.min(24 * 60 - 1, Math.round(minuteOfDay)));
+  const h = Math.floor(m / 60);
+  const mm = m % 60;
+  return `${pad2(h)}:${pad2(mm)}`;
+}
 
 export function DraggableEventBlock(p: Props) {
   const pxPerMin = p.weekView.pxPerMinute;
@@ -41,142 +47,321 @@ export function DraggableEventBlock(p: Props) {
   const baseTop = useSharedValue(p.top);
   const baseHeight = useSharedValue(p.height);
 
-  React.useEffect(() => {
+  // ✅ prevents tap while scrolling/dragging
+  const moved = useSharedValue(false);
+
+  const [previewRange, setPreviewRange] = useState<string>("");
+
+  useEffect(() => {
     baseTop.value = p.top;
     baseHeight.value = p.height;
     tY.value = 0;
     hY.value = 0;
+    moved.value = false;
+    setPreviewRange("");
   }, [p.top, p.height]);
 
-  const commit = (startMin: number, durationMin: number) => {
-    const start = withDayAndMinutes(p.dayDate, startMin);
-    const end = withDayAndMinutes(p.dayDate, startMin + durationMin);
-    p.onChange?.({
-      ...p.event,
-      start: start.toISOString(),
-      end: end.toISOString(),
-    });
-  };
+  const commitJS = useCallback(
+    (startMin: number, durMin: number) => {
+      const start = withDayAndMinutes(p.dayDate, startMin);
+      const end = withDayAndMinutes(p.dayDate, startMin + durMin);
+
+      p.onChange?.({
+        ...p.event,
+        start: start.toISOString(),
+        end: end.toISOString(),
+      });
+    },
+    [p.dayDate, p.event, p.onChange]
+  );
+
+  const setPreviewJS = useCallback((startMin: number, durMin: number) => {
+    setPreviewRange(`${fmtHHmm(startMin)}–${fmtHHmm(startMin + durMin)}`);
+  }, []);
+
+  const clearPreviewJS = useCallback(() => setPreviewRange(""), []);
+
+  // --- Tap: ignore if finger moved (scroll), and fail if moved too much ---
+  const tapGesture = useMemo(() => {
+    const maxDist = p.density === "expanded" ? 5 : 8;
+
+    return Gesture.Tap()
+      .maxDuration(220)
+      .maxDistance(maxDist) // ✅ scrolling cancels tap
+      .onEnd((_e, success) => {
+        if (!success) return;
+        if (moved.value) return; // ✅ extra safety
+        if (p.onPress) runOnJS(p.onPress)(p.event);
+      });
+  }, [p.density, p.onPress, p.event]);
 
   const moveGesture = useMemo(
     () =>
       Gesture.Pan()
         .enabled(p.density === "expanded")
+        .onBegin(() => {
+          moved.value = false;
+
+          const startMin = p.minMinute + baseTop.value / pxPerMin;
+          const durMin = baseHeight.value / pxPerMin;
+          runOnJS(setPreviewJS)(startMin, durMin);
+        })
         .onChange((e) => {
+          // mark movement (prevents tap)
+          if (Math.abs(e.translationY) > 4) moved.value = true;
+
           tY.value = e.translationY;
+
+          const nextTopPx = baseTop.value + tY.value;
+          const nextHeightPx = baseHeight.value + hY.value;
+
+          const rawStart = p.minMinute + nextTopPx / pxPerMin;
+          const rawDur = nextHeightPx / pxPerMin;
+
+          // snap (worklet-safe)
+          const snappedStart = Math.round(rawStart / step) * step;
+          const snappedDur = Math.round(rawDur / step) * step;
+
+          const minDur = step;
+          const maxStart = p.maxMinute - minDur;
+
+          const clampedStart = Math.max(
+            p.minMinute,
+            Math.min(maxStart, snappedStart)
+          );
+          const clampedDur = Math.max(
+            minDur,
+            Math.min(p.maxMinute - clampedStart, snappedDur)
+          );
+
+          runOnJS(setPreviewJS)(clampedStart, clampedDur);
         })
         .onEnd(() => {
           const nextTopPx = baseTop.value + tY.value;
-          const rawStartMin = p.minMinute + nextTopPx / pxPerMin;
+          const nextHeightPx = baseHeight.value + hY.value;
 
-          const snappedStart = snapMinutes(rawStartMin, step);
-          const rawDurMin = (baseHeight.value + hY.value) / pxPerMin;
-          const snappedDur = snapMinutes(rawDurMin, step);
+          const rawStart = p.minMinute + nextTopPx / pxPerMin;
+          const rawDur = nextHeightPx / pxPerMin;
+
+          const snappedStart = Math.round(rawStart / step) * step;
+          const snappedDur = Math.round(rawDur / step) * step;
 
           const minDur = step;
-          const clampedStart = clamp(
-            snappedStart,
+          const maxStart = p.maxMinute - minDur;
+
+          const clampedStart = Math.max(
             p.minMinute,
-            p.maxMinute - minDur
+            Math.min(maxStart, snappedStart)
           );
-          const clampedDur = clamp(
-            snappedDur,
+          const clampedDur = Math.max(
             minDur,
-            p.maxMinute - clampedStart
+            Math.min(p.maxMinute - clampedStart, snappedDur)
           );
 
-          runOnJS(commit)(clampedStart, clampedDur);
+          runOnJS(commitJS)(clampedStart, clampedDur);
           tY.value = 0;
           hY.value = 0;
+          moved.value = false;
+          runOnJS(clearPreviewJS)();
         }),
-    [p.density, p.weekView, p.minMinute, p.maxMinute]
+    [
+      p.density,
+      p.minMinute,
+      p.maxMinute,
+      pxPerMin,
+      step,
+      baseTop,
+      baseHeight,
+      tY,
+      hY,
+      commitJS,
+      setPreviewJS,
+      clearPreviewJS,
+    ]
   );
 
   const resizeGesture = useMemo(
     () =>
       Gesture.Pan()
         .enabled(p.density === "expanded")
+        .onBegin(() => {
+          moved.value = false;
+
+          const startMin = p.minMinute + baseTop.value / pxPerMin;
+          const durMin = baseHeight.value / pxPerMin;
+          runOnJS(setPreviewJS)(startMin, durMin);
+        })
         .onChange((e) => {
+          if (Math.abs(e.translationY) > 4) moved.value = true;
+
           hY.value = e.translationY;
+
+          const nextTopPx = baseTop.value + tY.value;
+          const nextHeightPx = baseHeight.value + hY.value;
+
+          const rawStart = p.minMinute + nextTopPx / pxPerMin;
+          const rawDur = nextHeightPx / pxPerMin;
+
+          const snappedStart = Math.round(rawStart / step) * step;
+          const snappedDur = Math.round(rawDur / step) * step;
+
+          const minDur = step;
+          const maxStart = p.maxMinute - minDur;
+
+          const clampedStart = Math.max(
+            p.minMinute,
+            Math.min(maxStart, snappedStart)
+          );
+          const clampedDur = Math.max(
+            minDur,
+            Math.min(p.maxMinute - clampedStart, snappedDur)
+          );
+
+          runOnJS(setPreviewJS)(clampedStart, clampedDur);
         })
         .onEnd(() => {
-          const startMin = p.minMinute + baseTop.value / pxPerMin;
-          const rawDurMin = (baseHeight.value + hY.value) / pxPerMin;
+          const nextTopPx = baseTop.value + tY.value;
+          const nextHeightPx = baseHeight.value + hY.value;
 
-          const snappedDur = snapMinutes(rawDurMin, step);
+          const rawStart = p.minMinute + nextTopPx / pxPerMin;
+          const rawDur = nextHeightPx / pxPerMin;
+
+          const snappedStart = Math.round(rawStart / step) * step;
+          const snappedDur = Math.round(rawDur / step) * step;
+
           const minDur = step;
-          const clampedDur = clamp(snappedDur, minDur, p.maxMinute - startMin);
+          const maxStart = p.maxMinute - minDur;
 
-          runOnJS(commit)(startMin, clampedDur);
+          const clampedStart = Math.max(
+            p.minMinute,
+            Math.min(maxStart, snappedStart)
+          );
+          const clampedDur = Math.max(
+            minDur,
+            Math.min(p.maxMinute - clampedStart, snappedDur)
+          );
+
+          runOnJS(commitJS)(clampedStart, clampedDur);
           tY.value = 0;
           hY.value = 0;
+          moved.value = false;
+          runOnJS(clearPreviewJS)();
         }),
-    [p.density, p.weekView, p.minMinute, p.maxMinute]
+    [
+      p.density,
+      p.minMinute,
+      p.maxMinute,
+      pxPerMin,
+      step,
+      baseTop,
+      baseHeight,
+      tY,
+      hY,
+      commitJS,
+      setPreviewJS,
+      clearPreviewJS,
+    ]
+  );
+
+  const cardGesture = useMemo(
+    () => Gesture.Simultaneous(tapGesture, moveGesture),
+    [tapGesture, moveGesture]
   );
 
   const aStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: tY.value }],
-    height: baseHeight.value + hY.value,
+    height: Math.max(6, baseHeight.value + hY.value),
   }));
+
+  const bg = p.event.color ?? "#2F6FED";
 
   if (p.density === "compact") {
     return (
-      <Pressable
-        onPress={() => p.onPress?.(p.event)}
-        style={[
-          styles.compactLine,
-          {
-            left: p.left + 2,
-            top: p.top,
-            width: p.width - 6,
-            backgroundColor: p.event.color ?? "#2F6FED",
-          },
-        ]}
-      />
+      <GestureDetector gesture={tapGesture}>
+        <Animated.View
+          style={[
+            styles.compactLine,
+            {
+              left: p.left + 2,
+              top: p.top,
+              width: p.width - 6,
+              backgroundColor: bg,
+            },
+          ]}
+        />
+      </GestureDetector>
     );
   }
 
   return (
-    <Animated.View
-      style={[
-        styles.card,
-        {
-          left: p.left,
-          top: p.top,
-          width: p.width - 4,
-          backgroundColor: p.event.color ?? "#2F6FED",
-        },
-        aStyle,
-      ]}
-    >
-      <GestureDetector gesture={moveGesture}>
-        <Pressable onPress={() => p.onPress?.(p.event)} style={{ flex: 1 }}>
+    <GestureDetector gesture={cardGesture}>
+      <Animated.View
+        style={[
+          styles.card,
+          {
+            left: p.left,
+            top: p.top,
+            width: p.width - 4,
+            backgroundColor: bg,
+          },
+          aStyle,
+        ]}
+      >
+        <View style={styles.headerRow}>
           <Text numberOfLines={1} style={styles.title}>
             {p.event.title}
           </Text>
-        </Pressable>
-      </GestureDetector>
+          {previewRange ? (
+            <Text style={styles.time}>{previewRange}</Text>
+          ) : null}
+        </View>
 
-      <GestureDetector gesture={resizeGesture}>
-        <View style={styles.resizeHandle} />
-      </GestureDetector>
-    </Animated.View>
+        <GestureDetector gesture={resizeGesture}>
+          <View style={styles.resizeStrip}>
+            <View style={styles.grabber} />
+          </View>
+        </GestureDetector>
+      </Animated.View>
+    </GestureDetector>
   );
 }
 
 const styles = StyleSheet.create({
   compactLine: { position: "absolute", height: 4, borderRadius: 2 },
+
   card: {
     position: "absolute",
     borderRadius: 10,
     padding: 6,
     overflow: "hidden",
   },
+
+  headerRow: { flex: 1, justifyContent: "space-between" },
+
   title: { color: "#fff", fontSize: 11, fontWeight: "800" },
-  resizeHandle: {
+
+  time: {
+    color: "rgba(255,255,255,0.85)",
+    fontSize: 10,
+    fontWeight: "700",
+    marginTop: 2,
+  },
+
+  // thin border-style resize handle
+  resizeStrip: {
     height: 14,
     marginTop: 6,
-    borderRadius: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(255,255,255,0.55)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  grabber: {
+    width: 22,
+    height: 3,
+    borderRadius: 3,
     backgroundColor: colors.backgroundSecondary,
+    opacity: 0.9,
   },
 });

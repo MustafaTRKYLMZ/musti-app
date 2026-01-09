@@ -1,4 +1,5 @@
 export * from "./theme";
+export * from "./components/AppModal";
 export * from "./components/MText";
 export * from "./components/Screen";
 export * from "./components/Card";

@@ -8,6 +8,13 @@ import React, {
 } from "react";
 import { Toast } from "./Toast";
 
+export type ToastVariant =
+  | "default"
+  | "success"
+  | "info"
+  | "warning"
+  | "danger";
+
 export type ToastAction = {
   label: string;
   onPress: () => void;
@@ -21,6 +28,7 @@ export type ToastPayload =
       message: string;
       duration?: number;
       actions?: ToastAction[];
+      variant?: ToastVariant; // ✅ NEW
     };
 
 type ToastState = {
@@ -28,6 +36,7 @@ type ToastState = {
   title?: string;
   message: string;
   actions?: ToastAction[];
+  variant?: ToastVariant; // ✅ NEW
 };
 
 type ToastApi = {
@@ -46,6 +55,7 @@ export function ToastProvider({ children, defaultDurationMs = 3000 }: Props) {
   const [toast, setToast] = useState<ToastState>({
     visible: false,
     message: "",
+    variant: "default",
   });
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -70,6 +80,7 @@ export function ToastProvider({ children, defaultDurationMs = 3000 }: Props) {
         setToast({
           visible: true,
           message: payload,
+          variant: "default",
         });
 
         timerRef.current = setTimeout(
@@ -84,6 +95,7 @@ export function ToastProvider({ children, defaultDurationMs = 3000 }: Props) {
         title: payload.title,
         message: payload.message,
         actions: payload.actions,
+        variant: payload.variant ?? "default",
       });
 
       const d = payload.duration ?? durationMs ?? defaultDurationMs;
@@ -103,6 +115,7 @@ export function ToastProvider({ children, defaultDurationMs = 3000 }: Props) {
         title={toast.title}
         message={toast.message}
         actions={toast.actions}
+        variant={toast.variant}
         onDismiss={hideToast}
       />
     </ToastContext.Provider>

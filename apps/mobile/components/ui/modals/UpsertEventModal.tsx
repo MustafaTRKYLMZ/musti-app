@@ -2,7 +2,7 @@ import React, { useState, useCallback } from "react";
 import type { MEvent } from "@musti/planner";
 import { spacing } from "@musti/ui-native";
 
-import { AppModal } from "../AppModal";
+import { AppModal } from "@musti/ui-native";
 import { useEventFormController } from "@/components/planner/controllers/useEventFormController";
 import { EventForm } from "@/components/planner/EventForm";
 import { EventColorPickerModal } from "./EventColorPickerModal";
@@ -24,12 +24,14 @@ type CreateProps = BaseProps & {
 type EditProps = BaseProps & {
   mode: "edit";
   event: MEvent;
-  onSubmit: (id: string, patch: Partial<MEvent>) => void; // ✅ store signature
+  onSubmit: (id: string, patch: Partial<MEvent>) => void;
+
+  onDelete: () => void;
 };
 
 type Props = CreateProps | EditProps;
 
-export function UpsertEventModal(props: Props) {
+export const UpsertEventModal = (props: Props) => {
   const [colorOpen, setColorOpen] = useState(false);
   const openColors = useCallback(() => setColorOpen(true), []);
   const closeColors = useCallback(() => setColorOpen(false), []);
@@ -45,7 +47,7 @@ export function UpsertEventModal(props: Props) {
           locale: props.locale,
           onClose: props.onClose,
           event: props.event,
-          onSubmit: props.onSubmit, // (id, patch)
+          onSubmit: props.onSubmit,
         }
       : {
           mode: "create",
@@ -55,7 +57,7 @@ export function UpsertEventModal(props: Props) {
           timezone: props.timezone,
           locale: props.locale,
           onClose: props.onClose,
-          onSubmit: props.onSubmit, // (payload)
+          onSubmit: props.onSubmit,
         }
   );
 
@@ -72,6 +74,10 @@ export function UpsertEventModal(props: Props) {
         showClose={false}
         contentContainerStyle={{ paddingTop: spacing.xs }}
         actions={{
+          onDelete: props.mode === "edit" ? props.onDelete : undefined,
+          deleteLabel: "Delete",
+          deleteDisabled: props.mode !== "edit",
+
           onSave: c.save,
           saveDisabled: !c.canSave,
           cancelLabel: "Cancel",
@@ -107,4 +113,4 @@ export function UpsertEventModal(props: Props) {
       />
     </>
   );
-}
+};

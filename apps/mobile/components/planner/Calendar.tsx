@@ -1,4 +1,4 @@
-import React, { FC, useMemo } from "react";
+import React, { FC, useCallback, useMemo } from "react";
 import { View, StyleSheet, useWindowDimensions } from "react-native";
 import {
   CalendarConfig,
@@ -14,6 +14,9 @@ import { MonthContainer } from "./MonthContainer";
 import { DAYS_IN_WEEK, TIME_COL_WIDTH } from "@/config/timeConfigs";
 import { UpsertEventModal } from "../ui/modals/UpsertEventModal";
 import { useCalendar } from "@/hooks/useCalendar";
+
+import { useCalendarEventsStore } from "@/store/calendar/useCalendarEventsStore";
+import { useToast } from "../ui/ToastProvider";
 
 const { colors } = plannerTheme;
 
@@ -42,10 +45,10 @@ export const Calendar: FC<CalendarProps> = ({
     createStartMinute,
     closeCreate,
 
+    // edit
     editOpen,
     editEventId,
     closeEdit,
-    resetModals,
 
     // events
     events,
@@ -55,6 +58,13 @@ export const Calendar: FC<CalendarProps> = ({
     // actions
     pressEvent,
   } = useCalendar();
+
+  const { showToast, hideToast } = useToast();
+
+  const deleteEventWithUndo = useCalendarEventsStore(
+    (s) => s.deleteEventWithUndo
+  );
+  const undoDelete = useCalendarEventsStore((s) => s.undoDelete);
 
   const config: CalendarConfig = {
     locale: "en",
@@ -91,6 +101,52 @@ export const Calendar: FC<CalendarProps> = ({
     if (!editOpen || !editEventId) return null;
     return (events ?? []).find((e) => e.id === editEventId) ?? null;
   }, [events, editOpen, editEventId]);
+
+  const confirmDeleteToast = useCallback(
+    (eventId: string) => {
+      showToast(
+        {
+          title: "Delete event?",
+          message: "You can undo for a few seconds.",
+          variant: "danger",
+          duration: 6000,
+          actions: [
+            {
+              label: "Cancel",
+              onPress: () => hideToast(),
+            },
+            {
+              label: "Delete",
+              destructive: true,
+              onPress: () => {
+                hideToast();
+
+                deleteEventWithUndo(eventId, 4000);
+
+                showToast(
+                  {
+                    message: "Event deleted",
+                    variant: "danger",
+                    duration: 4000,
+                    actions: [
+                      {
+                        label: "Undo",
+                        onPress: () => undoDelete(),
+                      },
+                    ],
+                  },
+                  4000
+                );
+              },
+            },
+          ],
+        },
+        6000
+      );
+    },
+    [showToast, hideToast, deleteEventWithUndo, undoDelete]
+  );
+
   return (
     <View style={styles.root}>
       <View style={styles.lettersRow}>
@@ -117,8 +173,6 @@ export const Calendar: FC<CalendarProps> = ({
             ...weekView,
           }}
           onEventChange={onEventChange}
-          // Eğer WeekView event press callback’i destekliyorsa:
-          // onPressEvent={(e) => pressEvent(e.id, e.start)}
         />
       )}
 
@@ -148,7 +202,7 @@ export const Calendar: FC<CalendarProps> = ({
         }}
       />
 
-      {/* EDIT (store-driven) */}
+      {/* EDIT */}
       {editEvent ? (
         <UpsertEventModal
           mode="edit"
@@ -157,10 +211,14 @@ export const Calendar: FC<CalendarProps> = ({
           event={editEvent}
           locale={locale ?? config.locale}
           timezone={config.timezone}
-          onClose={resetModals}
+          onClose={closeEdit}
           onSubmit={(id, patch) => {
             updateEvent(id, patch);
-            resetModals();
+            closeEdit();
+          }}
+          onDelete={() => {
+            closeEdit();
+            confirmDeleteToast(editEvent.id);
           }}
         />
       ) : null}

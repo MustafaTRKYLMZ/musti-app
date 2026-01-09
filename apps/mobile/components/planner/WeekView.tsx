@@ -21,7 +21,7 @@ import type {
 } from "@musti/planner/src/types";
 
 import { DaysHeader } from "./DaysHeader";
-import { plannerTheme } from "@musti/ui-native";
+import { plannerTheme, spacing } from "@musti/ui-native";
 import { TimeColumn } from "./TimeColumn";
 import { GridEvents } from "./GridEvents";
 import { BOTTOM_PADDING_MINUTES, TIME_COL_WIDTH } from "@/config/timeConfigs";
@@ -163,7 +163,13 @@ export function WeekView(props: {
         showsVerticalScrollIndicator={false}
         onLayout={(e) => setViewportH(e.nativeEvent.layout.height)}
       >
-        <View style={{ flexDirection: "row", height: contentHeight }}>
+        <View
+          style={{
+            flexDirection: "row",
+            marginTop: spacing.md,
+            height: contentHeight,
+          }}
+        >
           <TimeColumn
             TIME_COL_WIDTH={TIME_COL_WIDTH}
             weekView={props.weekView}
@@ -191,7 +197,6 @@ export function WeekView(props: {
             todayIndex={nowInfo?.todayIndex ?? -1}
             nowY={nowInfo?.y ?? null}
             nowColor={plannerTheme.colors.primary ?? "#EF4444"}
-            onEventChange={props.onEventChange}
           />
         </View>
       </ScrollView>

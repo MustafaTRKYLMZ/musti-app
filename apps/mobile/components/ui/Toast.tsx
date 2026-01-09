@@ -7,14 +7,15 @@ import {
   Modal,
   Platform,
 } from "react-native";
-import { MText, radii, spacing, useTheme } from "@musti/ui-native";
-import type { ToastAction } from "./ToastProvider";
+import { MText, radii, spacing, useTheme, ThemeColors } from "@musti/ui-native";
+import type { ToastAction, ToastVariant } from "./ToastProvider";
 
 type ToastProps = {
   visible: boolean;
   title?: string;
   message: string;
   actions?: ToastAction[];
+  variant?: ToastVariant; // ✅ NEW
   onDismiss: () => void;
 };
 
@@ -23,10 +24,48 @@ export const Toast = ({
   title,
   message,
   actions,
+  variant = "default",
   onDismiss,
 }: ToastProps) => {
   const { colors } = useTheme();
   const anim = useRef(new Animated.Value(0)).current;
+
+  const palette = useMemo(() => {
+    const surface =
+      (colors as ThemeColors).surface ??
+      (colors as ThemeColors).backgroundSecondary ??
+      colors.background;
+
+    const border =
+      (colors as ThemeColors).borderSubtle ??
+      (colors as ThemeColors).border ??
+      "rgba(0,0,0,0.12)";
+
+    const danger =
+      (colors as any).danger ??
+      (colors as any).error ??
+      (colors as any).destructive ??
+      "#EF4444";
+
+    const success = (colors as any).success ?? "#22C55E";
+    const warning = (colors as any).warning ?? "#F59E0B";
+    const info =
+      (colors as any).info ?? (colors as ThemeColors).primary ?? "#2F6FED";
+    const primary = (colors as ThemeColors).primary ?? "#2F6FED";
+
+    const accent =
+      variant === "danger"
+        ? danger
+        : variant === "success"
+        ? success
+        : variant === "warning"
+        ? warning
+        : variant === "info"
+        ? info
+        : primary;
+
+    return { surface, border, danger, accent };
+  }, [colors, variant]);
 
   useEffect(() => {
     Animated.timing(anim, {
@@ -57,8 +96,8 @@ export const Toast = ({
           style={[
             styles.toast,
             {
-              backgroundColor: colors.surface,
-              borderColor: colors.borderSubtle,
+              backgroundColor: palette.surface,
+              borderColor: palette.border,
               opacity: anim,
               transform: [
                 {
@@ -77,59 +116,66 @@ export const Toast = ({
             },
           ]}
         >
-          {title ? (
-            <MText
-              variant="body"
-              color="textPrimary"
-              numberOfLines={1}
-              style={styles.title}
-            >
-              {title}
+          {/* accent bar */}
+          <View style={[styles.accent, { backgroundColor: palette.accent }]} />
+
+          <View style={{ flex: 1 }}>
+            {title ? (
+              <MText
+                variant="body"
+                color="textPrimary"
+                numberOfLines={1}
+                style={styles.title}
+              >
+                {title}
+              </MText>
+            ) : null}
+
+            <MText variant="body" color="textPrimary" numberOfLines={2}>
+              {message}
             </MText>
-          ) : null}
 
-          <MText variant="body" color="textPrimary" numberOfLines={2}>
-            {message}
-          </MText>
+            {actions?.length ? (
+              <View style={styles.actionsRow}>
+                {actions.map((a, idx) => {
+                  const isDestructive = !!a.destructive;
+                  const btnBorder = isDestructive
+                    ? palette.danger
+                    : palette.border;
+                  const btnBg = isDestructive
+                    ? `${palette.danger}1A`
+                    : palette.surface;
 
-          {actions?.length ? (
-            <View style={styles.actionsRow}>
-              {actions.map((a, idx) => (
-                <Pressable
-                  key={`${a.label}-${idx}`}
-                  onPress={() => {
-                    onDismiss();
-                    a.onPress();
-                  }}
-                  style={[
-                    styles.actionBtn,
-                    { borderColor: colors.borderSubtle },
-                    a.destructive
-                      ? {
-                          borderColor: colors.danger,
-                          backgroundColor: colors.danger + "1A",
-                        }
-                      : {
-                          backgroundColor: colors.surface,
-                        },
-                  ]}
-                >
-                  <MText
-                    variant="body"
-                    numberOfLines={1}
-                    style={[
-                      styles.actionText,
-                      a.destructive
-                        ? { color: colors.danger }
-                        : { color: colors.textPrimary },
-                    ]}
-                  >
-                    {a.label}
-                  </MText>
-                </Pressable>
-              ))}
-            </View>
-          ) : null}
+                  return (
+                    <Pressable
+                      key={`${a.label}-${idx}`}
+                      onPress={() => {
+                        onDismiss();
+                        a.onPress();
+                      }}
+                      style={[
+                        styles.actionBtn,
+                        { borderColor: btnBorder, backgroundColor: btnBg },
+                      ]}
+                    >
+                      <MText
+                        variant="body"
+                        numberOfLines={1}
+                        style={[
+                          styles.actionText,
+                          isDestructive
+                            ? { color: palette.danger }
+                            : { color: colors.textPrimary },
+                        ]}
+                      >
+                        {a.label}
+                      </MText>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            ) : null}
+          </View>
         </Animated.View>
       </View>
     </Modal>
@@ -145,7 +191,8 @@ const styles = StyleSheet.create({
     paddingBottom: spacing["6xl"] + 16,
   },
   toast: {
-    maxWidth: "94%",
+    width: "100%",
+    maxWidth: 460,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderRadius: radii.md,
@@ -154,6 +201,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.16,
     shadowRadius: 10,
     elevation: 6,
+    flexDirection: "row",
+    gap: spacing.md,
+  },
+  accent: {
+    width: 4,
+    borderRadius: 999,
+    opacity: 0.9,
   },
   title: {
     fontWeight: "900",

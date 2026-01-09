@@ -1,68 +1,79 @@
 import { create } from "zustand";
-import dayjs from "dayjs";
-import { MEvent } from "@musti/planner";
+import type { MEvent } from "@musti/planner";
+
+type PendingDelete = {
+  token: string;
+  event: MEvent;
+  timeoutId: any;
+};
 
 type State = {
   events: MEvent[];
-  addEvent: (e: Omit<MEvent, "id"> & { id?: string }) => string;
+
+  addEvent: (payload: Omit<MEvent, "id">) => void;
   updateEvent: (id: string, patch: Partial<MEvent>) => void;
   deleteEvent: (id: string) => void;
-  getEventsForDate: (date: Date) => MEvent[];
+
+  pendingDelete?: PendingDelete;
+  deleteEventWithUndo: (id: string, durationMs?: number) => void;
+  undoDelete: () => void;
 };
 
-function uid() {
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
+const uid = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
-function isSameDayByStart(ev: MEvent, d: Date) {
-  return dayjs(ev.start).isSame(d, "day");
-}
+const sortEvents = (arr: MEvent[]) =>
+  [...arr].sort(
+    (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()
+  );
 
 export const useCalendarEventsStore = create<State>((set, get) => ({
   events: [],
 
-  addEvent: (e) => {
-    const id = e.id ?? uid();
+  addEvent: (payload) =>
+    set((s) => {
+      const id = uid();
+      const ev: MEvent = { ...(payload as any), id } as MEvent;
+      return { events: sortEvents([...s.events, ev]) };
+    }),
 
-    const s = dayjs(e.start);
-    const en = dayjs(e.end);
-    if (!s.isValid() || !en.isValid() || !en.isAfter(s)) {
-   
-      throw new Error("Invalid event time range (end must be after start).");
-    }
+  updateEvent: (id, patch) =>
+    set((s) => {
+      const next = s.events.map((e) => (e.id === id ? { ...e, ...patch } : e));
+      return { events: sortEvents(next) };
+    }),
 
-    const ev: MEvent = { ...e, id };
-    set((st) => ({ events: [ev, ...st.events] }));
-    return id;
-  },
+  deleteEvent: (id) =>
+    set((s) => ({ events: s.events.filter((e) => e.id !== id) })),
 
-  updateEvent: (id, patch) => {
-    set((st) => ({
-      events: st.events.map((it) => {
-        if (it.id !== id) return it;
+  deleteEventWithUndo: (id, durationMs = 4000) =>
+    set((s) => {
+      const ev = s.events.find((e) => e.id === id);
+      if (!ev) return s;
 
-        const next = { ...it, ...patch } as MEvent;
+      if (s.pendingDelete?.timeoutId) clearTimeout(s.pendingDelete.timeoutId);
 
-        const s = dayjs(next.start);
-        const en = dayjs(next.end);
-        if (!s.isValid() || !en.isValid() || !en.isAfter(s)) {
-          return it;
-        }
+      const token = uid();
+      const timeoutId = setTimeout(() => {
+        const cur = get().pendingDelete;
+        if (cur?.token === token) set({ pendingDelete: undefined });
+      }, durationMs);
 
-        return next;
-      }),
-    }));
-  },
+      return {
+        events: s.events.filter((e) => e.id !== id),
+        pendingDelete: { token, event: ev, timeoutId },
+      };
+    }),
 
-  deleteEvent: (id) => {
-    set((st) => ({ events: st.events.filter((it) => it.id !== id) }));
-  },
+  undoDelete: () =>
+    set((s) => {
+      const pd = s.pendingDelete;
+      if (!pd) return s;
 
-  getEventsForDate: (date) => {
-    return get()
-      .events
-      .filter((e) => isSameDayByStart(e, date))
-      .slice()
-      .sort((a, b) => dayjs(a.start).valueOf() - dayjs(b.start).valueOf());
-  },
+      clearTimeout(pd.timeoutId);
+
+      return {
+        events: sortEvents([...s.events, pd.event]),
+        pendingDelete: undefined,
+      };
+    }),
 }));
