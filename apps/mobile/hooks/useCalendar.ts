@@ -35,7 +35,6 @@ export const useCalendar=()=> {
       requestDelete: s.requestDelete,
       cancelDelete: s.cancelDelete,
       confirmDelete: s.confirmDelete,
-
       resetModals: s.resetModals,
     }))
   );
@@ -46,7 +45,7 @@ export const useCalendar=()=> {
       addEvent: s.addEvent,
       updateEvent: s.updateEvent,
       deleteEvent: s.deleteEvent,
-      getEventsForDate: s.getEventsForDate,
+      hasHydrated: s.hasHydrated,
     }))
   );
 

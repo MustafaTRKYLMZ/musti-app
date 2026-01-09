@@ -6,7 +6,7 @@ import weekOfYear from "dayjs/plugin/weekOfYear";
 import isoWeek from "dayjs/plugin/isoWeek";
 
 import { AppScreen } from "../AppScreen";
-import { spacing, radii } from "@musti/ui-native";
+import { spacing, radii, Spinner } from "@musti/ui-native";
 import { PlannerHeaderCenter } from "../planner/PlannerHeaderCenter";
 import { PlannerHeaderRight } from "../planner/PlannerHeaderRight";
 import { PlannerHeaderLeft } from "../planner/PlannerHeaderLeft";
@@ -30,6 +30,7 @@ export const PlannerHomeScreen = () => {
     closeDaySheet,
     openCreate,
     pressEvent,
+    hasHydrated,
     events,
   } = useCalendar();
 
@@ -49,6 +50,26 @@ export const PlannerHomeScreen = () => {
     setDate(today);
     openDay(today);
   }, [setDate, openDay]);
+
+  if (!hasHydrated) {
+    return (
+      <AppScreen
+        headerLeft={<PlannerHeaderLeft weekNumber={weekNumber} />}
+        variant="planner"
+        headerCenter={
+          <PlannerHeaderCenter
+            onPressToday={onPressToday}
+            label={selectedLabel}
+          />
+        }
+        headerRight={<PlannerHeaderRight />}
+      >
+        <View style={[styles.body, styles.center]}>
+          <Spinner />
+        </View>
+      </AppScreen>
+    );
+  }
 
   return (
     <AppScreen
@@ -75,6 +96,7 @@ export const PlannerHomeScreen = () => {
         />
 
         <FloatingCreateButton onPress={onPressFab} />
+
         {daySheetOpen && (
           <BottomDaySheet
             date={selectedDate}
@@ -91,6 +113,8 @@ export const PlannerHomeScreen = () => {
 
 const styles = StyleSheet.create({
   body: { flex: 1 },
+  center: { justifyContent: "center", alignItems: "center" },
+
   headerRight: {
     flexDirection: "row",
     alignItems: "center",
