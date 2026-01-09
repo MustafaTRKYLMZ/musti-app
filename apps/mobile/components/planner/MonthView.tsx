@@ -13,11 +13,11 @@ import { plannerTheme, spacing } from "@musti/ui-native";
 import { DayCard, DayInlineItem } from "./DayCard";
 import { TOTAL_DAYS, WEEKS_IN_GRID } from "@/config/timeConfigs";
 import {
-  eventToStartDate,
   eventToTitle,
   startOfWeek,
   addDays,
   sameDay,
+  toDate,
 } from "@musti/planner";
 import { useCalendarUiStore } from "@/store/calendar/useCalendarUiStore";
 
@@ -42,6 +42,13 @@ const addMonths = (d: Date, delta: number) => {
 
 const stripLeadingTime = (s: string) =>
   s.replace(/^\s*\d{1,2}:\d{2}\s+/, "").trim();
+
+type DayMarker = {
+  id: string;
+  color: string;
+  contL: boolean;
+  contR: boolean;
+};
 
 export function MonthView(props: {
   config: CalendarConfig;
@@ -102,26 +109,70 @@ export function MonthView(props: {
   }, [centerOffset, date.getFullYear(), date.getMonth(), pageWidth]);
 
   const { markersByDayKey, inlineByDayKey } = useMemo(() => {
-    const markers: Record<string, string[]> = {};
+    const markers: Record<string, DayMarker[]> = {};
     const inline: Record<
       string,
       { color: string; title: string; t: number }[]
     > = {};
 
-    for (const ev of props.events) {
-      const sd = eventToStartDate(ev as any);
-      if (!sd) continue;
+    const startOfDayLocal = (d: Date) =>
+      new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
 
-      const k = dayKey(sd);
+    const addDaysLocal = (d: Date, n: number) => {
+      const x = new Date(d);
+      x.setDate(x.getDate() + n);
+      return x;
+    };
+
+    const listDaysOverlapped = (start: Date, end: Date) => {
+      const endMinus = new Date(end.getTime() - 1);
+      if (!Number.isFinite(endMinus.getTime())) return [] as Date[];
+
+      let cur = startOfDayLocal(start);
+      const last = startOfDayLocal(endMinus);
+      const out: Date[] = [];
+
+      while (cur <= last) {
+        out.push(cur);
+        cur = addDaysLocal(cur, 1);
+      }
+      return out;
+    };
+
+    for (const ev of props.events) {
+      const s = toDate((ev as any).start);
+      const e = toDate((ev as any).end);
+      if (!Number.isFinite(s.getTime()) || !Number.isFinite(e.getTime()))
+        continue;
+      if (e <= s) continue;
+
+      const eventId = String((ev as any).id ?? "");
       const c = (ev as any)?.color ?? colors.primary;
 
-      (markers[k] ||= []).push(c);
+      const days = listDaysOverlapped(s, e);
+      if (!days.length) continue;
+
+      for (let i = 0; i < days.length; i++) {
+        const day = days[i];
+        const k = dayKey(day);
+
+        const contL = i > 0;
+        const contR = i < days.length - 1;
+
+        (markers[k] ||= []).push({ id: eventId, color: c, contL, contR });
+      }
+
+      const startKey = dayKey(startOfDayLocal(s));
 
       const rawTitle =
         (ev as any)?.title ?? (ev as any)?.name ?? eventToTitle(ev as any);
       const label = stripLeadingTime(String(rawTitle ?? ""));
 
-      (inline[k] ||= []).push({ color: c, title: label, t: sd.getTime() });
+      (inline[startKey] ||= []).push({
+        color: c,
+        title: label,
+        t: s.getTime(),
+      });
     }
 
     for (const k of Object.keys(inline)) inline[k].sort((a, b) => a.t - b.t);

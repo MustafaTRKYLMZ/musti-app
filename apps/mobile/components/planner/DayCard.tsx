@@ -1,24 +1,34 @@
-import React, { FC } from "react";
+import React, { FC, useMemo } from "react";
 import {
   Pressable,
   StyleSheet,
-  Text,
   View,
-  StyleProp,
-  ViewStyle,
-  TextStyle,
+  type StyleProp,
+  type ViewStyle,
+  type TextStyle,
 } from "react-native";
-import { MText, plannerTheme, radii, typography } from "@musti/ui-native";
-import { useCalendarUiStore } from "@/store/calendar/useCalendarUiStore";
+import { MText, plannerTheme, spacing, radii, sizes } from "@musti/ui-native";
 
 const { colors } = plannerTheme;
 
-export type DayInlineItem = { color: string; title: string };
+export type DayInlineItem = {
+  color: string;
+  title: string;
+};
 
-export type DayCardProps = {
+export type DayMarker = {
+  id: string; // eventId
+  color: string;
+  contL: boolean;
+  contR: boolean;
+};
+
+type MarkerInput = string[] | DayMarker[];
+
+type Props = {
   date: Date;
   width: number;
-  height?: number;
+  height: number;
 
   isToday?: boolean;
   isSelected?: boolean;
@@ -26,229 +36,214 @@ export type DayCardProps = {
 
   onPress?: (d: Date) => void;
 
-  markers?: string[];
+  markers?: MarkerInput;
   maxMarkers?: number;
-
-  markerMode?: "stack" | "row";
+  markerMode?: "stack";
 
   inlineItems?: DayInlineItem[];
   maxInlineItems?: number;
-
-  containerStyle?: StyleProp<ViewStyle>;
-  pillStyle?: StyleProp<ViewStyle>;
-  textStyle?: StyleProp<TextStyle>;
-
-  todayPillStyle?: StyleProp<ViewStyle>;
-  todayTextStyle?: StyleProp<TextStyle>;
-
-  outsidePillStyle?: StyleProp<ViewStyle>;
-  outsideTextStyle?: StyleProp<TextStyle>;
-
-  selectedStyle?: StyleProp<ViewStyle>;
-
-  cellBg?: string;
 };
 
-export const DayCard: FC<DayCardProps> = ({
+const CONNECT_PX = 10;
+
+const MARKER_H = 4;
+
+const MARKER_TOP = 30;
+
+function isNewMarkerArray(m?: MarkerInput): m is DayMarker[] {
+  return Array.isArray(m) && m.length > 0 && typeof (m as any)[0] === "object";
+}
+
+export const DayCard: FC<Props> = ({
   date,
   width,
   height,
-
   isToday = false,
   isSelected = false,
   isOutside = false,
-
   onPress,
-
   markers,
   maxMarkers = 4,
   markerMode = "stack",
-
   inlineItems,
   maxInlineItems = 2,
-
-  containerStyle,
-  pillStyle,
-  textStyle,
-  todayPillStyle,
-  todayTextStyle,
-  outsidePillStyle,
-  outsideTextStyle,
-  selectedStyle,
-
-  cellBg,
 }) => {
-  const openDay = useCalendarUiStore((s) => s.openDay);
+  const dayNum = date.getDate();
 
-  const count = markers?.length ?? 0;
-  const shown = count ? markers!.slice(0, maxMarkers) : [];
-  const overflow = count > maxMarkers ? count - maxMarkers : 0;
+  const containerStyle = useMemo<StyleProp<ViewStyle>>(() => {
+    const s: ViewStyle = {
+      width,
+      height,
+      backgroundColor: colors.background,
+      borderRadius: radii.xl,
+      paddingHorizontal: spacing.sm,
+      paddingTop: spacing.sm,
+      paddingBottom: spacing.xs,
 
-  const inCount = inlineItems?.length ?? 0;
-  const inShown = inCount ? inlineItems!.slice(0, maxInlineItems) : [];
-  const inOverflow = inCount > maxInlineItems ? inCount - maxInlineItems : 0;
+      overflow: "visible",
 
-  const markerW =
-    markerMode === "stack" ? Math.max(10, Math.floor(width * 0.55)) : 10;
+      justifyContent: "flex-start",
+      borderWidth: 2,
+      borderColor: isSelected ? colors.primary : "transparent",
+      opacity: isOutside ? 0.45 : 1,
+    };
+
+    return [s];
+  }, [width, height, isOutside, isSelected]);
+
+  const dayTextStyle = useMemo<StyleProp<TextStyle>>(() => {
+    const base: TextStyle = {
+      fontSize: sizes.md,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    };
+    if (isToday) return [base, { color: colors.primary, fontWeight: "800" }];
+    return base;
+  }, [isToday]);
+
+  const renderMarkers = () => {
+    if (!markers || markers.length === 0) return null;
+    if (markerMode !== "stack") return null;
+
+    if (isNewMarkerArray(markers)) {
+      const uniq = (() => {
+        const map = new Map<string, DayMarker>();
+        for (const it of markers) {
+          if (!map.has(it.id)) map.set(it.id, it);
+        }
+        return Array.from(map.values()).slice(0, maxMarkers);
+      })();
+
+      return (
+        <View style={styles.markerAbsWrap} pointerEvents="none">
+          {uniq.map((m, idx) => {
+            const top = MARKER_TOP + idx * (MARKER_H + 4);
+
+            return (
+              <View
+                key={m.id}
+                style={{
+                  position: "absolute",
+                  top,
+                  height: MARKER_H,
+                  backgroundColor: m.color,
+                  opacity: 0.95,
+
+                  left: m.contL ? -CONNECT_PX : 0,
+                  right: m.contR ? -CONNECT_PX : 0,
+
+                  borderTopLeftRadius: m.contL ? 0 : 3,
+                  borderBottomLeftRadius: m.contL ? 0 : 3,
+                  borderTopRightRadius: m.contR ? 0 : 3,
+                  borderBottomRightRadius: m.contR ? 0 : 3,
+                }}
+              />
+            );
+          })}
+        </View>
+      );
+    }
+
+    // eski format: sadece renk
+    const cols = (markers as string[]).slice(0, maxMarkers);
+
+    return (
+      <View style={styles.markerAbsWrap} pointerEvents="none">
+        {cols.map((c, idx) => {
+          const top = MARKER_TOP + idx * (MARKER_H + 4);
+          return (
+            <View
+              key={`${c}-${idx}`}
+              style={{
+                position: "absolute",
+                top,
+                left: 0,
+                right: 0,
+                height: MARKER_H,
+                backgroundColor: c,
+                borderRadius: 3,
+                opacity: 0.95,
+              }}
+            />
+          );
+        })}
+      </View>
+    );
+  };
+
+  const renderInline = () => {
+    if (!inlineItems || inlineItems.length === 0) return null;
+
+    const items = inlineItems.slice(0, maxInlineItems);
+
+    return (
+      <View style={styles.inlineWrap}>
+        {items.map((it, idx) => (
+          <View key={`${it.title}-${idx}`} style={styles.inlineRow}>
+            <View style={[styles.inlineDot, { backgroundColor: it.color }]} />
+            <MText numberOfLines={1} style={styles.inlineText}>
+              {it.title}
+            </MText>
+          </View>
+        ))}
+      </View>
+    );
+  };
 
   return (
     <Pressable
-      pressRetentionOffset={{ top: 12, left: 12, bottom: 12, right: 12 }}
-      onPress={() => (onPress ? onPress(date) : openDay(date))}
-      style={[
-        styles.cell,
-        { width, height: height ?? undefined },
-        cellBg ? { backgroundColor: cellBg } : null,
-        containerStyle,
-      ]}
+      onPress={() => onPress?.(date)}
+      style={containerStyle}
+      android_ripple={{ color: "rgba(255,255,255,0.06)" }}
     >
-      {isSelected && <View style={[styles.selectedOverlay, selectedStyle]} />}
-
-      <View
-        style={[
-          styles.pill,
-          pillStyle,
-          isToday && styles.pillToday,
-          isToday && todayPillStyle,
-          isOutside && styles.pillOutside,
-          isOutside && outsidePillStyle,
-        ]}
-      >
-        <Text
-          style={[
-            styles.text,
-            textStyle,
-            isToday && styles.todayText,
-            isToday && todayTextStyle,
-            isOutside && styles.outsideText,
-            isOutside && outsideTextStyle,
-          ]}
-        >
-          {date.getDate()}
-        </Text>
+      <View style={styles.topRow}>
+        <MText style={dayTextStyle}>{dayNum}</MText>
       </View>
 
-      {!!inShown.length && (
-        <View style={styles.inlineWrap}>
-          {inShown.map((it, i) => (
-            <View key={`${it.title}-${i}`} style={styles.inlineRow}>
-              <View style={[styles.inlineBar, { backgroundColor: it.color }]} />
-              <Text style={styles.inlineText} numberOfLines={1}>
-                {it.title}
-              </Text>
-            </View>
-          ))}
-          {inOverflow > 0 && (
-            <Text style={styles.inlineMore}>{`+${inOverflow}`}</Text>
-          )}
-        </View>
-      )}
+      {renderMarkers()}
 
-      {!inShown.length && !!shown.length && (
-        <View
-          style={[
-            styles.markersWrap,
-            markerMode === "row" ? styles.markersRow : styles.markersStack,
-          ]}
-        >
-          {shown.map((c, i) => (
-            <View
-              key={`${c}-${i}`}
-              style={[
-                styles.marker,
-                { backgroundColor: c, width: markerW },
-                markerMode === "row" ? styles.markerRow : styles.markerStack,
-              ]}
-            />
-          ))}
-          {overflow > 0 && (
-            <MText style={styles.overflowText}>{`+${overflow}`}</MText>
-          )}
-        </View>
-      )}
+      {renderInline()}
     </Pressable>
   );
 };
 
 const styles = StyleSheet.create({
-  cell: {
-    alignItems: "stretch",
-    justifyContent: "flex-start",
-    paddingVertical: 2,
-    paddingHorizontal: 2,
-    borderRadius: radii.sm,
-  },
-
-  selectedOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    borderWidth: 2,
-    borderColor: colors.primary,
-    borderRadius: radii.sm,
-  },
-
-  pill: {
-    alignSelf: "center",
-    minWidth: 16,
-    minHeight: 16,
-    borderRadius: radii.md,
+  topRow: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 4,
-    paddingVertical: 1,
+    justifyContent: "flex-start",
   },
 
-  pillToday: {
-    backgroundColor: colors.backgroundSecondary,
+  markerAbsWrap: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
   },
 
-  pillOutside: {
-    opacity: 0.5,
+  inlineWrap: {
+    marginTop: spacing.xs,
+    gap: 4,
   },
 
-  text: {
-    fontSize: typography.heading4.fontSize,
-    fontWeight: typography.heading4.fontWeight,
-    color: colors.textPrimary,
-    lineHeight: typography.heading4.fontSize,
+  inlineRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
   },
 
-  todayText: { color: colors.primary },
-  outsideText: { color: colors.textSecondary ?? colors.textPrimary },
+  inlineDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 6,
+  },
 
-  inlineWrap: { width: "100%", marginTop: 4, paddingHorizontal: 2 },
-  inlineRow: { flexDirection: "row", alignItems: "center", marginBottom: 3 },
-  inlineBar: { width: 3, height: 10, borderRadius: 2, marginRight: 4 },
   inlineText: {
     flex: 1,
-    fontSize: 10,
+    fontSize: sizes.sm,
     color: colors.textPrimary,
-    opacity: 0.95,
-  },
-  inlineMore: {
-    fontSize: 10,
-    color: colors.textSecondary ?? colors.textPrimary,
-    opacity: 0.9,
-    marginTop: 1,
-  },
-
-  markersWrap: {
-    marginTop: 2,
-    alignItems: "center",
-    justifyContent: "flex-start",
-    minHeight: 8,
-  },
-  markersStack: { flexDirection: "column" },
-  markersRow: { flexDirection: "row" },
-
-  marker: { height: 3, borderRadius: 2 },
-  markerStack: { marginBottom: 2 },
-  markerRow: { marginRight: 3 },
-
-  overflowText: {
-    fontSize: 9,
     fontWeight: "600",
-    color: colors.textSecondary ?? colors.textPrimary,
-    opacity: 0.9,
-    marginTop: 0,
+    opacity: 0.92,
   },
 });
