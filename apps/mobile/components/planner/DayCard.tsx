@@ -17,11 +17,12 @@ export type DayInlineItem = {
 };
 
 export type DayBar = {
-  id: string; // eventId
+  id: string;
   color: string;
   contL: boolean;
   contR: boolean;
   title: string | null;
+  row: number;
 };
 
 type Props = {
@@ -45,10 +46,21 @@ type Props = {
 };
 
 const CONNECT_PX = 10;
-const BAR_H = 4;
 
+// tight
+const BAR_H_EXPANDED = 14;
+const BAR_H_COMPACT = 4;
+
+const BAR_TOP_EXPANDED = 34;
 const BAR_TOP_COMPACT = 30;
-const BAR_TOP_EXPANDED = 22;
+
+const BAR_ROW_GAP_EXPANDED = 2;
+const BAR_ROW_GAP_COMPACT = 4;
+
+const DAY_TOP_PAD = 10;
+const MORE_H = 14;
+
+const INLINE_AFTER_BARS_GAP = 2;
 
 export const DayCard: FC<Props> = ({
   date,
@@ -58,14 +70,20 @@ export const DayCard: FC<Props> = ({
   isSelected = false,
   isOutside = false,
   onPress,
+
   expanded = false,
+
   bars,
   maxBars = 4,
+
   inlineItems,
   maxInlineItems = 2,
 }) => {
   const dayNum = date.getDate();
-  const barTop = expanded ? BAR_TOP_EXPANDED : BAR_TOP_COMPACT;
+
+  const BAR_H = expanded ? BAR_H_EXPANDED : BAR_H_COMPACT;
+  const BAR_TOP = expanded ? BAR_TOP_EXPANDED : BAR_TOP_COMPACT;
+  const BAR_ROW_GAP = expanded ? BAR_ROW_GAP_EXPANDED : BAR_ROW_GAP_COMPACT;
 
   const containerStyle = useMemo<StyleProp<ViewStyle>>(() => {
     const s: ViewStyle = {
@@ -73,10 +91,13 @@ export const DayCard: FC<Props> = ({
       height,
       backgroundColor: colors.background,
       borderRadius: radii.xl,
+
       paddingHorizontal: spacing.sm,
-      paddingTop: spacing.sm,
+      paddingTop: DAY_TOP_PAD,
       paddingBottom: spacing.xs,
+
       overflow: "visible",
+
       justifyContent: "flex-start",
       borderWidth: 2,
       borderColor: isSelected ? colors.primary : "transparent",
@@ -95,62 +116,154 @@ export const DayCard: FC<Props> = ({
     return base;
   }, [isToday]);
 
-  const renderBars = () => {
-    if (!bars || bars.length === 0) return null;
+  const barLayout = useMemo(() => {
+    if (!bars || bars.length === 0) {
+      return { render: [] as DayBar[], hiddenCount: 0, maxRowRendered: -1 };
+    }
 
-    const uniq = (() => {
-      const map = new Map<string, DayBar>();
-      for (const b of bars) if (!map.has(b.id)) map.set(b.id, b);
-      return Array.from(map.values()).slice(0, maxBars);
-    })();
+    const uniqMap = new Map<string, DayBar>();
+    for (const b of bars) if (!uniqMap.has(b.id)) uniqMap.set(b.id, b);
+    const uniq = Array.from(uniqMap.values());
+
+    const sorted = uniq.sort((a, b) => a.row - b.row);
+
+    const rawRender = sorted.slice(0, maxBars);
+    const hiddenCount = Math.max(0, sorted.length - rawRender.length);
+
+    const rowVals = Array.from(new Set(rawRender.map((b) => b.row))).sort(
+      (a, b) => a - b
+    );
+    const rowMap = new Map<number, number>();
+    rowVals.forEach((rv, idx) => rowMap.set(rv, idx));
+
+    const render: DayBar[] = rawRender.map((b) => ({
+      ...b,
+      row: rowMap.get(b.row) ?? 0,
+    }));
+
+    const maxRowRendered = rowVals.length ? rowVals.length - 1 : -1;
+
+    return { render, hiddenCount, maxRowRendered };
+  }, [bars, maxBars]);
+
+  const barBottomY = useMemo(() => {
+    if (!expanded) return 0;
+
+    const rowsUsed = Math.max(0, barLayout.maxRowRendered + 1);
+    const barsAreaH = rowsUsed > 0 ? rowsUsed * (BAR_H + BAR_ROW_GAP) : 0;
+    const moreAreaH = barLayout.hiddenCount > 0 ? MORE_H + 4 : 0;
+
+    return BAR_TOP + barsAreaH + moreAreaH;
+  }, [
+    expanded,
+    barLayout.maxRowRendered,
+    barLayout.hiddenCount,
+    BAR_H,
+    BAR_ROW_GAP,
+    BAR_TOP,
+  ]);
+
+  const renderBars = () => {
+    if (!barLayout.render.length) return null;
 
     return (
       <View style={styles.barAbsWrap} pointerEvents="none">
-        {uniq.map((b, idx) => {
-          const top = barTop + idx * (BAR_H + 10);
+        {barLayout.render.map((b) => {
+          const top = BAR_TOP + b.row * (BAR_H + BAR_ROW_GAP);
+
+          const left = b.contL ? -CONNECT_PX : 0;
+          const right = b.contR ? -CONNECT_PX : 0;
+
+          const rTL = b.contL ? 0 : 6;
+          const rBL = b.contL ? 0 : 6;
+          const rTR = b.contR ? 0 : 6;
+          const rBR = b.contR ? 0 : 6;
 
           return (
             <View
               key={b.id}
-              style={{ position: "absolute", left: 0, right: 0, top }}
+              style={{
+                position: "absolute",
+                top,
+                left,
+                right,
+                height: BAR_H,
+                backgroundColor: b.color,
+                opacity: 0.96,
+                borderTopLeftRadius: rTL,
+                borderBottomLeftRadius: rBL,
+                borderTopRightRadius: rTR,
+                borderBottomRightRadius: rBR,
+                alignItems: expanded ? "center" : undefined,
+                justifyContent: expanded ? "center" : undefined,
+                paddingHorizontal: expanded ? 8 : 0,
+              }}
             >
-              {/* bar */}
-              <View
-                style={{
-                  height: BAR_H,
-                  backgroundColor: b.color,
-                  opacity: 0.95,
-                  left: b.contL ? -CONNECT_PX : 0,
-                  right: b.contR ? -CONNECT_PX : 0,
-                  borderTopLeftRadius: b.contL ? 0 : 3,
-                  borderBottomLeftRadius: b.contL ? 0 : 3,
-                  borderTopRightRadius: b.contR ? 0 : 3,
-                  borderBottomRightRadius: b.contR ? 0 : 3,
-                }}
-              />
-
               {expanded && b.title ? (
-                <View style={styles.barTitleWrap} pointerEvents="none">
-                  <MText numberOfLines={1} style={styles.barTitleText}>
-                    {b.title}
-                  </MText>
-                </View>
+                <MText numberOfLines={1} style={styles.barTitleText}>
+                  {b.title}
+                </MText>
               ) : null}
             </View>
           );
         })}
+
+        {expanded && barLayout.hiddenCount > 0 ? (
+          <View
+            style={{
+              position: "absolute",
+              top:
+                BAR_TOP +
+                (barLayout.maxRowRendered + 1) * (BAR_H + BAR_ROW_GAP) +
+                2,
+              left: 0,
+              right: 0,
+              height: MORE_H,
+              justifyContent: "center",
+            }}
+          >
+            <MText numberOfLines={1} style={styles.moreText}>
+              +{barLayout.hiddenCount} more
+            </MText>
+          </View>
+        ) : null}
       </View>
     );
   };
 
   const renderInline = () => {
-    if (!expanded) return null;
     if (!inlineItems || inlineItems.length === 0) return null;
-
     const items = inlineItems.slice(0, maxInlineItems);
 
+    // compact: normal flow
+    if (!expanded) {
+      return (
+        <View style={[styles.inlineWrap, { marginTop: spacing.xs }]}>
+          {items.map((it, idx) => (
+            <View key={`${it.title}-${idx}`} style={styles.inlineRow}>
+              <View style={[styles.inlineDot, { backgroundColor: it.color }]} />
+              <MText numberOfLines={1} style={styles.inlineText}>
+                {it.title}
+              </MText>
+            </View>
+          ))}
+        </View>
+      );
+    }
+
     return (
-      <View style={styles.inlineWrap}>
+      <View
+        style={[
+          styles.inlineWrap,
+          {
+            position: "absolute",
+            left: spacing.sm,
+            right: spacing.sm,
+            top: barBottomY + INLINE_AFTER_BARS_GAP,
+          },
+        ]}
+        pointerEvents="none"
+      >
         {items.map((it, idx) => (
           <View key={`${it.title}-${idx}`} style={styles.inlineRow}>
             <View style={[styles.inlineDot, { backgroundColor: it.color }]} />
@@ -194,32 +307,37 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
 
-  // title barın üstünde, hafif içerden
-  barTitleWrap: {
-    marginTop: 4,
-    paddingHorizontal: 2,
-  },
   barTitleText: {
     fontSize: sizes.sm,
     fontWeight: "800",
+    color: "#fff",
+    opacity: 0.98,
+    textAlign: "center",
+  },
+
+  moreText: {
+    fontSize: sizes.sm,
+    fontWeight: "800",
     color: colors.textPrimary,
-    opacity: 0.95,
+    opacity: 0.75,
   },
 
   inlineWrap: {
-    marginTop: spacing.xs,
-    gap: 4,
+    gap: 2,
   },
+
   inlineRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
   },
+
   inlineDot: {
     width: 6,
     height: 6,
     borderRadius: 6,
   },
+
   inlineText: {
     flex: 1,
     fontSize: sizes.sm,

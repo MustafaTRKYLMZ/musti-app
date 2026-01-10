@@ -67,16 +67,44 @@ const listDaysOverlapped = (start: Date, end: Date) => {
   return out;
 };
 
-const buildVisibleDayKeySet = (baseDate: Date, weekStartsOn: number) => {
-  const monthStart = startOfMonth(baseDate);
-  const gridStart = startOfWeek(monthStart, weekStartsOn);
-  const gridDays = Array.from({ length: TOTAL_DAYS }, (_, i) =>
-    addDays(gridStart, i)
-  );
-  const set = new Set<string>();
-  for (const d of gridDays) set.add(dayKey(d));
-  return set;
+// week row içinde segment
+type WeekSeg = {
+  id: string;
+  color: string;
+  title: string;
+  startCol: number; // 0..6
+  endCol: number; // 0..6
 };
+
+// greedy row packing (çakışmayanlar aynı row)
+function packWeekSegments(segs: WeekSeg[]) {
+  const sorted = [...segs].sort((a, b) => {
+    if (a.startCol !== b.startCol) return a.startCol - b.startCol;
+    return b.endCol - b.startCol - (a.endCol - a.startCol);
+  });
+
+  const rows: { endCol: number }[] = [];
+  const placement = new Map<string, number>();
+
+  for (const s of sorted) {
+    let placed = -1;
+    for (let r = 0; r < rows.length; r++) {
+      if (s.startCol > rows[r].endCol) {
+        placed = r;
+        break;
+      }
+    }
+    if (placed === -1) {
+      placed = rows.length;
+      rows.push({ endCol: s.endCol });
+    } else {
+      rows[placed].endCol = s.endCol;
+    }
+    placement.set(s.id, placed);
+  }
+
+  return { placement, rowCount: rows.length };
+}
 
 export function MonthView(props: {
   config: CalendarConfig;
@@ -86,7 +114,7 @@ export function MonthView(props: {
   locale?: string;
   gridHeightAnim?: Animated.Value;
   onPressDay?: (d: Date) => void;
-  maxMarkers?: number;
+  maxMarkers?: number; // maxBars
   maxInlineItems?: number;
 }) {
   const scrollRef = useRef<ScrollView | null>(null);
@@ -136,74 +164,6 @@ export function MonthView(props: {
     });
   }, [centerOffset, date.getFullYear(), date.getMonth(), pageWidth]);
 
-  const { barsByDayKey, inlineByDayKey } = useMemo(() => {
-    const bars: Record<string, DayBar[]> = {};
-    const inline: Record<
-      string,
-      { color: string; title: string; t: number }[]
-    > = {};
-
-    const visibleSets = months.map((m) =>
-      buildVisibleDayKeySet(m, weekStartsOn)
-    );
-
-    for (const ev of props.events) {
-      const s = toDate((ev as any).start);
-      const e = toDate((ev as any).end);
-      if (!Number.isFinite(s.getTime()) || !Number.isFinite(e.getTime()))
-        continue;
-      if (e <= s) continue;
-
-      const eventId = String((ev as any).id ?? "");
-      const color = (ev as any)?.color ?? colors.primary;
-
-      const rawTitle =
-        (ev as any)?.title ?? (ev as any)?.name ?? eventToTitle(ev as any);
-      const title = stripLeadingTime(String(rawTitle ?? ""));
-
-      const days = listDaysOverlapped(s, e);
-      if (!days.length) continue;
-
-      for (let pageIndex = 0; pageIndex < 3; pageIndex++) {
-        const visible = visibleSets[pageIndex];
-        const visibleDays = days.filter((d) => visible.has(dayKey(d)));
-
-        if (!visibleDays.length) continue;
-
-        const anchorIdx = Math.floor(visibleDays.length / 2);
-        const anchorKey = dayKey(visibleDays[anchorIdx]);
-
-        for (let i = 0; i < visibleDays.length; i++) {
-          const d = visibleDays[i];
-          const k = dayKey(d);
-
-          const contL = i > 0;
-          const contR = i < visibleDays.length - 1;
-
-          (bars[k] ||= []).push({
-            id: eventId,
-            color,
-            contL,
-            contR,
-            title: k === anchorKey ? title : null,
-          });
-        }
-      }
-
-      const startKey = dayKey(startOfDayLocal(s));
-      (inline[startKey] ||= []).push({ color, title, t: s.getTime() });
-    }
-
-    // inline sort
-    for (const k of Object.keys(inline)) inline[k].sort((a, b) => a.t - b.t);
-    const inlineFlat: Record<string, DayInlineItem[]> = {};
-    for (const k of Object.keys(inline)) {
-      inlineFlat[k] = inline[k].map(({ color, title }) => ({ color, title }));
-    }
-
-    return { barsByDayKey: bars, inlineByDayKey: inlineFlat };
-  }, [props.events, months, weekStartsOn]);
-
   const buildMonthGrid = useMemo(() => {
     return (baseDate: Date) => {
       const monthIndex = baseDate.getMonth();
@@ -223,6 +183,108 @@ export function MonthView(props: {
     () => months.map(buildMonthGrid),
     [months, buildMonthGrid]
   );
+
+  // ✅ hesap: bars + single-day inline
+  const perPageData = useMemo(() => {
+    // her sayfa için ayrı map
+    return pages.map((p) => {
+      const barsByKey: Record<string, DayBar[]> = {};
+      const inlineByKey: Record<string, DayInlineItem[]> = {};
+
+      // week row bazında pack
+      for (let wi = 0; wi < p.weeks.length; wi++) {
+        const weekDays = p.weeks[wi]; // 7 gün
+        const weekKeys = weekDays.map(dayKey);
+
+        // bu week içinde görünen multi-day segs topla
+        const segs: WeekSeg[] = [];
+
+        // single-day için geçici bucket (gün bazında)
+        const inlineTmp: Record<
+          string,
+          { color: string; title: string; t: number }[]
+        > = {};
+
+        for (const ev of props.events) {
+          const s = toDate((ev as any).start);
+          const e = toDate((ev as any).end);
+          if (!Number.isFinite(s.getTime()) || !Number.isFinite(e.getTime()))
+            continue;
+          if (e <= s) continue;
+
+          const id = String((ev as any).id ?? "");
+          const color = (ev as any)?.color ?? colors.primary;
+          const rawTitle =
+            (ev as any)?.title ?? (ev as any)?.name ?? eventToTitle(ev as any);
+          const title = stripLeadingTime(String(rawTitle ?? ""));
+
+          const days = listDaysOverlapped(s, e);
+          if (!days.length) continue;
+
+          // bu week içinde görünür günler
+          const visibleCols: number[] = [];
+          for (let col = 0; col < 7; col++) {
+            if (days.some((d) => dayKey(d) === weekKeys[col]))
+              visibleCols.push(col);
+          }
+          if (!visibleCols.length) continue;
+
+          const isSingleDay = days.length === 1;
+
+          if (isSingleDay) {
+            // ✅ tek günlük: inline list (dot+title)
+            const k = weekKeys[visibleCols[0]];
+            (inlineTmp[k] ||= []).push({ color, title, t: s.getTime() });
+            continue;
+          }
+
+          // ✅ multi-day: bu week için segment
+          const startCol = Math.min(...visibleCols);
+          const endCol = Math.max(...visibleCols);
+
+          segs.push({ id, color, title, startCol, endCol });
+        }
+
+        // pack segs -> row
+        const { placement } = packWeekSegments(segs);
+
+        // segleri day keylere dağıt
+        for (const seg of segs) {
+          const row = placement.get(seg.id) ?? 0;
+
+          // title anchor: segment’in ortası
+          const spanLen = seg.endCol - seg.startCol + 1;
+          const anchorCol = seg.startCol + Math.floor(spanLen / 2);
+
+          for (let col = seg.startCol; col <= seg.endCol; col++) {
+            const k = weekKeys[col];
+            const contL = col > seg.startCol;
+            const contR = col < seg.endCol;
+
+            (barsByKey[k] ||= []).push({
+              id: seg.id,
+              color: seg.color,
+              contL,
+              contR,
+              row,
+              title: col === anchorCol ? seg.title : null,
+            });
+          }
+        }
+
+        // inline sort & flush
+        for (const k of Object.keys(inlineTmp)) {
+          inlineTmp[k].sort((a, b) => a.t - b.t);
+          inlineByKey[k] = inlineTmp[k].map(({ color, title }) => ({
+            color,
+            title,
+          }));
+        }
+      }
+
+      return { barsByKey, inlineByKey };
+    });
+  }, [pages, props.events]);
 
   const handleMomentumEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const x = e.nativeEvent.contentOffset.x;
@@ -255,46 +317,50 @@ export function MonthView(props: {
         scrollEventThrottle={16}
         contentContainerStyle={{ width: pageWidth * 3 }}
       >
-        {pages.map((p, pi) => (
-          <View
-            key={`page-${pi}`}
-            style={{ width: pageWidth, alignItems: "center" }}
-          >
-            {p.weeks.map((weekDays, wi) => (
-              <View
-                key={`week-${pi}-${wi}`}
-                style={[styles.weekRow, { width: pageWidth }]}
-              >
-                {weekDays.map((d, di) => {
-                  const k = dayKey(d);
+        {pages.map((p, pi) => {
+          const { barsByKey, inlineByKey } = perPageData[pi];
 
-                  return (
-                    <DayCard
-                      key={`${d.toISOString()}-${pi}-${wi}-${di}`}
-                      date={d}
-                      width={props.colWidth}
-                      height={cellH}
-                      expanded={props.expanded}
-                      isToday={sameDay(d, today)}
-                      isSelected={sameDay(d, selectedDate)}
-                      isOutside={d.getMonth() !== p.monthIndex}
-                      onPress={(dd) => {
-                        setDate(dd);
-                        props.onPressDay?.(dd);
-                      }}
-                      bars={barsByDayKey[k]}
-                      maxBars={props.maxMarkers ?? 4}
-                      inlineItems={
-                        props.expanded ? inlineByDayKey[k] : undefined
-                      }
-                      maxInlineItems={props.maxInlineItems ?? 2}
-                    />
-                  );
-                })}
-              </View>
-            ))}
-          </View>
-        ))}
+          return (
+            <View
+              key={`page-${pi}`}
+              style={{ width: pageWidth, alignItems: "center" }}
+            >
+              {p.weeks.map((weekDays, wi) => (
+                <View
+                  key={`week-${pi}-${wi}`}
+                  style={[styles.weekRow, { width: pageWidth }]}
+                >
+                  {weekDays.map((d, di) => {
+                    const k = dayKey(d);
+
+                    return (
+                      <DayCard
+                        key={`${d.toISOString()}-${pi}-${wi}-${di}`}
+                        date={d}
+                        width={props.colWidth}
+                        height={cellH}
+                        expanded={props.expanded}
+                        isToday={sameDay(d, today)}
+                        isSelected={sameDay(d, selectedDate)}
+                        isOutside={d.getMonth() !== p.monthIndex}
+                        onPress={(dd) => {
+                          setDate(dd);
+                          props.onPressDay?.(dd);
+                        }}
+                        // ✅ multi-day bars (stabil row)
+                        bars={barsByKey[k]}
+                        maxBars={props.maxMarkers ?? 4}
+                        // ✅ single-day inline list (her modda)
+                        inlineItems={inlineByKey[k]}
+                        maxInlineItems={props.maxInlineItems ?? 2}
+                      />
+                    );
+                  })}
+                </View>
+              ))}
+            </View>
+          );
+        })}
       </ScrollView>
     </View>
   );
