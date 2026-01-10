@@ -16,14 +16,13 @@ export type DayInlineItem = {
   title: string;
 };
 
-export type DayMarker = {
+export type DayBar = {
   id: string; // eventId
   color: string;
   contL: boolean;
   contR: boolean;
+  title: string | null;
 };
-
-type MarkerInput = string[] | DayMarker[];
 
 type Props = {
   date: Date;
@@ -36,23 +35,20 @@ type Props = {
 
   onPress?: (d: Date) => void;
 
-  markers?: MarkerInput;
-  maxMarkers?: number;
-  markerMode?: "stack";
+  expanded?: boolean;
+
+  bars?: DayBar[];
+  maxBars?: number;
 
   inlineItems?: DayInlineItem[];
   maxInlineItems?: number;
 };
 
 const CONNECT_PX = 10;
+const BAR_H = 4;
 
-const MARKER_H = 4;
-
-const MARKER_TOP = 30;
-
-function isNewMarkerArray(m?: MarkerInput): m is DayMarker[] {
-  return Array.isArray(m) && m.length > 0 && typeof (m as any)[0] === "object";
-}
+const BAR_TOP_COMPACT = 30;
+const BAR_TOP_EXPANDED = 22;
 
 export const DayCard: FC<Props> = ({
   date,
@@ -62,13 +58,14 @@ export const DayCard: FC<Props> = ({
   isSelected = false,
   isOutside = false,
   onPress,
-  markers,
-  maxMarkers = 4,
-  markerMode = "stack",
+  expanded = false,
+  bars,
+  maxBars = 4,
   inlineItems,
   maxInlineItems = 2,
 }) => {
   const dayNum = date.getDate();
+  const barTop = expanded ? BAR_TOP_EXPANDED : BAR_TOP_COMPACT;
 
   const containerStyle = useMemo<StyleProp<ViewStyle>>(() => {
     const s: ViewStyle = {
@@ -79,15 +76,12 @@ export const DayCard: FC<Props> = ({
       paddingHorizontal: spacing.sm,
       paddingTop: spacing.sm,
       paddingBottom: spacing.xs,
-
       overflow: "visible",
-
       justifyContent: "flex-start",
       borderWidth: 2,
       borderColor: isSelected ? colors.primary : "transparent",
       opacity: isOutside ? 0.45 : 1,
     };
-
     return [s];
   }, [width, height, isOutside, isSelected]);
 
@@ -101,70 +95,48 @@ export const DayCard: FC<Props> = ({
     return base;
   }, [isToday]);
 
-  const renderMarkers = () => {
-    if (!markers || markers.length === 0) return null;
-    if (markerMode !== "stack") return null;
+  const renderBars = () => {
+    if (!bars || bars.length === 0) return null;
 
-    if (isNewMarkerArray(markers)) {
-      const uniq = (() => {
-        const map = new Map<string, DayMarker>();
-        for (const it of markers) {
-          if (!map.has(it.id)) map.set(it.id, it);
-        }
-        return Array.from(map.values()).slice(0, maxMarkers);
-      })();
-
-      return (
-        <View style={styles.markerAbsWrap} pointerEvents="none">
-          {uniq.map((m, idx) => {
-            const top = MARKER_TOP + idx * (MARKER_H + 4);
-
-            return (
-              <View
-                key={m.id}
-                style={{
-                  position: "absolute",
-                  top,
-                  height: MARKER_H,
-                  backgroundColor: m.color,
-                  opacity: 0.95,
-
-                  left: m.contL ? -CONNECT_PX : 0,
-                  right: m.contR ? -CONNECT_PX : 0,
-
-                  borderTopLeftRadius: m.contL ? 0 : 3,
-                  borderBottomLeftRadius: m.contL ? 0 : 3,
-                  borderTopRightRadius: m.contR ? 0 : 3,
-                  borderBottomRightRadius: m.contR ? 0 : 3,
-                }}
-              />
-            );
-          })}
-        </View>
-      );
-    }
-
-    // eski format: sadece renk
-    const cols = (markers as string[]).slice(0, maxMarkers);
+    const uniq = (() => {
+      const map = new Map<string, DayBar>();
+      for (const b of bars) if (!map.has(b.id)) map.set(b.id, b);
+      return Array.from(map.values()).slice(0, maxBars);
+    })();
 
     return (
-      <View style={styles.markerAbsWrap} pointerEvents="none">
-        {cols.map((c, idx) => {
-          const top = MARKER_TOP + idx * (MARKER_H + 4);
+      <View style={styles.barAbsWrap} pointerEvents="none">
+        {uniq.map((b, idx) => {
+          const top = barTop + idx * (BAR_H + 10);
+
           return (
             <View
-              key={`${c}-${idx}`}
-              style={{
-                position: "absolute",
-                top,
-                left: 0,
-                right: 0,
-                height: MARKER_H,
-                backgroundColor: c,
-                borderRadius: 3,
-                opacity: 0.95,
-              }}
-            />
+              key={b.id}
+              style={{ position: "absolute", left: 0, right: 0, top }}
+            >
+              {/* bar */}
+              <View
+                style={{
+                  height: BAR_H,
+                  backgroundColor: b.color,
+                  opacity: 0.95,
+                  left: b.contL ? -CONNECT_PX : 0,
+                  right: b.contR ? -CONNECT_PX : 0,
+                  borderTopLeftRadius: b.contL ? 0 : 3,
+                  borderBottomLeftRadius: b.contL ? 0 : 3,
+                  borderTopRightRadius: b.contR ? 0 : 3,
+                  borderBottomRightRadius: b.contR ? 0 : 3,
+                }}
+              />
+
+              {expanded && b.title ? (
+                <View style={styles.barTitleWrap} pointerEvents="none">
+                  <MText numberOfLines={1} style={styles.barTitleText}>
+                    {b.title}
+                  </MText>
+                </View>
+              ) : null}
+            </View>
           );
         })}
       </View>
@@ -172,6 +144,7 @@ export const DayCard: FC<Props> = ({
   };
 
   const renderInline = () => {
+    if (!expanded) return null;
     if (!inlineItems || inlineItems.length === 0) return null;
 
     const items = inlineItems.slice(0, maxInlineItems);
@@ -200,8 +173,7 @@ export const DayCard: FC<Props> = ({
         <MText style={dayTextStyle}>{dayNum}</MText>
       </View>
 
-      {renderMarkers()}
-
+      {renderBars()}
       {renderInline()}
     </Pressable>
   );
@@ -214,7 +186,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-start",
   },
 
-  markerAbsWrap: {
+  barAbsWrap: {
     position: "absolute",
     left: 0,
     right: 0,
@@ -222,23 +194,32 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
 
+  // title barın üstünde, hafif içerden
+  barTitleWrap: {
+    marginTop: 4,
+    paddingHorizontal: 2,
+  },
+  barTitleText: {
+    fontSize: sizes.sm,
+    fontWeight: "800",
+    color: colors.textPrimary,
+    opacity: 0.95,
+  },
+
   inlineWrap: {
     marginTop: spacing.xs,
     gap: 4,
   },
-
   inlineRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
   },
-
   inlineDot: {
     width: 6,
     height: 6,
     borderRadius: 6,
   },
-
   inlineText: {
     flex: 1,
     fontSize: sizes.sm,

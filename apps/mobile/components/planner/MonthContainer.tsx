@@ -19,14 +19,12 @@ export type MonthContainerProps = {
   config: CalendarConfig;
   colWidth: number;
   locale?: string;
-  onPressEvent?: (e: MEvent) => void;
 };
 
 export const MonthContainer: FC<MonthContainerProps> = ({
   config,
   colWidth,
   locale,
-  onPressEvent,
 }) => {
   const { date, setDate, openDay, events } = useCalendar();
 

@@ -10,7 +10,7 @@ import {
 import type { CalendarConfig, MEvent } from "@musti/planner/src/types";
 
 import { plannerTheme, spacing } from "@musti/ui-native";
-import { DayCard, DayInlineItem } from "./DayCard";
+import { DayCard, DayInlineItem, DayBar } from "./DayCard";
 import { TOTAL_DAYS, WEEKS_IN_GRID } from "@/config/timeConfigs";
 import {
   eventToTitle,
@@ -43,11 +43,39 @@ const addMonths = (d: Date, delta: number) => {
 const stripLeadingTime = (s: string) =>
   s.replace(/^\s*\d{1,2}:\d{2}\s+/, "").trim();
 
-type DayMarker = {
-  id: string;
-  color: string;
-  contL: boolean;
-  contR: boolean;
+const startOfDayLocal = (d: Date) =>
+  new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+
+const addDaysLocal = (d: Date, n: number) => {
+  const x = new Date(d);
+  x.setDate(x.getDate() + n);
+  return x;
+};
+
+const listDaysOverlapped = (start: Date, end: Date) => {
+  const endMinus = new Date(end.getTime() - 1);
+  if (!Number.isFinite(endMinus.getTime())) return [] as Date[];
+
+  let cur = startOfDayLocal(start);
+  const last = startOfDayLocal(endMinus);
+  const out: Date[] = [];
+
+  while (cur <= last) {
+    out.push(cur);
+    cur = addDaysLocal(cur, 1);
+  }
+  return out;
+};
+
+const buildVisibleDayKeySet = (baseDate: Date, weekStartsOn: number) => {
+  const monthStart = startOfMonth(baseDate);
+  const gridStart = startOfWeek(monthStart, weekStartsOn);
+  const gridDays = Array.from({ length: TOTAL_DAYS }, (_, i) =>
+    addDays(gridStart, i)
+  );
+  const set = new Set<string>();
+  for (const d of gridDays) set.add(dayKey(d));
+  return set;
 };
 
 export function MonthView(props: {
@@ -108,36 +136,16 @@ export function MonthView(props: {
     });
   }, [centerOffset, date.getFullYear(), date.getMonth(), pageWidth]);
 
-  const { markersByDayKey, inlineByDayKey } = useMemo(() => {
-    const markers: Record<string, DayMarker[]> = {};
+  const { barsByDayKey, inlineByDayKey } = useMemo(() => {
+    const bars: Record<string, DayBar[]> = {};
     const inline: Record<
       string,
       { color: string; title: string; t: number }[]
     > = {};
 
-    const startOfDayLocal = (d: Date) =>
-      new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
-
-    const addDaysLocal = (d: Date, n: number) => {
-      const x = new Date(d);
-      x.setDate(x.getDate() + n);
-      return x;
-    };
-
-    const listDaysOverlapped = (start: Date, end: Date) => {
-      const endMinus = new Date(end.getTime() - 1);
-      if (!Number.isFinite(endMinus.getTime())) return [] as Date[];
-
-      let cur = startOfDayLocal(start);
-      const last = startOfDayLocal(endMinus);
-      const out: Date[] = [];
-
-      while (cur <= last) {
-        out.push(cur);
-        cur = addDaysLocal(cur, 1);
-      }
-      return out;
-    };
+    const visibleSets = months.map((m) =>
+      buildVisibleDayKeySet(m, weekStartsOn)
+    );
 
     for (const ev of props.events) {
       const s = toDate((ev as any).start);
@@ -147,43 +155,54 @@ export function MonthView(props: {
       if (e <= s) continue;
 
       const eventId = String((ev as any).id ?? "");
-      const c = (ev as any)?.color ?? colors.primary;
+      const color = (ev as any)?.color ?? colors.primary;
+
+      const rawTitle =
+        (ev as any)?.title ?? (ev as any)?.name ?? eventToTitle(ev as any);
+      const title = stripLeadingTime(String(rawTitle ?? ""));
 
       const days = listDaysOverlapped(s, e);
       if (!days.length) continue;
 
-      for (let i = 0; i < days.length; i++) {
-        const day = days[i];
-        const k = dayKey(day);
+      for (let pageIndex = 0; pageIndex < 3; pageIndex++) {
+        const visible = visibleSets[pageIndex];
+        const visibleDays = days.filter((d) => visible.has(dayKey(d)));
 
-        const contL = i > 0;
-        const contR = i < days.length - 1;
+        if (!visibleDays.length) continue;
 
-        (markers[k] ||= []).push({ id: eventId, color: c, contL, contR });
+        const anchorIdx = Math.floor(visibleDays.length / 2);
+        const anchorKey = dayKey(visibleDays[anchorIdx]);
+
+        for (let i = 0; i < visibleDays.length; i++) {
+          const d = visibleDays[i];
+          const k = dayKey(d);
+
+          const contL = i > 0;
+          const contR = i < visibleDays.length - 1;
+
+          (bars[k] ||= []).push({
+            id: eventId,
+            color,
+            contL,
+            contR,
+            title: k === anchorKey ? title : null,
+          });
+        }
       }
 
       const startKey = dayKey(startOfDayLocal(s));
-
-      const rawTitle =
-        (ev as any)?.title ?? (ev as any)?.name ?? eventToTitle(ev as any);
-      const label = stripLeadingTime(String(rawTitle ?? ""));
-
-      (inline[startKey] ||= []).push({
-        color: c,
-        title: label,
-        t: s.getTime(),
-      });
+      (inline[startKey] ||= []).push({ color, title, t: s.getTime() });
     }
 
+    // inline sort
     for (const k of Object.keys(inline)) inline[k].sort((a, b) => a.t - b.t);
-
     const inlineFlat: Record<string, DayInlineItem[]> = {};
     for (const k of Object.keys(inline)) {
       inlineFlat[k] = inline[k].map(({ color, title }) => ({ color, title }));
     }
 
-    return { markersByDayKey: markers, inlineByDayKey: inlineFlat };
-  }, [props.events]);
+    return { barsByDayKey: bars, inlineByDayKey: inlineFlat };
+  }, [props.events, months, weekStartsOn]);
 
   const buildMonthGrid = useMemo(() => {
     return (baseDate: Date) => {
@@ -255,6 +274,7 @@ export function MonthView(props: {
                       date={d}
                       width={props.colWidth}
                       height={cellH}
+                      expanded={props.expanded}
                       isToday={sameDay(d, today)}
                       isSelected={sameDay(d, selectedDate)}
                       isOutside={d.getMonth() !== p.monthIndex}
@@ -262,9 +282,8 @@ export function MonthView(props: {
                         setDate(dd);
                         props.onPressDay?.(dd);
                       }}
-                      markers={props.expanded ? undefined : markersByDayKey[k]}
-                      maxMarkers={props.maxMarkers ?? 4}
-                      markerMode="stack"
+                      bars={barsByDayKey[k]}
+                      maxBars={props.maxMarkers ?? 4}
                       inlineItems={
                         props.expanded ? inlineByDayKey[k] : undefined
                       }
