@@ -58,7 +58,7 @@ const BAR_ROW_GAP_EXPANDED = 2;
 const BAR_ROW_GAP_COMPACT = 4;
 
 const DAY_TOP_PAD = 10;
-const MORE_H = 14;
+const MORE_H = 16;
 
 const INLINE_AFTER_BARS_GAP = 2;
 
@@ -90,7 +90,7 @@ export const DayCard: FC<Props> = ({
       width,
       height,
       backgroundColor: colors.background,
-      borderRadius: radii.xl,
+      borderRadius: radii.md,
 
       paddingHorizontal: spacing.sm,
       paddingTop: DAY_TOP_PAD,
@@ -121,6 +121,7 @@ export const DayCard: FC<Props> = ({
       return { render: [] as DayBar[], hiddenCount: 0, maxRowRendered: -1 };
     }
 
+    // uniq by id
     const uniqMap = new Map<string, DayBar>();
     for (const b of bars) if (!uniqMap.has(b.id)) uniqMap.set(b.id, b);
     const uniq = Array.from(uniqMap.values());
@@ -130,6 +131,7 @@ export const DayCard: FC<Props> = ({
     const rawRender = sorted.slice(0, maxBars);
     const hiddenCount = Math.max(0, sorted.length - rawRender.length);
 
+    // normalize rows
     const rowVals = Array.from(new Set(rawRender.map((b) => b.row))).sort(
       (a, b) => a - b
     );
@@ -145,6 +147,20 @@ export const DayCard: FC<Props> = ({
 
     return { render, hiddenCount, maxRowRendered };
   }, [bars, maxBars]);
+
+  const moreTop = useMemo(() => {
+    if (!expanded) return 0;
+    if (barLayout.hiddenCount <= 0) return 0;
+    const rowsUsed = Math.max(0, barLayout.maxRowRendered + 1);
+    return BAR_TOP + rowsUsed * (BAR_H + BAR_ROW_GAP) + 2;
+  }, [
+    expanded,
+    barLayout.hiddenCount,
+    barLayout.maxRowRendered,
+    BAR_TOP,
+    BAR_H,
+    BAR_ROW_GAP,
+  ]);
 
   const barBottomY = useMemo(() => {
     if (!expanded) return 0;
@@ -164,68 +180,70 @@ export const DayCard: FC<Props> = ({
   ]);
 
   const renderBars = () => {
-    if (!barLayout.render.length) return null;
+    if (!barLayout.render.length && barLayout.hiddenCount <= 0) return null;
 
     return (
-      <View style={styles.barAbsWrap} pointerEvents="none">
-        {barLayout.render.map((b) => {
-          const top = BAR_TOP + b.row * (BAR_H + BAR_ROW_GAP);
+      <View style={styles.barAbsWrap} pointerEvents="box-none">
+        {/* bars (pointerEvents none) */}
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          {barLayout.render.map((b) => {
+            const top = BAR_TOP + b.row * (BAR_H + BAR_ROW_GAP);
 
-          const left = b.contL ? -CONNECT_PX : 0;
-          const right = b.contR ? -CONNECT_PX : 0;
+            const left = b.contL ? -CONNECT_PX : 0;
+            const right = b.contR ? -CONNECT_PX : 0;
 
-          const rTL = b.contL ? 0 : 6;
-          const rBL = b.contL ? 0 : 6;
-          const rTR = b.contR ? 0 : 6;
-          const rBR = b.contR ? 0 : 6;
+            const rTL = b.contL ? 0 : 6;
+            const rBL = b.contL ? 0 : 6;
+            const rTR = b.contR ? 0 : 6;
+            const rBR = b.contR ? 0 : 6;
 
-          return (
-            <View
-              key={b.id}
-              style={{
-                position: "absolute",
-                top,
-                left,
-                right,
-                height: BAR_H,
-                backgroundColor: b.color,
-                opacity: 0.96,
-                borderTopLeftRadius: rTL,
-                borderBottomLeftRadius: rBL,
-                borderTopRightRadius: rTR,
-                borderBottomRightRadius: rBR,
-                alignItems: expanded ? "center" : undefined,
-                justifyContent: expanded ? "center" : undefined,
-                paddingHorizontal: expanded ? 8 : 0,
-              }}
-            >
-              {expanded && b.title ? (
-                <MText numberOfLines={1} style={styles.barTitleText}>
-                  {b.title}
-                </MText>
-              ) : null}
-            </View>
-          );
-        })}
+            return (
+              <View
+                key={b.id}
+                style={{
+                  position: "absolute",
+                  top,
+                  left,
+                  right,
+                  height: BAR_H,
+                  backgroundColor: b.color,
+                  opacity: 0.96,
+                  borderTopLeftRadius: rTL,
+                  borderBottomLeftRadius: rBL,
+                  borderTopRightRadius: rTR,
+                  borderBottomRightRadius: rBR,
+                  alignItems: expanded ? "center" : undefined,
+                  justifyContent: expanded ? "center" : undefined,
+                  paddingHorizontal: expanded ? 8 : 0,
+                }}
+              >
+                {expanded && b.title ? (
+                  <MText numberOfLines={1} style={styles.barTitleText}>
+                    {b.title}
+                  </MText>
+                ) : null}
+              </View>
+            );
+          })}
+        </View>
 
+        {/* ✅ +X more  */}
         {expanded && barLayout.hiddenCount > 0 ? (
-          <View
-            style={{
-              position: "absolute",
-              top:
-                BAR_TOP +
-                (barLayout.maxRowRendered + 1) * (BAR_H + BAR_ROW_GAP) +
-                2,
-              left: 0,
-              right: 0,
-              height: MORE_H,
-              justifyContent: "center",
-            }}
+          <Pressable
+            onPress={() => onPress?.(date)}
+            style={[
+              styles.morePill,
+              {
+                top: moreTop,
+                left: spacing.xs,
+              },
+            ]}
+            hitSlop={6}
           >
             <MText numberOfLines={1} style={styles.moreText}>
               +{barLayout.hiddenCount} more
             </MText>
-          </View>
+          </Pressable>
         ) : null}
       </View>
     );
@@ -235,7 +253,6 @@ export const DayCard: FC<Props> = ({
     if (!inlineItems || inlineItems.length === 0) return null;
     const items = inlineItems.slice(0, maxInlineItems);
 
-    // compact: normal flow
     if (!expanded) {
       return (
         <View style={[styles.inlineWrap, { marginTop: spacing.xs }]}>
@@ -315,11 +332,20 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
+  morePill: {
+    position: "absolute",
+    height: MORE_H,
+    paddingHorizontal: 8,
+    borderRadius: 999,
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.08)",
+  },
+
   moreText: {
     fontSize: sizes.sm,
     fontWeight: "800",
     color: colors.textPrimary,
-    opacity: 0.75,
+    opacity: 0.85,
   },
 
   inlineWrap: {
