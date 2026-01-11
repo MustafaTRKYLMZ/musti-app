@@ -33,6 +33,7 @@ import {
   sameDay,
   segmentEventsForWeek,
   snapMinutes,
+  startOfWeek,
 } from "@musti/planner";
 import { useCalendar } from "@/hooks/useCalendar";
 
@@ -87,11 +88,11 @@ export function WeekView(props: {
   );
 
   const { weekStart, blocks } = useMemo(() => {
-    const prelim = layoutWeek(date, events, { weekStartsOn }, props.weekView);
+    const weekStart = startOfWeek(date, weekStartsOn);
 
     const segged = segmentEventsForWeek(
       events,
-      prelim.weekStart,
+      weekStart,
       startMinVis,
       endMinVis
     );

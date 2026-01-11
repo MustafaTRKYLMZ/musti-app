@@ -59,7 +59,7 @@ export function layoutWeek(
 
         return {
           id: `${e.id}__${dayIndex}`,
-          eventId: e.id,
+          event: e,
           startMin,
           endMin,
         };
@@ -74,7 +74,7 @@ export function layoutWeek(
 
       blocks.push({
         id: it.id,
-        event: events.find((e) => e.id === it.eventId)!,
+        event: it.event,
         dayIndex,
         top: (it.startMin - viewStart) * week.pxPerMinute,
         height: (it.endMin - it.startMin) * week.pxPerMinute,

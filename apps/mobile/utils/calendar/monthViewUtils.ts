@@ -1,5 +1,3 @@
-import { pad2 } from "@musti/planner";
-
 export const startOfMonth = (d: Date) =>
   new Date(d.getFullYear(), d.getMonth(), 1);
 

@@ -19,6 +19,7 @@ import {
   toDate,
   packWeekSegments,
   toISODateKeyLocal,
+  WeekSeg,
 } from "@musti/planner";
 import { useCalendarUiStore } from "@/store/calendar/useCalendarUiStore";
 import { eventToTitle } from "@/utils/calendar/format";
@@ -30,14 +31,6 @@ import {
 import { listLocalDaysOverlapped } from "@/utils/calendar/listLocalDaysOverlapped";
 
 const { colors } = plannerTheme;
-
-type WeekSeg = {
-  id: string;
-  color: string;
-  title: string;
-  startCol: number; // 0..6
-  endCol: number; // 0..6
-};
 
 export function MonthView(props: {
   config: CalendarConfig;

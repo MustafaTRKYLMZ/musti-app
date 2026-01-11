@@ -119,6 +119,7 @@ export const MonthDayEventsList: FC<MonthDayEventsListProps> = ({
           if (isMultiDay) {
             if (sameDay(start, date)) {
               time = formatTime24(start);
+              isOngoing = false;
             } else if (sameDay(end, date)) {
               time = formatTime24(end);
               isOngoing = true;
