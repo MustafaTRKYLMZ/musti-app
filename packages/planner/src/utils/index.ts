@@ -11,6 +11,6 @@ export * from "./datetime/week";
 export * from "./datetime/minutes";
 export * from "./datetime/parse";
 export * from "./datetime/format";
-export * from "./datetime/month";
+export * from "./datetime/weekSegments";
 export * from "./datetime/iso";
 export * from "./datetime/compare";

@@ -2,7 +2,7 @@ import React, { FC } from "react";
 import { View, StyleSheet, StyleProp, ViewStyle } from "react-native";
 import { spacing } from "@musti/ui-native";
 import { DayCard, DayBar, DayInlineItem } from "./DayCard";
-import { sameDay } from "@musti/planner";
+import { sameDay, toISODateKeyLocal } from "@musti/planner";
 import { useCalendar } from "@/hooks/useCalendar";
 
 export type DayNumbersRowProps = {
@@ -41,10 +41,7 @@ export const DayNumbersRow: FC<DayNumbersRowProps> = ({
     <View style={[styles.row, containerStyle]}>
       {days.map((d, i) => {
         const isLastInWeek = i % 7 === 6;
-        const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
-          2,
-          "0"
-        )}-${String(d.getDate()).padStart(2, "0")}`;
+        const k = toISODateKeyLocal(d);
 
         return (
           <View
