@@ -5,12 +5,12 @@ import { MText, radii, spacing, useTheme } from "@musti/ui-native";
 import { dateToHHmm } from "@musti/planner";
 import { hhmmToDate } from "@/utils/calendar/format";
 
-type Props = {
+type TimeFieldProps = {
   value: string;
   onChange: (hhmm: string) => void;
 };
 
-export function TimeField({ value, onChange }: Props) {
+export const TimeField = ({ value, onChange }: TimeFieldProps) => {
   const { colors } = useTheme();
   const [open, setOpen] = useState(false);
 
@@ -53,7 +53,7 @@ export function TimeField({ value, onChange }: Props) {
       )}
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   box: {
