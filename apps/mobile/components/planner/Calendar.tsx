@@ -182,7 +182,6 @@ export const Calendar: FC<CalendarProps> = ({
             config={config}
             colWidth={colWidth}
             locale={locale ?? config.locale}
-            onPressEvent={(e) => pressEvent(e.id, e.start)}
           />
         </View>
       )}

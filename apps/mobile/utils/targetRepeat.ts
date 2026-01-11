@@ -1,4 +1,5 @@
 import type { ReadingTarget, TargetRepeat } from "@musti/core";
+import { addDays, startOfDay } from "@musti/planner";
 
 function parseTimeOfDay(s?: string) {
   const str = s && /^\d{2}:\d{2}$/.test(s) ? s : "00:00";
@@ -15,17 +16,7 @@ function atTime(d: Date, timeOfDay?: string) {
   return x;
 }
 
-function startOfDay(d: Date) {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  return x;
-}
 
-function addDays(d: Date, n: number) {
-  const x = new Date(d);
-  x.setDate(x.getDate() + n);
-  return x;
-}
 
 function addMonths(d: Date, n: number) {
   const x = new Date(d);

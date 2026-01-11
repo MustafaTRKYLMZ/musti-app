@@ -148,18 +148,22 @@ export const DayCard: FC<Props> = ({
     return { render, hiddenCount, maxRowRendered };
   }, [bars, maxBars]);
 
+  // ✅ clamp'li moreTop: kartın dışına kaçmasın
   const moreTop = useMemo(() => {
-    if (!expanded) return 0;
     if (barLayout.hiddenCount <= 0) return 0;
+
     const rowsUsed = Math.max(0, barLayout.maxRowRendered + 1);
-    return BAR_TOP + rowsUsed * (BAR_H + BAR_ROW_GAP) + 2;
+    const t = BAR_TOP + rowsUsed * (BAR_H + BAR_ROW_GAP) + 2;
+
+    const maxTop = Math.max(0, height - MORE_H - 6);
+    return Math.min(t, maxTop);
   }, [
-    expanded,
     barLayout.hiddenCount,
     barLayout.maxRowRendered,
     BAR_TOP,
     BAR_H,
     BAR_ROW_GAP,
+    height,
   ]);
 
   const barBottomY = useMemo(() => {
@@ -227,8 +231,8 @@ export const DayCard: FC<Props> = ({
           })}
         </View>
 
-        {/* ✅ +X more  */}
-        {expanded && barLayout.hiddenCount > 0 ? (
+        {/* ✅ +X more (expanded şartı kaldırıldı) */}
+        {barLayout.hiddenCount > 0 ? (
           <Pressable
             onPress={() => onPress?.(date)}
             style={[
@@ -339,6 +343,10 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     justifyContent: "center",
     backgroundColor: "rgba(255,255,255,0.08)",
+
+    // ✅ always on top
+    zIndex: 50,
+    elevation: 50,
   },
 
   moreText: {

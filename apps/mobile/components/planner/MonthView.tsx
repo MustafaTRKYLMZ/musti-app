@@ -13,61 +13,24 @@ import { plannerTheme, spacing } from "@musti/ui-native";
 import { DayCard, DayInlineItem, DayBar } from "./DayCard";
 import { TOTAL_DAYS, WEEKS_IN_GRID } from "@/config/timeConfigs";
 import {
-  eventToTitle,
   startOfWeek,
   addDays,
   sameDay,
   toDate,
+  packWeekSegments,
+  toISODateKeyLocal,
 } from "@musti/planner";
 import { useCalendarUiStore } from "@/store/calendar/useCalendarUiStore";
+import { eventToTitle } from "@/utils/calendar/format";
+import {
+  addMonthsClamped,
+  startOfMonth,
+  stripLeadingTimeLabel,
+} from "@/utils/calendar/monthViewUtils";
+import { listLocalDaysOverlapped } from "@/utils/calendar/listLocalDaysOverlapped";
 
 const { colors } = plannerTheme;
 
-const startOfMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
-const pad2 = (n: number) => String(n).padStart(2, "0");
-const dayKey = (d: Date) =>
-  `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-
-const addMonths = (d: Date, delta: number) => {
-  const day = d.getDate();
-  const base = new Date(d.getFullYear(), d.getMonth() + delta, 1);
-  const lastDay = new Date(
-    base.getFullYear(),
-    base.getMonth() + 1,
-    0
-  ).getDate();
-  base.setDate(Math.min(day, lastDay));
-  return base;
-};
-
-const stripLeadingTime = (s: string) =>
-  s.replace(/^\s*\d{1,2}:\d{2}\s+/, "").trim();
-
-const startOfDayLocal = (d: Date) =>
-  new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
-
-const addDaysLocal = (d: Date, n: number) => {
-  const x = new Date(d);
-  x.setDate(x.getDate() + n);
-  return x;
-};
-
-const listDaysOverlapped = (start: Date, end: Date) => {
-  const endMinus = new Date(end.getTime() - 1);
-  if (!Number.isFinite(endMinus.getTime())) return [] as Date[];
-
-  let cur = startOfDayLocal(start);
-  const last = startOfDayLocal(endMinus);
-  const out: Date[] = [];
-
-  while (cur <= last) {
-    out.push(cur);
-    cur = addDaysLocal(cur, 1);
-  }
-  return out;
-};
-
-// week row içinde segment
 type WeekSeg = {
   id: string;
   color: string;
@@ -75,36 +38,6 @@ type WeekSeg = {
   startCol: number; // 0..6
   endCol: number; // 0..6
 };
-
-// greedy row packing (çakışmayanlar aynı row)
-function packWeekSegments(segs: WeekSeg[]) {
-  const sorted = [...segs].sort((a, b) => {
-    if (a.startCol !== b.startCol) return a.startCol - b.startCol;
-    return b.endCol - b.startCol - (a.endCol - a.startCol);
-  });
-
-  const rows: { endCol: number }[] = [];
-  const placement = new Map<string, number>();
-
-  for (const s of sorted) {
-    let placed = -1;
-    for (let r = 0; r < rows.length; r++) {
-      if (s.startCol > rows[r].endCol) {
-        placed = r;
-        break;
-      }
-    }
-    if (placed === -1) {
-      placed = rows.length;
-      rows.push({ endCol: s.endCol });
-    } else {
-      rows[placed].endCol = s.endCol;
-    }
-    placement.set(s.id, placed);
-  }
-
-  return { placement, rowCount: rows.length };
-}
 
 export function MonthView(props: {
   config: CalendarConfig;
@@ -152,9 +85,9 @@ export function MonthView(props: {
   }, [props.gridHeightAnim]);
 
   const months = useMemo(() => {
-    const prev = addMonths(date, -1);
+    const prev = addMonthsClamped(date, -1);
     const cur = date;
-    const next = addMonths(date, +1);
+    const next = addMonthsClamped(date, +1);
     return [prev, cur, next];
   }, [date]);
 
@@ -184,22 +117,17 @@ export function MonthView(props: {
     [months, buildMonthGrid]
   );
 
-  // ✅ hesap: bars + single-day inline
   const perPageData = useMemo(() => {
-    // her sayfa için ayrı map
     return pages.map((p) => {
       const barsByKey: Record<string, DayBar[]> = {};
       const inlineByKey: Record<string, DayInlineItem[]> = {};
 
-      // week row bazında pack
       for (let wi = 0; wi < p.weeks.length; wi++) {
-        const weekDays = p.weeks[wi]; // 7 gün
-        const weekKeys = weekDays.map(dayKey);
+        const weekDays = p.weeks[wi];
+        const weekKeys = weekDays.map(toISODateKeyLocal);
 
-        // bu week içinde görünen multi-day segs topla
         const segs: WeekSeg[] = [];
 
-        // single-day için geçici bucket (gün bazında)
         const inlineTmp: Record<
           string,
           { color: string; title: string; t: number }[]
@@ -216,43 +144,38 @@ export function MonthView(props: {
           const color = (ev as any)?.color ?? colors.primary;
           const rawTitle =
             (ev as any)?.title ?? (ev as any)?.name ?? eventToTitle(ev as any);
-          const title = stripLeadingTime(String(rawTitle ?? ""));
+          const title = stripLeadingTimeLabel(String(rawTitle ?? ""));
 
-          const days = listDaysOverlapped(s, e);
+          const days = listLocalDaysOverlapped(s, e);
           if (!days.length) continue;
 
-          // bu week içinde görünür günler
+          // ✅ perf: days -> set of keys
+          const dayKeySet = new Set(days.map(toISODateKeyLocal));
+
           const visibleCols: number[] = [];
           for (let col = 0; col < 7; col++) {
-            if (days.some((d) => dayKey(d) === weekKeys[col]))
-              visibleCols.push(col);
+            if (dayKeySet.has(weekKeys[col])) visibleCols.push(col);
           }
           if (!visibleCols.length) continue;
 
           const isSingleDay = days.length === 1;
-
           if (isSingleDay) {
-            // ✅ tek günlük: inline list (dot+title)
             const k = weekKeys[visibleCols[0]];
             (inlineTmp[k] ||= []).push({ color, title, t: s.getTime() });
             continue;
           }
 
-          // ✅ multi-day: bu week için segment
           const startCol = Math.min(...visibleCols);
           const endCol = Math.max(...visibleCols);
 
           segs.push({ id, color, title, startCol, endCol });
         }
 
-        // pack segs -> row
         const { placement } = packWeekSegments(segs);
 
-        // segleri day keylere dağıt
         for (const seg of segs) {
           const row = placement.get(seg.id) ?? 0;
 
-          // title anchor: segment’in ortası
           const spanLen = seg.endCol - seg.startCol + 1;
           const anchorCol = seg.startCol + Math.floor(spanLen / 2);
 
@@ -272,7 +195,6 @@ export function MonthView(props: {
           }
         }
 
-        // inline sort & flush
         for (const k of Object.keys(inlineTmp)) {
           inlineTmp[k].sort((a, b) => a.t - b.t);
           inlineByKey[k] = inlineTmp[k].map(({ color, title }) => ({
@@ -292,7 +214,7 @@ export function MonthView(props: {
     if (pageIndex === 1) return;
 
     const delta = pageIndex - 1;
-    setDate(addMonths(date, delta));
+    setDate(addMonthsClamped(date, delta));
 
     requestAnimationFrame(() => {
       scrollRef.current?.scrollTo({ x: centerOffset, animated: false });
@@ -331,7 +253,7 @@ export function MonthView(props: {
                   style={[styles.weekRow, { width: pageWidth }]}
                 >
                   {weekDays.map((d, di) => {
-                    const k = dayKey(d);
+                    const k = toISODateKeyLocal(d);
 
                     return (
                       <DayCard
@@ -347,10 +269,8 @@ export function MonthView(props: {
                           setDate(dd);
                           props.onPressDay?.(dd);
                         }}
-                        // ✅ multi-day bars (stabil row)
                         bars={barsByKey[k]}
                         maxBars={props.maxMarkers ?? 4}
-                        // ✅ single-day inline list (her modda)
                         inlineItems={inlineByKey[k]}
                         maxInlineItems={props.maxInlineItems ?? 2}
                       />

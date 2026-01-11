@@ -1,6 +1,6 @@
 import { toDateParts } from "./toDateParts";
 
-export const addDays = (date: string, delta: number) => {
+export const addISODateDays = (date: string, delta: number) => {
   const { y, m, day } = toDateParts(date);
   const dt = new Date(Date.UTC(y, m - 1, day));
   dt.setUTCDate(dt.getUTCDate() + delta);

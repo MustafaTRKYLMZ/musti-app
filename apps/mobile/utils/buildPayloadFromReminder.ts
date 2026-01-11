@@ -1,4 +1,3 @@
-// app/utils/buildPayloadFromReminder.ts
 import type { NotificationPayload } from "@musti/notifications";
 import type { ReminderItem } from "@/store/reminders/types";
 
@@ -35,9 +34,7 @@ export function buildPayloadFromReminder(
 ): NotificationPayload {
   const t = rem.target;
 
-  // BOOK
   if (t.type === "book") {
-    // İsteğe bağlı guard: store’da yoksa generic’e düş
     if (ctx.booksMap && !ctx.booksMap[t.bookUri]) {
       return { v: 1, kind: "generic" };
     }
@@ -53,7 +50,6 @@ export function buildPayloadFromReminder(
     return { v: 1, link: { kind: "target", targetId: t.targetId } };
   }
 
-  // PLAN  ✅ kritik kısım: planId + (plan içinden bookUri/bookName)
   if (t.type === "plan") {
     const plan = (ctx.plans ?? []).find(
       (p) => String(p.id) === String(t.planId)

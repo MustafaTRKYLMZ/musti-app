@@ -1,5 +1,8 @@
 import type { MEvent, WeekViewConfig } from "../types";
-import { addDays, minutesOfDay, sameDay, startOfWeek, toDate } from "./date";
+import { addDays, sameDay } from "./datetime/day";
+import { minutesOfDay } from "./datetime/minutes";
+import { toDate } from "./datetime/parse";
+import { startOfWeek } from "./datetime/week";
 import { placeOverlaps } from "./overlap";
 
 export type WeekBlock = {
@@ -13,7 +16,7 @@ export type WeekBlock = {
 };
 
 const DAY_START = 0;
-const DAY_END = 24 * 60; // 1440
+const DAY_END = 24 * 60;
 
 export function layoutWeek(
   date: Date,
@@ -48,11 +51,9 @@ export function layoutWeek(
         const startsToday = sameDay(s, dayStart);
         const endsToday = sameDay(en, dayStart);
 
-        // ✅ Gün hesabı 00:00 referanslı
         const dayStartMin = startsToday ? minutesOfDay(s) : DAY_START;
         const dayEndMin = endsToday ? minutesOfDay(en) : DAY_END;
 
-        // ✅ UI kırpması en sonda
         const startMin = Math.max(dayStartMin, viewStart);
         const endMin = Math.min(dayEndMin, viewEnd);
 

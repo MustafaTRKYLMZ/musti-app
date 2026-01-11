@@ -12,11 +12,9 @@ export function findSectionIndexForDate(
   if (targetKey) {
     const target = dayjs(targetKey).startOf("day");
 
-    // 1) Tam eşleşme
     sectionIndex = sections.findIndex((s) => s.key === targetKey);
 
     if (sectionIndex === -1) {
-      // 2) Önceki en yakın gün
       let bestBeforeIdx = -1;
       let bestBeforeDiff = Number.POSITIVE_INFINITY;
 
@@ -34,7 +32,6 @@ export function findSectionIndexForDate(
       if (bestBeforeIdx !== -1) {
         sectionIndex = bestBeforeIdx;
       } else {
-        // 3) Sonraki en yakın gün
         let bestAfterIdx = -1;
         let bestAfterDiff = Number.POSITIVE_INFINITY;
 
@@ -56,7 +53,6 @@ export function findSectionIndexForDate(
     }
   }
 
-  // 4) Hâlâ yoksa today'e fallback
   if (sectionIndex === -1) {
     sectionIndex = sections.findIndex((s) => s.position === "today");
   }
