@@ -4,7 +4,6 @@ import { DraggableEventBlock } from "./DraggableEventBlock";
 import { BlockedTime, MEvent, WeekViewConfig } from "@musti/planner/src/types";
 import { RenderHorizontalLines } from "./RenderHorizontalLines";
 import { addDays } from "@musti/planner";
-import { useCalendarUiStore } from "@/store/calendar/useCalendarUiStore";
 import { useCalendar } from "@/hooks/useCalendar";
 
 type GridEventsProps = {
@@ -140,6 +139,10 @@ export const GridEvents: FC<GridEventsProps> = ({
           b.dayIndex * columnWidth + (b.col * columnWidth) / b.colCount;
         const w = columnWidth / b.colCount;
 
+        const evAny = b.event as any;
+        const isSeg = !!evAny.__seg;
+        const parentId: string = evAny.__parentId ?? b.event.id;
+
         return (
           <DraggableEventBlock
             key={b.id}
@@ -153,9 +156,8 @@ export const GridEvents: FC<GridEventsProps> = ({
             dayDate={addDays(weekStart, b.dayIndex)}
             minMinute={startMinVis}
             maxMinute={endMinVis}
-            onPress={(e) => {
-              pressEvent(e.id, e.start);
-            }}
+            draggable={!isSeg}
+            onPress={(e) => pressEvent(parentId, e.start)}
             onChange={(next) => {
               updateEvent(next.id, { start: next.start, end: next.end });
               onEventChange?.(next);

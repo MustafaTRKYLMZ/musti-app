@@ -9,17 +9,14 @@ export function formatDurationShort(ms: number): string | null {
     const m = totalMin % 60;
     const h = Math.floor(totalMin / 60);
   
-    // 0–59s
     if (totalMin === 0) {
       return `${s}s`;
     }
   
-    // 1:00–59:59  => Xm YYs (pad seconds)
     if (h === 0) {
       return `${totalMin}m ${String(s).padStart(2, "0")}s`;
     }
   
-    // 1:00:00+ => Xh YYm ZZs (pad m and s)
     return `${h}h ${String(m).padStart(2, "0")}m ${String(s).padStart(2, "0")}s`;
   }
   

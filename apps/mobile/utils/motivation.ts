@@ -36,7 +36,6 @@ export async function scheduleMotivationNudgeIfNeeded() {
 
   const s = sStore.settings;
 
-  // ✅ kapalıysa: iptal + çık
   if (!s.motivationEnabled) {
     await cancelMotivationNudge().catch((error) => {
       console.error("Failed to cancel motivation nudge:", error);
@@ -50,7 +49,6 @@ export async function scheduleMotivationNudgeIfNeeded() {
   const goal = Math.max(1, Number(s.qualifyPagesPerDay ?? 10));
   const remaining = Math.max(0, goal - (today.pages ?? 0));
 
-  // ✅ onlyIfNotDone açıksa ve hedef tamamlandıysa iptal
   if (s.motivationOnlyIfNotDone && remaining <= 0) {
     await cancelMotivationNudge().catch((error) => {
       console.error("Failed to cancel motivation nudge:", error);
@@ -58,7 +56,6 @@ export async function scheduleMotivationNudgeIfNeeded() {
     return;
   }
 
-  // ✅ mesaj seçimi
   const title = "Reading time 📖";
   const body =
     remaining <= 0
@@ -76,7 +73,6 @@ export async function scheduleMotivationNudgeIfNeeded() {
       ? { type: "weekly" as const, weekday: s.motivationWeekday ?? 1, hour, minute }
       : { type: "daily" as const, hour, minute };
 
-  // ✅ tek notification kalsın (senin mevcut cancel stratejin neyse ona bağla)
   await cancelMotivationNudge().catch((error) => {
     console.error("Failed to cancel motivation nudge before scheduling:", error);
   });

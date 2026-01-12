@@ -1,5 +1,3 @@
-// utils/number.ts
-
 export const toIntOr = (n: unknown, fallback: number) => {
     const x = Math.floor(Number(n));
     return Number.isFinite(x) ? x : fallback;

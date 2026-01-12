@@ -1,13 +1,9 @@
 import React, { FC } from "react";
 import { View, StyleSheet, StyleProp, ViewStyle } from "react-native";
 import { spacing } from "@musti/ui-native";
-import { DayCard } from "./DayCard";
-import { pad2, sameDay } from "@musti/planner";
-import { useCalendarUiStore } from "@/store/calendar/useCalendarUiStore";
+import { DayCard, DayBar, DayInlineItem } from "./DayCard";
+import { sameDay, toISODateKeyLocal } from "@musti/planner";
 import { useCalendar } from "@/hooks/useCalendar";
-
-const dayKey = (d: Date) =>
-  `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 
 export type DayNumbersRowProps = {
   days: Date[];
@@ -15,9 +11,13 @@ export type DayNumbersRowProps = {
   colWidth: number;
   gap: number;
 
-  markersByDayKey?: Record<string, string[]>;
-  maxMarkers?: number;
+  barsByDayKey?: Record<string, DayBar[]>;
+  inlineByDayKey?: Record<string, DayInlineItem[]>;
 
+  maxBars?: number;
+  maxInlineItems?: number;
+
+  height?: number;
   containerStyle?: StyleProp<ViewStyle>;
   onPressDay?: (d: Date) => void;
 };
@@ -27,16 +27,21 @@ export const DayNumbersRow: FC<DayNumbersRowProps> = ({
   today,
   colWidth,
   gap,
-  markersByDayKey,
+  barsByDayKey,
+  inlineByDayKey,
+  maxBars = 4,
+  maxInlineItems = 0,
+  height = 44,
   containerStyle,
+  onPressDay,
 }) => {
   const { selectedDate, openDay } = useCalendar();
+
   return (
     <View style={[styles.row, containerStyle]}>
       {days.map((d, i) => {
         const isLastInWeek = i % 7 === 6;
-        const k = dayKey(d);
-        const markers = markersByDayKey?.[k];
+        const k = toISODateKeyLocal(d);
 
         return (
           <View
@@ -49,12 +54,19 @@ export const DayNumbersRow: FC<DayNumbersRowProps> = ({
             <DayCard
               date={d}
               width={colWidth}
+              height={height}
+              expanded={false}
               isToday={sameDay(d, today)}
               isSelected={sameDay(d, selectedDate)}
-              markers={markers}
-              maxMarkers={4}
-              markerMode="row"
-              onPress={(d) => openDay(d)}
+              isOutside={false}
+              bars={barsByDayKey?.[k]}
+              maxBars={maxBars}
+              inlineItems={inlineByDayKey?.[k]}
+              maxInlineItems={maxInlineItems}
+              onPress={(dd) => {
+                onPressDay?.(dd);
+                openDay(dd);
+              }}
             />
           </View>
         );

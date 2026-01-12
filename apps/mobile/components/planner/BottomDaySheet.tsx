@@ -2,7 +2,7 @@ import React, { useMemo, useRef } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import BottomSheet from "@gorhom/bottom-sheet"; // Adjust the import path if necessary
 import type { MEvent } from "@musti/planner/src/types";
-import { formatTime } from "@musti/planner";
+import { formatTime } from "@/utils/calendar/format";
 
 export function BottomDaySheet(props: {
   date: Date;

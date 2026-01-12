@@ -1,9 +1,5 @@
 import type { NotificationPayload } from "@musti/notifications";
 
-/**
- * Store'dan gelen ayarların MINIMUM shape'i.
- * Burada store type'ına bağımlı değiliz.
- */
 export type NotificationLinkSettings = {
   linkKind?: "generic" | "normal" | "plan" | "target";
 

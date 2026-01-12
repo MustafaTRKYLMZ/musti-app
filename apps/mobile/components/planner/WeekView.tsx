@@ -31,23 +31,20 @@ import {
   layoutWeek,
   pad2,
   sameDay,
+  segmentEventsForWeek,
   snapMinutes,
+  startOfWeek,
 } from "@musti/planner";
-import { useCalendarUiStore } from "@/store/calendar/useCalendarUiStore";
 import { useCalendar } from "@/hooks/useCalendar";
 
 const { colors } = plannerTheme;
 
 type Density = "compact" | "expanded";
 
-const clampNum = (v: number, a: number, b: number) =>
-  Math.max(a, Math.min(b, v));
-
 export function WeekView(props: {
   config: CalendarConfig;
   weekView: WeekViewConfig;
   locale?: string;
-
   onEventChange?: (next: MEvent) => void;
 }) {
   const { width: SCREEN_WIDTH } = useWindowDimensions();
@@ -70,10 +67,6 @@ export function WeekView(props: {
   const columnWidth = Math.floor(daysWidth / 7);
   const gridWidth = columnWidth * 7;
 
-  const { weekStart, blocks } = useMemo(() => {
-    return layoutWeek(date, events, { weekStartsOn }, props.weekView);
-  }, [date, events, props.weekView, weekStartsOn]);
-
   const startMinVis = props.weekView.startHour * 60;
   const endMinVis = props.weekView.endHour * 60;
 
@@ -93,6 +86,19 @@ export function WeekView(props: {
     },
     []
   );
+
+  const { weekStart, blocks } = useMemo(() => {
+    const weekStart = startOfWeek(date, weekStartsOn);
+
+    const segged = segmentEventsForWeek(
+      events,
+      weekStart,
+      startMinVis,
+      endMinVis
+    );
+
+    return layoutWeek(date, segged as any, { weekStartsOn }, props.weekView);
+  }, [date, events, props.weekView, weekStartsOn, startMinVis, endMinVis]);
 
   const handleTapGrid = useCallback(
     (dayIndex: number, yPx: number) => {
@@ -134,7 +140,7 @@ export function WeekView(props: {
     if (!viewportH) return;
 
     const maxScroll = Math.max(0, contentHeight - viewportH);
-    const target = clampNum(nowInfo.y - hourHeight, 0, maxScroll);
+    const target = clamp(nowInfo.y - hourHeight, 0, maxScroll);
 
     autoScrollingRef.current = true;
     requestAnimationFrame(() => {
@@ -197,6 +203,7 @@ export function WeekView(props: {
             todayIndex={nowInfo?.todayIndex ?? -1}
             nowY={nowInfo?.y ?? null}
             nowColor={plannerTheme.colors.primary ?? "#EF4444"}
+            onEventChange={props.onEventChange}
           />
         </View>
       </ScrollView>

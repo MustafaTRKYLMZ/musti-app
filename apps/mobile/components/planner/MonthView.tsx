@@ -10,38 +10,27 @@ import {
 import type { CalendarConfig, MEvent } from "@musti/planner/src/types";
 
 import { plannerTheme, spacing } from "@musti/ui-native";
-import { DayCard, DayInlineItem } from "./DayCard";
+import { DayCard, DayInlineItem, DayBar } from "./DayCard";
 import { TOTAL_DAYS, WEEKS_IN_GRID } from "@/config/timeConfigs";
 import {
-  eventToStartDate,
-  eventToTitle,
   startOfWeek,
   addDays,
   sameDay,
+  toDate,
+  packWeekSegments,
+  toISODateKeyLocal,
+  WeekSeg,
 } from "@musti/planner";
 import { useCalendarUiStore } from "@/store/calendar/useCalendarUiStore";
+import { eventToTitle } from "@/utils/calendar/format";
+import {
+  addMonthsClamped,
+  startOfMonth,
+  stripLeadingTimeLabel,
+} from "@/utils/calendar/monthViewUtils";
+import { listLocalDaysOverlapped } from "@/utils/calendar/listLocalDaysOverlapped";
 
 const { colors } = plannerTheme;
-
-const startOfMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
-const pad2 = (n: number) => String(n).padStart(2, "0");
-const dayKey = (d: Date) =>
-  `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-
-const addMonths = (d: Date, delta: number) => {
-  const day = d.getDate();
-  const base = new Date(d.getFullYear(), d.getMonth() + delta, 1);
-  const lastDay = new Date(
-    base.getFullYear(),
-    base.getMonth() + 1,
-    0
-  ).getDate();
-  base.setDate(Math.min(day, lastDay));
-  return base;
-};
-
-const stripLeadingTime = (s: string) =>
-  s.replace(/^\s*\d{1,2}:\d{2}\s+/, "").trim();
 
 export function MonthView(props: {
   config: CalendarConfig;
@@ -51,7 +40,7 @@ export function MonthView(props: {
   locale?: string;
   gridHeightAnim?: Animated.Value;
   onPressDay?: (d: Date) => void;
-  maxMarkers?: number;
+  maxMarkers?: number; // maxBars
   maxInlineItems?: number;
 }) {
   const scrollRef = useRef<ScrollView | null>(null);
@@ -89,9 +78,9 @@ export function MonthView(props: {
   }, [props.gridHeightAnim]);
 
   const months = useMemo(() => {
-    const prev = addMonths(date, -1);
+    const prev = addMonthsClamped(date, -1);
     const cur = date;
-    const next = addMonths(date, +1);
+    const next = addMonthsClamped(date, +1);
     return [prev, cur, next];
   }, [date]);
 
@@ -100,39 +89,6 @@ export function MonthView(props: {
       scrollRef.current?.scrollTo({ x: centerOffset, animated: false });
     });
   }, [centerOffset, date.getFullYear(), date.getMonth(), pageWidth]);
-
-  const { markersByDayKey, inlineByDayKey } = useMemo(() => {
-    const markers: Record<string, string[]> = {};
-    const inline: Record<
-      string,
-      { color: string; title: string; t: number }[]
-    > = {};
-
-    for (const ev of props.events) {
-      const sd = eventToStartDate(ev as any);
-      if (!sd) continue;
-
-      const k = dayKey(sd);
-      const c = (ev as any)?.color ?? colors.primary;
-
-      (markers[k] ||= []).push(c);
-
-      const rawTitle =
-        (ev as any)?.title ?? (ev as any)?.name ?? eventToTitle(ev as any);
-      const label = stripLeadingTime(String(rawTitle ?? ""));
-
-      (inline[k] ||= []).push({ color: c, title: label, t: sd.getTime() });
-    }
-
-    for (const k of Object.keys(inline)) inline[k].sort((a, b) => a.t - b.t);
-
-    const inlineFlat: Record<string, DayInlineItem[]> = {};
-    for (const k of Object.keys(inline)) {
-      inlineFlat[k] = inline[k].map(({ color, title }) => ({ color, title }));
-    }
-
-    return { markersByDayKey: markers, inlineByDayKey: inlineFlat };
-  }, [props.events]);
 
   const buildMonthGrid = useMemo(() => {
     return (baseDate: Date) => {
@@ -154,13 +110,104 @@ export function MonthView(props: {
     [months, buildMonthGrid]
   );
 
+  const perPageData = useMemo(() => {
+    return pages.map((p) => {
+      const barsByKey: Record<string, DayBar[]> = {};
+      const inlineByKey: Record<string, DayInlineItem[]> = {};
+
+      for (let wi = 0; wi < p.weeks.length; wi++) {
+        const weekDays = p.weeks[wi];
+        const weekKeys = weekDays.map(toISODateKeyLocal);
+
+        const segs: WeekSeg[] = [];
+
+        const inlineTmp: Record<
+          string,
+          { color: string; title: string; t: number }[]
+        > = {};
+
+        for (const ev of props.events) {
+          const s = toDate((ev as any).start);
+          const e = toDate((ev as any).end);
+          if (!Number.isFinite(s.getTime()) || !Number.isFinite(e.getTime()))
+            continue;
+          if (e <= s) continue;
+
+          const id = String((ev as any).id ?? "");
+          const color = (ev as any)?.color ?? colors.primary;
+          const rawTitle =
+            (ev as any)?.title ?? (ev as any)?.name ?? eventToTitle(ev as any);
+          const title = stripLeadingTimeLabel(String(rawTitle ?? ""));
+
+          const days = listLocalDaysOverlapped(s, e);
+          if (!days.length) continue;
+
+          // ✅ perf: days -> set of keys
+          const dayKeySet = new Set(days.map(toISODateKeyLocal));
+
+          const visibleCols: number[] = [];
+          for (let col = 0; col < 7; col++) {
+            if (dayKeySet.has(weekKeys[col])) visibleCols.push(col);
+          }
+          if (!visibleCols.length) continue;
+
+          const isSingleDay = days.length === 1;
+          if (isSingleDay) {
+            const k = weekKeys[visibleCols[0]];
+            (inlineTmp[k] ||= []).push({ color, title, t: s.getTime() });
+            continue;
+          }
+
+          const startCol = Math.min(...visibleCols);
+          const endCol = Math.max(...visibleCols);
+
+          segs.push({ id, color, title, startCol, endCol });
+        }
+
+        const { placement } = packWeekSegments(segs);
+
+        for (const seg of segs) {
+          const row = placement.get(seg.id) ?? 0;
+
+          const spanLen = seg.endCol - seg.startCol + 1;
+          const anchorCol = seg.startCol + Math.floor(spanLen / 2);
+
+          for (let col = seg.startCol; col <= seg.endCol; col++) {
+            const k = weekKeys[col];
+            const contL = col > seg.startCol;
+            const contR = col < seg.endCol;
+
+            (barsByKey[k] ||= []).push({
+              id: seg.id,
+              color: seg.color,
+              contL,
+              contR,
+              row,
+              title: col === anchorCol ? seg.title : null,
+            });
+          }
+        }
+
+        for (const k of Object.keys(inlineTmp)) {
+          inlineTmp[k].sort((a, b) => a.t - b.t);
+          inlineByKey[k] = inlineTmp[k].map(({ color, title }) => ({
+            color,
+            title,
+          }));
+        }
+      }
+
+      return { barsByKey, inlineByKey };
+    });
+  }, [pages, props.events]);
+
   const handleMomentumEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const x = e.nativeEvent.contentOffset.x;
     const pageIndex = Math.round(x / pageWidth);
     if (pageIndex === 1) return;
 
     const delta = pageIndex - 1;
-    setDate(addMonths(date, delta));
+    setDate(addMonthsClamped(date, delta));
 
     requestAnimationFrame(() => {
       scrollRef.current?.scrollTo({ x: centerOffset, animated: false });
@@ -185,46 +232,48 @@ export function MonthView(props: {
         scrollEventThrottle={16}
         contentContainerStyle={{ width: pageWidth * 3 }}
       >
-        {pages.map((p, pi) => (
-          <View
-            key={`page-${pi}`}
-            style={{ width: pageWidth, alignItems: "center" }}
-          >
-            {p.weeks.map((weekDays, wi) => (
-              <View
-                key={`week-${pi}-${wi}`}
-                style={[styles.weekRow, { width: pageWidth }]}
-              >
-                {weekDays.map((d, di) => {
-                  const k = dayKey(d);
+        {pages.map((p, pi) => {
+          const { barsByKey, inlineByKey } = perPageData[pi];
 
-                  return (
-                    <DayCard
-                      key={`${d.toISOString()}-${pi}-${wi}-${di}`}
-                      date={d}
-                      width={props.colWidth}
-                      height={cellH}
-                      isToday={sameDay(d, today)}
-                      isSelected={sameDay(d, selectedDate)}
-                      isOutside={d.getMonth() !== p.monthIndex}
-                      onPress={(dd) => {
-                        setDate(dd);
-                        props.onPressDay?.(dd);
-                      }}
-                      markers={props.expanded ? undefined : markersByDayKey[k]}
-                      maxMarkers={props.maxMarkers ?? 4}
-                      markerMode="stack"
-                      inlineItems={
-                        props.expanded ? inlineByDayKey[k] : undefined
-                      }
-                      maxInlineItems={props.maxInlineItems ?? 2}
-                    />
-                  );
-                })}
-              </View>
-            ))}
-          </View>
-        ))}
+          return (
+            <View
+              key={`page-${pi}`}
+              style={{ width: pageWidth, alignItems: "center" }}
+            >
+              {p.weeks.map((weekDays, wi) => (
+                <View
+                  key={`week-${pi}-${wi}`}
+                  style={[styles.weekRow, { width: pageWidth }]}
+                >
+                  {weekDays.map((d, di) => {
+                    const k = toISODateKeyLocal(d);
+
+                    return (
+                      <DayCard
+                        key={`${d.toISOString()}-${pi}-${wi}-${di}`}
+                        date={d}
+                        width={props.colWidth}
+                        height={cellH}
+                        expanded={props.expanded}
+                        isToday={sameDay(d, today)}
+                        isSelected={sameDay(d, selectedDate)}
+                        isOutside={d.getMonth() !== p.monthIndex}
+                        onPress={(dd) => {
+                          setDate(dd);
+                          props.onPressDay?.(dd);
+                        }}
+                        bars={barsByKey[k]}
+                        maxBars={props.maxMarkers ?? 4}
+                        inlineItems={inlineByKey[k]}
+                        maxInlineItems={props.maxInlineItems ?? 2}
+                      />
+                    );
+                  })}
+                </View>
+              ))}
+            </View>
+          );
+        })}
       </ScrollView>
     </View>
   );

@@ -166,9 +166,9 @@ export const Calendar: FC<CalendarProps> = ({
           config={config}
           locale={locale ?? config.locale}
           weekView={{
-            startHour: 7,
+            startHour: 0,
             endHour: 24,
-            stepMinutes: 30,
+            stepMinutes: 15,
             pxPerMinute: 1.2,
             ...weekView,
           }}
@@ -182,7 +182,6 @@ export const Calendar: FC<CalendarProps> = ({
             config={config}
             colWidth={colWidth}
             locale={locale ?? config.locale}
-            onPressEvent={(e) => pressEvent(e.id, e.start)}
           />
         </View>
       )}

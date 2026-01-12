@@ -18,7 +18,7 @@ import {
 import { useReadingStatsStore } from "@/store/bookshelf/useReadingStatsStore";
 import { useReadingEventsStore } from "@/store/bookshelf/useReadingEventsStore";
 import { toNonNegativeInt } from "@/utils/toNonNegativeInt";
-import { addDays } from "@/utils/addDays";
+import { addDays } from "@/utils/calendar/addISODateDays";
 
 import { TodaySummaryCard } from "@/components/Books/statsBook/TodaySummaryCard";
 import { PeriodCard } from "@/components/Books/statsBook/PeriodCard";

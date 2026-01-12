@@ -21,3 +21,9 @@ export function formatTime(iso: string, locale = "en-EN") {
     return e?.title ?? e?.name ?? e?.summary ?? e?.text ?? e?.label ?? "Event";
   };
   
+  export function hhmmToDate(hhmm: string) {
+    const [h, m] = (hhmm || "00:00").split(":").map(Number);
+    const d = new Date();
+    d.setHours(h ?? 0, m ?? 0, 0, 0);
+    return d;
+  }
