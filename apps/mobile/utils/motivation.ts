@@ -1,17 +1,28 @@
 import dayjs from "dayjs";
-import * as Notifications from "expo-notifications";
+import Constants from "expo-constants";
 import { useReadingGamificationStore } from "@/store/bookshelf/readingGamification/useReadingGamificationStore";
 import { useGamificationSettingsStore } from "@/store/bookshelf/readingGamification/useGamificationSettingsStore";
 import { scheduleCustomReminder } from "@musti/notifications";
 
 const MOTIVATION_ID = "motivation-nudge-v1";
 
-/**
- * Cancels the motivation nudge notification if it exists.
- * Searches through all scheduled notifications and cancels any that match
- * the motivation reminder ID.
- */
+function notificationsSupported(): boolean {
+  return Constants.appOwnership !== "expo";
+}
+
+async function getNotificationsModule() {
+  if (!notificationsSupported()) return null;
+  try {
+    return await import("expo-notifications");
+  } catch {
+    return null;
+  }
+}
+
 export async function cancelMotivationNudge() {
+  const Notifications = await getNotificationsModule();
+  if (!Notifications) return;
+
   try {
     const scheduled = await Notifications.getAllScheduledNotificationsAsync();
     const toCancel = scheduled
@@ -20,15 +31,19 @@ export async function cancelMotivationNudge() {
 
     if (toCancel.length > 0) {
       await Promise.all(
-        toCancel.map((id) => Notifications.cancelScheduledNotificationAsync(id))
+        toCancel.map((id) =>
+          Notifications.cancelScheduledNotificationAsync(id)
+        )
       );
     }
   } catch (error) {
-    console.error("Failed to cancel motivation nudge:", error);
+    console.warn("Failed to cancel motivation nudge:", error);
   }
 }
 
 export async function scheduleMotivationNudgeIfNeeded() {
+  if (!notificationsSupported()) return;
+
   const g = useReadingGamificationStore.getState();
   const sStore = useGamificationSettingsStore.getState();
 
@@ -37,9 +52,7 @@ export async function scheduleMotivationNudgeIfNeeded() {
   const s = sStore.settings;
 
   if (!s.motivationEnabled) {
-    await cancelMotivationNudge().catch((error) => {
-      console.error("Failed to cancel motivation nudge:", error);
-    });
+    await cancelMotivationNudge();
     return;
   }
 
@@ -50,9 +63,7 @@ export async function scheduleMotivationNudgeIfNeeded() {
   const remaining = Math.max(0, goal - (today.pages ?? 0));
 
   if (s.motivationOnlyIfNotDone && remaining <= 0) {
-    await cancelMotivationNudge().catch((error) => {
-      console.error("Failed to cancel motivation nudge:", error);
-    });
+    await cancelMotivationNudge();
     return;
   }
 
@@ -64,25 +75,31 @@ export async function scheduleMotivationNudgeIfNeeded() {
         ? `Only ${remaining} page${remaining === 1 ? "" : "s"} left to secure your streak ✅`
         : `You have ${remaining} pages left for today’s streak. 10 minutes is enough.`;
 
-  // ✅ schedule
   const hour = Math.max(0, Math.min(23, Number(s.motivationHour ?? 20)));
   const minute = Math.max(0, Math.min(59, Number(s.motivationMinute ?? 30)));
 
   const schedule =
     s.motivationScheduleType === "weekly"
-      ? { type: "weekly" as const, weekday: s.motivationWeekday ?? 1, hour, minute }
+      ? {
+          type: "weekly" as const,
+          weekday: s.motivationWeekday ?? 1,
+          hour,
+          minute,
+        }
       : { type: "daily" as const, hour, minute };
 
-  await cancelMotivationNudge().catch((error) => {
-    console.error("Failed to cancel motivation nudge before scheduling:", error);
-  });
+  await cancelMotivationNudge();
 
-  await scheduleCustomReminder({
-    id: MOTIVATION_ID,
-    owner: "bookshelf",
-    title,
-    body,
-    schedule,
-    payload: { v: 1, kind: "motivation" },
-  });
+  try {
+    await scheduleCustomReminder({
+      id: MOTIVATION_ID,
+      owner: "bookshelf",
+      title,
+      body,
+      schedule,
+      payload: { v: 1, kind: "motivation" },
+    });
+  } catch (error) {
+    console.warn("Failed to schedule motivation nudge:", error);
+  }
 }

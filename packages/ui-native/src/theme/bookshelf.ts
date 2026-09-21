@@ -1,5 +1,5 @@
 import { Theme, ThemeColors } from "./types";
-import { spacing, radii, iconSizes, typography, shadows } from "./tokens";
+import { spacing, radii, iconSizes, typography, shadows, sizes } from "./tokens";
 
 const hexToRgb = (hex: string) => {
   const h = hex.replace("#", "");
@@ -73,6 +73,10 @@ const bookshelfColors: ThemeColors = {
     bookshelfColorsBase.surface,
     0.55
   ),
+
+  backdrop: bookshelfColorsBase.backdropStrong,
+  border: bookshelfColorsBase.borderSubtle,
+  shadow: bookshelfColorsBase.shadowStrong,
 };
 
 export const bookshelfTheme: Theme = {
@@ -82,4 +86,5 @@ export const bookshelfTheme: Theme = {
   iconSizes,
   typography,
   shadows,
+  sizes,
 };

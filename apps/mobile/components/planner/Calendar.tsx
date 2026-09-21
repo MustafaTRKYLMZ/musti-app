@@ -2,6 +2,7 @@ import React, { FC, useCallback, useMemo } from "react";
 import { View, StyleSheet, useWindowDimensions } from "react-native";
 import {
   CalendarConfig,
+  isGoogleEvent,
   MEvent,
   WeekViewConfig,
   addDays,
@@ -13,6 +14,7 @@ import { plannerTheme, spacing } from "@musti/ui-native";
 import { MonthContainer } from "./MonthContainer";
 import { DAYS_IN_WEEK, TIME_COL_WIDTH } from "@/config/timeConfigs";
 import { UpsertEventModal } from "../ui/modals/UpsertEventModal";
+import { GoogleEventDetailModal } from "../ui/modals/GoogleEventDetailModal";
 import { useCalendar } from "@/hooks/useCalendar";
 
 import { useCalendarEventsStore } from "@/store/calendar/useCalendarEventsStore";
@@ -201,8 +203,14 @@ export const Calendar: FC<CalendarProps> = ({
         }}
       />
 
-      {/* EDIT */}
-      {editEvent ? (
+      {/* EDIT / GOOGLE READ-ONLY */}
+      {editEvent && isGoogleEvent(editEvent) ? (
+        <GoogleEventDetailModal
+          visible={editOpen}
+          event={editEvent}
+          onClose={closeEdit}
+        />
+      ) : editEvent ? (
         <UpsertEventModal
           mode="edit"
           visible={editOpen}

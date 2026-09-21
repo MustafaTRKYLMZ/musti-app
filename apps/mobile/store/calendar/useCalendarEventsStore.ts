@@ -3,7 +3,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import type { MEvent } from "@musti/planner";
+import { isGoogleEvent, type MEvent } from "@musti/planner";
 
 type PendingDelete = {
   token: string;
@@ -27,6 +27,10 @@ type State = {
   pendingDelete?: PendingDelete;
   deleteEventWithUndo: (id: string, durationMs?: number) => void;
   undoDelete: () => void;
+
+  upsertExternalEvents: (calendarId: string, events: MEvent[]) => void;
+  removeEventsForAccount: (accountId: string) => void;
+  removeEventsForCalendar: (calendarId: string) => void;
 
   // internal helpers
   rebuildIndexes: () => void;
@@ -88,7 +92,12 @@ export const useCalendarEventsStore = create<State>()(
       addEvent: (payload) =>
         set((s) => {
           const id = uid();
-          const ev: MEvent = { ...(payload as any), id };
+          const ev: MEvent = {
+            ...payload,
+            id,
+            source: payload.source ?? "planner",
+            calendarId: payload.calendarId ?? "local:planner",
+          };
 
           const nextEvents = sortEvents([...s.events, ev]);
           const { byId, byDay } = buildIndexes(nextEvents);
@@ -98,6 +107,11 @@ export const useCalendarEventsStore = create<State>()(
 
       updateEvent: (id, patch) =>
         set((s) => {
+          const current = s.eventsById[id] ?? s.events.find((e) => e.id === id);
+          if (current && isGoogleEvent(current)) {
+            return s;
+          }
+
           const nextEvents = sortEvents(
             s.events.map((e) => (e.id === id ? { ...e, ...patch } : e))
           );
@@ -108,16 +122,43 @@ export const useCalendarEventsStore = create<State>()(
 
       deleteEvent: (id) =>
         set((s) => {
+          const target = s.eventsById[id] ?? s.events.find((e) => e.id === id);
+          if (target && isGoogleEvent(target)) {
+            return s;
+          }
+
           const nextEvents = s.events.filter((e) => e.id !== id);
           const { byId, byDay } = buildIndexes(nextEvents);
 
           return { events: nextEvents, eventsById: byId, idsByDay: byDay };
         }),
 
+      upsertExternalEvents: (calendarId, incoming) =>
+        set((s) => {
+          const kept = s.events.filter((e) => e.calendarId !== calendarId);
+          const nextEvents = sortEvents([...kept, ...incoming]);
+          const { byId, byDay } = buildIndexes(nextEvents);
+          return { events: nextEvents, eventsById: byId, idsByDay: byDay };
+        }),
+
+      removeEventsForAccount: (accountId) =>
+        set((s) => {
+          const nextEvents = s.events.filter((e) => e.accountId !== accountId);
+          const { byId, byDay } = buildIndexes(nextEvents);
+          return { events: nextEvents, eventsById: byId, idsByDay: byDay };
+        }),
+
+      removeEventsForCalendar: (calendarId) =>
+        set((s) => {
+          const nextEvents = s.events.filter((e) => e.calendarId !== calendarId);
+          const { byId, byDay } = buildIndexes(nextEvents);
+          return { events: nextEvents, eventsById: byId, idsByDay: byDay };
+        }),
+
       deleteEventWithUndo: (id, durationMs = 4000) =>
         set((s) => {
           const ev = s.eventsById[id] ?? s.events.find((e) => e.id === id);
-          if (!ev) return s;
+          if (!ev || isGoogleEvent(ev)) return s;
 
           if (s.pendingDelete?.timeoutId) {
             clearTimeout(s.pendingDelete.timeoutId);

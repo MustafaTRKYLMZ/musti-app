@@ -9,14 +9,11 @@ import {
   ViewStyle,
   StyleProp,
 } from "react-native";
-import {
-  useTheme,
-  MText,
-  spacing,
-  radii,
-  ThemeColors,
-  BaseIcon,
-} from "@musti/ui-native";
+import { useTheme } from "../theme/ThemeContext";
+import { MText } from "./MText";
+import { spacing, radii } from "../theme/tokens";
+import { ThemeColors } from "../theme/types";
+import { BaseIcon } from "./AppIcon";
 
 export type DropdownOption<T extends string> = {
   key: T;

@@ -36,7 +36,7 @@ import { PdfOpenIntroOverlay } from "../ui/pdf/PdfOpenIntroOverlay";
 import { ensureCoversDir, getCoverPathForPdfUri } from "@/hooks/pdfCoverCache";
 import { useCropTransform } from "@/hooks/ useCropTransform";
 import { useReaderPrefs } from "@/hooks/ useReaderPrefs";
-import { PdfViewport } from "../ui/pdf/ PdfViewport";
+import { PdfViewportLazy as PdfViewport } from "../ui/pdf/PdfViewportLazy";
 import { ReaderHeaderBar } from "../ui/pdf/ ReaderHeaderBar";
 import { useReaderBookNav } from "@/hooks/useReaderBookNav";
 

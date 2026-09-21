@@ -1,9 +1,12 @@
 import { useEffect, useRef } from "react";
+import Constants from "expo-constants";
 import {
   cancelNotificationIds,
   ensureNotificationPermission,
   scheduleCustomReminder,
 } from "@musti/notifications";
+
+const notificationsEnabled = Constants.appOwnership !== "expo";
 import { useRemindersStore } from "@/store/reminders/useRemindersStore";
 import type { ReminderItem, ReminderOwner } from "@/store/reminders/types";
 
@@ -33,6 +36,8 @@ export function useReminderScheduler(owner: ReminderOwner) {
   const running = useRef(new Set<string>());
 
   useEffect(() => {
+    if (!notificationsEnabled) return;
+
     let disposed = false;
 
     const run = async () => {

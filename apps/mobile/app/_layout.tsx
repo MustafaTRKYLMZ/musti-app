@@ -10,21 +10,13 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ToastProvider } from "@/components/ui/ToastProvider";
 import { SchedulersHost } from "@/components/SchedulersHost";
 
-import * as Notifications from "expo-notifications";
+import Constants from "expo-constants";
 import {
   routeFromNotificationPayload,
   type RouteTo,
 } from "@/utils/routeFromPayload";
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+const notificationsEnabled = Constants.appOwnership !== "expo";
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -46,17 +38,23 @@ export default function RootLayout() {
   }, [navState?.key, router]);
 
   useEffect(() => {
-    let sub: Notifications.Subscription | null = null;
+    if (!notificationsEnabled) return;
 
-    const handleResponse = (response: Notifications.NotificationResponse) => {
-      const data = response?.notification?.request?.content?.data as any;
+    let sub: { remove: () => void } | null = null;
+    let cancelled = false;
+
+    const handleResponse = (response: {
+      notification?: { request?: { content?: { data?: unknown } } };
+    }) => {
+      const data = response?.notification?.request?.content?.data as {
+        payload?: unknown;
+      };
       const payload = data?.payload;
 
       if (!payload) return;
 
       const to = routeFromNotificationPayload(payload);
 
-      // ✅ if nav not ready yet, store it
       if (!navState?.key) {
         pendingRouteRef.current = to;
         return;
@@ -65,14 +63,30 @@ export default function RootLayout() {
       router.push(to as any);
     };
 
-    (async () => {
+    void (async () => {
+      const Notifications = await import("expo-notifications");
+      if (cancelled) return;
+
+      Notifications.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldShowAlert: true,
+          shouldPlaySound: true,
+          shouldSetBadge: false,
+          shouldShowBanner: true,
+          shouldShowList: true,
+        }),
+      });
+
       const last = await Notifications.getLastNotificationResponseAsync();
       if (last) handleResponse(last);
+
+      sub = Notifications.addNotificationResponseReceivedListener(handleResponse);
     })();
 
-    sub = Notifications.addNotificationResponseReceivedListener(handleResponse);
-
-    return () => sub?.remove();
+    return () => {
+      cancelled = true;
+      sub?.remove();
+    };
   }, [router, navState?.key]);
 
   return (
@@ -82,6 +96,7 @@ export default function RootLayout() {
           <SchedulersHost />
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="launcher" />
           </Stack>
         </ToastProvider>
       </ThemeProvider>

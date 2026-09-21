@@ -15,6 +15,8 @@ import { FloatingCreateButton } from "../planner/FloatingCreateButton";
 import { Calendar } from "../planner/Calendar";
 import { eventsForDay, MEvent } from "@musti/planner";
 import { useCalendar } from "@/hooks/useCalendar";
+import { useCalendarSync } from "@/hooks/useCalendarSync";
+import { useCalendarSourcesStore } from "@/store/calendar/useCalendarSourcesStore";
 
 dayjs.extend(weekOfYear);
 dayjs.extend(isoWeek);
@@ -33,6 +35,9 @@ export const PlannerHomeScreen = () => {
     hasHydrated,
     events,
   } = useCalendar();
+
+  const sourcesHydrated = useCalendarSourcesStore((s) => s.hasHydrated);
+  useCalendarSync(hasHydrated && sourcesHydrated);
 
   const weekNumber = useMemo(() => dayjs(date).isoWeek(), [date]);
   const selectedLabel = useMemo(() => dayjs(date).format("MMMM"), [date]);

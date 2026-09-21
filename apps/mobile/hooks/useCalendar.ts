@@ -1,5 +1,8 @@
+import { useMemo } from "react";
+import { filterEventsByEnabledCalendars } from "@musti/planner";
 import { useCalendarUiStore } from "@/store/calendar/useCalendarUiStore";
 import { useCalendarEventsStore } from "@/store/calendar/useCalendarEventsStore";
+import { useCalendarSourcesStore } from "@/store/calendar/useCalendarSourcesStore";
 import { useShallow } from "zustand/react/shallow";
 
 export const useCalendar=()=> {
@@ -41,7 +44,7 @@ export const useCalendar=()=> {
 
   const ev = useCalendarEventsStore(
     useShallow((s) => ({
-      events: s.events,
+      allEvents: s.events,
       addEvent: s.addEvent,
       updateEvent: s.updateEvent,
       deleteEvent: s.deleteEvent,
@@ -49,5 +52,14 @@ export const useCalendar=()=> {
     }))
   );
 
-  return { ...ui, ...ev };
+  const feeds = useCalendarSourcesStore((s) => s.feeds);
+
+  const events = useMemo(() => {
+    const enabledFeedIds = new Set(
+      feeds.filter((f) => f.enabled).map((f) => f.id)
+    );
+    return filterEventsByEnabledCalendars(ev.allEvents, enabledFeedIds);
+  }, [ev.allEvents, feeds]);
+
+  return { ...ui, ...ev, events };
 }

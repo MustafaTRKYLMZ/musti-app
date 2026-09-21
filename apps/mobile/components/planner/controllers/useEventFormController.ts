@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useCallback, useState } from "react";
 import { useForm } from "react-hook-form";
 import dayjs from "dayjs";
-import { type MEvent, type EventCreate } from "@musti/planner";
+import {
+  LOCAL_CALENDAR_ID,
+  type MEvent,
+  type EventCreate,
+} from "@musti/planner";
 
 import { clampTimeOrder } from "@/utils/calendar/clampTimeOrder";
 import { clampDay, isBeforeDay } from "@/utils/calendar/isBeforeDay";
@@ -183,6 +187,7 @@ export function useEventFormController(args: Args) {
         location: v.location?.trim() || undefined,
         notes: v.notes?.trim() || undefined,
         source: "planner",
+        calendarId: LOCAL_CALENDAR_ID,
       };
     }
 
@@ -205,6 +210,7 @@ export function useEventFormController(args: Args) {
       location: v.location?.trim() || undefined,
       notes: v.notes?.trim() || undefined,
       source: "planner",
+      calendarId: LOCAL_CALENDAR_ID,
     };
   }, [form, startDay, endDay, timezone]);
 

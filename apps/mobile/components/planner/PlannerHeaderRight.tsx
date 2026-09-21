@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { View, Pressable, StyleSheet } from "react-native";
+import { router } from "expo-router";
 import {
   useTheme,
   MText,
@@ -64,6 +65,24 @@ export const PlannerHeaderRight = () => {
         )}
       />
 
+      <Pressable
+        onPress={() => router.push("/(tabs)/planner/settings")}
+        hitSlop={8}
+        style={[
+          styles.iconBtn,
+          {
+            borderColor: colors.borderSubtle,
+            backgroundColor: surface,
+          },
+        ]}
+      >
+        <BaseIcon
+          name="settings-outline"
+          size={18}
+          color={colors.textPrimary}
+        />
+      </Pressable>
+
       <View style={styles.switcher}>
         <AppSwitcherButton />
       </View>
@@ -76,8 +95,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
-    width: 170,
+    width: 210,
     justifyContent: "flex-end",
+  },
+
+  iconBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 999,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   selectBtn: {

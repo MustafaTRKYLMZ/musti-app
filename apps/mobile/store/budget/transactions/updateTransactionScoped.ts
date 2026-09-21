@@ -8,7 +8,7 @@ import {
   import type {
     TransactionsStoreSet,
     TransactionsStoreGet,
-  } from "../types";
+  } from "../../types";
   
   export async function updateTransactionScopedAction(
     set: TransactionsStoreSet,

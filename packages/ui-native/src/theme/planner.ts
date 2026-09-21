@@ -74,6 +74,10 @@ const plannerColors: ThemeColors = {
     plannerColorsBase.surfaceElevated,
     0.55
   ),
+
+  backdrop: plannerColorsBase.backdropStrong,
+  border: plannerColorsBase.borderSubtle,
+  shadow: plannerColorsBase.shadowStrong,
 };
 
 export const plannerTheme: Theme = {

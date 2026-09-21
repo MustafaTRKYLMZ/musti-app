@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import Constants from "expo-constants";
 import {
   cancelScheduledByOwner,
   ensureNotificationPermission,
@@ -6,12 +7,16 @@ import {
 } from "@musti/notifications";
 import { useBookshelfNotificationSettingsStore } from "./useNotificationSettingsStore";
 
+const notificationsEnabled = Constants.appOwnership !== "expo";
+
 export function useBookshelfNotificationScheduler() {
   const enabled = useBookshelfNotificationSettingsStore((s) => s.enabled);
   const hour = useBookshelfNotificationSettingsStore((s) => s.hour);
   const minute = useBookshelfNotificationSettingsStore((s) => s.minute);
 
   useEffect(() => {
+    if (!notificationsEnabled) return;
+
     let disposed = false;
 
     const run = async () => {

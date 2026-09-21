@@ -89,3 +89,33 @@ export async function cancelNotificationIds(ids: string[]) {
     ids.map((id) => Notifications.cancelScheduledNotificationAsync(id))
   );
 }
+
+export async function cancelScheduledByOwner(owner: Owner) {
+  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+  const ids = scheduled
+    .filter((item) => item.content.data?.owner === owner)
+    .map((item) => item.identifier);
+  await cancelNotificationIds(ids);
+}
+
+export async function scheduleDailyReminder(input: {
+  owner: Owner;
+  hour: number;
+  minute: number;
+  title: string;
+  body: string;
+  kind: string;
+}) {
+  return scheduleCustomReminder({
+    id: `${input.owner}-daily-${input.hour}-${input.minute}`,
+    owner: input.owner,
+    title: input.title,
+    body: input.body,
+    schedule: {
+      type: "daily",
+      hour: input.hour,
+      minute: input.minute,
+    },
+    payload: { v: 1, kind: "generic" as const },
+  });
+}

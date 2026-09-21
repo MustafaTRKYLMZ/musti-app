@@ -1,4 +1,4 @@
-import { addMinutes } from ".";
+import { addMinutes } from "./datetime/minutes";
 import { MEvent } from "../types";
 import { maxDate, minDate } from "./datetime/compare";
 import { addDays, startOfDay } from "./datetime/day";

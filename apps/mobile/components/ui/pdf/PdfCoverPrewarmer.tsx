@@ -7,7 +7,6 @@ import React, {
   useState,
 } from "react";
 import { View, StyleSheet, InteractionManager, Platform } from "react-native";
-import Pdf from "react-native-pdf";
 import { captureRef } from "react-native-view-shot";
 import * as FileSystem from "expo-file-system/legacy";
 
@@ -21,6 +20,18 @@ type Props = {
 };
 
 const inFlight = new Set<string>();
+
+function getPdfComponent():
+  | React.ComponentType<Record<string, unknown>>
+  | null {
+  try {
+    return require("react-native-pdf").default as React.ComponentType<
+      Record<string, unknown>
+    >;
+  } catch {
+    return null;
+  }
+}
 
 export const PdfCoverPrewarmer: FC<Props> = ({
   pdfUris,
@@ -161,7 +172,9 @@ export const PdfCoverPrewarmer: FC<Props> = ({
     advance();
   }, [active, captureAndSave, advance, done, total, onProgress]);
 
-  if (!enabled || !active) return null;
+  const Pdf = getPdfComponent();
+
+  if (!enabled || !active || !Pdf) return null;
 
   return (
     <View style={styles.host} pointerEvents="none">
@@ -176,7 +189,7 @@ export const PdfCoverPrewarmer: FC<Props> = ({
           horizontal={false}
           fitPolicy={2}
           onLoadComplete={() => onLoadComplete()}
-          onError={(error) => {
+          onError={(error: unknown) => {
             console.warn("PdfCoverPrewarmer: PDF load error", error);
             onProgress?.(Math.min(done + 1, total), total);
             advance();

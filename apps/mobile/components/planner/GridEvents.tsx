@@ -1,7 +1,12 @@
 import React, { FC, useMemo } from "react";
 import { View, Pressable, RegisteredStyle, ViewStyle } from "react-native";
 import { DraggableEventBlock } from "./DraggableEventBlock";
-import { BlockedTime, MEvent, WeekViewConfig } from "@musti/planner/src/types";
+import {
+  BlockedTime,
+  isGoogleEvent,
+  MEvent,
+  WeekViewConfig,
+} from "@musti/planner";
 import { RenderHorizontalLines } from "./RenderHorizontalLines";
 import { addDays } from "@musti/planner";
 import { useCalendar } from "@/hooks/useCalendar";
@@ -156,7 +161,7 @@ export const GridEvents: FC<GridEventsProps> = ({
             dayDate={addDays(weekStart, b.dayIndex)}
             minMinute={startMinVis}
             maxMinute={endMinVis}
-            draggable={!isSeg}
+            draggable={!isSeg && !isGoogleEvent(b.event)}
             onPress={(e) => pressEvent(parentId, e.start)}
             onChange={(next) => {
               updateEvent(next.id, { start: next.start, end: next.end });

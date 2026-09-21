@@ -18,13 +18,13 @@ import { ReadingPlan } from "../types/plan/readingPlan";
   
     let currentIndex = plan.currentIndex;
     let currentPageInItem = plan.currentPageInItem;
-    let isCompleted = plan.isCompleted;
+    let isCompleted: boolean = plan.isCompleted;
   
     const items = plan.items;
   
     while (pagesLeft > 0 && !isCompleted && currentIndex < items.length) {
       const item = items[currentIndex];
-      const remainingForItem = item.pages - currentPageInItem;
+      const remainingForItem = item.pagesPerDay - currentPageInItem;
   
       if (remainingForItem <= 0) {
         // this item already finished, move to next
