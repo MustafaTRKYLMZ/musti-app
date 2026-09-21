@@ -9,3 +9,6 @@ export const addISODateDays = (date: string, delta: number) => {
   const dd = String(dt.getUTCDate()).padStart(2, "0");
   return `${yy}-${mm}-${dd}`;
 };
+
+/** ISO date string helper used by stats and reading stores. */
+export const addDays = addISODateDays;

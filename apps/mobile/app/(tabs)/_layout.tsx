@@ -30,6 +30,14 @@ export default function TabLayout() {
         }}
       />
 
+      {/* PLANNER */}
+      <Tabs.Screen
+        name="planner"
+        options={{
+          title: "planner",
+        }}
+      />
+
       {/* ABOUT */}
       <Tabs.Screen
         name="about"
