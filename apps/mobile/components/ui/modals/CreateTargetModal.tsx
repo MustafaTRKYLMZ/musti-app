@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { MText, spacing, radii, useTheme } from "@musti/ui-native";
+import { useTranslation } from "@musti/core";
 
 import type { LocalPdfFile } from "@/utils/getPdfsDirectory";
 import { useToast } from "@/components/ui/ToastProvider";
@@ -29,6 +30,7 @@ export const CreateTargetModal = ({
   initialBookUri,
 }: CreateTargetModalProps) => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const { showToast } = useToast();
 
   const chipColors = useChipColors();
@@ -76,14 +78,16 @@ export const CreateTargetModal = ({
     if (!canFinish) return;
     c.resetAll();
     onClose();
-    showToast({ message: "Target saved.", duration: 2000 });
+    showToast({ message: t("bookshelf.target.saved"), duration: 2000 });
   };
 
   return (
     <CreateModal
       visible={visible}
       onClose={handleClose}
-      title={c.targetId ? "Edit Target" : "New Target"}
+      title={
+        c.targetId ? t("bookshelf.target.editTitle") : t("bookshelf.target.newTitle")
+      }
       sheetStyle={{ padding: spacing.lg }}
       footer={
         <Pressable
@@ -99,7 +103,9 @@ export const CreateTargetModal = ({
           ]}
         >
           <MText style={{ fontWeight: "900" }}>
-            {canFinish ? "Save & Close" : "Add at least 1 item"}
+            {canFinish
+              ? t("bookshelf.target.saveAndClose")
+              : t("bookshelf.target.addAtLeastOneItem")}
           </MText>
         </Pressable>
       }
@@ -118,7 +124,7 @@ export const CreateTargetModal = ({
           ]}
         >
           <MText style={styles.primaryBtnText} color="textPrimary">
-            Create group
+            {t("bookshelf.target.createGroup")}
           </MText>
         </Pressable>
       ) : (
@@ -131,7 +137,9 @@ export const CreateTargetModal = ({
             },
           ]}
         >
-          <MText style={{ fontWeight: "900", opacity: 0.7 }}>Created</MText>
+          <MText style={{ fontWeight: "900", opacity: 0.7 }}>
+            {t("bookshelf.target.created")}
+          </MText>
         </View>
       )}
 
@@ -140,12 +148,17 @@ export const CreateTargetModal = ({
           chipColors,
           items: currentTarget?.items ?? [],
           canAddItem: c.canAddItem,
-          addItemLabel: c.targetId ? "Add item" : "Create group first",
+          addItemLabel: c.targetId
+            ? t("bookshelf.target.addItem")
+            : t("bookshelf.target.createGroupFirst"),
           onAddItem: c.addSelectedItem,
           onDeleteItem: (itemId) => {
             if (!currentTarget) return;
             deleteItem(currentTarget.id, itemId);
-            showToast({ message: "Item removed.", duration: 1800 });
+            showToast({
+              message: t("bookshelf.target.itemRemoved"),
+              duration: 1800,
+            });
           },
           onOpenChapters,
         })}

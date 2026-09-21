@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import dayjs from "dayjs";
-import type { PdfRef } from "react-native-pdf";
+import type { PdfRef } from "@/components/ui/pdf/pdfTypes";
 
 import { useBooksStore } from "@/store/bookshelf/useBooksStore";
 import type { ReaderShellProps } from "@/components/Books/ReaderShell";
 import { usePdfSource } from "./usePdfSource";
+import { useTranslation } from "@musti/core";
 
 export function useNormalReaderController(): ReaderShellProps {
   const router = useRouter();
+  const { t } = useTranslation();
 
   const params = useLocalSearchParams<{
     uri?: string;
@@ -62,9 +64,9 @@ export function useNormalReaderController(): ReaderShellProps {
 
   const { guard, source } = usePdfSource({
     uri,
-    invalidText: "Invalid PDF path",
-    preparingText: "Preparing PDF…",
-    failedText: "Failed to load PDF.",
+    invalidText: t("bookshelf.reader.invalidPdf"),
+    preparingText: t("bookshelf.reader.preparing"),
+    failedText: t("bookshelf.reader.loadFailed"),
   });
 
   const onLoadComplete = (pages: number) => {

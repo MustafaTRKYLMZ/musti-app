@@ -3,21 +3,25 @@ import { View, StyleSheet, Pressable } from "react-native";
 
 import { BaseIcon } from "@musti/ui-native";
 import { Card, MText, radii, spacing, useTheme } from "@musti/ui-native";
-
-import type { ReadingMode } from "@musti/core";
+import {
+  useTranslation,
+  formatTranslation,
+  type ReadingMode,
+  type TranslationKey,
+} from "@musti/core";
 import { EventList } from "./EventList";
 
 type ModePart = {
   mode: ReadingMode;
   value: number;
   icon: string;
-  label: string;
+  labelKey: TranslationKey;
 };
 
 type SectionTop = { label: string; pages: number };
 
 type Props = {
-  today: string; // YYYY-MM-DD
+  today: string;
   todayTotal: number;
 
   modeParts: ModePart[];
@@ -25,17 +29,14 @@ type Props = {
   sectionsTop: SectionTop[];
   selectedSectionLabel: string | null;
 
-  // events
   eventsAllCount: number;
   eventsFilteredCount: number;
   shownEventsCount: number;
-  eventsShown: any[]; // ReadingEvent[] ama core type import etmeyelim istersen
+  eventsShown: any[];
 
-  // UI state
   isOpen: boolean;
   showAll: boolean;
 
-  // actions
   onToggleOpen: () => void;
   onToggleShowAll: () => void;
   onSelectSection: (label: string) => void;
@@ -62,6 +63,7 @@ export function TodayCard({
   onClearSectionFilter,
   eventsDisplayLimit,
 }: Props) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
 
   return (
@@ -75,9 +77,9 @@ export function TodayCard({
       ]}
     >
       <View style={styles.summaryTitleRow}>
-        <BaseIcon name="today-outline" size={16} color={colors.textSecondary} />
+        <BaseIcon name="today-outline" color={colors.textSecondary} />
         <MText variant="bodyStrong" color="textPrimary">
-          Today
+          {t("bookshelf.stats.today")}
         </MText>
         <MText
           variant="caption"
@@ -93,7 +95,9 @@ export function TodayCard({
         color="textPrimary"
         style={{ marginTop: spacing.xs, fontWeight: "900" }}
       >
-        {todayTotal} pages
+        {formatTranslation(t("bookshelf.common.pagesCount"), {
+          count: todayTotal,
+        })}
       </MText>
 
       {modeParts.length > 0 ? (
@@ -111,11 +115,10 @@ export function TodayCard({
             >
               <BaseIcon
                 name={p.icon as any}
-                size={14}
                 color={colors.textSecondary}
               />
               <MText variant="caption" color="textSecondary">
-                {p.label}:
+                {t(p.labelKey)}:
               </MText>
               <MText
                 variant="caption"
@@ -133,26 +136,26 @@ export function TodayCard({
           color="textSecondary"
           style={{ marginTop: spacing.sm }}
         >
-          No pages tracked today yet.
+          {t("bookshelf.stats.noPagesToday")}
         </MText>
       )}
 
-      {/* Sections today */}
       {sectionsTop.length > 0 ? (
         <View style={{ marginTop: spacing.md }}>
           <View style={styles.subHeaderRow}>
             <View style={styles.subHeaderLeft}>
               <BaseIcon
                 name="albums-outline"
-                size={14}
                 color={colors.textSecondary}
               />
               <MText variant="bodyStrong" color="textPrimary">
-                Sections today
+                {t("bookshelf.stats.sectionsToday")}
               </MText>
             </View>
             <MText variant="caption" color="textSecondary">
-              top {sectionsTop.length}
+              {formatTranslation(t("bookshelf.stats.topSections"), {
+                count: sectionsTop.length,
+              })}
             </MText>
           </View>
 
@@ -187,7 +190,9 @@ export function TodayCard({
                       color="textPrimary"
                       style={{ fontWeight: "900" }}
                     >
-                      {s.pages}p
+                      {formatTranslation(t("bookshelf.stats.pagesShort"), {
+                        count: s.pages,
+                      })}
                     </MText>
                   </View>
                 </Pressable>
@@ -218,18 +223,21 @@ export function TodayCard({
                     numberOfLines={1}
                     style={{ flex: 1 }}
                   >
-                    Filtered: {selectedSectionLabel}
+                    {formatTranslation(t("bookshelf.stats.filtered"), {
+                      label: selectedSectionLabel,
+                    })}
                   </MText>
                   <MText
                     variant="caption"
                     color="textPrimary"
                     style={{ fontWeight: "900" }}
                   >
-                    {eventsFilteredCount} events
+                    {formatTranslation(t("bookshelf.stats.eventsCount"), {
+                      count: eventsFilteredCount,
+                    })}
                   </MText>
                   <BaseIcon
                     name="close-outline"
-                    size={14}
                     color={colors.textSecondary}
                   />
                 </View>
@@ -239,7 +247,6 @@ export function TodayCard({
         </View>
       ) : null}
 
-      {/* Today details toggle */}
       {eventsAllCount > 0 ? (
         <Pressable
           onPress={onToggleOpen}
@@ -251,11 +258,10 @@ export function TodayCard({
           <View style={styles.detailsToggleLeft}>
             <BaseIcon
               name="list-outline"
-              size={14}
               color={colors.textSecondary}
             />
             <MText variant="caption" color="textSecondary">
-              Today details
+              {t("bookshelf.stats.todayDetails")}
             </MText>
             <MText
               variant="caption"
@@ -270,14 +276,16 @@ export function TodayCard({
                 color="textSecondary"
                 style={{ opacity: 0.8 }}
               >
-                · filtered {eventsFilteredCount}
+                ·{" "}
+                {formatTranslation(t("bookshelf.stats.filteredCount"), {
+                  count: eventsFilteredCount,
+                })}
               </MText>
             ) : null}
           </View>
 
           <BaseIcon
             name={isOpen ? "chevron-up" : "chevron-down"}
-            size={18}
             color={colors.textSecondary}
           />
         </Pressable>
@@ -287,7 +295,10 @@ export function TodayCard({
         <View style={styles.detailsList}>
           <View style={styles.detailsMetaRow}>
             <MText variant="caption" color="textSecondary">
-              Showing {shownEventsCount} / {eventsFilteredCount}
+              {formatTranslation(t("bookshelf.stats.showing"), {
+                shown: shownEventsCount,
+                total: eventsFilteredCount,
+              })}
             </MText>
 
             {eventsFilteredCount > eventsDisplayLimit ? (
@@ -295,11 +306,12 @@ export function TodayCard({
                 <View style={styles.showAllBtn}>
                   <BaseIcon
                     name={showAll ? "contract-outline" : "expand-outline"}
-                    size={14}
                     color={colors.textSecondary}
                   />
                   <MText variant="caption" color="textSecondary">
-                    {showAll ? "Show less" : "Show all"}
+                    {showAll
+                      ? t("bookshelf.stats.showLess")
+                      : t("bookshelf.stats.showAll")}
                   </MText>
                 </View>
               </Pressable>

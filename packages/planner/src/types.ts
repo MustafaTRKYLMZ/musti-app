@@ -21,6 +21,8 @@ export type CalendarFeed = {
   color?: string;
   enabled: boolean;
   isPrimary?: boolean;
+  /** Google Calendar access role, e.g. owner | writer | reader */
+  accessRole?: string;
   lastSyncedAt?: string;
 };
 

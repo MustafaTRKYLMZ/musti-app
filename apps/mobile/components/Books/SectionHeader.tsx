@@ -1,21 +1,24 @@
 import { MText, spacing } from "@musti/ui-native";
 import { FC } from "react";
 import { View, StyleSheet } from "react-native";
-import { IconButton } from "@musti/ui-native/src/components/AppIcon";
+import { useTranslation } from "@musti/core";
+import { HeaderIconButton } from "@/components/ui/HeaderIconButton";
 
 type SectionHeaderProps = {
   title: string;
   onClose: () => void;
 };
 export const SectionHeader: FC<SectionHeaderProps> = ({ title, onClose }) => {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.headerRow}>
       <MText variant="heading3">{title}</MText>
-      <IconButton
-        name="close-outline"
-        style={styles.closeIcon}
+      <HeaderIconButton
+        icon="close"
+        variant="plain"
         onPress={onClose}
-        accessibilityLabel="Close chapters"
+        accessibilityLabel={t("bookshelf.chapters.close")}
       />
     </View>
   );
@@ -27,8 +30,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: spacing.md,
-  },
-  closeIcon: {
-    padding: spacing.xs,
   },
 });

@@ -7,6 +7,7 @@ import {
   useTheme,
   budgetTheme,
   bookshelfTheme,
+  plannerTheme,
 } from "@musti/ui-native";
 import { router } from "expo-router";
 import { IconTile } from "@musti/ui-native";
@@ -73,7 +74,7 @@ export function AppSwitcherMenu({ visible, onClose }: Props) {
             <IconTile
               name="calendar-outline"
               label="Planner"
-              color={bookshelfTheme.colors.success}
+              color={plannerTheme.colors.success}
               labelColor={colors.textPrimary}
               onPress={goPlanner}
               style={{ backgroundColor: colors.surfaceStrong }}

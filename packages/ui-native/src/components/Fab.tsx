@@ -7,7 +7,7 @@ import {
   StyleProp,
   Insets,
 } from "react-native";
-import { spacing, iconSizes } from "../theme";
+import { spacing, touchTargets } from "../theme";
 import { BaseIcon } from "./AppIcon";
 
 export type FABPlacement =
@@ -65,11 +65,11 @@ export const FAB: FC<FABProps> = ({
   offsetHorizontal = spacing.xl,
 
   backgroundColor,
-  size = 56,
+  size = touchTargets.fab,
   elevation = 4,
 
   iconName = "add",
-  iconSize = iconSizes.xl,
+  iconSize = touchTargets.controlIcon,
   iconColor,
 
   children,

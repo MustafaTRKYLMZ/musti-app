@@ -1,27 +1,28 @@
 import { bookshelfTheme, MText } from "@musti/ui-native";
 import { View, StyleSheet } from "react-native";
-import { IconButton } from "@musti/ui-native/src/components/AppIcon";
 import { FC } from "react";
+import { SectionAddButton } from "@/components/ui/SectionAddButton";
+import { SECTION_HEADER_GAP } from "./shelfLayout";
 
-const { colors, spacing, radii } = bookshelfTheme;
+const { spacing } = bookshelfTheme;
+
 type ShelfHeaderProps = {
   handleOpen: () => void;
   title: string;
+  addA11yLabel?: string;
 };
-export const ShelfHeader: FC<ShelfHeaderProps> = ({ handleOpen, title }) => {
+
+export const ShelfHeader: FC<ShelfHeaderProps> = ({
+  handleOpen,
+  title,
+  addA11yLabel = "Add",
+}) => {
   return (
     <View style={styles.shelfHeader}>
-      <MText variant="heading3" color="textPrimary" style={styles.shelfTitle}>
+      <MText variant="heading3" color="textPrimary">
         {title}
       </MText>
-      <IconButton
-        family="ion"
-        name="add-circle-outline"
-        padding={spacing.xs}
-        color={colors.textPrimary}
-        style={[styles.iconButton, { borderRadius: radii.full }]}
-        onPress={handleOpen}
-      />
+      <SectionAddButton onPress={handleOpen} accessibilityLabel={addA11yLabel} />
     </View>
   );
 };
@@ -31,12 +32,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-  },
-  shelfTitle: {
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.xs,
-  },
-  iconButton: {
-    marginLeft: 4,
+    paddingHorizontal: spacing.lg,
+    marginBottom: SECTION_HEADER_GAP,
   },
 });

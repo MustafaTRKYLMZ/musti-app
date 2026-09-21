@@ -95,29 +95,36 @@ export function AppScreen({
   const headerBg = getHeaderBackground(variant, colors);
   const headerBorder = getHeaderBorderColor(variant, colors);
 
+  const renderTitle = () => {
+    if (!title) return null;
+
+    const mergedTitleStyle = StyleSheet.flatten<TextStyle>([
+      styles.title,
+      headerTitleStyle,
+      { color: headerTitleColor ?? colors.textPrimary },
+    ]);
+
+    return (
+      <MText
+        variant="heading2"
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.8}
+        style={mergedTitleStyle}
+      >
+        {title}
+      </MText>
+    );
+  };
+
   const renderCenter = () => {
     if (headerCenter) return headerCenter;
-
-    if (title) {
-      const mergedTitleStyle = StyleSheet.flatten<TextStyle>([
-        styles.title,
-        headerTitleStyle,
-        { color: headerTitleColor ?? colors.textPrimary },
-      ]);
-
-      return (
-        <MText variant="heading2" numberOfLines={1} style={mergedTitleStyle}>
-          {title}
-        </MText>
-      );
-    }
-
-    return null;
+    return renderTitle();
   };
 
   const renderRight = () => {
     if (headerRight) return headerRight;
-    if (!showSwitcher) return null;
+    if (!showSwitcher || headerLeft) return null;
     return <AppSwitcherButton />;
   };
 
@@ -128,15 +135,25 @@ export function AppScreen({
     return null;
   };
 
+  const isPlanner = variant === "planner";
+  const leftContent = renderLeft();
+  const rightContent = renderRight();
+  const hasCustomRight = !!headerRight;
+
   return (
     <SafeAreaView
-      style={[styles.safe, safeAreaStyle]}
+      style={[
+        styles.safe,
+        isPlanner ? styles.safePlanner : null,
+        safeAreaStyle,
+      ]}
       edges={["top", "left", "right", "bottom"]}
     >
       <View
         style={[
           styles.header,
           variant === "budget" ? styles.headerBudget : null,
+          isPlanner ? styles.headerPlanner : null,
           {
             borderBottomColor: headerBorder,
             backgroundColor: headerBg,
@@ -144,9 +161,32 @@ export function AppScreen({
           headerContainerStyle,
         ]}
       >
-        <View style={styles.left}>{renderLeft()}</View>
-        <View style={styles.center}>{renderCenter()}</View>
-        <View style={styles.right}>{renderRight()}</View>
+        {leftContent ? (
+          <View
+            style={variant === "planner" ? styles.plannerLeft : styles.left}
+          >
+            {leftContent}
+          </View>
+        ) : null}
+        <View
+          style={[
+            variant === "planner" ? styles.plannerCenter : styles.center,
+            !leftContent && !isPlanner ? styles.centerFlushLeft : null,
+          ]}
+        >
+          {renderCenter()}
+        </View>
+        {rightContent ? (
+          <View
+            style={
+              variant === "planner" || hasCustomRight
+                ? styles.plannerRight
+                : styles.right
+            }
+          >
+            {rightContent}
+          </View>
+        ) : null}
       </View>
 
       <View style={[styles.content, contentStyle]}>{children}</View>
@@ -159,13 +199,27 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: spacing.sm,
   },
+  safePlanner: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderRadius: radii.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    minHeight: 64,
+    gap: spacing.sm,
+  },
+  headerPlanner: {
+    borderRadius: 0,
     paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.md,
+    minHeight: 64,
+    marginBottom: spacing.sm,
   },
 
   headerBudget: Platform.select({
@@ -181,21 +235,46 @@ const styles = StyleSheet.create({
   }) as ViewStyle,
 
   left: {
-    width: 40,
+    flexShrink: 0,
+    minHeight: 44,
+    minWidth: 44,
     justifyContent: "center",
     alignItems: "flex-start",
   },
+  plannerLeft: {
+    flexShrink: 0,
+    justifyContent: "center",
+    alignItems: "flex-start",
+    paddingRight: spacing.xs,
+  },
   center: {
     flex: 1,
+    minWidth: 0,
     justifyContent: "center",
   },
+  centerFlushLeft: {
+    alignItems: "flex-start",
+  },
+  plannerCenter: {
+    flex: 1,
+    minWidth: 0,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   right: {
-    width: 66,
+    flexShrink: 0,
+    alignItems: "flex-end",
+    justifyContent: "center",
+  },
+  plannerRight: {
+    flexShrink: 0,
     alignItems: "flex-end",
     justifyContent: "center",
   },
   title: {
     textAlign: "left",
+    width: "100%",
+    flexShrink: 1,
   },
   content: {
     flex: 1,

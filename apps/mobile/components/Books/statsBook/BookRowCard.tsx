@@ -3,6 +3,7 @@ import { View, StyleSheet, Pressable } from "react-native";
 
 import { BaseIcon } from "@musti/ui-native";
 import { Card, MText, radii, spacing, useTheme } from "@musti/ui-native";
+import { useTranslation, formatTranslation } from "@musti/core";
 import { formatModeParts } from "@/utils/formatModeParts";
 import type { BookRow } from "./types";
 
@@ -12,6 +13,7 @@ type Props = {
 };
 
 export function BookRowCard({ item, onPress }: Props) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
 
   const parts = useMemo(
@@ -33,7 +35,9 @@ export function BookRowCard({ item, onPress }: Props) {
               {item.bookName}
             </MText>
             <MText variant="caption" color="textSecondary" numberOfLines={1}>
-              {item.pagesTotal} pages
+              {formatTranslation(t("bookshelf.common.pagesCount"), {
+                count: item.pagesTotal,
+              })}
             </MText>
           </View>
 

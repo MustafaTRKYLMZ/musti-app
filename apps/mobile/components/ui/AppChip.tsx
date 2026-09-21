@@ -6,7 +6,7 @@ import {
   View,
   ViewStyle,
 } from "react-native";
-import { MText, spacing, radii } from "@musti/ui-native";
+import { MText, spacing, radii, touchTargets } from "@musti/ui-native";
 import { BaseIcon } from "@musti/ui-native";
 
 type ChipColors = {
@@ -43,7 +43,7 @@ export type AppChipProps = {
 };
 
 const sizeMap = {
-  sm: { px: spacing.md, py: spacing.xs, radius: radii.md, font: 13 },
+  sm: { px: spacing.md, py: spacing.sm, radius: radii.md, font: 13 },
   md: { px: spacing.lg, py: spacing.sm, radius: radii.lg, font: 14 },
   lg: {
     px: spacing.xl ?? spacing.lg,
@@ -63,7 +63,7 @@ export function AppChip({
   icon,
   iconFamily = "ion",
   iconPosition = "left",
-  iconSize = 18,
+  iconSize = touchTargets.controlIcon,
 
   size = "md",
   pill = false,
@@ -79,20 +79,21 @@ export function AppChip({
   const palette = disabled
     ? colors.disabled ?? colors.inactive
     : active
-    ? colors.active
-    : colors.inactive;
+      ? colors.active
+      : colors.inactive;
 
   const radius = pill ? radii.full : s.radius;
 
   const leftIcon = icon && iconPosition === "left";
   const rightIcon = icon && iconPosition === "right";
+  const isPressable = !!onPress && !disabled;
 
   return (
     <Pressable
       testID={testID}
       onPress={disabled ? undefined : onPress}
       disabled={disabled || !onPress}
-      hitSlop={8}
+      hitSlop={spacing.xs}
       accessibilityRole="button"
       accessibilityState={{ disabled, selected: active }}
       style={({ pressed }) => {
@@ -108,6 +109,7 @@ export function AppChip({
             backgroundColor: palette.bg,
             borderColor: palette.border,
             opacity: baseOpacity * pressOpacity,
+            minHeight: isPressable ? touchTargets.minimum : undefined,
           },
           style,
         ];
@@ -147,6 +149,7 @@ export function AppChip({
 const styles = StyleSheet.create({
   base: {
     borderWidth: 1,
+    justifyContent: "center",
   },
   row: {
     flexDirection: "row",

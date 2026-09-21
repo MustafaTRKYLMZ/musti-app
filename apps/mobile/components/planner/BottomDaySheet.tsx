@@ -1,8 +1,12 @@
 import React, { useMemo, useRef } from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
-import BottomSheet from "@gorhom/bottom-sheet"; // Adjust the import path if necessary
+import { View, Pressable, StyleSheet } from "react-native";
+import BottomSheet from "@gorhom/bottom-sheet";
+import { useTranslation, toBcp47 } from "@musti/core";
+import { MText, spacing, useTheme } from "@musti/ui-native";
 import type { MEvent } from "@musti/planner";
 import { formatTime } from "@/utils/calendar/format";
+import { HeaderIconButton } from "@/components/ui/HeaderIconButton";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export function BottomDaySheet(props: {
   date: Date;
@@ -14,6 +18,10 @@ export function BottomDaySheet(props: {
 }) {
   const ref = useRef<BottomSheet>(null);
   const snapPoints = useMemo(() => ["22%", "45%", "75%"], []);
+  const { colors } = useTheme();
+  const { t, language } = useTranslation();
+
+  const locale = props.locale ?? toBcp47(language);
 
   return (
     <BottomSheet
@@ -22,42 +30,56 @@ export function BottomDaySheet(props: {
       snapPoints={snapPoints}
       enablePanDownToClose
       onClose={props.onClose}
+      backgroundStyle={{ backgroundColor: colors.surface }}
+      handleIndicatorStyle={{ backgroundColor: colors.borderSubtle }}
     >
       <View style={styles.wrap}>
         <View style={styles.row}>
-          <Text style={styles.title}>
-            {props.date.toLocaleDateString(props.locale ?? "tr-TR", {
+          <MText variant="bodyStrong" style={{ color: colors.textPrimary, flex: 1 }}>
+            {props.date.toLocaleDateString(locale, {
               weekday: "long",
               day: "numeric",
               month: "long",
             })}
-          </Text>
+          </MText>
 
-          <Pressable onPress={props.onCreate} style={styles.addBtn}>
-            <Text style={styles.addBtnText}>＋</Text>
-          </Pressable>
+          <HeaderIconButton
+            icon="add-outline"
+            accessibilityLabel={t("empty.events.action")}
+            onPress={props.onCreate}
+          />
         </View>
 
         {props.events.length === 0 ? (
-          <Text style={styles.empty}>Bu gün için etkinlik yok</Text>
+          <EmptyState
+            compact
+            icon="calendar-outline"
+            title={t("empty.events.title")}
+            actionLabel={t("empty.events.action")}
+            onAction={props.onCreate}
+          />
         ) : (
           props.events.map((e) => (
             <Pressable
               key={e.id}
               onPress={() => props.onPressEvent(e)}
               style={styles.item}
+              accessibilityRole="button"
+              accessibilityLabel={e.title}
             >
               <View
-                style={[styles.dot, { backgroundColor: e.color ?? "#2F6FED" }]}
+                style={[
+                  styles.dot,
+                  { backgroundColor: e.color ?? colors.primary },
+                ]}
               />
               <View style={{ flex: 1 }}>
-                <Text numberOfLines={1} style={styles.itemTitle}>
+                <MText variant="bodyStrong" numberOfLines={1}>
                   {e.title}
-                </Text>
-                <Text style={styles.itemTime}>
-                  {formatTime(e.start, props.locale)} –{" "}
-                  {formatTime(e.end, props.locale)}
-                </Text>
+                </MText>
+                <MText variant="caption" color="textSecondary">
+                  {formatTime(e.start, locale)} – {formatTime(e.end, locale)}
+                </MText>
               </View>
             </Pressable>
           ))
@@ -68,30 +90,22 @@ export function BottomDaySheet(props: {
 }
 
 const styles = StyleSheet.create({
-  wrap: { padding: 16 },
+  wrap: { padding: spacing.md },
   row: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    marginBottom: spacing.sm,
   },
-  title: { fontSize: 16, fontWeight: "800", color: "#111" },
-  addBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+  item: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#EEF4FF",
+    paddingVertical: spacing.sm,
   },
-  addBtnText: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: "#2F6FED",
-    marginTop: -1,
+  dot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: spacing.sm,
   },
-  empty: { marginTop: 10, color: "#777" },
-  item: { flexDirection: "row", alignItems: "center", paddingVertical: 10 },
-  dot: { width: 10, height: 10, borderRadius: 5, marginRight: 10 },
-  itemTitle: { fontSize: 14, fontWeight: "700", color: "#111" },
-  itemTime: { fontSize: 12, color: "#666", marginTop: 2 },
 });

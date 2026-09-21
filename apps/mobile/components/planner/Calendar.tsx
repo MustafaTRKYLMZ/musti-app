@@ -8,17 +8,24 @@ import {
   addDays,
   startOfWeek,
 } from "@musti/planner";
+import {
+  createCalendarEvent,
+  deleteCalendarEvent,
+  updateCalendarEvent,
+} from "@/services/googleCalendar/calendarEventMutations";
 import { WeekView } from "./WeekView";
 import { WeekdayLettersRow } from "./WeekdayLettersRow";
 import { plannerTheme, spacing } from "@musti/ui-native";
 import { MonthContainer } from "./MonthContainer";
+import { DayViewModal } from "./DayViewModal";
+import { DayView } from "./DayView";
 import { DAYS_IN_WEEK, TIME_COL_WIDTH } from "@/config/timeConfigs";
 import { UpsertEventModal } from "../ui/modals/UpsertEventModal";
-import { GoogleEventDetailModal } from "../ui/modals/GoogleEventDetailModal";
 import { useCalendar } from "@/hooks/useCalendar";
 
 import { useCalendarEventsStore } from "@/store/calendar/useCalendarEventsStore";
 import { useToast } from "../ui/ToastProvider";
+import { useTranslation } from "@musti/core";
 
 const { colors } = plannerTheme;
 
@@ -27,6 +34,8 @@ export type CalendarProps = {
   locale?: string;
   weekView?: Partial<WeekViewConfig>;
   onEventChange?: (next: MEvent) => void;
+  onRefresh?: () => void;
+  refreshing?: boolean;
 };
 
 export const Calendar: FC<CalendarProps> = ({
@@ -34,6 +43,8 @@ export const Calendar: FC<CalendarProps> = ({
   locale,
   weekView,
   onEventChange,
+  onRefresh,
+  refreshing,
 }) => {
   const { width } = useWindowDimensions();
 
@@ -54,14 +65,17 @@ export const Calendar: FC<CalendarProps> = ({
 
     // events
     events,
-    addEvent,
-    updateEvent,
 
     // actions
     pressEvent,
+
+    dayModalOpen,
+    dayModalDate,
+    closeDayModal,
   } = useCalendar();
 
   const { showToast, hideToast } = useToast();
+  const { t } = useTranslation();
 
   const deleteEventWithUndo = useCalendarEventsStore(
     (s) => s.deleteEventWithUndo
@@ -104,35 +118,68 @@ export const Calendar: FC<CalendarProps> = ({
     return (events ?? []).find((e) => e.id === editEventId) ?? null;
   }, [events, editOpen, editEventId]);
 
+  const showMutationError = useCallback(
+    (message: string) => {
+      showToast({
+        title: t("planner.event.updateFailed"),
+        message,
+        variant: "danger",
+        duration: 6000,
+      });
+    },
+    [showToast, t]
+  );
+
   const confirmDeleteToast = useCallback(
-    (eventId: string) => {
+    (event: MEvent) => {
+      const isGoogle = isGoogleEvent(event);
       showToast(
         {
-          title: "Delete event?",
-          message: "You can undo for a few seconds.",
+          title: t("planner.event.deleteTitle"),
+          message: isGoogle
+            ? t("planner.event.deleteGoogle")
+            : t("planner.event.deleteUndo"),
           variant: "danger",
           duration: 6000,
           actions: [
             {
-              label: "Cancel",
+              label: t("cancel"),
               onPress: () => hideToast(),
             },
             {
-              label: "Delete",
+              label: t("delete"),
               destructive: true,
               onPress: () => {
                 hideToast();
 
-                deleteEventWithUndo(eventId, 4000);
+                if (isGoogle) {
+                  void deleteCalendarEvent(event)
+                    .then(() => {
+                      showToast({
+                        message: t("planner.event.deleted"),
+                        variant: "success",
+                        duration: 3000,
+                      });
+                    })
+                    .catch((err) => {
+                      showMutationError(
+                        err instanceof Error
+                          ? err.message
+                          : t("planner.event.deleteFailed")
+                      );
+                    });
+                  return;
+                }
 
+                deleteEventWithUndo(event.id, 4000);
                 showToast(
                   {
-                    message: "Event deleted",
+                    message: t("planner.event.deleted"),
                     variant: "danger",
                     duration: 4000,
                     actions: [
                       {
-                        label: "Undo",
+                        label: t("planner.event.undo"),
                         onPress: () => undoDelete(),
                       },
                     ],
@@ -146,25 +193,29 @@ export const Calendar: FC<CalendarProps> = ({
         6000
       );
     },
-    [showToast, hideToast, deleteEventWithUndo, undoDelete]
+    [showToast, hideToast, deleteEventWithUndo, undoDelete, showMutationError, t]
   );
 
   return (
     <View style={styles.root}>
-      <View style={styles.lettersRow}>
-        {leftInset > 0 && <View style={{ width: leftInset }} />}
-        <View style={[styles.gridBorder, { width: gridWidth }]}>
-          <WeekdayLettersRow
-            days={currentWeekDays}
-            locale={locale ?? config.locale}
-            colWidth={colWidth}
-            gap={gap}
-          />
+      {view === "week" ? (
+        <View style={styles.lettersRow}>
+          {leftInset > 0 && <View style={{ width: leftInset }} />}
+          <View style={[styles.gridBorder, { width: gridWidth }]}>
+            <WeekdayLettersRow
+              days={currentWeekDays}
+              locale={locale ?? config.locale}
+              weekStartsOn={config.weekStartsOn ?? 1}
+              colWidth={colWidth}
+              gap={gap}
+            />
+          </View>
         </View>
-      </View>
+      ) : null}
 
-      {view === "week" && (
-        <WeekView
+      {view === "day" && (
+        <DayView
+          day={date}
           config={config}
           locale={locale ?? config.locale}
           weekView={{
@@ -178,12 +229,31 @@ export const Calendar: FC<CalendarProps> = ({
         />
       )}
 
+      {view === "week" && (
+        <WeekView
+          config={config}
+          locale={locale ?? config.locale}
+          weekView={{
+            startHour: 0,
+            endHour: 24,
+            stepMinutes: 15,
+            pxPerMinute: 1.2,
+            ...weekView,
+          }}
+          onEventChange={onEventChange}
+          onRefresh={onRefresh}
+          refreshing={refreshing}
+        />
+      )}
+
       {view === "month" && (
         <View style={{ flex: 1 }}>
           <MonthContainer
             config={config}
             colWidth={colWidth}
             locale={locale ?? config.locale}
+            onRefresh={onRefresh}
+            refreshing={refreshing}
           />
         </View>
       )}
@@ -197,20 +267,36 @@ export const Calendar: FC<CalendarProps> = ({
         locale={locale ?? config.locale}
         timezone={config.timezone}
         onClose={closeCreate}
-        onSubmit={(payload) => {
-          addEvent(payload);
-          closeCreate();
+        onSubmit={async (payload, targetCalendarId) => {
+          try {
+            await createCalendarEvent(payload, targetCalendarId);
+          } catch (err) {
+            showMutationError(
+              err instanceof Error
+                ? err.message
+                : t("planner.event.createFailed")
+            );
+            throw err;
+          }
         }}
       />
 
-      {/* EDIT / GOOGLE READ-ONLY */}
-      {editEvent && isGoogleEvent(editEvent) ? (
-        <GoogleEventDetailModal
-          visible={editOpen}
-          event={editEvent}
-          onClose={closeEdit}
-        />
-      ) : editEvent ? (
+      <DayViewModal
+        visible={dayModalOpen}
+        day={dayModalDate}
+        onClose={closeDayModal}
+        config={config}
+        locale={locale ?? config.locale}
+        weekView={{
+          startHour: 0,
+          endHour: 24,
+          stepMinutes: 15,
+          pxPerMinute: 1.2,
+          ...weekView,
+        }}
+      />
+
+      {editEvent ? (
         <UpsertEventModal
           mode="edit"
           visible={editOpen}
@@ -219,13 +305,21 @@ export const Calendar: FC<CalendarProps> = ({
           locale={locale ?? config.locale}
           timezone={config.timezone}
           onClose={closeEdit}
-          onSubmit={(id, patch) => {
-            updateEvent(id, patch);
-            closeEdit();
+          onSubmit={async (id, patch) => {
+            try {
+              await updateCalendarEvent(editEvent, patch);
+            } catch (err) {
+              showMutationError(
+                err instanceof Error
+                  ? err.message
+                  : t("planner.event.updateFailedShort")
+              );
+              throw err;
+            }
           }}
           onDelete={() => {
             closeEdit();
-            confirmDeleteToast(editEvent.id);
+            confirmDeleteToast(editEvent);
           }}
         />
       ) : null}

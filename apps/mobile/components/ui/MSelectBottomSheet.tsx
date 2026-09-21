@@ -204,7 +204,6 @@ export function MSelectBottomSheet<T extends MSelectItemBase>({
           <BaseIcon
             family="ion"
             name="chevron-down"
-            size={iconSizes.md}
             color={colors.textPrimary}
           />
         </View>
@@ -259,7 +258,6 @@ export function MSelectBottomSheet<T extends MSelectItemBase>({
                 <MText style={{ fontWeight: "900" }}>{label ?? "Select"}</MText>
                 <IconButton
                   name="close"
-                  size={iconSizes.lg}
                   color={colors.textPrimary}
                   onPress={closeSheet}
                 />
@@ -285,7 +283,6 @@ export function MSelectBottomSheet<T extends MSelectItemBase>({
                   {!!q && (
                     <IconButton
                       name="close-circle"
-                      size={iconSizes.md}
                       color={colors.textSecondary}
                       onPress={() => setQ("")}
                       style={{ padding: 0 }}

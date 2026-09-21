@@ -3,6 +3,7 @@ import { View, StyleSheet, Pressable } from "react-native";
 
 import { BaseIcon } from "@musti/ui-native";
 import { Card, MText, radii, spacing, useTheme } from "@musti/ui-native";
+import { useTranslation, formatTranslation } from "@musti/core";
 import type { SimpleTopRow } from "./types";
 
 type Props = {
@@ -11,6 +12,7 @@ type Props = {
 };
 
 export function SimpleTopRowCard({ item, onPress }: Props) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
 
   return (
@@ -32,7 +34,9 @@ export function SimpleTopRowCard({ item, onPress }: Props) {
             color={colors.textSecondary}
           />
           <MText variant="caption" color="textSecondary">
-            {item.pages} pages
+            {formatTranslation(t("bookshelf.common.pagesCount"), {
+              count: item.pages,
+            })}
           </MText>
         </View>
       </Card>

@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo } from "react";
 import { View, StyleSheet, Pressable, Dimensions } from "react-native";
 import { spacing, useTheme } from "@musti/ui-native";
 
+import { bookshelfScreenStyles } from "@/components/Books/bookshelfScreenStyles";
+
 import { useBookSectionsStore } from "@/store/bookshelf/useBookSectionsStore";
 import { useBooksStore } from "@/store/bookshelf/useBooksStore";
 import { useReadingEventsStore } from "@/store/bookshelf/useReadingEventsStore";
@@ -9,10 +11,9 @@ import { useReadingEventsStore } from "@/store/bookshelf/useReadingEventsStore";
 import { SectionHeader } from "./SectionHeader";
 import { AddSectionForm } from "./AddSectionForm";
 import { SectionList } from "./SectionList";
-import { Divider } from "../ui/Divider";
 import { clampPage } from "@/utils/number";
 import { buildEffectiveRanges } from "@/utils/buildEffectiveRanges";
-import { BookSection } from "@musti/core";
+import { BookSection, useTranslation, formatTranslation } from "@musti/core";
 
 type Props = {
   visible: boolean;
@@ -30,6 +31,7 @@ export function BookSectionsSidebar({
   bookUri,
   onJumpToPage,
 }: Props) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
 
   const byBook = useBookSectionsStore((s) => s.byBook);
@@ -88,7 +90,11 @@ export function BookSectionsSidebar({
     if (num < 1) return;
 
     if (num > totalPages) {
-      setPageError(`This book has only ${totalPages} pages.`);
+      setPageError(
+        formatTranslation(t("bookshelf.chapters.bookPagesOnly"), {
+          count: totalPages,
+        })
+      );
     }
     setEndPageError(null);
   };
@@ -102,7 +108,11 @@ export function BookSectionsSidebar({
     if (num < 1) return;
 
     if (num > totalPages) {
-      setEndPageError(`This book has only ${totalPages} pages.`);
+      setEndPageError(
+        formatTranslation(t("bookshelf.chapters.bookPagesOnly"), {
+          count: totalPages,
+        })
+      );
     }
   };
 
@@ -113,17 +123,25 @@ export function BookSectionsSidebar({
 
     if (end != null) {
       if (Number.isNaN(end) || end < page) {
-        setEndPageError("End page must be >= start page.");
+        setEndPageError(t("bookshelf.chapters.endGteStart"));
         return;
       }
       if (totalPages && end > totalPages) {
-        setEndPageError(`This book has only ${totalPages} pages.`);
+        setEndPageError(
+          formatTranslation(t("bookshelf.chapters.bookPagesOnly"), {
+            count: totalPages,
+          })
+        );
         return;
       }
     }
 
     if (totalPages && page > totalPages) {
-      setPageError(`This book has only ${totalPages} pages.`);
+      setPageError(
+        formatTranslation(t("bookshelf.chapters.bookPagesOnly"), {
+          count: totalPages,
+        })
+      );
       return;
     }
 
@@ -177,13 +195,14 @@ export function BookSectionsSidebar({
         style={[
           styles.sidebar,
           {
-            backgroundColor: colors.surface,
+            backgroundColor: colors.background,
             borderLeftColor: colors.borderSubtle,
             shadowColor: colors.shadowStrong,
           },
         ]}
       >
-        <SectionHeader title="Chapters" onClose={onClose} />
+        <SectionHeader title={t("bookshelf.chapters.title")} onClose={onClose} />
+
         <AddSectionForm
           title={title}
           setTitle={setTitle}
@@ -196,14 +215,14 @@ export function BookSectionsSidebar({
           endPageError={endPageError}
         />
 
-        <Divider />
-
-        <SectionList
-          sections={sections}
-          onDeleteSection={handleDeleteSection}
-          onUpdateSection={handleUpdateSection}
-          onJumpToPage={handleJumpAndClose}
-        />
+        <View style={[bookshelfScreenStyles.listCard, styles.listCard]}>
+          <SectionList
+            sections={sections}
+            onDeleteSection={handleDeleteSection}
+            onUpdateSection={handleUpdateSection}
+            onJumpToPage={handleJumpAndClose}
+          />
+        </View>
       </View>
     </View>
   );
@@ -224,6 +243,8 @@ const styles = StyleSheet.create({
   },
   sidebar: {
     width: SIDEBAR_WIDTH,
+    flex: 1,
+    flexDirection: "column",
     paddingTop: spacing["2xl"],
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.lg,
@@ -231,5 +252,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 10,
     shadowOffset: { width: -4, height: 0 },
+    gap: spacing.md,
+  },
+  listCard: {
+    flex: 1,
+    paddingVertical: spacing.sm,
   },
 });

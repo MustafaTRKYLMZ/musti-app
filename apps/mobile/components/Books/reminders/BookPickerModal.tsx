@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { MText, spacing, radii, useTheme, iconSizes } from "@musti/ui-native";
 import { BaseIcon, IconButton } from "@musti/ui-native";
+import { useTranslation } from "@musti/core";
 import { useBooksStore } from "@/store/bookshelf/useBooksStore";
 
 type BookRow = {
@@ -29,9 +30,11 @@ export function BookPickerModal({
   onClose,
   onPick,
   selectedUri,
-  title = "Choose book",
+  title,
 }: Props) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
+  const resolvedTitle = title ?? t("bookshelf.reminders.chooseBook");
   const [q, setQ] = useState("");
 
   // ✅ adapt to your store shape
@@ -43,10 +46,10 @@ export function BookPickerModal({
     return Object.entries(items)
       .map(([uri, v]: any) => ({
         uri,
-        name: String(v?.name ?? v?.title ?? "Untitled"),
+        name: String(v?.name ?? v?.title ?? t("bookshelf.common.untitled")),
       }))
       .filter((b) => b.uri && b.name);
-  }, [items]);
+  }, [items, t]);
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
@@ -85,13 +88,11 @@ export function BookPickerModal({
         {selected ? (
           <BaseIcon
             name={"checkmark-circle" as any}
-            size={iconSizes.md}
             color={colors.success}
           />
         ) : (
           <BaseIcon
             name={"chevron-forward" as any}
-            size={iconSizes.md}
             color={colors.textSecondary}
           />
         )}
@@ -111,11 +112,10 @@ export function BookPickerModal({
       <View style={[styles.sheet, { backgroundColor: colors.surface }]}>
         <View style={styles.header}>
           <MText variant="heading3" color="textPrimary">
-            {title}
+            {resolvedTitle}
           </MText>
           <IconButton
             name="close-outline"
-            size={22}
             color={colors.textPrimary}
             onPress={onClose}
           />
@@ -132,13 +132,12 @@ export function BookPickerModal({
         >
           <BaseIcon
             name={"search-outline" as any}
-            size={iconSizes.md}
             color={colors.textSecondary}
           />
           <TextInput
             value={q}
             onChangeText={setQ}
-            placeholder="Search book…"
+            placeholder={t("bookshelf.reminders.searchBook")}
             placeholderTextColor={colors.textSecondary}
             style={{ flex: 1, color: colors.textPrimary }}
             autoCorrect={false}
@@ -148,7 +147,6 @@ export function BookPickerModal({
             <Pressable onPress={() => setQ("")} hitSlop={8}>
               <BaseIcon
                 name={"close-circle" as any}
-                size={iconSizes.md}
                 color={colors.textSecondary}
               />
             </Pressable>
@@ -164,7 +162,7 @@ export function BookPickerModal({
           contentContainerStyle={{ paddingBottom: spacing.lg }}
           ListEmptyComponent={
             <View style={{ padding: spacing.lg, opacity: 0.8 }}>
-              <MText color="textSecondary">No books found.</MText>
+              <MText color="textSecondary">{t("bookshelf.reminders.noBooks")}</MText>
             </View>
           }
         />

@@ -18,7 +18,6 @@ export function MonthNavigator({ monthName, year, onPrev, onNext }: Props) {
         style={styles.monthNavIcon}
         hitSlop={12}
         name="chevron-back"
-        size={iconSizes.xl}
         color={colors.textSecondary}
       />
 
@@ -40,7 +39,6 @@ export function MonthNavigator({ monthName, year, onPrev, onNext }: Props) {
         style={styles.monthNavIcon}
         hitSlop={12}
         name="chevron-forward"
-        size={iconSizes.xl}
         color={colors.textSecondary}
       />
     </View>

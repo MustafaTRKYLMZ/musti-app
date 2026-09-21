@@ -3,7 +3,12 @@ import { View, StyleSheet } from "react-native";
 import { MText, radii, spacing, useTheme } from "@musti/ui-native";
 
 import { AppChip } from "@/components/ui/AppChip";
-import { ReadingTarget, TargetItemStatus } from "@musti/core";
+import {
+  ReadingTarget,
+  TargetItemStatus,
+  formatTranslation,
+  useTranslation,
+} from "@musti/core";
 
 type TargetItemPagerProps = {
   target: ReadingTarget;
@@ -17,6 +22,7 @@ export const TargetItemPager = ({
   maxDots = 7,
 }: TargetItemPagerProps) => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const items = target.items ?? [];
   const total = items.length;
 
@@ -106,7 +112,9 @@ export const TargetItemPager = ({
 
       <View style={styles.chipsRow}>
         <AppChip
-          label={`Done ${counts.done}`}
+          label={formatTranslation(t("bookshelf.target.doneCount"), {
+            count: counts.done,
+          })}
           icon="checkmark-circle-outline"
           active={false}
           onPress={() => {}}
@@ -116,7 +124,9 @@ export const TargetItemPager = ({
           disabled
         />
         <AppChip
-          label={`Active ${counts.active}`}
+          label={formatTranslation(t("bookshelf.target.activeCount"), {
+            count: counts.active,
+          })}
           icon="flash-outline"
           active={false}
           onPress={() => {}}
@@ -126,7 +136,9 @@ export const TargetItemPager = ({
           disabled
         />
         <AppChip
-          label={`Pending ${counts.pending}`}
+          label={formatTranslation(t("bookshelf.target.pendingCount"), {
+            count: counts.pending,
+          })}
           icon="time-outline"
           active={false}
           onPress={() => {}}
@@ -143,7 +155,7 @@ export const TargetItemPager = ({
 const styles = StyleSheet.create({
   wrap: {
     borderWidth: 1,
-    borderRadius: radii.xl,
+    borderRadius: radii.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     gap: spacing.xs,

@@ -1,10 +1,12 @@
 import React, { useMemo } from "react";
 import { View, StyleSheet, FlatList, useWindowDimensions } from "react-native";
+import { useTranslation } from "@musti/core";
 import { MText, spacing } from "@musti/ui-native";
 import type { LocalPdfFile } from "@/utils/getPdfsDirectory";
 import { BookCard } from "./BookCard";
 import { PdfCoverPrewarmer } from "../ui/pdf/PdfCoverPrewarmer";
 import { ShelfPlank } from "./ShelfPlank";
+import { BOOK_TO_SHELF_GAP, SECTION_HEADER_GAP } from "./shelfLayout";
 
 type Props = {
   lastReadBooks: { uri: string; name: string; lastOpened: number }[];
@@ -15,12 +17,6 @@ type Props = {
   readingStats?: Record<string, { pagesTotal: number; targetPages: number }>;
 };
 
-const FOOTER_H = 64;
-const FOOTER_OVERLAP = FOOTER_H / 5;
-
-const BOOK_TO_SHELF_GAP = -28;
-const SHELF_EXTRA_PADDING = spacing["2xl"];
-
 export const LastReadBook = ({
   lastReadBooks,
   handleOpenPdf,
@@ -29,6 +25,7 @@ export const LastReadBook = ({
   progressMap,
   readingStats,
 }: Props) => {
+  const { t } = useTranslation();
   const today = new Date().toISOString().slice(0, 10);
   const { width: screenW } = useWindowDimensions();
 
@@ -46,8 +43,8 @@ export const LastReadBook = ({
   return (
     <View style={styles.root}>
       <View style={styles.headerRow}>
-        <MText variant="heading2" color="textPrimary">
-          Last read
+        <MText variant="heading3" color="textPrimary">
+          {t("bookshelf.lastRead")}
         </MText>
       </View>
 
@@ -95,7 +92,7 @@ export const LastReadBook = ({
 
 const styles = StyleSheet.create({
   root: {
-    marginTop: spacing.xl,
+    marginTop: spacing.md,
     overflow: "visible",
   },
 
@@ -104,12 +101,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    marginBottom: SECTION_HEADER_GAP,
   },
 
   listWrap: {
     position: "relative",
     overflow: "visible",
-    paddingBottom: SHELF_EXTRA_PADDING,
+    paddingBottom: spacing.sm,
   },
 
   list: {
@@ -120,8 +118,8 @@ const styles = StyleSheet.create({
 
   listContent: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.md + FOOTER_OVERLAP,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.sm,
   },
 
   shelfAbs: {
@@ -130,6 +128,6 @@ const styles = StyleSheet.create({
     right: spacing.lg,
     bottom: BOOK_TO_SHELF_GAP,
     zIndex: 1,
-    elevation: 0,
+    elevation: 1,
   },
 });

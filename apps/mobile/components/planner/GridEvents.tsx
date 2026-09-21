@@ -34,6 +34,9 @@ type GridEventsProps = {
   todayIndex: number;
   nowY: number | null;
   nowColor?: string;
+
+  /** Single-day column (day view modal). */
+  mode?: "week" | "day";
 };
 
 export const GridEvents: FC<GridEventsProps> = ({
@@ -54,8 +57,13 @@ export const GridEvents: FC<GridEventsProps> = ({
   todayIndex,
   nowY,
   nowColor,
+  mode = "week",
 }) => {
   const { updateEvent, openDay, pressEvent } = useCalendar();
+
+  const dayCount = mode === "day" ? 1 : 7;
+  const lineCount = mode === "day" ? 2 : 8;
+  const eventDensity = mode === "day" ? "expanded" : density;
 
   const nowX = useMemo(() => {
     if (todayIndex < 0) return null;
@@ -64,12 +72,13 @@ export const GridEvents: FC<GridEventsProps> = ({
 
   return (
     <View style={{ width: gridWidth, height: totalHeight }}>
-      {Array.from({ length: 7 }).map((_, dayIndex) => {
-        const dayDate = addDays(weekStart, dayIndex);
+      {Array.from({ length: dayCount }).map((_, dayIndex) => {
+        const dayDate =
+          mode === "day" ? weekStart : addDays(weekStart, dayIndex);
         return (
           <Pressable
             key={`day-${dayIndex}`}
-            onPress={() => openDay(dayDate)}
+            onPress={mode === "day" ? undefined : () => openDay(dayDate)}
             onLongPress={(evt) =>
               handleTapGrid(dayIndex, evt.nativeEvent.locationY)
             }
@@ -85,7 +94,7 @@ export const GridEvents: FC<GridEventsProps> = ({
         );
       })}
 
-      {Array.from({ length: 8 }).map((_, i) => (
+      {Array.from({ length: lineCount }).map((_, i) => (
         <View
           key={`v-line-${i}`}
           style={[
@@ -151,7 +160,7 @@ export const GridEvents: FC<GridEventsProps> = ({
         return (
           <DraggableEventBlock
             key={b.id}
-            density={density}
+            density={eventDensity}
             weekView={weekView}
             top={b.top}
             height={b.height}

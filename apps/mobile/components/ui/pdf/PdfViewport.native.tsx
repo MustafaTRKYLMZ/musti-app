@@ -1,12 +1,14 @@
 import React, { FC, useMemo } from "react";
 import { View, StyleSheet } from "react-native";
-import Pdf, { PdfRef } from "react-native-pdf";
+import Pdf from "react-native-pdf";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { runOnJS } from "react-native-reanimated";
 
+import type { PdfRef } from "./pdfTypes";
+
 type Props = {
   pdfRef?: React.RefObject<PdfRef | null>;
-  captureRef?: React.RefObject<View | null>; // ✅ NEW
+  captureRef?: React.RefObject<View | null>;
   source: { uri: string } | number;
   initialPage: number;
 
@@ -16,17 +18,18 @@ type Props = {
   enablePaging: boolean;
 
   onLoadComplete: (n: number, filePath?: string) => void;
-  onError?: (e: any) => void;
+  onError?: (e: unknown) => void;
   onPageChanged: (page: number, numberOfPages: number) => void;
 
   onLayoutSize: (w: number, h: number) => void;
 
-  // transform
   translateX: number;
   translateY: number;
   scale: number;
 
   onDoubleTap: () => void;
+  onPinchUpdate?: (scale: number) => void;
+  onPinchEnd?: (scale: number) => void;
 };
 
 export const PdfViewport: FC<Props> = ({
@@ -45,15 +48,27 @@ export const PdfViewport: FC<Props> = ({
   translateY,
   scale,
   onDoubleTap,
+  onPinchUpdate,
+  onPinchEnd,
 }) => {
-  const doubleTapGesture = useMemo(() => {
-    return Gesture.Tap()
+  const gesture = useMemo(() => {
+    const doubleTapGesture = Gesture.Tap()
       .numberOfTaps(2)
       .maxDelay(250)
       .onEnd(() => {
         runOnJS(onDoubleTap)();
       });
-  }, [onDoubleTap]);
+
+    const pinchGesture = Gesture.Pinch()
+      .onUpdate((event) => {
+        if (onPinchUpdate) runOnJS(onPinchUpdate)(event.scale);
+      })
+      .onEnd((event) => {
+        if (onPinchEnd) runOnJS(onPinchEnd)(event.scale);
+      });
+
+    return Gesture.Simultaneous(doubleTapGesture, pinchGesture);
+  }, [onDoubleTap, onPinchUpdate, onPinchEnd]);
 
   return (
     <View
@@ -63,9 +78,8 @@ export const PdfViewport: FC<Props> = ({
         onLayoutSize(width, height);
       }}
     >
-      <GestureDetector gesture={doubleTapGesture}>
+      <GestureDetector gesture={gesture}>
         <View style={styles.cropClip}>
-          {/* ✅ Wrap Pdf with captureRef so we screenshot only this area */}
           <View ref={captureRef} style={styles.captureWrap} collapsable={false}>
             <Pdf
               ref={pdfRef}

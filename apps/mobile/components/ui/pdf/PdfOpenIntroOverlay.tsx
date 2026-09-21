@@ -394,7 +394,6 @@ export const PdfOpenIntroOverlay: FC<Props> = ({
             <BaseIcon
               family="ion"
               name="book-outline"
-              size={20}
               color={colors.textPrimary}
             />
           </View>

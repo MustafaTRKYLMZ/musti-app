@@ -9,6 +9,7 @@ import {
 import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
+import { useTranslation } from "@musti/core";
 import { MText, bookshelfTheme } from "@musti/ui-native";
 
 import { useGamificationSettingsStore } from "@/store/bookshelf/readingGamification/useGamificationSettingsStore";
@@ -24,9 +25,15 @@ const { colors, spacing, radii } = bookshelfTheme;
 
 type Props = {
   inModal?: boolean;
+  /** Inside settings collapsible — no outer card/title chrome */
+  embedded?: boolean;
 };
 
-export function GamificationSettingsCard({ inModal = false }: Props) {
+export function GamificationSettingsCard({
+  inModal = false,
+  embedded = false,
+}: Props) {
+  const { t } = useTranslation();
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -77,8 +84,10 @@ export function GamificationSettingsCard({ inModal = false }: Props) {
       console.error("Failed to schedule motivation nudge after toggle:", error);
     });
     showToast({
-      title: "Motivation nudge",
-      message: !settings.motivationEnabled ? "Enabled" : "Disabled",
+      title: t("bookshelf.gamification.nudgeTitle"),
+      message: !settings.motivationEnabled
+        ? t("bookshelf.gamification.enabled")
+        : t("bookshelf.gamification.disabled"),
       duration: 2500,
     });
   };
@@ -121,8 +130,8 @@ export function GamificationSettingsCard({ inModal = false }: Props) {
       console.error("Failed to schedule motivation nudge after reset:", error);
     });
     showToast({
-      title: "Gamification",
-      message: "Settings reset to defaults",
+      title: t("bookshelf.gamification.title"),
+      message: t("bookshelf.gamification.settingsReset"),
       duration: 2500,
     });
   };
@@ -147,26 +156,39 @@ export function GamificationSettingsCard({ inModal = false }: Props) {
 
   if (!hydrated) return null;
 
-  const cardStyle = [styles.card, inModal ? styles.cardInModal : null].filter(
-    Boolean
-  );
+  const cardStyle = embedded
+    ? styles.embedded
+    : [styles.card, inModal ? styles.cardInModal : null].filter(Boolean);
 
   const content = (
     <View style={cardStyle}>
       <View style={styles.headerRow}>
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <MText style={{ fontSize: 16, fontWeight: "900" }}>
-            Gamification
+        {embedded ? (
+          <MText variant="caption" color="textSecondary" style={{ flex: 1 }}>
+            {t("bookshelf.gamification.preview")} {preview.pages}{" "}
+            {t("bookshelf.streak.pages")} → {preview.base}{" "}
+            {t("bookshelf.gamification.previewNormal")} · {preview.plan}{" "}
+            {t("bookshelf.gamification.previewPlan")} · {preview.target}{" "}
+            {t("bookshelf.gamification.previewTarget")}
           </MText>
-          <MText style={{ opacity: 0.7, marginTop: 2 }} numberOfLines={2}>
-            Preview: {preview.pages} pages → {preview.base} XP (normal) ·{" "}
-            {preview.plan} XP (plan) · {preview.target} XP (target)
-          </MText>
-        </View>
+        ) : (
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <MText variant="heading4" color="textPrimary">
+              {t("bookshelf.gamification.title")}
+            </MText>
+            <MText variant="caption" color="textSecondary" numberOfLines={2}>
+              {t("bookshelf.gamification.preview")} {preview.pages}{" "}
+              {t("bookshelf.streak.pages")} → {preview.base}{" "}
+              {t("bookshelf.gamification.previewNormal")} · {preview.plan}{" "}
+              {t("bookshelf.gamification.previewPlan")} · {preview.target}{" "}
+              {t("bookshelf.gamification.previewTarget")}
+            </MText>
+          </View>
+        )}
 
         <Pressable onPress={onReset} style={styles.resetBtn}>
-          <MText style={{ color: colors.primary, fontWeight: "900" }}>
-            Reset
+          <MText variant="caption" style={{ color: colors.primary, fontWeight: "600" }}>
+            {t("bookshelf.gamification.reset")}
           </MText>
         </Pressable>
       </View>
@@ -174,11 +196,10 @@ export function GamificationSettingsCard({ inModal = false }: Props) {
       <View style={{ height: spacing.sm }} />
 
       <Stepper
-        label="Daily streak goal (pages)"
+        label={t("bookshelf.gamification.dailyStreakGoal")}
         info={{
-          title: "Daily streak goal",
-          message:
-            "Your streak counts for a day if you read at least this many pages.",
+          title: t("bookshelf.gamification.dailyStreakGoalTitle"),
+          message: t("bookshelf.gamification.dailyStreakGoalInfo"),
         }}
         value={settings.qualifyPagesPerDay}
         min={1}
@@ -188,10 +209,10 @@ export function GamificationSettingsCard({ inModal = false }: Props) {
       />
 
       <Stepper
-        label="XP per page"
+        label={t("bookshelf.gamification.xpPerPage")}
         info={{
-          title: "XP per page",
-          message: "How much XP you earn for each page you read.",
+          title: t("bookshelf.gamification.xpPerPage"),
+          message: t("bookshelf.gamification.xpPerPageInfo"),
         }}
         value={settings.xpPerPage}
         min={0}
@@ -201,10 +222,10 @@ export function GamificationSettingsCard({ inModal = false }: Props) {
       />
 
       <Stepper
-        label="Plan multiplier"
+        label={t("bookshelf.gamification.planMultiplier")}
         info={{
-          title: "Plan multiplier",
-          message: "XP boost when reading in Plan mode.",
+          title: t("bookshelf.gamification.planMultiplier"),
+          message: t("bookshelf.gamification.planMultiplierInfo"),
         }}
         value={Math.round(settings.planMultiplier * 100)}
         valueLabel={`${Math.round(settings.planMultiplier * 100)}%`}
@@ -215,10 +236,10 @@ export function GamificationSettingsCard({ inModal = false }: Props) {
       />
 
       <Stepper
-        label="Target multiplier"
+        label={t("bookshelf.gamification.targetMultiplier")}
         info={{
-          title: "Target multiplier",
-          message: "XP boost when reading in Target mode.",
+          title: t("bookshelf.gamification.targetMultiplier"),
+          message: t("bookshelf.gamification.targetMultiplierInfo"),
         }}
         value={Math.round(settings.targetMultiplier * 100)}
         valueLabel={`${Math.round(settings.targetMultiplier * 100)}%`}
@@ -229,10 +250,10 @@ export function GamificationSettingsCard({ inModal = false }: Props) {
       />
 
       <Stepper
-        label="Plan completion bonus"
+        label={t("bookshelf.gamification.planBonus")}
         info={{
-          title: "Plan completion bonus",
-          message: "Extra XP when you complete your plan.",
+          title: t("bookshelf.gamification.planBonus"),
+          message: t("bookshelf.gamification.planBonusInfo"),
         }}
         value={settings.planCompleteBonus}
         min={0}
@@ -242,10 +263,10 @@ export function GamificationSettingsCard({ inModal = false }: Props) {
       />
 
       <Stepper
-        label="Target completion bonus"
+        label={t("bookshelf.gamification.targetBonus")}
         info={{
-          title: "Target completion bonus",
-          message: "Extra XP when you complete a target.",
+          title: t("bookshelf.gamification.targetBonus"),
+          message: t("bookshelf.gamification.targetBonusInfo"),
         }}
         value={settings.targetCompleteBonus}
         min={0}
@@ -256,42 +277,44 @@ export function GamificationSettingsCard({ inModal = false }: Props) {
 
       <View style={styles.divider} />
 
-      <MText style={{ fontSize: 14, fontWeight: "900" }}>
-        Motivation nudge
+      <MText variant="heading4" color="textPrimary">
+        {t("bookshelf.gamification.motivationNudge")}
       </MText>
-      <MText style={{ opacity: 0.7, marginTop: 2 }}>
-        Optional reminder to protect your streak.
+      <MText variant="caption" color="textSecondary">
+        {t("bookshelf.gamification.motivationNudgeDesc")}
       </MText>
 
       <View style={{ height: spacing.sm }} />
 
       <ToggleRow
-        label="Enable motivation nudge"
-        description="Sends a reminder at your chosen time."
+        label={t("bookshelf.gamification.enableNudge")}
+        description={t("bookshelf.gamification.enableNudgeDesc")}
         value={settings.motivationEnabled}
         onToggle={onToggleEnabled}
-        onLabel="On"
-        offLabel="Off"
+        onLabel={t("common.on")}
+        offLabel={t("common.off")}
       />
 
       <View style={{ height: spacing.sm }} />
 
       <ToggleRow
-        label="Only if goal not met"
-        description="If you already hit the streak goal, don’t send."
+        label={t("bookshelf.gamification.onlyIfNotDone")}
+        description={t("bookshelf.gamification.onlyIfNotDoneDesc")}
         value={settings.motivationOnlyIfNotDone}
         onToggle={toggleOnlyIfNotDone}
-        onLabel="On"
-        offLabel="Off"
+        onLabel={t("common.on")}
+        offLabel={t("common.off")}
       />
 
       <View style={{ height: spacing.md }} />
 
-      <MText style={{ fontWeight: "900" }}>Schedule</MText>
+      <MText variant="bodyStrong" color="textPrimary">
+        {t("bookshelf.gamification.schedule")}
+      </MText>
 
       <View style={styles.rowWrap}>
         <AppChip
-          label="Daily"
+          label={t("bookshelf.gamification.daily")}
           active={settings.motivationScheduleType === "daily"}
           onPress={() => setScheduleType("daily")}
           icon="repeat-outline"
@@ -300,7 +323,7 @@ export function GamificationSettingsCard({ inModal = false }: Props) {
           pill={false}
         />
         <AppChip
-          label="Weekly"
+          label={t("bookshelf.gamification.weekly")}
           active={settings.motivationScheduleType === "weekly"}
           onPress={() => setScheduleType("weekly")}
           icon="calendar-outline"
@@ -328,7 +351,7 @@ export function GamificationSettingsCard({ inModal = false }: Props) {
 
       <View style={{ marginTop: spacing.md }}>
         <RowAction
-          label="Time"
+          label={t("bookshelf.gamification.time")}
           value={timeLabel}
           icon="time-outline"
           onPress={() => setShowTime(true)}
@@ -375,9 +398,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderSubtle,
     backgroundColor: colors.surface,
-    borderRadius: radii.lg,
+    borderRadius: radii.md,
     padding: spacing.md,
     marginHorizontal: spacing.lg,
+  },
+  embedded: {
+    gap: spacing.sm,
   },
   cardInModal: {
     marginHorizontal: 0,

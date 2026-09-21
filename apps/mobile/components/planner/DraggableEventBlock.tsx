@@ -10,6 +10,7 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import type { MEvent, WeekViewConfig } from "@musti/planner/src/types";
 import { withDayAndMinutes, pad2 } from "@musti/planner";
 import { colors } from "@musti/ui-native";
+import { eventToTitle } from "@/utils/calendar/format";
 
 type Props = {
   density: "compact" | "expanded";
@@ -31,6 +32,8 @@ type Props = {
   onChange?: (next: MEvent) => void;
 };
 
+const MIN_EXPANDED_HEIGHT = 28;
+
 function fmtHHmm(minuteOfDay: number) {
   const m = Math.max(0, Math.min(24 * 60 - 1, Math.round(minuteOfDay)));
   const h = Math.floor(m / 60);
@@ -41,6 +44,8 @@ function fmtHHmm(minuteOfDay: number) {
 export function DraggableEventBlock(p: Props) {
   const pxPerMin = p.weekView.pxPerMinute;
   const step = p.weekView.stepMinutes;
+  const title = eventToTitle(p.event);
+  const blockHeight = Math.max(MIN_EXPANDED_HEIGHT, p.height);
 
   const canDrag = p.draggable !== false;
 
@@ -274,7 +279,7 @@ export function DraggableEventBlock(p: Props) {
 
   const aStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: tY.value }],
-    height: Math.max(6, baseHeight.value + hY.value),
+    height: Math.max(MIN_EXPANDED_HEIGHT, baseHeight.value + hY.value),
   }));
 
   const bg = p.event.color ?? "#2F6FED";
@@ -289,6 +294,7 @@ export function DraggableEventBlock(p: Props) {
               left: p.left + 2,
               top: p.top,
               width: p.width - 6,
+              height: Math.max(4, p.height),
               backgroundColor: bg,
             },
           ]}
@@ -297,65 +303,79 @@ export function DraggableEventBlock(p: Props) {
     );
   }
 
+  const showTimeInBlock = blockHeight >= 44;
+
   return (
     <GestureDetector gesture={cardGesture}>
       <Animated.View
         style={[
           styles.card,
           {
-            left: p.left,
+            left: p.left + 2,
             top: p.top,
             width: p.width - 4,
+            height: blockHeight,
             backgroundColor: bg,
           },
           aStyle,
         ]}
       >
         <View style={styles.headerRow}>
-          <Text numberOfLines={1} style={styles.title}>
-            {p.event.title}
+          <Text numberOfLines={blockHeight >= 52 ? 2 : 1} style={styles.title}>
+            {title}
           </Text>
           {previewRange ? (
             <Text style={styles.time}>{previewRange}</Text>
+          ) : showTimeInBlock ? (
+            <Text style={styles.time} numberOfLines={1}>
+              {fmtHHmm(p.minMinute + p.top / pxPerMin)}–
+              {fmtHHmm(p.minMinute + (p.top + p.height) / pxPerMin)}
+            </Text>
           ) : null}
         </View>
 
-        <GestureDetector gesture={resizeGesture}>
-          <View style={styles.resizeStrip}>
-            <View style={styles.grabber} />
-          </View>
-        </GestureDetector>
+        {canDrag && blockHeight >= 40 ? (
+          <GestureDetector gesture={resizeGesture}>
+            <View style={styles.resizeStrip}>
+              <View style={styles.grabber} />
+            </View>
+          </GestureDetector>
+        ) : null}
       </Animated.View>
     </GestureDetector>
   );
 }
 
 const styles = StyleSheet.create({
-  compactLine: { position: "absolute", height: 4, borderRadius: 2 },
+  compactLine: { position: "absolute", borderRadius: 2 },
 
   card: {
     position: "absolute",
-    borderRadius: 10,
-    padding: 6,
+    flexDirection: "column",
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     overflow: "hidden",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.25)",
   },
 
-  headerRow: { flex: 1, justifyContent: "space-between" },
+  headerRow: { flex: 1, justifyContent: "flex-start" },
 
-  title: { color: "#fff", fontSize: 11, fontWeight: "800" },
+  title: { color: "#fff", fontSize: 12, fontWeight: "800", lineHeight: 15 },
 
   time: {
-    color: "rgba(255,255,255,0.85)",
+    color: "rgba(255,255,255,0.9)",
     fontSize: 10,
-    fontWeight: "700",
+    fontWeight: "600",
     marginTop: 2,
   },
 
   resizeStrip: {
-    height: 14,
-    marginTop: 6,
+    height: 12,
+    marginTop: "auto",
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "rgba(255,255,255,0.55)",
+    borderTopColor: "rgba(255,255,255,0.45)",
     alignItems: "center",
     justifyContent: "center",
   },

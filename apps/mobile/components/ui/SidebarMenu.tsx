@@ -2,8 +2,9 @@ import React from "react";
 import { View, TouchableOpacity, StyleSheet } from "react-native";
 import { router } from "expo-router";
 import { useTranslation } from "@musti/core";
-import { MText, colors, spacing, radii } from "@musti/ui-native";
+import { MText, colors, spacing, radii, Divider, touchTargets } from "@musti/ui-native";
 import { BaseIcon, IconButton } from "@musti/ui-native/src/components/AppIcon";
+import { LanguageSettingsSection } from "@/components/settings/LanguageSettingsSection";
 
 interface Props {
   open: boolean;
@@ -26,17 +27,19 @@ export function SidebarMenu({ open, onClose }: Props) {
       <View style={styles.sidebarPanel}>
         <View style={styles.sidebarHeaderRow}>
           <MText variant="heading3" color="textPrimary">
-            Menu
+            {t("nav.menu")}
           </MText>
 
           <IconButton
             name="close"
             color={colors.textSecondary}
-            size={22}
             onPress={onClose}
             style={styles.sidebarCloseButton}
           />
         </View>
+
+        <LanguageSettingsSection variant="inline" />
+        <Divider inset={0} thickness={1} />
 
         {/* MONEY */}
         <MText
@@ -53,7 +56,6 @@ export function SidebarMenu({ open, onClose }: Props) {
         >
           <BaseIcon
             name="wallet-outline"
-            size={22}
             color={colors.textPrimary}
             style={styles.sidebarItemIcon}
           />
@@ -68,7 +70,6 @@ export function SidebarMenu({ open, onClose }: Props) {
         >
           <BaseIcon
             name="repeat-outline"
-            size={22}
             color={colors.textPrimary}
             style={styles.sidebarItemIcon}
           />
@@ -83,7 +84,6 @@ export function SidebarMenu({ open, onClose }: Props) {
         >
           <BaseIcon
             name="flask-outline"
-            size={22}
             color={colors.textPrimary}
             style={styles.sidebarItemIcon}
           />
@@ -107,7 +107,6 @@ export function SidebarMenu({ open, onClose }: Props) {
         >
           <BaseIcon
             name="storefront-outline"
-            size={22}
             color={colors.textPrimary}
             style={styles.sidebarItemIcon}
           />
@@ -122,7 +121,6 @@ export function SidebarMenu({ open, onClose }: Props) {
         >
           <BaseIcon
             name="cube-outline"
-            size={22}
             color={colors.textPrimary}
             style={styles.sidebarItemIcon}
           />
@@ -137,7 +135,6 @@ export function SidebarMenu({ open, onClose }: Props) {
         >
           <BaseIcon
             name="list-outline"
-            size={22}
             color={colors.textPrimary}
             style={styles.sidebarItemIcon}
           />
@@ -161,7 +158,6 @@ export function SidebarMenu({ open, onClose }: Props) {
         >
           <BaseIcon
             name="analytics-outline"
-            size={22}
             color={colors.textPrimary}
             style={styles.sidebarItemIcon}
           />
@@ -176,7 +172,6 @@ export function SidebarMenu({ open, onClose }: Props) {
         >
           <BaseIcon
             name="pricetags-outline"
-            size={22}
             color={colors.textPrimary}
             style={styles.sidebarItemIcon}
           />
@@ -200,7 +195,6 @@ export function SidebarMenu({ open, onClose }: Props) {
         >
           <BaseIcon
             name="cloudy-outline"
-            size={22}
             color={colors.textPrimary}
             style={styles.sidebarItemIcon}
           />
@@ -215,7 +209,6 @@ export function SidebarMenu({ open, onClose }: Props) {
         >
           <BaseIcon
             name="download-outline"
-            size={22}
             color={colors.textPrimary}
             style={styles.sidebarItemIcon}
           />
@@ -230,7 +223,6 @@ export function SidebarMenu({ open, onClose }: Props) {
         >
           <BaseIcon
             name="settings-outline"
-            size={22}
             color={colors.textPrimary}
             style={styles.sidebarItemIcon}
           />
@@ -245,7 +237,6 @@ export function SidebarMenu({ open, onClose }: Props) {
         >
           <BaseIcon
             name="information-circle-outline"
-            size={22}
             color={colors.textPrimary}
             style={styles.sidebarItemIcon}
           />
@@ -304,6 +295,7 @@ const styles = StyleSheet.create({
   sidebarItem: {
     flexDirection: "row",
     alignItems: "center",
+    minHeight: touchTargets.minimum,
     paddingVertical: spacing.sm,
   },
   sidebarItemIcon: {

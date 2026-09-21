@@ -18,8 +18,9 @@ type Props = {
 
 const { colors } = plannerTheme;
 
-const LABEL_OFFSET_Y = 6;
 const LABEL_FONT_SIZE = sizes.md;
+/** Room for full glyph height (Android includeFontPadding + line box). */
+const LABEL_LINE_HEIGHT = LABEL_FONT_SIZE + 8;
 
 export const TimeColumn: FC<Props> = ({
   TIME_COL_WIDTH,
@@ -30,7 +31,7 @@ export const TimeColumn: FC<Props> = ({
   nowLabel,
   nowColor,
 }) => {
-  const hoursCount = weekView.endHour - weekView.startHour + 1;
+  const hoursCount = weekView.endHour - weekView.startHour;
   const bottomSpacerHeight = (bottomPaddingMinutes / 60) * hourHeight;
 
   const overlap = useMemo(() => {
@@ -48,7 +49,7 @@ export const TimeColumn: FC<Props> = ({
 
   return (
     <View style={[styles.col, { width: TIME_COL_WIDTH, minWidth: 44 }]}>
-      <View style={{ height: hoursCount * hourHeight }}>
+      <View style={{ height: hoursCount * hourHeight, overflow: "visible" }}>
         {Array.from({ length: hoursCount }).map((_, i) => {
           const hour = weekView.startHour + i;
           const displayHour = hour % 24;
@@ -62,8 +63,8 @@ export const TimeColumn: FC<Props> = ({
               style={[
                 styles.timeLabel,
                 {
-                  top: lineY - LABEL_OFFSET_Y - LABEL_FONT_SIZE / 2,
-                  height: LABEL_FONT_SIZE + 2,
+                  top: lineY - LABEL_LINE_HEIGHT / 2,
+                  lineHeight: LABEL_LINE_HEIGHT,
                   opacity: hideThis ? 0 : 1,
                 },
               ]}
@@ -92,6 +93,7 @@ export const TimeColumn: FC<Props> = ({
 const styles = StyleSheet.create({
   col: {
     position: "relative",
+    overflow: "visible",
   },
 
   timeLabel: {

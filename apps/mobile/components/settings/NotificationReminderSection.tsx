@@ -4,8 +4,10 @@ import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
 import Toast from "react-native-root-toast";
-import { MText, spacing, radii, useTheme } from "@musti/ui-native";
-import { IconTile } from "@musti/ui-native/src/components/AppIcon";
+import { MText, spacing, radii, useTheme, touchTargets } from "@musti/ui-native";
+import { useTranslation } from "@musti/core";
+import { RowAction } from "@/components/ui/RowAction";
+import { bookshelfScreenStyles } from "@/components/Books/bookshelfScreenStyles";
 
 type Props = {
   title: string;
@@ -15,6 +17,7 @@ type Props = {
   minute: number;
   onToggle: (v: boolean) => Promise<void> | void;
   onTimeChange: (hour: number, minute: number) => Promise<void> | void;
+  variant?: "card" | "embedded";
 };
 
 export function NotificationReminderSection({
@@ -25,8 +28,10 @@ export function NotificationReminderSection({
   minute,
   onToggle,
   onTimeChange,
+  variant = "card",
 }: Props) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const [showPicker, setShowPicker] = useState(false);
 
   const timeLabel = useMemo(() => {
@@ -42,7 +47,7 @@ export function NotificationReminderSection({
     try {
       await onTimeChange(date.getHours(), date.getMinutes());
     } catch {
-      Toast.show("Time could not be updated.", {
+      Toast.show(t("bookshelf.notifications.timeUpdateFailed"), {
         duration: Toast.durations.SHORT,
       });
     }
@@ -50,7 +55,7 @@ export function NotificationReminderSection({
 
   const openPicker = () => {
     if (!enabled) {
-      Toast.show("Enable notifications first.", {
+      Toast.show(t("bookshelf.notifications.enableFirst"), {
         duration: Toast.durations.SHORT,
       });
       return;
@@ -58,13 +63,20 @@ export function NotificationReminderSection({
     setShowPicker(true);
   };
 
+  const wrapStyle =
+    variant === "embedded"
+      ? styles.embedded
+      : [bookshelfScreenStyles.sectionCard, styles.cardStandalone];
+
   return (
-    <View style={[styles.card, { backgroundColor: colors.surfaceElevated }]}>
+    <View style={wrapStyle}>
       <View style={styles.row}>
         <View style={{ flex: 1 }}>
-          <MText variant="heading3">{title}</MText>
+          <MText variant="heading4" color="textPrimary">
+            {title}
+          </MText>
           {description ? (
-            <MText style={{ marginTop: 4, color: colors.textSecondary }}>
+            <MText variant="caption" color="textSecondary" style={styles.desc}>
               {description}
             </MText>
           ) : null}
@@ -76,7 +88,7 @@ export function NotificationReminderSection({
             try {
               await onToggle(v);
             } catch {
-              Toast.show("Notification settings could not be updated.", {
+              Toast.show(t("bookshelf.notifications.updateFailed"), {
                 duration: Toast.durations.SHORT,
               });
             }
@@ -84,23 +96,12 @@ export function NotificationReminderSection({
         />
       </View>
 
-      <View style={[styles.row, { marginTop: spacing.md }]}>
-        <MText style={{ color: colors.textSecondary }}>Time</MText>
-        <IconTile
-          onPress={openPicker}
-          style={[
-            styles.timePill,
-            {
-              backgroundColor: colors.surface,
-              opacity: enabled ? 1 : 0.5,
-            },
-          ]}
-          label={timeLabel}
-          name="time-outline"
-          size={16}
-          color={enabled ? colors.textPrimary : colors.textSecondary}
-        />
-      </View>
+      <RowAction
+        label={t("bookshelf.reminders.timeLabel")}
+        value={timeLabel}
+        icon="time-outline"
+        onPress={openPicker}
+      />
 
       {showPicker ? (
         <DateTimePicker
@@ -116,19 +117,20 @@ export function NotificationReminderSection({
 }
 
 const styles = StyleSheet.create({
-  card: {
-    padding: spacing.lg,
-    borderRadius: radii.xl,
+  cardStandalone: {
+    backgroundColor: undefined,
+  },
+  embedded: {
+    gap: spacing.sm,
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: spacing.md,
+    minHeight: touchTargets.minimum,
   },
-  timePill: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.lg,
+  desc: {
+    marginTop: spacing.xs,
   },
 });

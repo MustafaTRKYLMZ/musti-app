@@ -1,8 +1,10 @@
-import React, { FC } from "react";
+import React from "react";
 import { View, StyleSheet } from "react-native";
+import { useTranslation } from "@musti/core";
 import { MText, useTheme } from "@musti/ui-native";
 
 export const BookshelfHeader = () => {
+  const { t } = useTranslation();
   const theme = useTheme();
   const { spacing } = theme;
 
@@ -10,7 +12,7 @@ export const BookshelfHeader = () => {
     <View style={[styles.header, { paddingHorizontal: spacing.sm }]}>
       <View style={[styles.headerLeft, { padding: spacing.sm }]}>
         <MText variant="heading1" style={styles.headerTitle}>
-          Bookshelf
+          {t("bookshelf.title")}
         </MText>
       </View>
     </View>

@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { useTheme } from "../theme/ThemeContext";
 import { MText } from "./MText";
-import { spacing, radii } from "../theme/tokens";
+import { spacing, radii, touchTargets } from "../theme/tokens";
 import { ThemeColors } from "../theme/types";
 import { BaseIcon } from "./AppIcon";
 
@@ -54,7 +54,7 @@ export function DropdownMenu<T extends string>({
   onChange,
   renderTrigger,
   width = 180,
-  itemHeight = 42,
+  itemHeight = touchTargets.minimum,
   align = "right",
   menuStyle,
   triggerStyle,
@@ -145,7 +145,7 @@ export function DropdownMenu<T extends string>({
         ) : (
           <Pressable
             onPress={openMenu}
-            hitSlop={8}
+            hitSlop={spacing.xs}
             style={[
               styles.trigger,
               {
@@ -156,11 +156,7 @@ export function DropdownMenu<T extends string>({
             ]}
           >
             {selectedIcon ? (
-              <BaseIcon
-                name={selectedIcon}
-                size={18}
-                color={colors.textSecondary}
-              />
+              <BaseIcon name={selectedIcon} color={colors.textSecondary} />
             ) : null}
 
             <MText
@@ -172,11 +168,7 @@ export function DropdownMenu<T extends string>({
               {selectedLabel}
             </MText>
 
-            <BaseIcon
-              name="chevron-down-outline"
-              size={18}
-              color={colors.textSecondary}
-            />
+            <BaseIcon name="chevron-down-outline" color={colors.textSecondary} />
           </Pressable>
         )}
       </View>
@@ -223,7 +215,6 @@ export function DropdownMenu<T extends string>({
                   {opt.icon ? (
                     <BaseIcon
                       name={opt.icon}
-                      size={18}
                       color={active ? palette.primary : colors.textSecondary}
                     />
                   ) : null}
@@ -244,11 +235,7 @@ export function DropdownMenu<T extends string>({
                 <View style={styles.itemRight}>
                   {opt.right}
                   {active ? (
-                    <BaseIcon
-                      name="checkmark-outline"
-                      size={18}
-                      color={palette.primary}
-                    />
+                    <BaseIcon name="checkmark-outline" color={palette.primary} />
                   ) : null}
                 </View>
               </Pressable>
@@ -265,12 +252,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     borderRadius: 999,
     borderWidth: 1,
     minWidth: 90,
-    maxWidth: 220, // ✅ clamp-ish
+    maxWidth: 220,
+    minHeight: touchTargets.minimum,
     justifyContent: "center",
   },
 

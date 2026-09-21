@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Controller } from "react-hook-form";
 import { MText, spacing, radii, useTheme } from "@musti/ui-native";
+import { useTranslation } from "@musti/core";
 import { useRenameBookController } from "@/components/Books/controllers/useRenameBookController";
 
 type Props = {
@@ -26,6 +27,7 @@ export const RenameBookModal = ({
   onConfirm,
 }: Props) => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
 
   const c = useRenameBookController({
     visible,
@@ -79,7 +81,7 @@ export const RenameBookModal = ({
           ]}
         >
           <MText variant="bodyStrong" color="textPrimary" style={styles.title}>
-            Rename book
+            {t("bookshelf.book.renameTitle")}
           </MText>
 
           <Controller
@@ -97,7 +99,7 @@ export const RenameBookModal = ({
                     backgroundColor: colors.surface,
                   },
                 ]}
-                placeholder="Book name"
+                placeholder={t("bookshelf.book.renamePlaceholder")}
                 placeholderTextColor={colors.textSecondary}
                 autoFocus
                 returnKeyType="done"
@@ -127,7 +129,7 @@ export const RenameBookModal = ({
               disabled={c.isSubmitting}
             >
               <MText variant="body" color="textSecondary">
-                Cancel
+                {t("common.cancel")}
               </MText>
             </TouchableOpacity>
 
@@ -144,7 +146,7 @@ export const RenameBookModal = ({
               disabled={!c.canSubmit || c.isSubmitting}
             >
               <MText variant="body" color="textInverse">
-                Save
+                {t("common.save")}
               </MText>
             </TouchableOpacity>
           </View>

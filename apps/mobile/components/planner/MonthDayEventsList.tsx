@@ -6,11 +6,12 @@ import {
   Pressable,
   NativeSyntheticEvent,
   NativeScrollEvent,
+  RefreshControl,
 } from "react-native";
 
+import { useTranslation } from "@musti/core";
 import { MText, plannerTheme } from "@musti/ui-native";
 import {
-  addDays,
   eventToStartDate,
   formatTime24,
   sameDay,
@@ -19,10 +20,15 @@ import {
 } from "@musti/planner";
 import { useCalendar } from "@/hooks/useCalendar";
 import { eventToTitle } from "@/utils/calendar/format";
+import {
+  buildDayEventIndex,
+  getDayEventMarkers,
+} from "@/utils/calendar/dayEventIndex";
 
 const { colors, spacing } = plannerTheme;
 
-/* ================= helpers ================= */
+const TIME_COL_W = 44;
+const DOT = 10;
 
 function getEventStart(ev: MEvent): Date | null {
   const sd = eventToStartDate(ev as any);
@@ -40,54 +46,169 @@ function getEventEnd(ev: MEvent, start: Date): Date {
     const d = new Date(rawEnd);
     if (!isNaN(d.getTime())) return d;
   }
-  // fallback: very short event
   return new Date(start.getTime() + 60 * 1000);
 }
 
-function overlapsDay(ev: MEvent, day: Date) {
-  const dayStart = startOfDay(day);
-  const dayEnd = addDays(dayStart, 1);
-
-  const evStart = getEventStart(ev);
-  if (!evStart) return false;
-
-  const evEnd = getEventEnd(ev, evStart);
-  return evStart < dayEnd && evEnd > dayStart;
+function isAllDayEvent(ev: MEvent, start: Date, end: Date): boolean {
+  if ((ev as any)?.allDay) return true;
+  const durationMs = end.getTime() - start.getTime();
+  return durationMs >= 23 * 60 * 60 * 1000;
 }
 
-/* ================= component ================= */
+type AgendaMeta = {
+  timeLabel: string;
+  range: string;
+  sortKey: number;
+  groupKey: string;
+};
+
+function buildAgendaMeta(
+  ev: MEvent,
+  day: Date,
+  allDayLabel: string,
+  ongoingLabel: string
+): AgendaMeta {
+  const start = getEventStart(ev);
+  if (!start) {
+    return { timeLabel: "", range: "", sortKey: 99999, groupKey: "unknown" };
+  }
+
+  const end = getEventEnd(ev, start);
+
+  if (isAllDayEvent(ev, start, end)) {
+    return {
+      timeLabel: allDayLabel,
+      range: allDayLabel,
+      sortKey: -1,
+      groupKey: "allday",
+    };
+  }
+
+  const isMultiDay =
+    startOfDay(start).getTime() !== startOfDay(end).getTime();
+
+  if (isMultiDay) {
+    if (sameDay(start, day)) {
+      const startStr = formatTime24(start);
+      const endStr = formatTime24(end);
+      const minutes = start.getHours() * 60 + start.getMinutes();
+      return {
+        timeLabel: startStr,
+        range: `${startStr} – ${endStr}`,
+        sortKey: minutes,
+        groupKey: `t-${minutes}`,
+      };
+    }
+    if (sameDay(end, day)) {
+      const endStr = formatTime24(end);
+      const dayStart = startOfDay(end);
+      const minutes = dayStart.getHours() * 60 + dayStart.getMinutes();
+      return {
+        timeLabel: endStr,
+        range: `${formatTime24(dayStart)} – ${endStr}`,
+        sortKey: minutes,
+        groupKey: `t-${minutes}`,
+      };
+    }
+    return {
+      timeLabel: "00:00",
+      range: ongoingLabel,
+      sortKey: 0,
+      groupKey: "ongoing",
+    };
+  }
+
+  const startStr = formatTime24(start);
+  const endStr = formatTime24(end);
+  const minutes = start.getHours() * 60 + start.getMinutes();
+  return {
+    timeLabel: startStr,
+    range: `${startStr} – ${endStr}`,
+    sortKey: minutes,
+    groupKey: `t-${minutes}`,
+  };
+}
+
+type AgendaEventItem = {
+  ev: MEvent;
+  title: string;
+  color: string;
+  range: string;
+};
+
+type TimeGroup = {
+  groupKey: string;
+  timeLabel: string;
+  sortKey: number;
+  items: AgendaEventItem[];
+};
 
 export type MonthDayEventsListProps = {
   date: Date;
   events: MEvent[];
   onTop?: () => void;
+  onRefresh?: () => void;
+  refreshing?: boolean;
 };
 
 export const MonthDayEventsList: FC<MonthDayEventsListProps> = ({
   date,
   events,
   onTop,
+  onRefresh,
+  refreshing,
 }) => {
   const { pressEvent } = useCalendar();
+  const { t } = useTranslation();
 
-  const dayEvents = useMemo(() => {
-    const filtered = events.filter((ev) => overlapsDay(ev, date));
-    return filtered.sort((a, b) => {
-      const da = getEventStart(a)?.getTime() ?? 0;
-      const db = getEventStart(b)?.getTime() ?? 0;
-      return da - db;
-    });
-  }, [events, date]);
+  const dayIndex = useMemo(() => buildDayEventIndex(events), [events]);
+
+  const timeGroups = useMemo(() => {
+    const markers = getDayEventMarkers(dayIndex, date);
+    const byId = new Map(events.map((ev) => [ev.id, ev]));
+    const dayEvents = markers
+      .map((m) => byId.get(m.id))
+      .filter((ev): ev is MEvent => Boolean(ev));
+
+    const allDayLabel = t("planner.form.allDay");
+    const ongoingLabel = t("planner.agenda.ongoing");
+
+    const groupMap = new Map<string, TimeGroup>();
+
+    for (const ev of dayEvents) {
+      const meta = buildAgendaMeta(ev, date, allDayLabel, ongoingLabel);
+      const item: AgendaEventItem = {
+        ev,
+        title: eventToTitle(ev as any),
+        color: (ev as any)?.color ?? colors.primary,
+        range: meta.range,
+      };
+
+      const existing = groupMap.get(meta.groupKey);
+      if (existing) {
+        existing.items.push(item);
+      } else {
+        groupMap.set(meta.groupKey, {
+          groupKey: meta.groupKey,
+          timeLabel: meta.timeLabel,
+          sortKey: meta.sortKey,
+          items: [item],
+        });
+      }
+    }
+
+    return [...groupMap.values()].sort((a, b) => a.sortKey - b.sortKey);
+  }, [dayIndex, date, events, t]);
 
   const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     if (!onTop) return;
     if (e.nativeEvent.contentOffset.y <= 0) onTop();
   };
 
-  if (!dayEvents.length) {
+  if (!timeGroups.length) {
     return (
       <View style={styles.empty}>
-        <MText style={styles.emptyText}>No events</MText>
+        <MText style={styles.emptyText}>{t("planner.agenda.noEvents")}</MText>
       </View>
     );
   }
@@ -101,69 +222,52 @@ export const MonthDayEventsList: FC<MonthDayEventsListProps> = ({
       scrollEventThrottle={16}
       onScroll={handleScroll}
       keyboardShouldPersistTaps="handled"
+      refreshControl={
+        onRefresh ? (
+          <RefreshControl
+            refreshing={Boolean(refreshing)}
+            onRefresh={onRefresh}
+          />
+        ) : undefined
+      }
     >
-      {dayEvents.map((ev, i) => {
-        const title = eventToTitle(ev as any);
-        const color = (ev as any)?.color ?? colors.primary;
+      {timeGroups.map((group) => (
+        <View key={group.groupKey} style={styles.groupRow}>
+          <MText style={styles.timeCol}>{group.timeLabel}</MText>
 
-        const start = getEventStart(ev);
-        const end = start ? getEventEnd(ev, start) : null;
-
-        let time = start ? formatTime24(start) : "";
-        let isOngoing = false;
-
-        if (start && end) {
-          const isMultiDay =
-            startOfDay(start).getTime() !== startOfDay(end).getTime();
-
-          if (isMultiDay) {
-            if (sameDay(start, date)) {
-              time = formatTime24(start);
-              isOngoing = false;
-            } else if (sameDay(end, date)) {
-              time = formatTime24(end);
-              isOngoing = true;
-            } else {
-              time = "00:00";
-              isOngoing = true;
-            }
-          }
-        }
-
-        return (
-          <Pressable
-            key={(ev as MEvent)?.id ? String((ev as MEvent).id) : `${i}`}
-            onPress={() => pressEvent?.(ev.id, (ev as MEvent).start)}
-            style={styles.row}
-          >
-            <MText style={styles.time}>{time}</MText>
-
-            <View style={[styles.bar, { backgroundColor: color }]} />
-
-            <View style={styles.titleWrap}>
-              <MText style={styles.title} numberOfLines={1}>
-                {title}
-              </MText>
-
-              {isOngoing ? (
-                <View
-                  style={[
-                    styles.ongoingPill,
-                    { backgroundColor: `${color}22` }, // subtle tint
-                  ]}
-                >
-                  <MText style={[styles.ongoingText, { color }]}>Ongoing</MText>
+          <View style={styles.eventsCol}>
+            {group.items.map((item, idx) => (
+              <Pressable
+                key={item.ev.id}
+                onPress={() => pressEvent?.(item.ev.id, item.ev.start)}
+                style={[
+                  styles.eventBlock,
+                  idx < group.items.length - 1 && styles.eventBlockGap,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={`${item.title}, ${item.range}`}
+              >
+                <View style={styles.titleRow}>
+                  <View
+                    style={[styles.dot, { backgroundColor: item.color }]}
+                  />
+                  <MText style={styles.title} numberOfLines={2}>
+                    {item.title}
+                  </MText>
                 </View>
-              ) : null}
-            </View>
-          </Pressable>
-        );
-      })}
+                {item.range && item.range !== group.timeLabel ? (
+                  <MText style={styles.range} numberOfLines={1}>
+                    {item.range}
+                  </MText>
+                ) : null}
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      ))}
     </ScrollView>
   );
 };
-
-/* ================= styles ================= */
 
 const styles = StyleSheet.create({
   scroll: { flex: 1 },
@@ -175,47 +279,61 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
 
-  row: {
+  groupRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     paddingVertical: spacing.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.borderSubtle,
+    gap: spacing.sm,
   },
 
-  time: {
-    width: 56,
-    color: colors.textSecondary ?? colors.textPrimary,
-    opacity: 0.85,
+  timeCol: {
+    width: TIME_COL_W,
+    fontSize: 14,
+    fontWeight: "700",
+    color: colors.textPrimary,
+    paddingTop: 2,
+    flexShrink: 0,
   },
 
-  bar: {
-    width: 3,
-    height: "70%",
-    borderRadius: 2,
-    marginHorizontal: spacing.sm,
-  },
-
-  titleWrap: {
+  eventsCol: {
     flex: 1,
+    minWidth: 0,
+  },
+
+  eventBlock: {
+    gap: 2,
+  },
+
+  eventBlockGap: {
+    marginBottom: spacing.sm,
+  },
+
+  titleRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.xs,
+    gap: spacing.sm,
+  },
+
+  dot: {
+    width: DOT,
+    height: DOT,
+    borderRadius: 999,
+    flexShrink: 0,
   },
 
   title: {
     flex: 1,
+    fontSize: 14,
+    fontWeight: "600",
     color: colors.textPrimary,
   },
 
-  ongoingPill: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-  },
-
-  ongoingText: {
-    fontSize: 11,
-    fontWeight: "800",
+  range: {
+    marginLeft: DOT + spacing.sm,
+    fontSize: 12,
+    color: colors.textSecondary ?? colors.textPrimary,
+    opacity: 0.75,
   },
 });

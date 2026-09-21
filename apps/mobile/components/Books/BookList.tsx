@@ -1,11 +1,18 @@
 import React, { useMemo } from "react";
 import { View, StyleSheet, useWindowDimensions } from "react-native";
+import { useTranslation } from "@musti/core";
 import { MText, spacing } from "@musti/ui-native";
 import type { LocalPdfFile } from "@/utils/getPdfsDirectory";
 import { BookCard } from "./BookCard";
-import { IconButton } from "@musti/ui-native/src/components/AppIcon";
 import { PdfCoverPrewarmer } from "@/components/ui/pdf/PdfCoverPrewarmer";
+import { SectionAddButton } from "@/components/ui/SectionAddButton";
 import { ShelfPlank } from "./ShelfPlank";
+import {
+  BOOK_TO_SHELF_GAP,
+  LAST_READ_TO_BOOKS_GAP,
+  SECTION_HEADER_GAP,
+  SHELF_ROW_GAP,
+} from "./shelfLayout";
 
 type GridBook = LocalPdfFile & { lastOpened: number };
 
@@ -21,9 +28,6 @@ type BookListProps = {
 
 const COLS = 3;
 
-const BOOK_TO_SHELF_GAP = -40;
-const SHELF_ROW_GAP = spacing["2xl"];
-
 export const BookList = ({
   setModalVisible,
   gridRows,
@@ -33,6 +37,7 @@ export const BookList = ({
   progressMap,
   readingStats,
 }: BookListProps) => {
+  const { t } = useTranslation();
   const today = new Date().toISOString().slice(0, 10);
   const { width: screenW } = useWindowDimensions();
 
@@ -57,20 +62,16 @@ export const BookList = ({
   }, [screenW]);
 
   return (
-    <View style={{ marginTop: spacing.xl }}>
+    <View style={styles.section}>
       <View style={styles.headerRow}>
-        <MText variant="heading2" color="textPrimary">
-          Books
+        <MText variant="heading3" color="textPrimary">
+          {t("bookshelf.books")}
         </MText>
-        <IconButton
-          name="add-circle-outline"
-          size={spacing.xl * 1.2}
-          color="textSecondary"
+        <SectionAddButton
+          accessibilityLabel={t("bookshelf.plan.addBook")}
           onPress={() => setModalVisible(true)}
         />
       </View>
-
-      <View style={{ height: spacing.md }} />
 
       {gridRows.map((row, rIdx) => {
         const missing = Math.max(0, COLS - row.length);
@@ -126,23 +127,28 @@ export const BookList = ({
 };
 
 const styles = StyleSheet.create({
+  section: {
+    marginTop: LAST_READ_TO_BOOKS_GAP,
+  },
   headerRow: {
     paddingHorizontal: spacing.lg,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    marginBottom: SECTION_HEADER_GAP,
   },
 
   rowWrap: {
     position: "relative",
     paddingBottom: SHELF_ROW_GAP,
+    overflow: "visible",
   },
 
   row: {
-    paddingHorizontal: spacing.xs,
+    paddingHorizontal: spacing.lg,
     flexDirection: "row",
     justifyContent: "flex-start",
-    alignItems: "flex-start",
+    alignItems: "flex-end",
     gap: spacing.md,
     zIndex: 2,
     elevation: 2,
@@ -150,10 +156,10 @@ const styles = StyleSheet.create({
 
   shelfAbs: {
     position: "absolute",
-    left: 0,
+    left: spacing.lg,
     right: spacing.lg,
     bottom: BOOK_TO_SHELF_GAP,
     zIndex: 1,
-    elevation: 0,
+    elevation: 1,
   },
 });

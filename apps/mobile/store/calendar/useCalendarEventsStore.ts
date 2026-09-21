@@ -20,7 +20,7 @@ type State = {
   idsByDay: Record<DayKey, string[]>;
   hasHydrated: boolean;
 
-  addEvent: (payload: Omit<MEvent, "id">) => void;
+  addEvent: (payload: Omit<MEvent, "id">) => MEvent;
   updateEvent: (id: string, patch: Partial<MEvent>) => void;
   deleteEvent: (id: string) => void;
 
@@ -29,6 +29,8 @@ type State = {
   undoDelete: () => void;
 
   upsertExternalEvents: (calendarId: string, events: MEvent[]) => void;
+  mergeEvent: (event: MEvent) => void;
+  removeEventById: (id: string) => void;
   removeEventsForAccount: (accountId: string) => void;
   removeEventsForCalendar: (calendarId: string) => void;
 
@@ -89,21 +91,23 @@ export const useCalendarEventsStore = create<State>()(
         set({ eventsById: byId, idsByDay: byDay });
       },
 
-      addEvent: (payload) =>
-        set((s) => {
-          const id = uid();
-          const ev: MEvent = {
-            ...payload,
-            id,
-            source: payload.source ?? "planner",
-            calendarId: payload.calendarId ?? "local:planner",
-          };
+      addEvent: (payload) => {
+        const id = uid();
+        const ev: MEvent = {
+          ...payload,
+          id,
+          source: payload.source ?? "planner",
+          calendarId: payload.calendarId ?? "local:planner",
+        };
 
+        set((s) => {
           const nextEvents = sortEvents([...s.events, ev]);
           const { byId, byDay } = buildIndexes(nextEvents);
-
           return { events: nextEvents, eventsById: byId, idsByDay: byDay };
-        }),
+        });
+
+        return ev;
+      },
 
       updateEvent: (id, patch) =>
         set((s) => {
@@ -137,6 +141,21 @@ export const useCalendarEventsStore = create<State>()(
         set((s) => {
           const kept = s.events.filter((e) => e.calendarId !== calendarId);
           const nextEvents = sortEvents([...kept, ...incoming]);
+          const { byId, byDay } = buildIndexes(nextEvents);
+          return { events: nextEvents, eventsById: byId, idsByDay: byDay };
+        }),
+
+      mergeEvent: (event) =>
+        set((s) => {
+          const without = s.events.filter((e) => e.id !== event.id);
+          const nextEvents = sortEvents([...without, event]);
+          const { byId, byDay } = buildIndexes(nextEvents);
+          return { events: nextEvents, eventsById: byId, idsByDay: byDay };
+        }),
+
+      removeEventById: (id) =>
+        set((s) => {
+          const nextEvents = s.events.filter((e) => e.id !== id);
           const { byId, byDay } = buildIndexes(nextEvents);
           return { events: nextEvents, eventsById: byId, idsByDay: byDay };
         }),

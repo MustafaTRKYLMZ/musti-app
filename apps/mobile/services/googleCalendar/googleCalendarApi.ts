@@ -1,4 +1,5 @@
 import type { CalendarFeed, GoogleAccount, MEvent } from "@musti/planner";
+import { getGoogleOAuthClientId } from "@/constants/googleCalendarConfig";
 
 type GoogleCalendarListItem = {
   id: string;
@@ -8,7 +9,7 @@ type GoogleCalendarListItem = {
   accessRole?: string;
 };
 
-type GoogleEventItem = {
+export type GoogleEventItem = {
   id: string;
   status?: string;
   summary?: string;
@@ -22,19 +23,80 @@ type GoogleEventItem = {
 const CALENDAR_API = "https://www.googleapis.com/calendar/v3";
 const USERINFO_API = "https://www.googleapis.com/oauth2/v3/userinfo";
 
-async function googleFetch<T>(url: string, accessToken: string): Promise<T> {
+async function googleRequest<T>(
+  url: string,
+  accessToken: string,
+  init?: RequestInit
+): Promise<T> {
   const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${accessToken}` },
+    ...init,
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      ...(init?.body ? { "Content-Type": "application/json" } : {}),
+      ...init?.headers,
+    },
   });
 
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    throw new Error(
-      `Google Calendar API error (${res.status}): ${body || res.statusText}`
-    );
+    if (__DEV__) {
+      console.error(
+        "[Google Calendar API]",
+        init?.method ?? "GET",
+        url,
+        "→",
+        res.status,
+        body || res.statusText
+      );
+    }
+    const err = new Error(
+      googleApiErrorMessage(res.status, body || res.statusText)
+    ) as Error & { status?: number; body?: string };
+    err.status = res.status;
+    err.body = body;
+    throw err;
+  }
+
+  if (res.status === 204) {
+    return undefined as T;
   }
 
   return res.json() as Promise<T>;
+}
+
+function googleApiErrorMessage(status: number, body: string): string {
+  if (status === 403) {
+    if (/insufficient|scope|permission/i.test(body)) {
+      return "Google permission denied. Open Settings, disconnect and reconnect your Google account.";
+    }
+    return "This calendar is read-only. Pick Primary or My Planner when creating events.";
+  }
+  if (status === 401) {
+    return "Google session expired. Reconnect your account in Settings.";
+  }
+  return `Google Calendar API error (${status}): ${body}`;
+}
+
+async function googleFetch<T>(url: string, accessToken: string): Promise<T> {
+  return googleRequest<T>(url, accessToken);
+}
+
+export function googleCalendarIdsForWrite(feed: {
+  isPrimary?: boolean;
+  externalCalendarId: string;
+}): string[] {
+  const ids = [feed.externalCalendarId];
+  if (feed.isPrimary) {
+    ids.push("primary");
+  }
+  return [...new Set(ids)];
+}
+
+export function googleCalendarIdForWrite(feed: {
+  isPrimary?: boolean;
+  externalCalendarId: string;
+}): string {
+  return feed.externalCalendarId;
 }
 
 export async function fetchGoogleUserProfile(accessToken: string): Promise<{
@@ -58,7 +120,10 @@ export async function fetchGoogleCalendarList(
   let pageToken: string | undefined;
 
   do {
-    const qs = new URLSearchParams({ minAccessRole: "reader" });
+    const qs = new URLSearchParams({
+      minAccessRole: "reader",
+      showHidden: "true",
+    });
     if (pageToken) qs.set("pageToken", pageToken);
 
     const json = await googleFetch<{
@@ -70,7 +135,21 @@ export async function fetchGoogleCalendarList(
     pageToken = json.nextPageToken;
   } while (pageToken);
 
-  return items;
+  const byId = new Map(items.map((item) => [item.id, item]));
+
+  if (![...byId.values()].some((item) => item.primary)) {
+    try {
+      const primary = await googleFetch<GoogleCalendarListItem>(
+        `${CALENDAR_API}/users/me/calendarList/primary`,
+        accessToken
+      );
+      byId.set(primary.id, { ...primary, primary: true });
+    } catch {
+      // Primary endpoint unavailable — fall back to list contents.
+    }
+  }
+
+  return [...byId.values()];
 }
 
 export async function fetchGoogleCalendarEvents(
@@ -108,6 +187,108 @@ export async function fetchGoogleCalendarEvents(
   return items.filter((item) => item.status !== "cancelled");
 }
 
+type GoogleEventWriteBody = {
+  summary: string;
+  description?: string;
+  location?: string;
+  start: { date?: string; dateTime?: string; timeZone?: string };
+  end: { date?: string; dateTime?: string; timeZone?: string };
+};
+
+function padDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = `${d.getMonth() + 1}`.padStart(2, "0");
+  const day = `${d.getDate()}`.padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+export function buildGoogleEventWriteBody(
+  event: Pick<
+    MEvent,
+    "title" | "start" | "end" | "allDay" | "notes" | "location" | "timezone"
+  >
+): GoogleEventWriteBody {
+  const body: GoogleEventWriteBody = {
+    summary: event.title,
+    description: event.notes,
+    location: event.location,
+    start: {},
+    end: {},
+  };
+
+  if (event.allDay) {
+    const start = new Date(event.start);
+    const endExclusive = new Date(event.end);
+    body.start = { date: padDate(start) };
+    body.end = { date: padDate(endExclusive) };
+    return body;
+  }
+
+  body.start = {
+    dateTime: event.start,
+    timeZone: event.timezone,
+  };
+  body.end = {
+    dateTime: event.end,
+    timeZone: event.timezone,
+  };
+  return body;
+}
+
+export async function insertGoogleCalendarEvent(
+  accessToken: string,
+  calendarId: string,
+  event: Pick<
+    MEvent,
+    "title" | "start" | "end" | "allDay" | "notes" | "location" | "timezone"
+  >
+): Promise<GoogleEventItem> {
+  const encodedCal = encodeURIComponent(calendarId);
+  return googleRequest<GoogleEventItem>(
+    `${CALENDAR_API}/calendars/${encodedCal}/events`,
+    accessToken,
+    {
+      method: "POST",
+      body: JSON.stringify(buildGoogleEventWriteBody(event)),
+    }
+  );
+}
+
+export async function updateGoogleCalendarEvent(
+  accessToken: string,
+  externalCalendarId: string,
+  externalEventId: string,
+  event: Pick<
+    MEvent,
+    "title" | "start" | "end" | "allDay" | "notes" | "location" | "timezone"
+  >
+): Promise<GoogleEventItem> {
+  const encodedCal = encodeURIComponent(externalCalendarId);
+  const encodedEvent = encodeURIComponent(externalEventId);
+  return googleRequest<GoogleEventItem>(
+    `${CALENDAR_API}/calendars/${encodedCal}/events/${encodedEvent}`,
+    accessToken,
+    {
+      method: "PATCH",
+      body: JSON.stringify(buildGoogleEventWriteBody(event)),
+    }
+  );
+}
+
+export async function deleteGoogleCalendarEvent(
+  accessToken: string,
+  externalCalendarId: string,
+  externalEventId: string
+): Promise<void> {
+  const encodedCal = encodeURIComponent(externalCalendarId);
+  const encodedEvent = encodeURIComponent(externalEventId);
+  await googleRequest<void>(
+    `${CALENDAR_API}/calendars/${encodedCal}/events/${encodedEvent}`,
+    accessToken,
+    { method: "DELETE" }
+  );
+}
+
 export function mapGoogleEventToMEvent(
   item: GoogleEventItem,
   feed: CalendarFeed,
@@ -127,7 +308,8 @@ export function mapGoogleEventToMEvent(
     accountId: account.id,
     title: item.summary?.trim() || "(No title)",
     start: allDay ? `${startRaw}T00:00:00` : startRaw,
-    end: allDay ? `${endRaw}T23:59:59` : endRaw,
+    // Google all-day end dates are exclusive (midnight on the day after).
+    end: allDay ? `${endRaw}T00:00:00` : endRaw,
     allDay,
     location: item.location,
     notes: item.description,
@@ -136,19 +318,46 @@ export function mapGoogleEventToMEvent(
   };
 }
 
+export async function revokeGoogleToken(token: string): Promise<void> {
+  const res = await fetch(
+    `https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(token)}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    }
+  );
+
+  if (!res.ok && res.status !== 400) {
+    const text = await res.text().catch(() => "");
+    if (__DEV__) {
+      console.warn("[Google OAuth] revoke response:", res.status, text);
+    }
+  }
+}
+
 export async function refreshGoogleAccessToken(
-  refreshToken: string
+  refreshToken: string,
+  clientId?: string
 ): Promise<{ accessToken: string; expiresIn?: number }> {
-  const clientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
-  if (!clientId) {
-    throw new Error("EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID is not configured.");
+  const resolvedClientId = clientId ?? getGoogleOAuthClientId();
+  if (!resolvedClientId) {
+    throw new Error(
+      "Google OAuth client ID is not configured (set platform client IDs in .env)."
+    );
   }
 
   const body = new URLSearchParams({
-    client_id: clientId,
+    client_id: resolvedClientId,
     grant_type: "refresh_token",
     refresh_token: refreshToken,
   });
+
+  if (__DEV__) {
+    console.log(
+      "[Google OAuth] refresh token with client:",
+      resolvedClientId.slice(0, 12) + "…"
+    );
+  }
 
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",

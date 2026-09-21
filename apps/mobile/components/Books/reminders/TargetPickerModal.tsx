@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { MText, spacing, radii, useTheme, iconSizes } from "@musti/ui-native";
 import { BaseIcon, IconButton } from "@musti/ui-native";
+import { useTranslation } from "@musti/core";
 import { useReadingTargetsStore } from "@/store/bookshelf/useReadingTargetsStore";
 
 type TargetRow = {
@@ -31,10 +32,12 @@ export function TargetPickerModal({
   onClose,
   onPick,
   selectedId,
-  title = "Choose target",
+  title,
   activeOnly = true,
 }: Props) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
+  const resolvedTitle = title ?? t("bookshelf.reminders.chooseTarget");
   const [q, setQ] = useState("");
 
   const targets = useReadingTargetsStore((s) => s.targets);
@@ -47,16 +50,16 @@ export function TargetPickerModal({
   }, [visible, hydrated, hydrate]);
 
   const rows: TargetRow[] = useMemo(() => {
-    const list = (targets ?? []).map((t: any) => ({
-      id: String(t.id),
-      title: String(t.title ?? "Target"),
-      status: t.status,
+    const list = (targets ?? []).map((target: any) => ({
+      id: String(target.id),
+      title: String(target.title ?? t("bookshelf.mode.target")),
+      status: target.status,
     }));
 
     return (activeOnly ? list.filter((t) => t.status !== "done") : list).filter(
       (t) => t.id && t.title
     );
-  }, [targets, activeOnly]);
+  }, [targets, activeOnly, t]);
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
@@ -95,13 +98,11 @@ export function TargetPickerModal({
         {selected ? (
           <BaseIcon
             name={"checkmark-circle" as any}
-            size={iconSizes.md}
             color={colors.success}
           />
         ) : (
           <BaseIcon
             name={"chevron-forward" as any}
-            size={iconSizes.md}
             color={colors.textSecondary}
           />
         )}
@@ -121,11 +122,10 @@ export function TargetPickerModal({
       <View style={[styles.sheet, { backgroundColor: colors.surface }]}>
         <View style={styles.header}>
           <MText variant="heading3" color="textPrimary">
-            {title}
+            {resolvedTitle}
           </MText>
           <IconButton
             name="close-outline"
-            size={22}
             color={colors.textPrimary}
             onPress={onClose}
           />
@@ -142,13 +142,12 @@ export function TargetPickerModal({
         >
           <BaseIcon
             name={"search-outline" as any}
-            size={iconSizes.md}
             color={colors.textSecondary}
           />
           <TextInput
             value={q}
             onChangeText={setQ}
-            placeholder="Search target…"
+            placeholder={t("bookshelf.reminders.searchTarget")}
             placeholderTextColor={colors.textSecondary}
             style={{ flex: 1, color: colors.textPrimary }}
             autoCorrect={false}
@@ -158,7 +157,6 @@ export function TargetPickerModal({
             <Pressable onPress={() => setQ("")} hitSlop={8}>
               <BaseIcon
                 name={"close-circle" as any}
-                size={iconSizes.md}
                 color={colors.textSecondary}
               />
             </Pressable>
@@ -175,7 +173,9 @@ export function TargetPickerModal({
           ListEmptyComponent={
             <View style={{ padding: spacing.lg, opacity: 0.8 }}>
               <MText color="textSecondary">
-                {activeOnly ? "No active targets found." : "No targets found."}
+                {activeOnly
+                  ? t("bookshelf.reminders.noActiveTargets")
+                  : t("bookshelf.reminders.noTargets")}
               </MText>
             </View>
           }

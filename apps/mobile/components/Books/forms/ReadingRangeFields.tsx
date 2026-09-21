@@ -1,6 +1,7 @@
 import React from "react";
 import { Pressable, StyleSheet, TextInput, View } from "react-native";
 import { Controller, type Control, type FieldErrors } from "react-hook-form";
+import { useTranslation } from "@musti/core";
 import { MText, spacing, radii, useTheme } from "@musti/ui-native";
 
 import { AppChip } from "@/components/ui/AppChip";
@@ -49,6 +50,7 @@ export function ReadingRangeFields({
   onOpenChapters,
   showTypeToggle = true,
 }: Props) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const type = getValues().type as TargetType;
 
@@ -61,13 +63,13 @@ export function ReadingRangeFields({
           name="selectedBookId"
           render={({ field: { value, onChange } }) => (
             <MSelectBottomSheet
-              label="Book"
-              placeholder="Select a book…"
+              label={t("bookshelf.target.bookLabel")}
+              placeholder={t("bookshelf.target.selectBook")}
               valueId={value}
               items={bookItems}
               onChange={(it) => onChange(it.id)}
               searchable
-              searchPlaceholder="Search book…"
+              searchPlaceholder={t("bookshelf.plan.searchBook")}
             />
           )}
         />
@@ -79,12 +81,12 @@ export function ReadingRangeFields({
           {showTypeToggle ? (
             <>
               <MText style={formStyles.sectionTitle} color="textSecondary">
-                Type
+                {t("bookshelf.target.typeLabel")}
               </MText>
 
               <View style={styles.chipsRow}>
                 <AppChip
-                  label="Section"
+                  label={t("bookshelf.target.sectionLabel")}
                   icon="list-outline"
                   active={type === "section"}
                   onPress={() => setValue("type", "section" as TargetType)}
@@ -93,7 +95,7 @@ export function ReadingRangeFields({
                   pill={false}
                 />
                 <AppChip
-                  label="Pages"
+                  label={t("bookshelf.target.pagesLabel")}
                   icon="copy-outline"
                   active={type === "pages"}
                   onPress={() => setValue("type", "pages" as TargetType)}
@@ -114,13 +116,13 @@ export function ReadingRangeFields({
                   name="selectedSectionId"
                   render={({ field: { value, onChange } }) => (
                     <MSelectBottomSheet
-                      label="Section"
-                      placeholder="Select a section…"
+                      label={t("bookshelf.target.sectionLabel")}
+                      placeholder={t("bookshelf.target.selectSection")}
                       valueId={value}
                       items={sectionItems}
                       onChange={(it) => onChange(it.id)}
                       searchable
-                      searchPlaceholder="Search section…"
+                      searchPlaceholder={t("bookshelf.target.searchSection")}
                     />
                   )}
                 />
@@ -128,7 +130,7 @@ export function ReadingRangeFields({
             ) : (
               <View style={{ marginTop: spacing.md }}>
                 <MText style={{ opacity: 0.7 }}>
-                  No sections found for this book.
+                  {t("bookshelf.target.noSections")}
                 </MText>
 
                 <Pressable
@@ -144,7 +146,9 @@ export function ReadingRangeFields({
                     },
                   ]}
                 >
-                  <MText style={{ fontWeight: "800" }}>Open chapters</MText>
+                  <MText style={{ fontWeight: "800" }}>
+                    {t("bookshelf.chapters.open")}
+                  </MText>
                 </Pressable>
               </View>
             )
@@ -152,13 +156,13 @@ export function ReadingRangeFields({
             <>
               {/* Pages */}
               <MText style={formStyles.sectionTitle} color="textSecondary">
-                Pages
+                {t("bookshelf.target.pagesLabel")}
               </MText>
 
               <View style={styles.pagesRow}>
                 <View style={{ flex: 1 }}>
                   <MText style={styles.pagesLabel} color="textSecondary">
-                    Start page
+                    {t("bookshelf.target.startPage")}
                   </MText>
 
                   <Controller
@@ -169,7 +173,7 @@ export function ReadingRangeFields({
                         value={value}
                         onChangeText={(t) => onChange(t.replace(/[^\d]/g, ""))}
                         keyboardType="number-pad"
-                        placeholder="e.g. 10"
+                        placeholder={t("bookshelf.target.startPlaceholder")}
                         placeholderTextColor={colors.textSecondary}
                         style={[
                           styles.input,
@@ -195,7 +199,7 @@ export function ReadingRangeFields({
 
                 <View style={{ flex: 1 }}>
                   <MText style={styles.pagesLabel} color="textSecondary">
-                    End page
+                    {t("bookshelf.target.endPage")}
                   </MText>
 
                   <Controller
@@ -206,7 +210,7 @@ export function ReadingRangeFields({
                         value={value}
                         onChangeText={(t) => onChange(t.replace(/[^\d]/g, ""))}
                         keyboardType="number-pad"
-                        placeholder="e.g. 30"
+                        placeholder={t("bookshelf.target.endPlaceholder")}
                         placeholderTextColor={colors.textSecondary}
                         style={[
                           styles.input,
@@ -230,7 +234,7 @@ export function ReadingRangeFields({
               </View>
 
               <MText style={{ opacity: 0.7, marginTop: spacing.xs }}>
-                Tip: End page must be greater than start page.
+                {t("bookshelf.target.endPageTip")}
               </MText>
             </>
           )}

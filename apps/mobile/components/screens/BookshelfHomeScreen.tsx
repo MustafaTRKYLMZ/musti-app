@@ -17,10 +17,10 @@ import { pickActiveItem } from "@/utils/pickActiveItem";
 
 import { CreatePlanModal } from "@/components/ui/modals/CreatePlanModal";
 import { AppScreen } from "@/components/AppScreen";
-import { BookshelfHeader } from "@/components/Books/BookshelfHeader";
-import { bookshelfTheme, iconSizes } from "@musti/ui-native";
-import { IconButton } from "@musti/ui-native";
+import { useTranslation, formatTranslation } from "@musti/core";
+import { bookshelfTheme } from "@musti/ui-native";
 import { AppSwitcherButton } from "@/components/AppSwitcherButton";
+import { HeaderIconButton } from "@/components/ui/HeaderIconButton";
 import { LastReadBook } from "@/components/Books/LastReadBook";
 import { PlanList } from "@/components/Books/PlanList";
 import { BookList } from "../Books/BookList";
@@ -35,30 +35,13 @@ import { useGamificationSettingsStore } from "@/store/bookshelf/readingGamificat
 import { AddBookModal } from "../ui/modals/AddBookModal";
 import { EditPlanModal } from "../ui/modals/EditPlanModal";
 import { RenameBookModal } from "../ui/modals/RenameBookModal";
+import { bookshelfScreenStyles } from "@/components/Books/bookshelfScreenStyles";
 
 const { spacing } = bookshelfTheme;
 
-const bColors = bookshelfTheme.colors;
-const bSpacing = bookshelfTheme.spacing;
-const bRadii = bookshelfTheme.radii;
-
-const bookshelfHeaderStyles = StyleSheet.create({
-  safe: { paddingHorizontal: bSpacing.md, paddingVertical: bSpacing.sm },
-  header: {
-    borderBottomWidth: 0,
-    backgroundColor: bColors.surface,
-    borderRadius: bRadii.md,
-    borderWidth: 1,
-    borderColor: bColors.borderSubtle,
-    shadowColor: bColors.shadowStrong,
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-  },
-  title: { fontWeight: "600" },
-});
-
 export default function BookshelfHomeScreen() {
+  const { t } = useTranslation();
+
   useEffect(() => {
     useReadingGamificationStore.getState().hydrate();
     useGamificationSettingsStore.getState().hydrate();
@@ -218,12 +201,14 @@ export default function BookshelfHomeScreen() {
 
   const handleDeletePdf = (item: LocalPdfFile) => {
     Alert.alert(
-      "Delete PDF",
-      `Are you sure you want to delete "${item.name}"?`,
+      t("bookshelf.book.deletePdf"),
+      formatTranslation(t("bookshelf.book.deletePdfConfirm"), {
+        name: item.name,
+      }),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Delete",
+          text: t("common.delete"),
           style: "destructive",
           onPress: async () => {
             await deleteLocalPdf(item.uri);
@@ -235,15 +220,21 @@ export default function BookshelfHomeScreen() {
   };
 
   const handleDeletePlan = (planId: string) => {
-    const planName = plans.find((p) => p.id === planId)?.name ?? "this plan";
-    Alert.alert("Delete plan", `Delete "${planName}"?`, [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: () => deletePlan(planId),
-      },
-    ]);
+    const planName =
+      plans.find((p) => p.id === planId)?.name ??
+      t("bookshelf.plan.deleteFallback");
+    Alert.alert(
+      t("bookshelf.plan.deleteTitle"),
+      formatTranslation(t("bookshelf.plan.deleteConfirm"), { name: planName }),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("common.delete"),
+          style: "destructive",
+          onPress: () => deletePlan(planId),
+        },
+      ]
+    );
   };
 
   const openPlanDirect = (planId: string) => {
@@ -317,8 +308,8 @@ export default function BookshelfHomeScreen() {
     } catch (e) {
       console.warn("Rename error", e);
       Alert.alert(
-        "Rename failed",
-        "Could not rename this file. Please try a different name."
+        t("bookshelf.book.renameFailed"),
+        t("bookshelf.book.renameFailedMsg")
       );
     }
   }
@@ -362,35 +353,32 @@ export default function BookshelfHomeScreen() {
 
   return (
     <AppScreen
-      title="Bookshelf"
-      headerCenter={<BookshelfHeader />}
+      title={t("bookshelf.title")}
+      showMenu={false}
       headerRight={
         <View style={styles.headerActions}>
-          <IconButton
-            name="stats-chart-outline"
-            size={iconSizes.lg}
-            color={bColors.textPrimary}
+          <HeaderIconButton
+            icon="stats-chart-outline"
+            accessibilityLabel={t("bookshelf.a11y.openStats")}
             onPress={() => router.push("/(tabs)/bookshelf/stats")}
           />
-          <IconButton
-            name="notifications-circle-outline"
-            size={iconSizes.lg}
-            color={bColors.textPrimary}
+          <HeaderIconButton
+            icon="notifications-circle-outline"
+            accessibilityLabel={t("bookshelf.a11y.openReminders")}
             onPress={() => router.push("/(tabs)/bookshelf/reminders")}
           />
-          <IconButton
-            name="settings-outline"
-            size={iconSizes.lg}
-            color={bColors.textPrimary}
+          <HeaderIconButton
+            icon="settings-outline"
+            accessibilityLabel={t("bookshelf.a11y.openSettings")}
             onPress={() => router.push("/(tabs)/bookshelf/settings")}
           />
           <AppSwitcherButton />
         </View>
       }
-      safeAreaStyle={bookshelfHeaderStyles.safe}
-      headerContainerStyle={bookshelfHeaderStyles.header}
-      headerTitleStyle={bookshelfHeaderStyles.title}
-      headerTitleColor={bColors.textPrimary}
+      safeAreaStyle={bookshelfScreenStyles.safe}
+      headerContainerStyle={bookshelfScreenStyles.header}
+      headerTitleStyle={bookshelfScreenStyles.headerTitle}
+      headerTitleColor={bookshelfTheme.colors.textPrimary}
     >
       <View style={styles.container}>
         <ScrollView
@@ -548,7 +536,9 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.sm,
+    justifyContent: "flex-end",
+    flexWrap: "wrap",
+    gap: spacing.xs,
   },
   scrollContent: { paddingTop: spacing.lg, paddingBottom: spacing["3xl"] },
 });

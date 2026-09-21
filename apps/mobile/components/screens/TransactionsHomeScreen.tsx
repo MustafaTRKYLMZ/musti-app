@@ -9,8 +9,6 @@ import {
   type LocalTransaction,
 } from "@musti/core";
 
-import { CustomAlert } from "@/components/CustomAlert";
-
 import { FAB, MText, colors, spacing, radii } from "@musti/ui-native";
 import { AppScreen } from "@/components/AppScreen";
 import { syncTransactions } from "@/services/syncTransactions";
@@ -34,8 +32,6 @@ export function TransactionsHomeScreen() {
   const loadFromStorage = useTransactionsStore((s) => s.loadFromStorage);
   const deleteScoped = useTransactionsStore((s) => s.deleteTransactionScoped);
   const getBalanceOnDate = useTransactionsStore((s) => s.getBalanceOnDate);
-  const [alertMessage, setAlertMessage] = useState("");
-
   const loadInitialBalance = useSettingsStore((s) => s.loadInitialBalance);
 
   const [month, setMonth] = useState(getCurrentMonth);
@@ -213,10 +209,7 @@ export function TransactionsHomeScreen() {
       variant="budget"
       onPressMenu={() => setSidebarOpen(true)}
       headerCenter={
-        <BudgetHeader
-          onOpenSimulation={handleOpenSimulation}
-          onLanguageChange={setAlertMessage}
-        />
+        <BudgetHeader onOpenSimulation={handleOpenSimulation} />
       }
       safeAreaStyle={styles.safeArea}
       headerContainerStyle={styles.headerContainer}
@@ -290,11 +283,6 @@ export function TransactionsHomeScreen() {
           target={deleteTarget}
           onConfirm={confirmDelete}
           onClose={closeDeleteSheet}
-        />
-        <CustomAlert
-          visible={!!alertMessage}
-          message={alertMessage}
-          onHide={() => setAlertMessage("")}
         />
       </View>
     </AppScreen>

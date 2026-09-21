@@ -7,14 +7,10 @@ import {
   Pressable,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons, Feather } from "@expo/vector-icons";
-import {
-  colors as defaultColors,
-  spacing,
-  radii,
-  iconSizes,
-  MText,
-  useTheme,
-} from "@musti/ui-native";
+import { spacing, radii, iconSizes, touchTargets } from "../theme/tokens";
+import { colors as defaultColors } from "../theme";
+import { MText } from "./MText";
+import { useTheme } from "../theme/ThemeContext";
 
 export type IconFamily = "ion" | "material-community" | "feather";
 
@@ -65,7 +61,9 @@ export type IconButtonProps = {
   iconNode?: React.ReactNode;
   size?: number;
   accessibilityLabel?: string;
-  disabled?: boolean; // ✅ NEW
+  disabled?: boolean;
+  /** When false, skips the fixed 44×44 control box (e.g. nested in a larger row). */
+  control?: boolean;
 };
 
 export const IconButton = React.forwardRef<View, IconButtonProps>(
@@ -77,13 +75,14 @@ export const IconButton = React.forwardRef<View, IconButtonProps>(
       color,
       backgroundColor,
       padding = spacing.xs,
-      hitSlop = 8,
+      hitSlop = spacing.xs,
       style,
       onPress,
       rounded = true,
       iconNode,
       accessibilityLabel,
       disabled = false,
+      control = true,
     },
     ref
   ) {
@@ -101,33 +100,40 @@ export const IconButton = React.forwardRef<View, IconButtonProps>(
     const hoverBackground = disabled
       ? finalBackgroundColor
       : hovered
-      ? palette.background
-      : finalBackgroundColor;
+        ? palette.background
+        : finalBackgroundColor;
+
+    const isPressable = !!onPress && !disabled;
+    const useControlBox = isPressable && control;
+    const iconSize = size ?? touchTargets.controlIcon;
 
     const content =
       iconNode ??
       (name ? (
-        <BaseIcon family={family} name={name} size={size} color={finalColor} />
+        <BaseIcon family={family} name={name} size={iconSize} color={finalColor} />
       ) : null);
 
     return (
       <Pressable
         ref={ref}
         onPress={disabled ? undefined : onPress}
-        hitSlop={hitSlop}
+        hitSlop={useControlBox ? spacing.xs : hitSlop}
         disabled={disabled}
-        accessibilityRole="button"
+        accessibilityRole={isPressable ? "button" : undefined}
         accessibilityState={{ disabled }}
         accessibilityLabel={accessibilityLabel}
         onHoverIn={disabled ? undefined : () => setHovered(true)}
         onHoverOut={disabled ? undefined : () => setHovered(false)}
         android_ripple={
-          disabled ? undefined : { color: rippleColor, radius: 22 }
+          disabled || !isPressable
+            ? undefined
+            : { color: rippleColor, radius: touchTargets.control / 2 }
         }
         style={[
           styles.button,
+          useControlBox ? styles.controlButton : null,
           {
-            padding,
+            padding: useControlBox ? 0 : padding,
             borderRadius: rounded ? radii.full : radii.md,
             backgroundColor: hoverBackground,
             opacity: disabled ? 0.4 : 1,
@@ -154,13 +160,13 @@ export type IconTileProps = {
   backgroundColor?: string;
   iconBackgroundColor?: string;
   labelColor?: string;
-  disabled?: boolean; // ✅ NEW
+  disabled?: boolean;
 };
 
 export function IconTile({
   family = "ion",
   name,
-  size = iconSizes.xl,
+  size = iconSizes.lg,
   color,
   label,
   onPress,
@@ -201,6 +207,7 @@ export function IconTile({
           opacity: disabled ? 0.45 : 1,
           transform: [{ scale: hovered && !disabled ? 1.04 : 1 }],
           shadowOpacity: hovered && !disabled ? 0.24 : 0.12,
+          minHeight: onPress ? touchTargets.minimum : undefined,
         },
         style,
       ]}
@@ -233,6 +240,12 @@ const styles = StyleSheet.create({
   button: {
     justifyContent: "center",
     alignItems: "center",
+  },
+  controlButton: {
+    width: touchTargets.control,
+    height: touchTargets.control,
+    minWidth: touchTargets.control,
+    minHeight: touchTargets.control,
   },
   tile: {
     alignItems: "center",

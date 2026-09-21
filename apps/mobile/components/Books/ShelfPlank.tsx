@@ -91,7 +91,6 @@ export const ShelfPlank: FC<ShelfPlankProps> = ({
 
   const r = Math.min(radius, pts.frontRect.h / 2);
 
-  // ✅ unique ids
   const topLightId = `topLight-${idSuffix}`;
   const frontShadeId = `frontShade-${idSuffix}`;
   const accentLineId = `accentLine-${idSuffix}`;

@@ -16,6 +16,11 @@ export type DayInlineItem = {
   title: string;
 };
 
+export type DayMarker = {
+  id: string;
+  color: string;
+};
+
 export type DayBar = {
   id: string;
   color: string;
@@ -43,13 +48,17 @@ type Props = {
 
   inlineItems?: DayInlineItem[];
   maxInlineItems?: number;
+
+  /** All events on this day — used for compact dot row (matches agenda count). */
+  markers?: DayMarker[];
+  maxMarkerDots?: number;
 };
 
 const CONNECT_PX = 10;
 
 // tight
 const BAR_H_EXPANDED = 14;
-const BAR_H_COMPACT = 4;
+const BAR_H_COMPACT = 5;
 
 const BAR_TOP_EXPANDED = 34;
 const BAR_TOP_COMPACT = 30;
@@ -78,6 +87,9 @@ export const DayCard: FC<Props> = ({
 
   inlineItems,
   maxInlineItems = 2,
+
+  markers,
+  maxMarkerDots = 4,
 }) => {
   const dayNum = date.getDate();
 
@@ -90,21 +102,25 @@ export const DayCard: FC<Props> = ({
       width,
       height,
       backgroundColor: colors.background,
-      borderRadius: radii.md,
+      borderRadius: radii.sm,
 
-      paddingHorizontal: spacing.sm,
-      paddingTop: DAY_TOP_PAD,
+      paddingHorizontal: spacing.xs,
+      paddingTop: DAY_TOP_PAD - 2,
       paddingBottom: spacing.xs,
 
-      overflow: "visible",
+      overflow: "hidden",
 
       justifyContent: "flex-start",
-      borderWidth: 2,
-      borderColor: isSelected ? colors.primary : "transparent",
-      opacity: isOutside ? 0.45 : 1,
+      borderWidth: isSelected ? 2 : 1,
+      borderColor: isSelected
+        ? colors.primary
+        : isToday
+          ? `${colors.primary}66`
+          : colors.borderSubtle,
+      opacity: isOutside ? 0.5 : 1,
     };
     return [s];
-  }, [width, height, isOutside, isSelected]);
+  }, [width, height, isOutside, isSelected, isToday, colors]);
 
   const dayTextStyle = useMemo<StyleProp<TextStyle>>(() => {
     const base: TextStyle = {
@@ -184,6 +200,7 @@ export const DayCard: FC<Props> = ({
   ]);
 
   const renderBars = () => {
+    if (!expanded) return null;
     if (!barLayout.render.length && barLayout.hiddenCount <= 0) return null;
 
     return (
@@ -253,23 +270,33 @@ export const DayCard: FC<Props> = ({
     );
   };
 
+  const renderCompactMarkers = () => {
+    if (expanded || !markers || markers.length === 0) return null;
+
+    const visible = markers.slice(0, maxMarkerDots);
+    const hidden = markers.length - visible.length;
+
+    return (
+      <View style={[styles.inlineWrap, styles.inlineDotsOnly]}>
+        {visible.map((m) => (
+          <View
+            key={m.id}
+            style={[styles.inlineDot, { backgroundColor: m.color }]}
+          />
+        ))}
+        {hidden > 0 ? (
+          <MText style={styles.moreDotsText}>+{hidden}</MText>
+        ) : null}
+      </View>
+    );
+  };
+
   const renderInline = () => {
     if (!inlineItems || inlineItems.length === 0) return null;
     const items = inlineItems.slice(0, maxInlineItems);
 
     if (!expanded) {
-      return (
-        <View style={[styles.inlineWrap, { marginTop: spacing.xs }]}>
-          {items.map((it, idx) => (
-            <View key={`${it.title}-${idx}`} style={styles.inlineRow}>
-              <View style={[styles.inlineDot, { backgroundColor: it.color }]} />
-              <MText numberOfLines={1} style={styles.inlineText}>
-                {it.title}
-              </MText>
-            </View>
-          ))}
-        </View>
-      );
+      return null;
     }
 
     return (
@@ -307,6 +334,7 @@ export const DayCard: FC<Props> = ({
         <MText style={dayTextStyle}>{dayNum}</MText>
       </View>
 
+      {!expanded ? renderCompactMarkers() : null}
       {renderBars()}
       {renderInline()}
     </Pressable>
@@ -317,9 +345,9 @@ const styles = StyleSheet.create({
   topRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "flex-start",
+    justifyContent: "space-between",
+    paddingHorizontal: 2,
   },
-
   barAbsWrap: {
     position: "absolute",
     left: 0,
@@ -360,6 +388,13 @@ const styles = StyleSheet.create({
     gap: 2,
   },
 
+  inlineDotsOnly: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: spacing.xs,
+    gap: 3,
+  },
+
   inlineRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -370,6 +405,13 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 6,
+  },
+
+  moreDotsText: {
+    fontSize: sizes.sm,
+    fontWeight: "700",
+    color: colors.textSecondary,
+    marginLeft: 2,
   },
 
   inlineText: {

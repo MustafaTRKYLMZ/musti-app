@@ -1,20 +1,20 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
 import { MText, spacing } from "@musti/ui-native";
+import { useTranslation } from "@musti/core";
 
 type Props = {
   count: number;
   title?: string;
 };
 
-export function Last30DaysHeader({
-  count,
-  title = "Last 30 days · daily (excluding today)",
-}: Props) {
+export function Last30DaysHeader({ count, title }: Props) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.sectionHeader}>
       <MText variant="bodyStrong" color="textPrimary">
-        {title}
+        {title ?? t("bookshelf.stats.last30Daily")}
       </MText>
       <MText variant="caption" color="textSecondary">
         {count}

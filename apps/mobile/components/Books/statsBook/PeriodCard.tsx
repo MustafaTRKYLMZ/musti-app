@@ -36,7 +36,7 @@ export function PeriodCard({
     >
       <View style={styles.periodHeader}>
         <View style={styles.periodHeaderLeft}>
-          <BaseIcon name={icon as any} size={16} color={colors.textSecondary} />
+          <BaseIcon name={icon as any} color={colors.textSecondary} />
           <MText variant="bodyStrong" color="textPrimary">
             {title}
           </MText>

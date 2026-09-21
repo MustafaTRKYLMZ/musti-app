@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   StyleSheet,
@@ -10,27 +10,28 @@ import {
 import type { CalendarConfig, MEvent } from "@musti/planner/src/types";
 
 import { plannerTheme, spacing } from "@musti/ui-native";
-import { DayCard, DayInlineItem, DayBar } from "./DayCard";
-import { TOTAL_DAYS, WEEKS_IN_GRID } from "@/config/timeConfigs";
-import {
-  startOfWeek,
-  addDays,
-  sameDay,
-  toDate,
-  packWeekSegments,
-  toISODateKeyLocal,
-  WeekSeg,
-} from "@musti/planner";
+import { DayCard } from "./DayCard";
+import { WEEKS_IN_GRID } from "@/config/timeConfigs";
+import { sameDay, toISODateKeyLocal } from "@musti/planner";
 import { useCalendarUiStore } from "@/store/calendar/useCalendarUiStore";
-import { eventToTitle } from "@/utils/calendar/format";
 import {
   addMonthsClamped,
-  startOfMonth,
-  stripLeadingTimeLabel,
 } from "@/utils/calendar/monthViewUtils";
-import { listLocalDaysOverlapped } from "@/utils/calendar/listLocalDaysOverlapped";
+import {
+  buildDayEventIndex,
+  getDayEventMarkers,
+} from "@/utils/calendar/dayEventIndex";
+import {
+  getMonthPageData,
+  prefetchAdjacentMonths,
+} from "@/utils/calendar/monthPageData";
+import { getWeekdayHeaderDays } from "@/utils/calendar/format";
+import { WeekdayLettersRow } from "./WeekdayLettersRow";
 
 const { colors } = plannerTheme;
+
+const SWIPE_COMMIT_RATIO = 0.08;
+const FLING_VELOCITY = 0.08;
 
 export function MonthView(props: {
   config: CalendarConfig;
@@ -40,13 +41,17 @@ export function MonthView(props: {
   locale?: string;
   gridHeightAnim?: Animated.Value;
   onPressDay?: (d: Date) => void;
-  maxMarkers?: number; // maxBars
+  maxMarkers?: number;
   maxInlineItems?: number;
 }) {
   const scrollRef = useRef<ScrollView | null>(null);
+  const commitLockUntil = useRef(0);
+  const dateRef = useRef(useCalendarUiStore.getState().date);
+  const isDraggingRef = useRef(false);
 
   const date = useCalendarUiStore((s) => s.date);
   const selectedDate = useCalendarUiStore((s) => s.selectedDate);
+  const shiftDate = useCalendarUiStore((s) => s.shiftDate);
   const setDate = useCalendarUiStore((s) => s.setDate);
 
   const weekStartsOn = props.config.weekStartsOn ?? 1;
@@ -58,164 +63,112 @@ export function MonthView(props: {
   const [cellH, setCellH] = useState(42);
 
   useEffect(() => {
+    dateRef.current = date;
+  }, [date]);
+
+  useEffect(() => {
+    prefetchAdjacentMonths(date, props.events, weekStartsOn);
+  }, [date, props.events, weekStartsOn]);
+
+  useEffect(() => {
     if (!props.gridHeightAnim) return;
 
-    let raf = 0;
+    let lastCellH = 0;
     const subId = props.gridHeightAnim.addListener(({ value }) => {
-      if (raf) return;
-      raf = requestAnimationFrame(() => {
-        raf = 0;
-        const h = Math.max(0, value);
-        const next = Math.max(32, Math.floor(h / WEEKS_IN_GRID));
-        setCellH(next);
-      });
+      const h = Math.max(0, value);
+      const next = Math.max(32, Math.floor(h / WEEKS_IN_GRID));
+      if (Math.abs(next - lastCellH) < 3) return;
+      lastCellH = next;
+      setCellH(next);
     });
 
     return () => {
-      if (raf) cancelAnimationFrame(raf);
       props.gridHeightAnim?.removeListener(subId);
     };
   }, [props.gridHeightAnim]);
 
-  const months = useMemo(() => {
-    const prev = addMonthsClamped(date, -1);
-    const cur = date;
-    const next = addMonthsClamped(date, +1);
-    return [prev, cur, next];
-  }, [date]);
-
-  useEffect(() => {
-    requestAnimationFrame(() => {
-      scrollRef.current?.scrollTo({ x: centerOffset, animated: false });
-    });
-  }, [centerOffset, date.getFullYear(), date.getMonth(), pageWidth]);
-
-  const buildMonthGrid = useMemo(() => {
-    return (baseDate: Date) => {
-      const monthIndex = baseDate.getMonth();
-      const mStart = startOfMonth(baseDate);
-      const gridStart = startOfWeek(mStart, weekStartsOn);
-      const gridDays = Array.from({ length: TOTAL_DAYS }, (_, i) =>
-        addDays(gridStart, i)
-      );
-      const weeks = Array.from({ length: WEEKS_IN_GRID }, (_, w) =>
-        gridDays.slice(w * 7, w * 7 + 7)
-      );
-      return { monthIndex, weeks };
-    };
-  }, [weekStartsOn]);
-
-  const pages = useMemo(
-    () => months.map(buildMonthGrid),
-    [months, buildMonthGrid]
+  const dayIndex = useMemo(
+    () => buildDayEventIndex(props.events),
+    [props.events]
   );
 
-  const perPageData = useMemo(() => {
-    return pages.map((p) => {
-      const barsByKey: Record<string, DayBar[]> = {};
-      const inlineByKey: Record<string, DayInlineItem[]> = {};
+  const months = useMemo(
+    () => [addMonthsClamped(date, -1), date, addMonthsClamped(date, +1)],
+    [date]
+  );
 
-      for (let wi = 0; wi < p.weeks.length; wi++) {
-        const weekDays = p.weeks[wi];
-        const weekKeys = weekDays.map(toISODateKeyLocal);
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ x: centerOffset, animated: false });
+  }, [date.getFullYear(), date.getMonth(), pageWidth, centerOffset]);
 
-        const segs: WeekSeg[] = [];
+  const pages = useMemo(
+    () =>
+      months.map((m) => getMonthPageData(m, props.events, weekStartsOn)),
+    [months, props.events, weekStartsOn]
+  );
 
-        const inlineTmp: Record<
-          string,
-          { color: string; title: string; t: number }[]
-        > = {};
+  const weekdayHeaderDays = useMemo(
+    () => getWeekdayHeaderDays(weekStartsOn),
+    [weekStartsOn]
+  );
 
-        for (const ev of props.events) {
-          const s = toDate((ev as any).start);
-          const e = toDate((ev as any).end);
-          if (!Number.isFinite(s.getTime()) || !Number.isFinite(e.getTime()))
-            continue;
-          if (e <= s) continue;
+  const commitPage = useCallback(
+    (x: number, velocityX = 0) => {
+      if (Date.now() < commitLockUntil.current) return false;
 
-          const id = String((ev as any).id ?? "");
-          const color = (ev as any)?.color ?? colors.primary;
-          const rawTitle =
-            (ev as any)?.title ?? (ev as any)?.name ?? eventToTitle(ev as any);
-          const title = stripLeadingTimeLabel(String(rawTitle ?? ""));
+      const dist = x - centerOffset;
+      let pageIndex = 1;
 
-          const days = listLocalDaysOverlapped(s, e);
-          if (!days.length) continue;
-
-          // ✅ perf: days -> set of keys
-          const dayKeySet = new Set(days.map(toISODateKeyLocal));
-
-          const visibleCols: number[] = [];
-          for (let col = 0; col < 7; col++) {
-            if (dayKeySet.has(weekKeys[col])) visibleCols.push(col);
-          }
-          if (!visibleCols.length) continue;
-
-          const isSingleDay = days.length === 1;
-          if (isSingleDay) {
-            const k = weekKeys[visibleCols[0]];
-            (inlineTmp[k] ||= []).push({ color, title, t: s.getTime() });
-            continue;
-          }
-
-          const startCol = Math.min(...visibleCols);
-          const endCol = Math.max(...visibleCols);
-
-          segs.push({ id, color, title, startCol, endCol });
-        }
-
-        const { placement } = packWeekSegments(segs);
-
-        for (const seg of segs) {
-          const row = placement.get(seg.id) ?? 0;
-
-          const spanLen = seg.endCol - seg.startCol + 1;
-          const anchorCol = seg.startCol + Math.floor(spanLen / 2);
-
-          for (let col = seg.startCol; col <= seg.endCol; col++) {
-            const k = weekKeys[col];
-            const contL = col > seg.startCol;
-            const contR = col < seg.endCol;
-
-            (barsByKey[k] ||= []).push({
-              id: seg.id,
-              color: seg.color,
-              contL,
-              contR,
-              row,
-              title: col === anchorCol ? seg.title : null,
-            });
-          }
-        }
-
-        for (const k of Object.keys(inlineTmp)) {
-          inlineTmp[k].sort((a, b) => a.t - b.t);
-          inlineByKey[k] = inlineTmp[k].map(({ color, title }) => ({
-            color,
-            title,
-          }));
-        }
+      if (Math.abs(velocityX) > FLING_VELOCITY) {
+        pageIndex = velocityX < 0 ? 2 : 0;
+      } else if (Math.abs(dist) > pageWidth * SWIPE_COMMIT_RATIO) {
+        pageIndex = dist > 0 ? 2 : 0;
+      } else {
+        pageIndex = Math.round(x / pageWidth);
+        if (pageIndex === 1) return false;
       }
 
-      return { barsByKey, inlineByKey };
-    });
-  }, [pages, props.events]);
+      if (pageIndex === 1) return false;
 
-  const handleMomentumEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const x = e.nativeEvent.contentOffset.x;
-    const pageIndex = Math.round(x / pageWidth);
-    if (pageIndex === 1) return;
+      commitLockUntil.current = Date.now() + 280;
+      const delta = pageIndex - 1;
+      const nextDate = addMonthsClamped(dateRef.current, delta);
 
-    const delta = pageIndex - 1;
-    setDate(addMonthsClamped(date, delta));
-
-    requestAnimationFrame(() => {
       scrollRef.current?.scrollTo({ x: centerOffset, animated: false });
-    });
-  };
+      shiftDate(nextDate);
+      return true;
+    },
+    [pageWidth, centerOffset, shiftDate]
+  );
+
+  const handleScroll = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (!isDraggingRef.current) return;
+      commitPage(e.nativeEvent.contentOffset.x);
+    },
+    [commitPage]
+  );
+
+  const handleScrollRelease = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      isDraggingRef.current = false;
+      const { contentOffset, velocity } = e.nativeEvent;
+      commitPage(contentOffset.x, velocity?.x ?? 0);
+    },
+    [commitPage]
+  );
 
   return (
     <View style={styles.container}>
+      <WeekdayLettersRow
+        days={weekdayHeaderDays}
+        locale={props.locale ?? props.config.locale}
+        weekStartsOn={weekStartsOn}
+        colWidth={props.colWidth}
+        gap={0}
+        containerStyle={styles.weekdayRow}
+      />
+
       <ScrollView
         ref={(r) => {
           scrollRef.current = r;
@@ -224,20 +177,23 @@ export function MonthView(props: {
         nestedScrollEnabled
         directionalLockEnabled
         showsHorizontalScrollIndicator={false}
+        removeClippedSubviews
         bounces={false}
         decelerationRate="fast"
-        snapToInterval={pageWidth}
-        snapToAlignment="start"
-        onMomentumScrollEnd={handleMomentumEnd}
+        disableIntervalMomentum
+        pagingEnabled
+        onScrollBeginDrag={() => {
+          isDraggingRef.current = true;
+        }}
+        onScroll={handleScroll}
+        onScrollEndDrag={handleScrollRelease}
         scrollEventThrottle={16}
         contentContainerStyle={{ width: pageWidth * 3 }}
       >
         {pages.map((p, pi) => {
-          const { barsByKey, inlineByKey } = perPageData[pi];
-
           return (
             <View
-              key={`page-${pi}`}
+              key={`${months[pi].getFullYear()}-${months[pi].getMonth()}`}
               style={{ width: pageWidth, alignItems: "center" }}
             >
               {p.weeks.map((weekDays, wi) => (
@@ -250,7 +206,7 @@ export function MonthView(props: {
 
                     return (
                       <DayCard
-                        key={`${d.toISOString()}-${pi}-${wi}-${di}`}
+                        key={`${k}-${pi}-${wi}-${di}`}
                         date={d}
                         width={props.colWidth}
                         height={cellH}
@@ -262,10 +218,15 @@ export function MonthView(props: {
                           setDate(dd);
                           props.onPressDay?.(dd);
                         }}
-                        bars={barsByKey[k]}
+                        bars={p.barsByKey[k]}
                         maxBars={props.maxMarkers ?? 4}
-                        inlineItems={inlineByKey[k]}
-                        maxInlineItems={props.maxInlineItems ?? 2}
+                        inlineItems={p.inlineByKey[k]}
+                        maxInlineItems={props.maxInlineItems ?? 4}
+                        markers={getDayEventMarkers(dayIndex, d).map((m) => ({
+                          id: m.id,
+                          color: m.color,
+                        }))}
+                        maxMarkerDots={4}
                       />
                     );
                   })}
@@ -282,7 +243,13 @@ export function MonthView(props: {
 const styles = StyleSheet.create({
   container: {
     backgroundColor: colors.background,
-    paddingVertical: spacing.sm,
+    paddingBottom: spacing.sm,
+  },
+  weekdayRow: {
+    paddingBottom: spacing.xs,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.borderSubtle,
+    marginBottom: spacing.xs,
   },
   weekRow: { flexDirection: "row" },
 });

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
+import { useTranslation } from "@musti/core";
 import type { TargetRepeat } from "@musti/core";
 import {
   createTargetSchema,
@@ -58,6 +59,7 @@ type EditDeps = {
 type Deps = CommonDeps & (CreateDeps | EditDeps);
 
 export function useTargetFormController(deps: Deps) {
+  const { t } = useTranslation();
   const {
     control,
     setValue,
@@ -219,21 +221,27 @@ export function useTargetFormController(deps: Deps) {
     if (!ok) return;
 
     const vals = getValues();
-    const t = vals.title.trim();
-    if (!t) return;
+    const targetTitle = vals.title.trim();
+    if (!targetTitle) return;
 
     try {
-      const id = await deps.addTarget(t);
+      const id = await deps.addTarget(targetTitle);
       setCreatedTargetId(id);
 
       const payload = buildTargetRepeatFromForm(vals);
       if (payload) await deps.setTargetRepeat(id, payload);
 
-      deps.showToast({ message: "Target created. Now add items.", duration: 2500 });
+      deps.showToast({
+        message: t("bookshelf.target.createdAddItems"),
+        duration: 2500,
+      });
     } catch {
-      deps.showToast({ message: "Failed to create target.", duration: 4000 });
+      deps.showToast({
+        message: t("bookshelf.target.createFailed"),
+        duration: 4000,
+      });
     }
-  }, [deps, trigger, getValues]);
+  }, [deps, trigger, getValues, t]);
 
   // ✅ add item (both modes)
   const addSelectedItem = useCallback(async () => {
@@ -243,7 +251,10 @@ export function useTargetFormController(deps: Deps) {
 
     if (vals.type === "section") {
       if (!selectedSection) {
-        deps.showToast({ message: "Select a section first.", duration: 2500 });
+        deps.showToast({
+          message: t("bookshelf.target.selectSectionFirst"),
+          duration: 2500,
+        });
         return;
       }
 
@@ -262,10 +273,16 @@ export function useTargetFormController(deps: Deps) {
           jumpPage,
         });
 
-        deps.showToast({ message: "Item added.", duration: 1800 });
+        deps.showToast({
+          message: t("bookshelf.target.itemAdded"),
+          duration: 1800,
+        });
         setValue("selectedSectionId", null, { shouldDirty: true });
       } catch {
-        deps.showToast({ message: "Failed to add item.", duration: 3500 });
+        deps.showToast({
+          message: t("bookshelf.target.itemAddFailed"),
+          duration: 3500,
+        });
       }
       return;
     }
@@ -278,7 +295,7 @@ export function useTargetFormController(deps: Deps) {
 
     if (!(endPage > jumpPage)) {
       deps.showToast({
-        message: "End page must be greater than start page.",
+        message: t("bookshelf.target.endPageGtStart"),
         duration: 3500,
       });
       return;
@@ -296,11 +313,17 @@ export function useTargetFormController(deps: Deps) {
         jumpPage,
       });
 
-      deps.showToast({ message: "Item added.", duration: 1800 });
+      deps.showToast({
+        message: t("bookshelf.target.itemAdded"),
+        duration: 1800,
+      });
       setValue("startPageInput", "", { shouldDirty: true });
       setValue("endPageInput", "", { shouldDirty: true });
     } catch {
-      deps.showToast({ message: "Failed to add item.", duration: 3500 });
+      deps.showToast({
+        message: t("bookshelf.target.itemAddFailed"),
+        duration: 3500,
+      });
     }
   }, [
     deps,
@@ -310,6 +333,7 @@ export function useTargetFormController(deps: Deps) {
     getValues,
     trigger,
     setValue,
+    t,
   ]);
 
   // ✅ save edit (only edit mode)
@@ -330,11 +354,17 @@ export function useTargetFormController(deps: Deps) {
       const payload = buildTargetRepeatFromForm(vals);
       await deps.setTargetRepeat(deps.target.id, payload);
 
-      deps.showToast({ message: "Target saved.", duration: 2000 });
+      deps.showToast({
+        message: t("bookshelf.target.saved"),
+        duration: 2000,
+      });
     } catch {
-      deps.showToast({ message: "Failed to save target.", duration: 3500 });
+      deps.showToast({
+        message: t("bookshelf.target.saveFailed"),
+        duration: 3500,
+      });
     }
-  }, [deps, trigger, getValues]);
+  }, [deps, trigger, getValues, t]);
 
   const resetAll = useCallback(() => {
     reset(createTargetDefaultValues);

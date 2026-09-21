@@ -5,6 +5,7 @@ import {
   MText,
   radii,
   spacing,
+  touchTargets,
 } from "@musti/ui-native";
 import { Pressable, View, StyleSheet } from "react-native";
 
@@ -34,7 +35,7 @@ export const RowAction = ({
       <View style={styles.rowBtnLeft}>
         <BaseIcon
           name={icon as any}
-          size={iconSizes.md}
+          size={iconSizes.lg}
           color={colors.textSecondary}
         />
         <MText style={{ color: colors.textPrimary, fontWeight: "800" }}>
@@ -47,7 +48,7 @@ export const RowAction = ({
         </MText>
         <BaseIcon
           name={"chevron-forward" as any}
-          size={iconSizes.md}
+          size={iconSizes.lg}
           color={colors.textSecondary}
         />
       </View>
@@ -60,6 +61,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
+    minHeight: touchTargets.minimum,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",

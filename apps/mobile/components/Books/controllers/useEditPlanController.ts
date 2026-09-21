@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert } from "react-native";
 import { listLocalPdfs, type LocalPdfFile } from "@/utils/getPdfsDirectory";
 import type { MSelectItemBase } from "@/components/ui/MSelectBottomSheet";
+import { useTranslation, formatTranslation } from "@musti/core";
 import type { PlanItemConfig } from "@musti/core";
 
 type EntryState = Record<string, string>;
@@ -20,6 +21,7 @@ type Deps = {
 };
 
 export function useEditPlanController(deps: Deps) {
+  const { t } = useTranslation();
   const [books, setBooks] = useState<LocalPdfFile[]>([]);
   const [planName, setPlanName] = useState("");
 
@@ -111,7 +113,10 @@ export function useEditPlanController(deps: Deps) {
 
   const addSelectedBook = useCallback(() => {
     if (!selectedBookUri) {
-      Alert.alert("No book selected", "Please select a book first.");
+      Alert.alert(
+        t("bookshelf.plan.noBookSelected"),
+        t("bookshelf.plan.selectBookFirst")
+      );
       return;
     }
 
@@ -119,7 +124,10 @@ export function useEditPlanController(deps: Deps) {
     const pages = raw ? parseInt(raw, 10) : 0;
 
     if (!pages || pages <= 0) {
-      Alert.alert("Invalid pages", "Please enter a positive page amount.");
+      Alert.alert(
+        t("bookshelf.plan.invalidPages"),
+        t("bookshelf.plan.positivePages")
+      );
       return;
     }
 
@@ -127,7 +135,7 @@ export function useEditPlanController(deps: Deps) {
 
     const nextAvail = availableBooks.find((b) => b.uri !== selectedBookUri);
     setSelectedBookUri(nextAvail?.uri ?? null);
-  }, [selectedBookUri, entries, availableBooks]);
+  }, [selectedBookUri, entries, availableBooks, t]);
 
   const removeBook = useCallback((uri: string) => {
     setOrder((prev) => prev.filter((x) => x !== uri));
@@ -169,11 +177,15 @@ export function useEditPlanController(deps: Deps) {
   }, [books]);
 
   const removeAllBooks = useCallback(() => {
-    Alert.alert("Clear plan", "Remove all books from this plan?", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Remove", style: "destructive", onPress: () => setOrder([]) },
+    Alert.alert(t("bookshelf.plan.clearTitle"), t("bookshelf.plan.clearConfirm"), [
+      { text: t("common.cancel"), style: "cancel" },
+      {
+        text: t("bookshelf.common.remove"),
+        style: "destructive",
+        onPress: () => setOrder([]),
+      },
     ]);
-  }, []);
+  }, [t]);
 
   const addMultiSelected = useCallback(() => {
     const selectedUris = Object.keys(multiSelected).filter((u) => multiSelected[u]);
@@ -224,37 +236,40 @@ export function useEditPlanController(deps: Deps) {
   const save = useCallback(() => {
     if (!deps.planId || !deps.plan) return;
 
-    const finalName = planName.trim() || "Reading plan";
+    const finalName = planName.trim() || t("bookshelf.plan.defaultName");
     const items = buildItems();
 
     if (!items.length) {
-      Alert.alert(
-        "Empty plan",
-        "Please keep at least one book with a valid pages/day target."
-      );
+      Alert.alert(t("bookshelf.plan.emptyTitle"), t("bookshelf.plan.emptyMsg"));
       return;
     }
 
     deps.updatePlan({ planId: deps.planId, name: finalName, items });
     deps.onClose();
-  }, [deps, planName, buildItems]);
+  }, [deps, planName, buildItems, t]);
 
   const del = useCallback(() => {
     if (!deps.planId || !deps.plan) return;
 
-    Alert.alert("Delete plan", `Delete "${deps.plan.name}"?`, [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: () => {
-          deps.deletePlan(deps.planId!);
-          deps.onClose();
-          deps.onDeleted?.();
+    Alert.alert(
+      t("bookshelf.plan.deleteTitle"),
+      formatTranslation(t("bookshelf.plan.deleteConfirm"), {
+        name: deps.plan.name || t("bookshelf.plan.deleteFallback"),
+      }),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("common.delete"),
+          style: "destructive",
+          onPress: () => {
+            deps.deletePlan(deps.planId!);
+            deps.onClose();
+            deps.onDeleted?.();
+          },
         },
-      },
-    ]);
-  }, [deps]);
+      ]
+    );
+  }, [deps, t]);
 
   return {
     // data

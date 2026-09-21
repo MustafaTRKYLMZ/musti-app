@@ -19,7 +19,6 @@ export default function ComingSoonScreen() {
       <View style={styles.headerRow}>
         <IconButton
           name="chevron-back"
-          size={iconSizes.md}
           color={"white"}
           onPress={handleBack}
         />

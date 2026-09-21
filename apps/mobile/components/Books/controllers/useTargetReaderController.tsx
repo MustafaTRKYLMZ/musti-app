@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import dayjs from "dayjs";
-import type { PdfRef } from "react-native-pdf";
+import type { PdfRef } from "@/components/ui/pdf/pdfTypes";
 
 import { useReadingTargetsStore } from "@/store/bookshelf/useReadingTargetsStore";
 import { scheduleMotivationNudgeIfNeeded } from "@/utils/motivation";
@@ -10,10 +10,12 @@ import { useToast } from "@/components/ui/ToastProvider";
 import type { ReaderShellProps } from "@/components/Books/ReaderShell";
 import { clampInt } from "@/utils/number";
 import { usePdfSource } from "./usePdfSource";
+import { useTranslation } from "@musti/core";
 
 export function useTargetReaderController(): ReaderShellProps {
   const router = useRouter();
   const { showToast } = useToast();
+  const { t } = useTranslation();
 
   const params = useLocalSearchParams<{
     targetId?: string;
@@ -87,9 +89,9 @@ export function useTargetReaderController(): ReaderShellProps {
   // ✅ PDF source (cached)
   const pdf = usePdfSource({
     uri: bookUri,
-    invalidText: "Loading…",
-    preparingText: "Preparing PDF…",
-    failedText: "Failed to load PDF.",
+    invalidText: t("bookshelf.common.loading"),
+    preparingText: t("bookshelf.reader.preparing"),
+    failedText: t("bookshelf.reader.loadFailed"),
   });
 
   // auto-close when all done, but not while advancing
@@ -135,12 +137,17 @@ export function useTargetReaderController(): ReaderShellProps {
 
   // ✅ single, final guard (base checks + pdf guard last)
   const guard: ReaderShellProps["guard"] = useMemo(() => {
-    if (!targetId) return { kind: "message", text: "Invalid targetId" };
-    if (!hydrated) return { kind: "message", text: "Loading…" };
-    if (!target) return { kind: "message", text: "Target not found." };
-    if (isClosing) return { kind: "message", text: "Done." };
-    if (isAdvancing) return { kind: "message", text: "Loading…" };
-    if (!activeItem || !bookUri) return { kind: "message", text: "Loading…" };
+    if (!targetId)
+      return { kind: "message", text: t("bookshelf.reader.invalidTargetId") };
+    if (!hydrated)
+      return { kind: "message", text: t("bookshelf.common.loading") };
+    if (!target)
+      return { kind: "message", text: t("bookshelf.reader.targetNotFound") };
+    if (isClosing) return { kind: "message", text: t("bookshelf.reader.done") };
+    if (isAdvancing)
+      return { kind: "message", text: t("bookshelf.common.loading") };
+    if (!activeItem || !bookUri)
+      return { kind: "message", text: t("bookshelf.common.loading") };
 
     return pdf.guard;
   }, [
@@ -152,6 +159,7 @@ export function useTargetReaderController(): ReaderShellProps {
     activeItem,
     bookUri,
     pdf.guard,
+    t,
   ]);
 
   const startPage = Math.max(
@@ -193,8 +201,8 @@ export function useTargetReaderController(): ReaderShellProps {
       void markItemDone(targetId, activeItem.id).catch(() => {});
 
       showToast({
-        title: "Target completed 🎯",
-        message: "Nice work!",
+        title: t("bookshelf.toast.targetComplete"),
+        message: t("bookshelf.reader.niceWork"),
         duration: 2500,
       });
 

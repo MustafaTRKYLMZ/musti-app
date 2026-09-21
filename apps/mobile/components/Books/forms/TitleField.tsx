@@ -1,6 +1,7 @@
 import React from "react";
 import { StyleSheet, TextInput } from "react-native";
 import { Controller, type Control, type FieldErrors } from "react-hook-form";
+import { useTranslation } from "@musti/core";
 import { MText, radii, spacing, useTheme } from "@musti/ui-native";
 
 import type { CreateTargetFormValues } from "@musti/forms";
@@ -16,15 +17,19 @@ type Props = {
 export function TitleField({
   control,
   errors,
-  label = "Title",
-  placeholder = "e.g. Morning routine",
+  label,
+  placeholder,
 }: Props) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
+  const resolvedLabel = label ?? t("bookshelf.plan.titleDefault");
+  const resolvedPlaceholder =
+    placeholder ?? t("bookshelf.plan.titlePlaceholder");
 
   return (
     <>
       <MText style={formStyles.sectionTitle} color="textSecondary">
-        {label}
+        {resolvedLabel}
       </MText>
 
       <Controller
@@ -34,7 +39,7 @@ export function TitleField({
           <TextInput
             value={value}
             onChangeText={onChange}
-            placeholder={placeholder}
+            placeholder={resolvedPlaceholder}
             placeholderTextColor={colors.textSecondary}
             style={[
               styles.input,

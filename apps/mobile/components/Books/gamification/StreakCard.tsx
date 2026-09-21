@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { View, StyleSheet, Pressable, Animated } from "react-native";
+import { View, StyleSheet, Pressable, Animated, ScrollView } from "react-native";
 import dayjs from "dayjs";
-import { MText, bookshelfTheme } from "@musti/ui-native";
+import { useTranslation, formatTranslation } from "@musti/core";
+import { MText, bookshelfTheme, BaseIcon, iconSizes } from "@musti/ui-native";
 
 import { CircularProgress } from "@/components/ui/CircularProgress";
 import { StreakSheet } from "@/components/Books/gamification/StreakSheet";
+import { ReadingPulseStrip } from "@/components/Books/gamification/ReadingPulseStrip";
 
 import { useReadingGamificationStore } from "@/store/bookshelf/readingGamification/useReadingGamificationStore";
 import { useGamificationSettingsStore } from "@/store/bookshelf/readingGamification/useGamificationSettingsStore";
@@ -14,16 +16,19 @@ import { useLastGain } from "@/hooks/useLastGain";
 
 const { colors, spacing, radii } = bookshelfTheme;
 
+const TODAY_RING = 52;
+const RING_STROKE = 6;
+const CHIP_ICON = iconSizes.md;
+
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 
 export function StreakCard() {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const { showToast } = useToast();
 
-  // ✅ event channel (one-shot)
   const { last, consume } = useLastGain();
 
-  // hydrate stores once
   useEffect(() => {
     const settingsState = useGamificationSettingsStore.getState();
     if (!settingsState.hydrated) settingsState.hydrate();
@@ -52,10 +57,7 @@ export function StreakCard() {
     xp.xpForNextLevel > 0 ? xp.xpIntoLevel / xp.xpForNextLevel : 0
   );
 
-  // ✅ micro celebration pulse
   const pulse = useRef(new Animated.Value(1)).current;
-
-  // ✅ only fire "secured" once on 0 -> 1
   const prevGoalDoneRef = useRef(false);
 
   useEffect(() => {
@@ -78,14 +80,14 @@ export function StreakCard() {
       ]).start();
 
       showToast({
-        title: "Streak secured ✅",
-        message: `You hit ${goalPages} pages today.`,
+        title: t("bookshelf.streak.securedTitle"),
+        message: `${t("bookshelf.streak.securedMsgPrefix")} ${goalPages} ${t("bookshelf.streak.securedMsgSuffix")}`,
         duration: 3200,
       });
     }
 
     prevGoalDoneRef.current = goalDone;
-  }, [goalDone, goalPages, gHydrated, sHydrated, pulse, showToast]);
+  }, [goalDone, goalPages, gHydrated, sHydrated, pulse, showToast, t]);
 
   useEffect(() => {
     if (!gHydrated || !sHydrated) return;
@@ -93,21 +95,26 @@ export function StreakCard() {
 
     const title =
       last.kind === "pages"
-        ? "Progress saved 📖"
+        ? t("bookshelf.toast.progressSaved")
         : last.kind === "planComplete"
-        ? "Plan completed ✅"
-        : "Target completed 🎯";
+          ? t("bookshelf.toast.planComplete")
+          : t("bookshelf.toast.targetComplete");
 
     let message = "";
     if (last.kind === "pages") {
       const parts: string[] = [];
-      if (last.pages > 0)
-        parts.push(`${last.pages} page${last.pages === 1 ? "" : "s"}`);
-      if ((last.minutes ?? 0) > 0) parts.push(`${last.minutes} min`);
+      if (last.pages > 0) {
+        parts.push(
+          `${last.pages} ${last.pages === 1 ? t("bookshelf.toast.page") : t("bookshelf.toast.pages")}`
+        );
+      }
+      if ((last.minutes ?? 0) > 0) {
+        parts.push(`${last.minutes} ${t("bookshelf.toast.min")}`);
+      }
       if (last.xp > 0) parts.push(`+${last.xp} XP`);
       message = parts.join(" · ");
     } else {
-      message = last.xp > 0 ? `+${last.xp} XP` : "Nice!";
+      message = last.xp > 0 ? `+${last.xp} XP` : t("bookshelf.toast.nice");
     }
 
     showToast({
@@ -117,64 +124,93 @@ export function StreakCard() {
     });
 
     consume();
-  }, [last, consume, showToast, gHydrated, sHydrated]);
+  }, [last, consume, showToast, gHydrated, sHydrated, t]);
 
-  const subtitle = goalDone
-    ? "Today secured ✅ Tap for details"
-    : `Read ${Math.max(
-        0,
-        goalPages - today.pages
-      )} more pages · Tap for details`;
+  const dayLabel =
+    streak.current === 1
+      ? t("bookshelf.streak.day")
+      : t("bookshelf.streak.days");
+
+  const levelChipLabel = formatTranslation(t("bookshelf.streak.levelChip"), {
+    level: String(xp.level),
+    percent: String(Math.round(xpProgress * 100)),
+  });
+
+  const cardA11yLabel = formatTranslation(t("bookshelf.streak.cardA11y"), {
+    pages: String(today.pages),
+    goal: String(goalPages),
+    streak: String(streak.current),
+    level: String(xp.level),
+  });
 
   if (!gHydrated || !sHydrated) return null;
 
   return (
     <>
       <Animated.View style={{ transform: [{ scale: pulse }] }}>
-        <Pressable style={styles.card} onPress={() => setOpen(true)}>
-          <View style={styles.row}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.card,
+            goalDone && styles.cardDone,
+            pressed && styles.cardPressed,
+          ]}
+          onPress={() => setOpen(true)}
+          accessibilityRole="button"
+          accessibilityLabel={cardA11yLabel}
+          accessibilityHint={t("bookshelf.streak.detailsHint")}
+        >
+          <View style={styles.pulseRow}>
+            <ReadingPulseStrip progress={goalProgress} goalDone={goalDone} />
             <CircularProgress
-              size={58}
-              stroke={7}
+              size={TODAY_RING}
+              stroke={RING_STROKE}
               value={goalProgress}
               labelTop={`${today.pages}/${goalPages}`}
-              labelBottom="today"
-              progressColor={colors.success}
+              labelBottom={t("bookshelf.streak.pages")}
+              progressColor={goalDone ? colors.success : colors.primary}
+              style={styles.todayRing}
             />
+          </View>
 
-            <View style={styles.mid}>
-              <MText style={styles.title}>Streak</MText>
-              <MText style={styles.sub} numberOfLines={2}>
-                {subtitle}
-              </MText>
-
-              <View style={{ height: spacing.xs }} />
-
-              <View style={styles.microRow}>
-                <View style={styles.chip}>
-                  <MText style={styles.chipText}>
-                    🔥 {streak.current} day{streak.current === 1 ? "" : "s"}
-                  </MText>
-                </View>
-
-                <View style={styles.chip}>
-                  <MText style={styles.chipText}>🏆 best {streak.best}</MText>
-                </View>
+          <View style={styles.bottomRow}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.chipScroll}
+              contentContainerStyle={styles.chipRow}
+            >
+              <View style={styles.chip}>
+                <BaseIcon name="flame-outline" size={CHIP_ICON} color={colors.primary} />
+                <MText variant="caption" style={styles.chipText}>
+                  {streak.current} {dayLabel}
+                </MText>
               </View>
-            </View>
 
-            <View style={styles.right}>
-              <CircularProgress
-                size={46}
-                stroke={6}
-                value={xpProgress}
-                labelTop={`L${xp.level}`}
-                labelBottom="xp"
-                progressColor={colors.primary}
+              <View style={styles.chip}>
+                <BaseIcon
+                  name="trophy-outline"
+                  size={CHIP_ICON}
+                  color={colors.textSecondary}
+                />
+                <MText variant="caption" style={styles.chipText}>
+                  {t("bookshelf.streak.best")} {streak.best}
+                </MText>
+              </View>
+
+              <View style={styles.chip}>
+                <BaseIcon name="ribbon-outline" size={CHIP_ICON} color={colors.primary} />
+                <MText variant="caption" style={styles.chipText} numberOfLines={1}>
+                  {levelChipLabel}
+                </MText>
+              </View>
+            </ScrollView>
+
+            <View style={styles.detailsCue} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+              <BaseIcon
+                name="chevron-forward"
+                size={CHIP_ICON}
+                color={colors.textSecondary}
               />
-              <MText style={styles.tap} numberOfLines={1}>
-                Tap
-              </MText>
             </View>
           </View>
         </Pressable>
@@ -191,53 +227,65 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderSubtle,
     backgroundColor: colors.surface,
-    borderRadius: radii.lg,
+    borderRadius: radii.md,
     padding: spacing.md,
+    gap: spacing.sm,
+  },
+  cardDone: {
+    borderColor: colors.success,
+  },
+  cardPressed: {
+    opacity: 0.92,
   },
 
-  row: {
+  pulseRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.md,
+    gap: spacing.sm,
+    paddingBottom: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.borderSubtle,
+  },
+  todayRing: {
+    flexShrink: 0,
   },
 
-  mid: {
-    flex: 1,
-    minWidth: 0,
-  },
-
-  title: { fontSize: 16, fontWeight: "900" },
-  sub: { opacity: 0.75, marginTop: 2 },
-
-  microRow: {
+  bottomRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
-    flexWrap: "wrap",
+  },
+  chipScroll: {
+    flex: 1,
+    minWidth: 0,
+  },
+  chipRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    paddingRight: spacing.xs,
+  },
+  detailsCue: {
+    flexShrink: 0,
+    width: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    opacity: 0.75,
   },
 
   chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
     paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
+    paddingVertical: spacing.xs,
     borderRadius: radii.full,
     backgroundColor: colors.backgroundSecondary,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
   },
   chipText: {
-    fontSize: 12,
-    fontWeight: "700",
+    fontWeight: "600",
     opacity: 0.9,
-  },
-
-  right: {
-    alignItems: "center",
-    gap: 4,
-  },
-
-  tap: {
-    fontSize: 11,
-    opacity: 0.65,
-    fontWeight: "700",
   },
 });

@@ -1,5 +1,6 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
+import { useTranslation, formatTranslation } from "@musti/core";
 import { MText, spacing, radii, iconSizes, useTheme } from "@musti/ui-native";
 import { IconButton } from "@musti/ui-native";
 import { TargetItemSummary } from "./TargetItemSummary";
@@ -14,13 +15,18 @@ export const TargetItemsList = ({
   items,
   onDeleteItem,
 }: TargetItemsListProps) => {
+  const { t } = useTranslation();
   const { colors } = useTheme();
 
   if (!items.length) return null;
 
   return (
     <>
-      <MText style={styles.title}>Items ({items.length})</MText>
+      <MText style={styles.title}>
+        {formatTranslation(t("bookshelf.target.itemsCount"), {
+          count: items.length,
+        })}
+      </MText>
 
       <View
         style={[
@@ -42,7 +48,6 @@ export const TargetItemsList = ({
 
             <IconButton
               name="trash-outline"
-              size={iconSizes.md}
               color={colors.textPrimary}
               onPress={() => onDeleteItem(it.id)}
             />

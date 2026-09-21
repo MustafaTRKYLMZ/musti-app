@@ -43,14 +43,17 @@ export default function TransactionForm({
   const [fixedEndMonth, setFixedEndMonth] = useState<string | null>(
     initialFixedEndMonth ?? null
   );
+  const [formError, setFormError] = useState<string | null>(null);
 
   const handleSubmit = () => {
     const parsed = Number(String(amount).replace(",", "."));
 
     if (!item || Number.isNaN(parsed)) {
-      alert("Item and valid amount are required.");
+      setFormError(t("validation.requiredFields"));
       return;
     }
+
+    setFormError(null);
 
     const month = date.slice(0, 7);
 
@@ -206,6 +209,12 @@ export default function TransactionForm({
           style={styles.input}
         />
       </View>
+
+      {formError ? (
+        <MText variant="caption" style={{ color: colors.danger }}>
+          {formError}
+        </MText>
+      ) : null}
 
       <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
         <MText variant="bodyStrong" color="textInverse">

@@ -3,6 +3,8 @@ import { useForm } from "react-hook-form";
 import dayjs from "dayjs";
 import {
   LOCAL_CALENDAR_ID,
+  getWritableCalendarFeeds,
+  type CalendarFeed,
   type MEvent,
   type EventCreate,
 } from "@musti/planner";
@@ -12,6 +14,7 @@ import { clampDay, isBeforeDay } from "@/utils/calendar/isBeforeDay";
 import { isoToDayAndTime } from "@/utils/calendar/isoToDayAndTime";
 import { minuteToHHmm } from "@/utils/calendar/minuteToHHmm";
 import { parseHHmm } from "@/utils/calendar/parseHHmm";
+import { useCalendarSourcesStore } from "@/store/calendar/useCalendarSourcesStore";
 
 type BaseArgs = {
   visible: boolean;
@@ -24,19 +27,43 @@ type BaseArgs = {
 
 type CreateArgs = BaseArgs & {
   mode: "create";
-  onSubmit: (e: Omit<MEvent, "id">) => void;
+  onSubmit: (e: Omit<MEvent, "id">, targetCalendarId: string) => void | Promise<void>;
 };
 
 type EditArgs = BaseArgs & {
   mode: "edit";
   event: MEvent;
-  onSubmit: (id: string, patch: Partial<MEvent>) => void;
+  onSubmit: (id: string, patch: Partial<MEvent>) => void | Promise<void>;
 };
 
 type Args = CreateArgs | EditArgs;
 
 export function useEventFormController(args: Args) {
   const { visible, startMinute, timezone, onClose } = args;
+  const feeds = useCalendarSourcesStore((s) => s.feeds);
+  const accounts = useCalendarSourcesStore((s) => s.accounts);
+  const writableFeeds = useMemo(
+    () => getWritableCalendarFeeds(feeds),
+    [feeds]
+  );
+
+  const calendarOptions = useMemo(
+    () =>
+      writableFeeds.map((feed) => ({
+        id: feed.id,
+        label: feed.name,
+        subLabel:
+          feed.provider === "google"
+            ? accounts.find((a) => a.id === feed.accountId)?.email
+            : "Local planner",
+        feed,
+      })),
+    [writableFeeds, accounts]
+  );
+
+  const [targetCalendarId, setTargetCalendarId] = useState<string>(
+    LOCAL_CALENDAR_ID
+  );
 
   const initialDays = useMemo(() => {
     if (args.mode === "edit") {
@@ -60,7 +87,20 @@ export function useEventFormController(args: Args) {
     if (!visible) return;
     _setStartDay(initialDays.startDay);
     _setEndDay(initialDays.endDay);
-  }, [visible, initialDays.startDay, initialDays.endDay]);
+    if (args.mode === "create") {
+      setTargetCalendarId(
+        useCalendarSourcesStore.getState().resolveDefaultWriteCalendarId()
+      );
+    } else {
+      setTargetCalendarId(args.event.calendarId ?? LOCAL_CALENDAR_ID);
+    }
+  }, [
+    visible,
+    initialDays.startDay,
+    initialDays.endDay,
+    args.mode,
+    args.mode === "edit" ? args.event.calendarId : null,
+  ]);
 
   const setStartDay = useCallback((d: Date) => {
     const nextStart = clampDay(d);
@@ -167,15 +207,36 @@ export function useEventFormController(args: Args) {
     return endDt.isAfter(startDt);
   }, [title, allDay, startTime, endTime, startDay, endDay]);
 
+  const selectedFeed = useMemo<CalendarFeed | null>(() => {
+    return writableFeeds.find((f) => f.id === targetCalendarId) ?? null;
+  }, [writableFeeds, targetCalendarId]);
+
   const buildPayload = useCallback((): Omit<MEvent, "id"> | null => {
     const v = form.getValues();
     const cleanTitle = (v.title ?? "").trim();
     if (!cleanTitle) return null;
 
+    const feed =
+      selectedFeed ??
+      writableFeeds.find((f) => f.id === targetCalendarId) ??
+      null;
+    const isGoogleTarget =
+      feed?.provider === "google" && feed.id !== LOCAL_CALENDAR_ID;
+
+    const base = {
+      color: isGoogleTarget ? feed?.color ?? v.color : v.color,
+      location: v.location?.trim() || undefined,
+      notes: v.notes?.trim() || undefined,
+      source: isGoogleTarget ? ("google" as const) : ("planner" as const),
+      calendarId: feed?.id ?? LOCAL_CALENDAR_ID,
+      accountId: isGoogleTarget ? feed?.accountId : undefined,
+    };
+
     if (v.allDay) {
-      const d = clampDay(startDay);
-      const start = dayjs(d).startOf("day").toISOString();
-      const end = dayjs(d).add(1, "day").startOf("day").toISOString();
+      const startD = clampDay(startDay);
+      const endD = clampDay(endDay);
+      const start = dayjs(startD).startOf("day").toISOString();
+      const end = dayjs(endD).add(1, "day").startOf("day").toISOString();
 
       return {
         title: cleanTitle,
@@ -183,11 +244,7 @@ export function useEventFormController(args: Args) {
         end,
         timezone,
         allDay: true,
-        color: v.color,
-        location: v.location?.trim() || undefined,
-        notes: v.notes?.trim() || undefined,
-        source: "planner",
-        calendarId: LOCAL_CALENDAR_ID,
+        ...base,
       };
     }
 
@@ -206,28 +263,23 @@ export function useEventFormController(args: Args) {
       end: endDt.toISOString(),
       timezone,
       allDay: false,
-      color: v.color,
-      location: v.location?.trim() || undefined,
-      notes: v.notes?.trim() || undefined,
-      source: "planner",
-      calendarId: LOCAL_CALENDAR_ID,
+      ...base,
     };
-  }, [form, startDay, endDay, timezone]);
+  }, [form, startDay, endDay, timezone, selectedFeed, targetCalendarId, writableFeeds]);
 
-  const save = useCallback(() => {
+  const save = useCallback(async () => {
     const payload = buildPayload();
     if (!payload) return;
 
     if (args.mode === "create") {
-      args.onSubmit(payload);
+      await args.onSubmit(payload, targetCalendarId);
       onClose();
       return;
     }
 
-    // ✅ patch merge
-    args.onSubmit(args.event.id, { ...payload });
+    await args.onSubmit(args.event.id, { ...payload });
     onClose();
-  }, [args, buildPayload, onClose]);
+  }, [args, buildPayload, onClose, targetCalendarId]);
 
   const toggleAllDay = useCallback(() => {
     const cur = form.getValues("allDay");
@@ -250,6 +302,11 @@ export function useEventFormController(args: Args) {
     save,
     buildPayload,
     toggleAllDay,
+
+    calendarOptions,
+    targetCalendarId,
+    setTargetCalendarId,
+    calendarLocked: args.mode === "edit",
 
     close: onClose,
   };

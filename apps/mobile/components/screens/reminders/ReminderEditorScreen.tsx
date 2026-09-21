@@ -12,6 +12,7 @@ import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
 import { MText, spacing, radii, useTheme, iconSizes } from "@musti/ui-native";
+import { useTranslation } from "@musti/core";
 
 import { useRemindersStore } from "@/store/reminders/useRemindersStore";
 import type {
@@ -20,6 +21,7 @@ import type {
   ReminderTarget,
 } from "@/store/reminders/types";
 import { AppScreen } from "@/components/AppScreen";
+import { BookshelfSubScreen } from "@/components/Books/BookshelfSubScreen";
 import { BaseIcon, IconButton, IconTile } from "@musti/ui-native";
 import { BookPickerModal } from "@/components/Books/reminders/BookPickerModal";
 import { PlanPickerModal } from "@/components/Books/reminders/PlanPickerModal";
@@ -36,6 +38,7 @@ type Props = {
 export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
   const theme = useTheme();
   const { colors } = theme;
+  const { t } = useTranslation();
 
   const cardBg = colors.surface;
   const innerBg = colors.surfaceElevated;
@@ -252,79 +255,53 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
       style={[styles.rowBtn, { borderColor: border, backgroundColor: innerBg }]}
     >
       <View style={styles.rowBtnLeft}>
-        <BaseIcon name={icon as any} size={iconSizes.md} color={text2} />
+        <BaseIcon name={icon as any} color={text2} />
         <MText style={{ color: text }}>{label}</MText>
       </View>
       <View style={styles.rowBtnRight}>
         <MText style={{ color: text2 }}>{value}</MText>
         <BaseIcon
           name={"chevron-forward" as any}
-          size={iconSizes.md}
           color={text2}
         />
       </View>
     </Pressable>
   );
 
-  const titleText = mode === "new" ? "New Reminder" : "Reminder";
+  const titleText =
+    mode === "new"
+      ? t("bookshelf.reminders.new")
+      : t("bookshelf.reminders.editTitle");
 
   const onBack = () => {
     if (router.canGoBack?.()) router.back();
     else router.replace(basePath);
   };
 
-  const chosenBookLabel = bookName && bookUri ? bookName : "Choose book";
+  const chosenBookLabel =
+    bookName && bookUri ? bookName : t("bookshelf.reminders.chooseBook");
   const chosenPlanLabel = planTitle
     ? planTitle
     : planId
-    ? planId
-    : "Choose plan";
+      ? planId
+      : t("bookshelf.reminders.choosePlan");
   const chosenTargetLabel = targetTitle
     ? targetTitle
     : targetId
-    ? targetId
-    : "Choose target";
+      ? targetId
+      : t("bookshelf.reminders.chooseTarget");
 
-  return (
-    <AppScreen
-      title={titleText}
-      headerContainerStyle={{
-        borderBottomWidth: 0,
-        backgroundColor: colors.surface,
-        borderRadius: radii.md,
-        borderWidth: 1,
-        borderColor: colors.borderSubtle,
-        shadowColor: colors.shadowStrong,
-        shadowOpacity: 0.18,
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 4 },
-      }}
-      headerLeft={
-        <IconButton
-          name="chevron-back"
-          onPress={onBack}
-          size={24}
-          color={colors.textPrimary}
-        />
-      }
-    >
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={styles.container}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        <MText variant="heading2" style={{ color: colors.textPrimary }}>
-          {mode === "new" ? "New Reminder" : "Edit Reminder"}
-        </MText>
-
+  const formContent = (
+    <>
         <View
           style={[
             styles.card,
             { backgroundColor: cardBg, borderColor: border },
           ]}
         >
-          <MText style={{ color: text2 }}>Title</MText>
+          <MText style={{ color: text2 }}>
+            {t("bookshelf.reminders.titleLabel")}
+          </MText>
           <View
             style={[
               styles.inputWrap,
@@ -333,13 +310,12 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
           >
             <BaseIcon
               name={"text-outline" as any}
-              size={iconSizes.md}
               color={text2}
             />
             <TextInput
               value={title}
               onChangeText={setTitle}
-              placeholder="E.g: Reading"
+              placeholder={t("bookshelf.reminders.titlePlaceholder")}
               placeholderTextColor={text2}
               style={[styles.inputInline, { color: text }]}
             />
@@ -347,7 +323,9 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
 
           <View style={{ height: spacing.md }} />
 
-          <MText style={{ color: text2 }}>Message</MText>
+          <MText style={{ color: text2 }}>
+            {t("bookshelf.reminders.messageLabel")}
+          </MText>
           <View
             style={[
               styles.inputWrap,
@@ -357,13 +335,12 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
           >
             <BaseIcon
               name={"chatbubble-ellipses-outline" as any}
-              size={iconSizes.md}
               color={text2}
             />
             <TextInput
               value={body}
               onChangeText={setBody}
-              placeholder="E.g: Today read 10 pages"
+              placeholder={t("bookshelf.reminders.messagePlaceholder")}
               placeholderTextColor={text2}
               multiline
               disableFullscreenUI
@@ -375,7 +352,9 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
           <View style={{ height: spacing.md }} />
 
           <View style={styles.row}>
-            <MText style={{ color: text2 }}>Status</MText>
+            <MText style={{ color: text2 }}>
+              {t("bookshelf.reminders.statusLabel")}
+            </MText>
             <Pressable
               onPress={() => setEnabled((v) => !v)}
               style={[
@@ -399,11 +378,10 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
                       ? "checkmark-circle-outline"
                       : "close-circle-outline") as any
                   }
-                  size={iconSizes.md}
                   color={enabled ? textInverse : text2}
                 />
                 <MText style={{ color: enabled ? textInverse : text }}>
-                  {enabled ? "Open" : "Close"}
+                  {enabled ? t("common.on") : t("common.off")}
                 </MText>
               </View>
             </Pressable>
@@ -417,13 +395,13 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
           ]}
         >
           <MText variant="heading3" style={{ color: text }}>
-            Type
+            {t("bookshelf.reminders.typeLabel")}
           </MText>
 
           <View style={styles.rowWrap}>
             <AppChip
               active={targetType === "general"}
-              label="General"
+              label={t("bookshelf.reminders.typeGeneral")}
               icon="notifications-outline"
               onPress={() => setTargetType("general")}
               colors={chipColors}
@@ -432,7 +410,7 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
             />
             <AppChip
               active={targetType === "plan"}
-              label="Plan"
+              label={t("bookshelf.reminders.typePlan")}
               icon="calendar-outline"
               onPress={() => setTargetType("plan")}
               colors={chipColors}
@@ -441,7 +419,7 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
             />
             <AppChip
               active={targetType === "book"}
-              label="Book"
+              label={t("bookshelf.reminders.typeBook")}
               icon="book-outline"
               onPress={() => setTargetType("book")}
               colors={chipColors}
@@ -450,7 +428,7 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
             />
             <AppChip
               active={targetType === "target"}
-              label="Target"
+              label={t("bookshelf.reminders.typeTarget")}
               icon="flag-outline"
               onPress={() => setTargetType("target")}
               colors={chipColors}
@@ -459,7 +437,7 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
             />
             <AppChip
               active={targetType === "weeklyReport"}
-              label="Haftalık Rapor"
+              label={t("bookshelf.reminders.typeWeeklyReport")}
               icon="stats-chart-outline"
               onPress={() => setTargetType("weeklyReport")}
               colors={chipColors}
@@ -471,7 +449,7 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
           {targetType === "book" ? (
             <View style={{ marginTop: spacing.md }}>
               <RowAction
-                label="Book"
+                label={t("bookshelf.reminders.typeBook")}
                 value={chosenBookLabel}
                 icon="book-outline"
                 onPress={() => setBookPickerOpen(true)}
@@ -485,7 +463,7 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
                 </MText>
               ) : (
                 <MText style={{ marginTop: spacing.sm, color: text2 }}>
-                  Select a book from your library.
+                  {t("bookshelf.reminders.selectBookHint")}
                 </MText>
               )}
             </View>
@@ -494,14 +472,14 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
           {targetType === "plan" ? (
             <View style={{ marginTop: spacing.md }}>
               <RowAction
-                label="Plan"
+                label={t("bookshelf.reminders.typePlan")}
                 value={chosenPlanLabel}
                 icon="calendar-outline"
                 onPress={() => setPlanPickerOpen(true)}
               />
               {!planId ? (
                 <MText style={{ marginTop: spacing.sm, color: text2 }}>
-                  Select a plan to open when tapping the notification.
+                  {t("bookshelf.reminders.selectPlanHint")}
                 </MText>
               ) : null}
             </View>
@@ -510,14 +488,14 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
           {targetType === "target" ? (
             <View style={{ marginTop: spacing.md }}>
               <RowAction
-                label="Target"
+                label={t("bookshelf.reminders.typeTarget")}
                 value={chosenTargetLabel}
                 icon="flag-outline"
                 onPress={() => setTargetPickerOpen(true)}
               />
               {!targetId ? (
                 <MText style={{ marginTop: spacing.sm, color: text2 }}>
-                  Select a target to open when tapping the notification.
+                  {t("bookshelf.reminders.selectTargetHint")}
                 </MText>
               ) : null}
             </View>
@@ -531,13 +509,13 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
           ]}
         >
           <MText variant="heading3" style={{ color: text }}>
-            Timing
+            {t("bookshelf.reminders.timingLabel")}
           </MText>
 
           <View style={styles.rowWrap}>
             <AppChip
               active={scheduleType === "daily"}
-              label="Daily"
+              label={t("bookshelf.reminders.daily")}
               icon="repeat-outline"
               onPress={() => setScheduleType("daily")}
               colors={chipColors}
@@ -546,7 +524,7 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
             />
             <AppChip
               active={scheduleType === "weekly"}
-              label="Weekly"
+              label={t("bookshelf.reminders.weekly")}
               icon="calendar-outline"
               onPress={() => setScheduleType("weekly")}
               colors={chipColors}
@@ -555,7 +533,7 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
             />
             <AppChip
               active={scheduleType === "once"}
-              label="Once"
+              label={t("bookshelf.reminders.once")}
               icon="time-outline"
               onPress={() => setScheduleType("once")}
               colors={chipColors}
@@ -583,7 +561,7 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
           {scheduleType === "once" ? (
             <View style={{ marginTop: spacing.md }}>
               <RowAction
-                label="Date"
+                label={t("bookshelf.reminders.dateLabel")}
                 value={onceDate.toLocaleDateString()}
                 icon="calendar-outline"
                 onPress={() => setShowDate(true)}
@@ -593,7 +571,7 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
 
           <View style={{ marginTop: spacing.md }}>
             <RowAction
-              label="Time"
+              label={t("bookshelf.reminders.timeLabel")}
               value={`${String(hour).padStart(2, "0")}:${String(
                 minute
               ).padStart(2, "0")}`}
@@ -621,10 +599,9 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
 
         <View style={styles.actionsRow}>
           <IconTile
-            label="Cancel"
+            label={t("common.cancel")}
             name="close-outline"
             onPress={onBack}
-            size={iconSizes.lg}
             backgroundColor="transparent"
             iconBackgroundColor={colors.surfaceElevated}
             color={text}
@@ -635,10 +612,9 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
           <View style={styles.actionsRight}>
             {mode === "edit" ? (
               <IconTile
-                label="Delete"
+                label={t("common.delete")}
                 name="trash-outline"
                 onPress={del}
-                size={iconSizes.lg}
                 backgroundColor="transparent"
                 iconBackgroundColor={colors.surfaceElevated}
                 color={danger}
@@ -648,10 +624,11 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
             ) : null}
 
             <IconTile
-              label={mode === "new" ? "Create" : "Save"}
+              label={
+                mode === "new" ? t("bookshelf.reminders.create") : t("common.save")
+              }
               name="save-outline"
               onPress={save}
-              size={iconSizes.lg}
               backgroundColor={primaryBg}
               iconBackgroundColor="rgba(255,255,255,0.16)"
               color={textInverse}
@@ -660,8 +637,11 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
             />
           </View>
         </View>
-      </ScrollView>
+    </>
+  );
 
+  const modals = (
+    <>
       <BookPickerModal
         visible={bookPickerOpen}
         onClose={() => setBookPickerOpen(false)}
@@ -694,26 +674,68 @@ export function ReminderEditorScreen({ owner, mode, reminderId }: Props) {
           setTargetPickerOpen(false);
         }}
       />
-    </AppScreen>
+    </>
+  );
+
+  if (owner === "bookshelf") {
+    return (
+      <>
+        <BookshelfSubScreen
+          title={titleText}
+          fallbackRoute={basePath}
+          contentContainerStyle={styles.container}
+        >
+          {formContent}
+        </BookshelfSubScreen>
+        {modals}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <AppScreen
+        title={titleText}
+        variant="budget"
+        showMenu={false}
+        showSwitcher={false}
+        headerLeft={
+          <IconButton
+            name="chevron-back"
+            onPress={onBack}
+            color={colors.textPrimary}
+          />
+        }
+      >
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {formContent}
+        </ScrollView>
+      </AppScreen>
+      {modals}
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    padding: spacing.lg,
-    paddingBottom: spacing["3xl"] ?? spacing.xl,
+    paddingBottom: spacing.xl,
     gap: spacing.lg,
   },
   card: {
     padding: spacing.lg,
-    borderRadius: radii.lg,
+    borderRadius: radii.md,
     borderWidth: 1,
   },
 
   inputWrap: {
     marginTop: spacing.sm,
     borderWidth: 1,
-    borderRadius: radii.lg,
+    borderRadius: radii.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     flexDirection: "row",

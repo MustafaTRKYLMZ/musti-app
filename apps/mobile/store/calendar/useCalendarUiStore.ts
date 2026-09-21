@@ -16,6 +16,10 @@ type CalendarUiState = {
   // sheet
   daySheetOpen: boolean;
 
+  // day view modal (from month grid)
+  dayModalOpen: boolean;
+  dayModalDate: Date;
+
   // create
   createOpen: boolean;
   createDay: Date;
@@ -33,10 +37,15 @@ type CalendarUiState = {
   setView: (v: CalendarView) => void;
 
   setDate: (d: Date) => void;
+  /** Month/week pager — local only, no network. */
+  shiftDate: (d: Date) => void;
   setSelectedDate: (d: Date) => void;
 
   openDay: (d: Date) => void;
   closeDaySheet: () => void;
+
+  openDayModal: (d: Date) => void;
+  closeDayModal: () => void;
 
   openCreate: (day: Date, startMinute?: number) => void;
   closeCreate: () => void;
@@ -61,6 +70,9 @@ export const useCalendarUiStore = create<CalendarUiState>((set, get) => ({
 
   daySheetOpen: false,
 
+  dayModalOpen: false,
+  dayModalDate: clampDay(new Date()),
+
   createOpen: false,
   createDay: clampDay(new Date()),
   createStartMinute: undefined,
@@ -74,6 +86,12 @@ export const useCalendarUiStore = create<CalendarUiState>((set, get) => ({
   setView: (v) => set({ view: v }),
 
   setDate: (d) =>
+    set((s) => {
+      const dd = clampDay(d);
+      return { ...s, date: dd, selectedDate: dd };
+    }),
+
+  shiftDate: (d) =>
     set((s) => {
       const dd = clampDay(d);
       return { ...s, date: dd, selectedDate: dd };
@@ -98,6 +116,19 @@ export const useCalendarUiStore = create<CalendarUiState>((set, get) => ({
   },
 
   closeDaySheet: () => set({ daySheetOpen: false }),
+
+  openDayModal: (d) => {
+    const dd = clampDay(d);
+    set({
+      dayModalOpen: true,
+      dayModalDate: dd,
+      selectedDate: dd,
+      date: dd,
+      daySheetOpen: false,
+    });
+  },
+
+  closeDayModal: () => set({ dayModalOpen: false }),
 
   openCreate: (day, startMinute) => {
     const dd = clampDay(day);

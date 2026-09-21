@@ -11,11 +11,11 @@ import {
   MText,
   spacing,
   radii,
-  iconSizes,
   bookshelfTheme,
   useTheme,
 } from "@musti/ui-native";
-import { IconButton } from "@musti/ui-native";
+import { useTranslation } from "@musti/core";
+import { HeaderIconButton } from "@/components/ui/HeaderIconButton";
 
 type BottomSheetOwner = "budget" | "bookshelf";
 
@@ -44,6 +44,7 @@ export function BottomSheetModal({
   leftAction,
   rightAction,
 }: BottomSheetModalProps) {
+  const { t } = useTranslation();
   const isIOS = Platform.OS === "ios";
 
   // ✅ budget colors: app theme
@@ -86,7 +87,7 @@ export function BottomSheetModal({
             style={[
               styles.sheet,
               {
-                backgroundColor: colors.surfaceStrong,
+                backgroundColor: colors.surface,
                 borderColor: colors.borderSubtle,
               },
             ]}
@@ -111,15 +112,11 @@ export function BottomSheetModal({
               {/* RIGHT */}
               <View style={styles.rightSlot}>
                 {rightAction ?? (
-                  <IconButton
-                    name="close"
-                    size={iconSizes.lg}
-                    color={colors.danger}
+                  <HeaderIconButton
+                    icon="close"
+                    variant="circle"
                     onPress={onClose}
-                    style={[
-                      styles.closeButton,
-                      { borderColor: colors.borderSubtle },
-                    ]}
+                    accessibilityLabel={t("common.close")}
                   />
                 )}
               </View>
@@ -183,12 +180,4 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
-  closeButton: {
-    width: 30,
-    height: 30,
-    borderRadius: radii.full,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
 });

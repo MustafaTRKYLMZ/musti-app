@@ -1,11 +1,10 @@
 import React, { useMemo, useCallback } from "react";
-import { ScrollView, StyleSheet, FlatList, View } from "react-native";
+import { StyleSheet, FlatList, View } from "react-native";
 import dayjs from "dayjs";
 import { useRouter } from "expo-router";
 
-import { AppScreen } from "@/components/AppScreen";
-import { IconButton } from "@musti/ui-native";
-import { spacing, iconSizes, useTheme, MText } from "@musti/ui-native";
+import { spacing, MText } from "@musti/ui-native";
+import { BookshelfSubScreen } from "@/components/Books/BookshelfSubScreen";
 
 import { useReadingStatsStore } from "@/store/bookshelf/useReadingStatsStore";
 import { useReadingEventsStore } from "@/store/bookshelf/useReadingEventsStore";
@@ -13,7 +12,7 @@ import { useReadingEventsStore } from "@/store/bookshelf/useReadingEventsStore";
 import { toNonNegativeInt } from "@/utils/toNonNegativeInt";
 import { formatModeParts } from "@/utils/formatModeParts";
 import { guessNameFromUri } from "@/utils/guessNameFromUri";
-import { ReadingMode } from "@musti/core";
+import { ReadingMode, useTranslation } from "@musti/core";
 
 import { BookRowCard } from "@/components/Books/statsBook/BookRowCard";
 import { EmptyStateCard } from "@/components/Books/statsBook/EmptyStateCard";
@@ -25,9 +24,8 @@ import { useLocalBooks } from "@/hooks/useLocalBooks";
 import { StatsSectionHeader } from "@/components/Books/statsBook/StatsSectionHeader";
 
 export default function StatsScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
-  const { colors } = useTheme();
-
   const today = useMemo(() => dayjs().format("YYYY-MM-DD"), []);
 
   // store
@@ -171,22 +169,8 @@ export default function StatsScreen() {
   );
 
   return (
-    <AppScreen
-      title="Stats"
-      headerLeft={
-        <IconButton
-          name="chevron-back"
-          size={iconSizes.lg}
-          color={colors.textPrimary}
-          onPress={() => router.back()}
-        />
-      }
-    >
-      <ScrollView
-        style={[styles.container, { backgroundColor: colors.background }]}
-        contentContainerStyle={{ paddingBottom: spacing["3xl"] }}
-        showsVerticalScrollIndicator={false}
-      >
+    <BookshelfSubScreen title={t("bookshelf.stats.title")}>
+      <View style={styles.statsContent}>
         <TodaySummaryCard
           today={today}
           todayTotal={todayTotal}
@@ -195,12 +179,12 @@ export default function StatsScreen() {
         />
 
         <StatsSectionHeader
-          title="Today · Top 7 books"
+          title={t("bookshelf.stats.todayTop7")}
           count={todayBooksTop7.length}
         />
 
         {todayBooksTop7.length === 0 ? (
-          <EmptyStateCard message="No reading logged for today." />
+          <EmptyStateCard message={t("bookshelf.stats.noReadingToday")} />
         ) : (
           <FlatList
             data={todayBooksTop7}
@@ -212,10 +196,10 @@ export default function StatsScreen() {
 
         <PeriodCard
           icon="time-outline"
-          title="Last 7 days"
+          title={t("bookshelf.stats.last7Days")}
           total={weekTotal}
-          subtitle="Total pages in last 7 days"
-          topTitle="Top 7 books"
+          subtitle={t("bookshelf.stats.totalPages7")}
+          topTitle={t("bookshelf.stats.top7Books")}
           topCount={weekTop7.length}
         >
           {weekTop7.length === 0 ? (
@@ -224,7 +208,7 @@ export default function StatsScreen() {
               color="textSecondary"
               style={{ marginTop: spacing.sm }}
             >
-              No reading found in the last 7 days.
+              {t("bookshelf.stats.noReading7")}
             </MText>
           ) : (
             <FlatList
@@ -239,10 +223,10 @@ export default function StatsScreen() {
 
         <PeriodCard
           icon="calendar-outline"
-          title="Last 30 days"
+          title={t("bookshelf.stats.last30Days")}
           total={monthTotal}
-          subtitle="Total pages in last 30 days"
-          topTitle="Top 7 books"
+          subtitle={t("bookshelf.stats.totalPages30")}
+          topTitle={t("bookshelf.stats.top7Books")}
           topCount={monthTop7.length}
         >
           {monthTop7.length === 0 ? (
@@ -251,7 +235,7 @@ export default function StatsScreen() {
               color="textSecondary"
               style={{ marginTop: spacing.sm }}
             >
-              No reading found in the last 30 days.
+              {t("bookshelf.stats.noReading30")}
             </MText>
           ) : (
             <FlatList
@@ -264,16 +248,13 @@ export default function StatsScreen() {
           )}
         </PeriodCard>
 
-        <View style={{ height: spacing.lg }} />
-      </ScrollView>
-    </AppScreen>
+      </View>
+    </BookshelfSubScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
+  statsContent: {
+    gap: spacing.md,
   },
 });

@@ -1,27 +1,23 @@
 import React, { useRef, useState } from "react";
 import { StyleSheet, StyleProp, ViewStyle, View } from "react-native";
-import { spacing, iconSizes, useTheme } from "@musti/ui-native";
+import { spacing } from "@musti/ui-native";
 import { AppSwitcherMenu } from "./AppSwitcherMenu";
-import { IconButton } from "@musti/ui-native/src/components/AppIcon";
+import { HeaderIconButton } from "@/components/ui/HeaderIconButton";
 
 type Props = { style?: StyleProp<ViewStyle> };
 
 export function AppSwitcherButton({ style }: Props) {
   const [open, setOpen] = useState(false);
   const anchorRef = useRef<View | null>(null);
-  const { colors } = useTheme();
 
   return (
     <View style={styles.switcherButton}>
       <View ref={anchorRef} collapsable={false}>
-        <IconButton
-          name="apps-outline"
-          family="ion"
-          size={iconSizes.xl}
-          color={colors.textPrimary}
-          onPress={() => setOpen(true)}
-          style={[styles.button, style]}
+        <HeaderIconButton
+          icon="apps-outline"
           accessibilityLabel="Open app switcher"
+          onPress={() => setOpen(true)}
+          style={style}
         />
       </View>
 
@@ -31,10 +27,9 @@ export function AppSwitcherButton({ style }: Props) {
 }
 
 const styles = StyleSheet.create({
-  button: { padding: spacing.sm },
   switcherButton: {
     justifyContent: "center",
     alignItems: "center",
-    marginRight: spacing.sm,
+    marginRight: spacing.xs,
   },
 });

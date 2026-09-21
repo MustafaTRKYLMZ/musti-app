@@ -76,7 +76,6 @@ export const CashflowRow: React.FC<CashflowRowProps> = ({
           {/* Arrow icon → BaseIcon */}
           <BaseIcon
             name={arrowIconName}
-            size={16}
             color={amountColor}
             style={{ marginRight: 4, marginTop: 1 }}
           />
@@ -103,7 +102,6 @@ export const CashflowRow: React.FC<CashflowRowProps> = ({
           <IconButton
             onPress={onDelete}
             name="trash-outline"
-            size={18}
             color={colors.danger}
             style={styles.iconButton}
           />

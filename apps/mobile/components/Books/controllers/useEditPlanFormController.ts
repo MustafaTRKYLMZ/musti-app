@@ -4,6 +4,7 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import type { LocalPdfFile } from "@/utils/getPdfsDirectory";
+import { useTranslation, formatTranslation } from "@musti/core";
 import type { PlanItemConfig } from "@musti/core";
 
 import {
@@ -41,6 +42,7 @@ type Deps = {
 type MultiSelectedState = Record<string, boolean>;
 
 export function useEditPlanFormController(deps: Deps) {
+  const { t } = useTranslation();
   const {
     control,
     reset,
@@ -74,7 +76,7 @@ export function useEditPlanFormController(deps: Deps) {
     if (!deps.plan) return;
 
     reset({
-      name: deps.plan.name ?? "Reading plan",
+      name: deps.plan.name ?? t("bookshelf.plan.defaultName"),
       items: (deps.plan.items ?? []).map((it) => ({
         bookUri: it.bookUri,
         bookName: it.bookName,
@@ -90,7 +92,7 @@ export function useEditPlanFormController(deps: Deps) {
     setPagesInput("");
     setMultiSelectOpen(false);
     setMultiSelected({});
-  }, [deps.visible, deps.plan, deps.books, reset]);
+  }, [deps.visible, deps.plan, deps.books, reset, t]);
 
   // current selected uris
   const selectedUris = useMemo(() => {
@@ -140,7 +142,10 @@ export function useEditPlanFormController(deps: Deps) {
     const pages = cleaned ? Number(cleaned) : 0;
 
     if (!pages || pages <= 0) {
-      Alert.alert("Invalid pages", "Please enter a positive page amount.");
+      Alert.alert(
+        t("bookshelf.plan.invalidPages"),
+        t("bookshelf.plan.positivePages")
+      );
       return;
     }
 
@@ -151,7 +156,7 @@ export function useEditPlanFormController(deps: Deps) {
     });
 
     setPagesInput("");
-  }, [append, deps.books, pagesInput, selectedBookUri]);
+  }, [append, deps.books, pagesInput, selectedBookUri, t]);
 
   const removeAt = useCallback(
     (idx: number) => {
@@ -209,15 +214,15 @@ export function useEditPlanFormController(deps: Deps) {
   }, [deps.books, replace]);
 
   const removeAllBooks = useCallback(() => {
-    Alert.alert("Clear plan", "Remove all books from this plan?", [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(t("bookshelf.plan.clearTitle"), t("bookshelf.plan.clearConfirm"), [
+      { text: t("common.cancel"), style: "cancel" },
       {
-        text: "Remove",
+        text: t("bookshelf.common.remove"),
         style: "destructive",
         onPress: () => replace([]),
       },
     ]);
-  }, [replace]);
+  }, [replace, t]);
 
   // Multi-select helpers
   const toggleMultiSelectOpen = useCallback(() => {
@@ -300,13 +305,13 @@ export function useEditPlanFormController(deps: Deps) {
     const parsed = createPlanSchema.parse(values) as CreatePlanParsed;
 
     if (!parsed.items?.length) {
-      Alert.alert("Empty plan", "Please keep at least one book with a valid pages/day target.");
+      Alert.alert(t("bookshelf.plan.emptyTitle"), t("bookshelf.plan.emptyMsg"));
       return;
     }
 
     deps.updatePlan({
       planId: deps.planId,
-      name: parsed.name.trim() || "Reading plan",
+      name: parsed.name.trim() || t("bookshelf.plan.defaultName"),
       items: parsed.items.map((it) => ({
         bookUri: it.bookUri,
         bookName: it.bookName,
@@ -315,24 +320,30 @@ export function useEditPlanFormController(deps: Deps) {
     });
 
     deps.onClose();
-  }, [deps, getValues, trigger]);
+  }, [deps, getValues, trigger, t]);
 
   const confirmDelete = useCallback(() => {
     if (!deps.planId || !deps.plan) return;
 
-    Alert.alert("Delete plan", `Delete "${deps.plan.name}"?`, [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: () => {
-          deps.deletePlan(deps.planId!);
-          deps.onDeleted?.();
-          deps.onClose();
+    Alert.alert(
+      t("bookshelf.plan.deleteTitle"),
+      formatTranslation(t("bookshelf.plan.deleteConfirm"), {
+        name: deps.plan.name || t("bookshelf.plan.deleteFallback"),
+      }),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("common.delete"),
+          style: "destructive",
+          onPress: () => {
+            deps.deletePlan(deps.planId!);
+            deps.onDeleted?.();
+            deps.onClose();
+          },
         },
-      },
-    ]);
-  }, [deps]);
+      ]
+    );
+  }, [deps, t]);
 
   const isValid = rhfIsValid && fields.length > 0;
 

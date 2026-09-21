@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import { View, StyleSheet } from "react-native";
 import { IconTile } from "@musti/ui-native/src/components/AppIcon";
 import { FC } from "react";
+import { useTranslation } from "@musti/core";
 
 const { colors } = bookshelfTheme;
 type PlanBottomActionButtonsProps = {
@@ -13,6 +14,8 @@ export const PlanBottomActionButtons: FC<PlanBottomActionButtonsProps> = ({
   handleDelete,
   handleSave,
 }) => {
+  const { t } = useTranslation();
+
   return (
     <View
       style={[
@@ -25,7 +28,7 @@ export const PlanBottomActionButtons: FC<PlanBottomActionButtonsProps> = ({
     >
       <IconTile
         name="close-outline"
-        label="Cancel"
+        label={t("common.close")}
         size={iconSizes.lg}
         onPress={() => router.back()}
         style={[
@@ -38,7 +41,7 @@ export const PlanBottomActionButtons: FC<PlanBottomActionButtonsProps> = ({
       />
       <IconTile
         name="trash-outline"
-        label="Delete"
+        label={t("delete")}
         size={iconSizes.lg}
         onPress={handleDelete}
         style={[
@@ -51,7 +54,7 @@ export const PlanBottomActionButtons: FC<PlanBottomActionButtonsProps> = ({
       />
       <IconTile
         name="checkmark-outline"
-        label="Save"
+        label={t("save")}
         size={iconSizes.lg}
         onPress={handleSave}
         style={[
@@ -70,7 +73,7 @@ const styles = StyleSheet.create({
   btn: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
-    borderRadius: radii.lg,
+    borderRadius: radii.md,
     borderWidth: 1,
   },
 

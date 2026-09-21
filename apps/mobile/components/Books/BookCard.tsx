@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import Svg, { Rect, Line } from "react-native-svg";
 
+import { useTranslation } from "@musti/core";
 import {
   MText,
   spacing,
@@ -24,9 +25,18 @@ import {
 import { IconButton, BaseIcon } from "@musti/ui-native";
 import type { LocalPdfFile } from "@/utils/getPdfsDirectory";
 import { usePdfCoverFromCache } from "@/hooks/usePdfCoverFromCache";
-import { BookCardFooter } from "./BookCardFooter";
+import {
+  BookCardFooter,
+  BOOK_NAMEPLATE_HEIGHT,
+  BOOK_NAMEPLATE_INSET_X,
+} from "./BookCardFooter";
+import { BOOK_SHELF_LIFT } from "./shelfLayout";
 
 const { colors } = bookshelfTheme;
+
+/** Wide enough for long menu labels (e.g. TR "Yeniden adlandır"). */
+const BOOK_MENU_POPOVER_W = 228;
+const BOOK_MENU_EDGE = 8;
 type BookCardProps = {
   file: LocalPdfFile;
   onOpen: () => void;
@@ -66,11 +76,7 @@ const GRID_GAP = spacing.md;
 
 const ROW_W = 120;
 
-const FOOTER_H = 64;
-const FOOTER_OVERLAP = FOOTER_H / 2;
-const FOOTER_OPTICAL_SHIFT = spacing.sm + FOOTER_OVERLAP / 3;
-
-const CONTACT_SHADOW_Y = -10;
+const CONTACT_SHADOW_Y = -4;
 
 export const BookCard: FC<BookCardProps> = ({
   file,
@@ -82,6 +88,7 @@ export const BookCard: FC<BookCardProps> = ({
   todayPages,
   variant = "grid",
 }) => {
+  const { t } = useTranslation();
   const { colors } = useTheme();
 
   const bookId = file.uri ?? file.name;
@@ -160,7 +167,6 @@ export const BookCard: FC<BookCardProps> = ({
   const wrapperW = isRow ? ROW_W : gridItemWidth;
 
   const safeTodayPages = Math.max(0, Number(todayPages ?? 0) || 0);
-  const todayLabel = `Today: ${safeTodayPages}`;
 
   const lastPosLine = useMemo(() => {
     const lp = Math.max(0, Number(lastPage ?? 0) || 0);
@@ -169,8 +175,6 @@ export const BookCard: FC<BookCardProps> = ({
     return lp > 0 ? String(lp) : "—";
   }, [lastPage, totalPages]);
 
-  const POPOVER_W = 160;
-  const EDGE = 8;
   const clamp = (v: number, min: number, max: number) =>
     Math.max(min, Math.min(max, v));
 
@@ -181,9 +185,13 @@ export const BookCard: FC<BookCardProps> = ({
     const screenW = Dimensions.get("window").width;
 
     UIManager.measure(handle, (_x, _y, width, height, pageX, pageY) => {
-      const desiredX = pageX + width - POPOVER_W;
-      const x = clamp(desiredX, EDGE, screenW - POPOVER_W - EDGE);
-      const y = Math.max(EDGE, pageY + height + 8);
+      const desiredX = pageX + width - BOOK_MENU_POPOVER_W;
+      const x = clamp(
+        desiredX,
+        BOOK_MENU_EDGE,
+        screenW - BOOK_MENU_POPOVER_W - BOOK_MENU_EDGE
+      );
+      const y = Math.max(BOOK_MENU_EDGE, pageY + height + 8);
       setMenuPos({ x, y });
       setMenuVisible(true);
     });
@@ -214,7 +222,7 @@ export const BookCard: FC<BookCardProps> = ({
         onPressOut={handlePressOut}
         style={[
           isRow ? styles.cardWrapperRow : styles.cardWrapperGrid,
-          { paddingBottom: FOOTER_OVERLAP },
+          { marginBottom: BOOK_SHELF_LIFT },
         ]}
         activeOpacity={0.85}
       >
@@ -227,7 +235,7 @@ export const BookCard: FC<BookCardProps> = ({
                 isRow ? styles.cardRow : styles.cardGrid,
               ]}
             >
-              <View style={[styles.body, { paddingBottom: FOOTER_OVERLAP }]}>
+              <View style={styles.body}>
                 {showCover && (
                   <View style={styles.coverClip} pointerEvents="none">
                     <Image
@@ -290,37 +298,32 @@ export const BookCard: FC<BookCardProps> = ({
                   <View style={styles.menuChip}>
                     <IconButton
                       name="ellipsis-vertical"
-                      size={iconSizes.md}
                       color={colors.textPrimary}
                       onPress={openMenu}
                       hitSlop={8}
                     />
                   </View>
                 </View>
+
+                <View
+                  pointerEvents="none"
+                  style={[
+                    styles.nameplateWrap,
+                    {
+                      left: BOOK_NAMEPLATE_INSET_X,
+                      right: BOOK_NAMEPLATE_INSET_X,
+                    },
+                  ]}
+                >
+                  <BookCardFooter
+                    file={file}
+                    totalPages={totalPages}
+                    progress={progress}
+                    width={wrapperW - BOOK_NAMEPLATE_INSET_X * 2}
+                  />
+                </View>
               </View>
             </Card>
-
-            {/* ✅ footer */}
-            <View
-              pointerEvents="none"
-              style={[
-                styles.footerFloat,
-                {
-                  width: wrapperW,
-                  height: FOOTER_H,
-                  bottom: -FOOTER_OVERLAP,
-                },
-              ]}
-            >
-              <BookCardFooter
-                file={file}
-                todayLabel={todayLabel}
-                totalPages={totalPages}
-                progress={progress}
-                width={wrapperW}
-                compact={isRow}
-              />
-            </View>
 
             <View
               pointerEvents="none"
@@ -328,7 +331,7 @@ export const BookCard: FC<BookCardProps> = ({
                 styles.contactShadow,
                 {
                   width: wrapperW,
-                  bottom: -FOOTER_OVERLAP + FOOTER_H + CONTACT_SHADOW_Y,
+                  bottom: CONTACT_SHADOW_Y,
                 },
               ]}
             />
@@ -354,6 +357,7 @@ export const BookCard: FC<BookCardProps> = ({
               {
                 top: menuPos.y,
                 left: menuPos.x,
+                width: BOOK_MENU_POPOVER_W,
                 backgroundColor: colors.surface,
                 borderColor: colors.borderSubtle,
               },
@@ -366,11 +370,14 @@ export const BookCard: FC<BookCardProps> = ({
               <BaseIcon
                 family="ion"
                 name="stats-chart-outline"
-                size={16}
                 color={colors.textPrimary}
               />
-              <MText variant="body" color="textPrimary">
-                Stats
+              <MText
+                variant="body"
+                color="textPrimary"
+                style={styles.menuItemLabel}
+              >
+                {t("bookshelf.book.stats")}
               </MText>
             </TouchableOpacity>
 
@@ -382,11 +389,14 @@ export const BookCard: FC<BookCardProps> = ({
                 <BaseIcon
                   family="ion"
                   name="create-outline"
-                  size={16}
                   color={colors.textPrimary}
                 />
-                <MText variant="body" color="textPrimary">
-                  Rename
+                <MText
+                  variant="body"
+                  color="textPrimary"
+                  style={styles.menuItemLabel}
+                >
+                  {t("bookshelf.book.rename")}
                 </MText>
               </TouchableOpacity>
             )}
@@ -398,11 +408,10 @@ export const BookCard: FC<BookCardProps> = ({
               <BaseIcon
                 family="ion"
                 name="trash-outline"
-                size={16}
                 color={colors.danger}
               />
-              <MText variant="body" color="danger">
-                Delete
+              <MText variant="body" color="danger" style={styles.menuItemLabel}>
+                {t("delete")}
               </MText>
             </TouchableOpacity>
           </View>
@@ -446,7 +455,6 @@ export const BookCard: FC<BookCardProps> = ({
               </MText>
               <IconButton
                 name="close-outline"
-                size={iconSizes.lg}
                 color={colors.textPrimary}
                 onPress={() => setStatsVisible(false)}
               />
@@ -456,7 +464,7 @@ export const BookCard: FC<BookCardProps> = ({
 
             <View style={styles.statsRow}>
               <MText variant="body" color="textSecondary">
-                Today
+                {t("today")}
               </MText>
               <MText variant="body" color="textPrimary">
                 {safeTodayPages}
@@ -465,7 +473,7 @@ export const BookCard: FC<BookCardProps> = ({
 
             <View style={styles.statsRow}>
               <MText variant="body" color="textSecondary">
-                Last position
+                {t("bookshelf.book.lastPosition")}
               </MText>
               <MText variant="body" color="textPrimary">
                 {lastPosLine}
@@ -474,7 +482,7 @@ export const BookCard: FC<BookCardProps> = ({
 
             <View style={styles.statsRow}>
               <MText variant="body" color="textSecondary">
-                Total progress
+                {t("bookshelf.book.totalProgress")}
               </MText>
               <MText variant="body" color="textPrimary">
                 {totalPages && totalPages > 0
@@ -489,7 +497,7 @@ export const BookCard: FC<BookCardProps> = ({
               color="textSecondary"
               style={{ opacity: 0.9 }}
             >
-              More details will be on the Stats screen (next step).
+              {t("bookshelf.book.moreStatsHint")}
             </MText>
           </TouchableOpacity>
         </TouchableOpacity>
@@ -502,17 +510,17 @@ const styles = StyleSheet.create({
   cardWrapperRow: { marginRight: spacing.md },
   cardWrapperGrid: {
     marginRight: 0,
-    marginBottom: spacing.md,
+    marginBottom: 0,
   },
 
   cardOuter: {
     position: "relative",
   },
 
-  footerFloat: {
+  nameplateWrap: {
     position: "absolute",
-    left: 0,
-    zIndex: 20,
+    bottom: spacing.sm,
+    zIndex: 8,
   },
 
   cardBase: {
@@ -535,7 +543,7 @@ const styles = StyleSheet.create({
     top: spacing.sm + 4,
     left: 22,
     right: spacing.lg,
-    bottom: FOOTER_OPTICAL_SHIFT,
+    bottom: spacing.sm + BOOK_NAMEPLATE_HEIGHT - 4,
     borderRadius: radii.sm,
     overflow: "hidden",
     zIndex: 1,
@@ -604,7 +612,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: "rgba(0,0,0,0.18)",
     opacity: 0.28,
-    zIndex: 19,
+    zIndex: 1,
   },
 
   menuOverlay: { flex: 1, backgroundColor: "transparent" },
@@ -614,7 +622,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     borderRadius: radii.lg,
     borderWidth: 1,
-    width: 160,
     elevation: 6,
     shadowColor: "#000",
     shadowOpacity: 0.15,
@@ -625,6 +632,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
+  },
+  menuItemLabel: {
+    flex: 1,
+    flexShrink: 1,
   },
 
   statsOverlay: {

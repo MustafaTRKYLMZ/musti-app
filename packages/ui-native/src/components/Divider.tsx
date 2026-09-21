@@ -1,6 +1,7 @@
 import React from "react";
 import { View, StyleSheet, ViewStyle } from "react-native";
-import { useTheme, spacing } from "@musti/ui-native";
+import { useTheme } from "../theme/ThemeContext";
+import { spacing } from "../theme/tokens";
 
 export type DividerProps = {
   /** vertical space before & after */

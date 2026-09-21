@@ -23,7 +23,6 @@ export default function AboutScreen() {
         <IconButton
           family="ion"
           name="close"
-          size={22}
           color={colors.textPrimary}
           onPress={handleClose}
         />

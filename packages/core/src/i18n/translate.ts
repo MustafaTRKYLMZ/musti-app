@@ -1,9 +1,11 @@
 import { en } from "./locales/en";
 import { tr } from "./locales/tr";
+import { nl } from "./locales/nl";
 
 export const dictionaries = {
   en,
   tr,
+  nl,
 } as const;
 
 export type LanguageCode = keyof typeof dictionaries;

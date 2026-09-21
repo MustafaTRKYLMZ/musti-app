@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { MText, spacing, radii, useTheme } from "@musti/ui-native";
+import { useTranslation } from "@musti/core";
 
 import { useImportPdfController } from "@/components/Books/controllers/useImportPdfController";
 
@@ -22,6 +23,7 @@ export const AddBookModal: React.FC<Props> = ({
   onBookImported,
 }) => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
 
   const c = useImportPdfController({
     onImported: (doc) => {
@@ -54,7 +56,7 @@ export const AddBookModal: React.FC<Props> = ({
           ]}
         >
           <MText variant="heading2" color="textPrimary" style={styles.title}>
-            Add book
+            {t("bookshelf.book.addTitle")}
           </MText>
 
           <MText
@@ -62,7 +64,7 @@ export const AddBookModal: React.FC<Props> = ({
             color="textSecondary"
             style={styles.description}
           >
-            Select a PDF from your device and save it into your bookshelf.
+            {t("bookshelf.book.addDesc")}
           </MText>
 
           <TouchableOpacity
@@ -84,7 +86,7 @@ export const AddBookModal: React.FC<Props> = ({
                 color="textInverse"
                 style={styles.primaryButtonText}
               >
-                Pick PDF
+                {t("bookshelf.book.pickPdf")}
               </MText>
             )}
           </TouchableOpacity>
@@ -99,7 +101,7 @@ export const AddBookModal: React.FC<Props> = ({
               color="textPrimary"
               style={{ opacity: c.isLoading ? 0.6 : 1 }}
             >
-              Close
+              {t("common.close")}
             </MText>
           </TouchableOpacity>
         </View>

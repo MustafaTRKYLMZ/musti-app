@@ -11,6 +11,7 @@ import {
 } from "@musti/forms";
 
 import type { MSelectItemBase } from "@/components/ui/MSelectBottomSheet";
+import { useTranslation } from "@musti/core";
 
 type Deps = {
   visible: boolean;
@@ -23,6 +24,7 @@ type Deps = {
 };
 
 export function useCreatePlanFormController(deps: Deps) {
+  const { t } = useTranslation();
   const {
     control,
     reset,
@@ -52,7 +54,7 @@ export function useCreatePlanFormController(deps: Deps) {
 
     reset({
       ...createPlanDefaultValues,
-      name: "Reading plan",
+      name: t("bookshelf.plan.defaultName"),
       items: [],
     });
 

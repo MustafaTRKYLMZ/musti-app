@@ -8,6 +8,7 @@ const { colors } = plannerTheme;
 export type WeekdayLettersRowProps = {
   days: Date[];
   locale?: string;
+  weekStartsOn?: number;
   colWidth: number;
   gap: number;
   containerStyle?: StyleProp<ViewStyle>;
@@ -17,6 +18,7 @@ export type WeekdayLettersRowProps = {
 export const WeekdayLettersRow: FC<WeekdayLettersRowProps> = ({
   days,
   locale,
+  weekStartsOn = 1,
   colWidth,
   gap,
   containerStyle,
@@ -38,7 +40,7 @@ export const WeekdayLettersRow: FC<WeekdayLettersRowProps> = ({
             ]}
           >
             <Text style={[styles.text, textStyle]}>
-              {getWeekdayLetter(d, locale)}
+              {getWeekdayLetter(d, locale, weekStartsOn)}
             </Text>
           </View>
         );

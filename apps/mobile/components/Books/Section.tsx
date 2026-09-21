@@ -1,7 +1,8 @@
-import { MText, radii, shadows, spacing, useTheme } from "@musti/ui-native";
+import { MText, radii, spacing, useTheme } from "@musti/ui-native";
 import React, { FC, useMemo, useState } from "react";
 import { View, StyleSheet, TextInput, TouchableOpacity } from "react-native";
-import { IconButton } from "@musti/ui-native/src/components/AppIcon";
+import { useTranslation, formatTranslation } from "@musti/core";
+import { HeaderIconButton } from "@/components/ui/HeaderIconButton";
 
 type SectionProps = {
   id: string;
@@ -29,6 +30,7 @@ export const Section: FC<SectionProps> = ({
   onUpdateSection,
   onJumpToPage,
 }) => {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -38,9 +40,11 @@ export const Section: FC<SectionProps> = ({
   const [draftEnd, setDraftEnd] = useState(endPage ? String(endPage) : "");
 
   const endLabel = useMemo(() => {
-    if (!endPage) return `Page ${startPage}`;
+    if (!endPage) {
+      return formatTranslation(t("bookshelf.chapters.pageN"), { n: startPage });
+    }
     return `${startPage}–${endPage}`;
-  }, [startPage, endPage]);
+  }, [startPage, endPage, t]);
 
   const handleStartEdit = () => {
     setDraftTitle(title);
@@ -84,7 +88,7 @@ export const Section: FC<SectionProps> = ({
               styles.titleInput,
               { borderColor: colors.borderSubtle, color: colors.textPrimary },
             ]}
-            placeholder="Title"
+            placeholder={t("bookshelf.chapters.titleLabel")}
             placeholderTextColor={colors.textSecondary}
           />
 
@@ -96,7 +100,7 @@ export const Section: FC<SectionProps> = ({
               styles.pageInput,
               { borderColor: colors.borderSubtle, color: colors.textPrimary },
             ]}
-            placeholder="Start"
+            placeholder={t("bookshelf.chapters.start")}
             placeholderTextColor={colors.textSecondary}
           />
 
@@ -114,7 +118,7 @@ export const Section: FC<SectionProps> = ({
                 color: colors.textPrimary,
               },
             ]}
-            placeholder="End"
+            placeholder={t("bookshelf.chapters.end")}
             placeholderTextColor={colors.textSecondary}
             returnKeyType="done"
             onSubmitEditing={handleSaveEdit}
@@ -133,53 +137,61 @@ export const Section: FC<SectionProps> = ({
 
       {isEditing ? (
         <View style={styles.editActions}>
-          <IconButton
-            name="close-outline"
+          <HeaderIconButton
+            icon="close"
+            variant="plain"
             onPress={handleCancelEdit}
-            style={styles.actionIcon}
+            accessibilityLabel={t("common.cancel")}
           />
-          <IconButton
-            name="checkmark-outline"
+          <HeaderIconButton
+            icon="checkmark"
+            variant="circle"
+            iconColor={colors.textInverse}
             onPress={handleSaveEdit}
-            style={[styles.actionIcon, { backgroundColor: colors.primary }]}
+            accessibilityLabel={t("common.save")}
+            style={{
+              borderColor: colors.primary,
+              backgroundColor: colors.primary,
+            }}
           />
         </View>
       ) : (
         <View style={styles.menuWrapper}>
-          <IconButton
-            name="ellipsis-vertical"
+          <HeaderIconButton
+            icon="ellipsis-vertical"
+            variant="plain"
             onPress={() => setMenuOpen((prev) => !prev)}
+            accessibilityLabel={t("bookshelf.chapters.title")}
           />
 
-          {menuOpen && (
+          {menuOpen ? (
             <View
               style={[
                 styles.menuContainer,
                 {
-                  backgroundColor: colors.surface,
+                  backgroundColor: colors.surfaceElevated ?? colors.surface,
                   borderColor: colors.borderSubtle,
+                  shadowColor: colors.shadowStrong,
                 },
               ]}
             >
-              <View style={styles.menuRow}>
-                <IconButton
-                  name="pencil-outline"
-                  onPress={handleStartEdit}
-                  style={styles.menuIcon}
-                  accessibilityLabel="Edit section"
-                />
-                <IconButton
-                  name="trash-outline"
-                  onPress={() => {
-                    setMenuOpen(false);
-                    onDeleteSection(id);
-                  }}
-                  style={styles.menuIcon}
-                  accessibilityLabel="Delete section"
-                />
-              </View>
+              <HeaderIconButton
+                icon="pencil-outline"
+                variant="plain"
+                onPress={handleStartEdit}
+                accessibilityLabel={t("bookshelf.chapters.edit")}
+              />
+              <HeaderIconButton
+                icon="trash-outline"
+                variant="plain"
+                onPress={() => {
+                  setMenuOpen(false);
+                  onDeleteSection(id);
+                }}
+                accessibilityLabel={t("bookshelf.chapters.delete")}
+              />
             </View>
-          )}
+          ) : null}
         </View>
       )}
     </View>
@@ -227,34 +239,22 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: spacing["2xl"],
     right: 0,
-    borderWidth: 1,
-    borderRadius: radii.full,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 2,
-    zIndex: 20,
-    shadowColor: shadows.card.shadowColor,
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    minWidth: 72,
-  },
-
-  menuRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-  },
-
-  menuIcon: {
-    marginHorizontal: spacing.sm,
+    borderWidth: 1,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xs,
+    zIndex: 20,
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    gap: spacing.xs,
   },
 
   editActions: {
     flexDirection: "row",
     alignItems: "center",
-  },
-
-  actionIcon: {
-    marginLeft: spacing.xs,
+    gap: spacing.xs,
   },
 });

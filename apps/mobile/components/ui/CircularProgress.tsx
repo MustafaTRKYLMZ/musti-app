@@ -31,17 +31,24 @@ export function CircularProgress({
   const v = clamp01(value);
   const progressStroke = progressColor ?? colors.danger;
   const trackStroke = trackColor ?? colors.borderSubtle;
-  const { r, c, dash } = useMemo(() => {
+
+  const { r, c, dash, labelWidth, topSize, bottomSize } = useMemo(() => {
     const radius = (size - stroke) / 2;
     const circumference = 2 * Math.PI * radius;
     const dashOffset = circumference * (1 - v);
-    return { r: radius, c: circumference, dash: dashOffset };
+    return {
+      r: radius,
+      c: circumference,
+      dash: dashOffset,
+      labelWidth: Math.max(28, size - stroke * 2.8),
+      topSize: Math.round(size * 0.2),
+      bottomSize: Math.round(size * 0.145),
+    };
   }, [size, stroke, v]);
 
   return (
     <View style={[styles.wrap, { width: size, height: size }, style]}>
       <Svg width={size} height={size} style={StyleSheet.absoluteFillObject}>
-        {/* Track */}
         <Circle
           cx={size / 2}
           cy={size / 2}
@@ -50,7 +57,6 @@ export function CircularProgress({
           fill="transparent"
           stroke={trackStroke}
         />
-        {/* Progress */}
         <Circle
           cx={size / 2}
           cy={size / 2}
@@ -67,14 +73,27 @@ export function CircularProgress({
         />
       </Svg>
 
-      <View style={styles.center}>
+      <View style={[styles.center, { width: labelWidth }]}>
         {labelTop ? (
-          <MText style={styles.top} numberOfLines={1}>
+          <MText
+            style={[styles.top, { fontSize: topSize, lineHeight: topSize + 2 }]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.8}
+          >
             {labelTop}
           </MText>
         ) : null}
         {labelBottom ? (
-          <MText style={styles.bottom} numberOfLines={1}>
+          <MText
+            style={[
+              styles.bottom,
+              { fontSize: bottomSize, lineHeight: bottomSize + 2 },
+            ]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.8}
+          >
             {labelBottom}
           </MText>
         ) : null}
@@ -92,14 +111,14 @@ const styles = StyleSheet.create({
   center: {
     alignItems: "center",
     justifyContent: "center",
+    gap: 1,
   },
   top: {
     fontWeight: "900",
-    fontSize: 12,
+    textAlign: "center",
   },
   bottom: {
-    fontSize: 10,
     opacity: 0.7,
-    marginTop: 1,
+    textAlign: "center",
   },
 });

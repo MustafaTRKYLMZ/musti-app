@@ -13,8 +13,9 @@ import {
   ViewToken,
 } from "react-native";
 import dayjs from "dayjs";
-import { LocalizedDateText, type LocalTransaction } from "@musti/core";
+import { LocalizedDateText, useTranslation, type LocalTransaction } from "@musti/core";
 import { MText, colors, spacing, radii } from "@musti/ui-native";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 import { useTransactionsStore } from "../../store/budget/transactions/useTransactionsStore";
 import { CashflowRow } from "@/components/ui/CashflowRow";
@@ -54,6 +55,7 @@ export default function TransactionList({
   scrollToDateKey,
   scrollToDateTrigger,
 }: TransactionListProps) {
+  const { t } = useTranslation();
   const [refreshing, setRefreshing] = useState(false);
   const listRef = useRef<SectionList<LocalTransaction, TxSection> | null>(null);
   const initialScrollDoneRef = useRef(false);
@@ -209,40 +211,13 @@ export default function TransactionList({
   if (!transactions.length) {
     return (
       <View style={styles.emptyState}>
-        <BaseIcon
-          name="wallet-outline"
-          size={40}
-          color={colors.textSecondary}
+        <EmptyState
+          icon="wallet-outline"
+          title={t("empty.transactions.title")}
+          subtitle={t("empty.transactions.subtitle")}
+          actionLabel={onPressRefresh ? t("empty.transactions.refresh") : undefined}
+          onAction={onPressRefresh ? () => void handleRefresh() : undefined}
         />
-
-        <MText variant="bodyStrong" color="textPrimary">
-          No transactions yet
-        </MText>
-
-        <MText
-          variant="body"
-          color="textSecondary"
-          style={styles.emptySubtitle}
-        >
-          Add a new one with the + button or refresh.
-        </MText>
-
-        {onPressRefresh && (
-          <TouchableOpacity
-            style={styles.emptyRefreshButton}
-            onPress={() => void handleRefresh()}
-          >
-            <BaseIcon
-              name="refresh-outline"
-              size={16}
-              color={colors.textMuted}
-              style={{ marginRight: spacing.xs }}
-            />
-            <MText variant="bodyStrong" color="primary">
-              Refresh
-            </MText>
-          </TouchableOpacity>
-        )}
       </View>
     );
   }

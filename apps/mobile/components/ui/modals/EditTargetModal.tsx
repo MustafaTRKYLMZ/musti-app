@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { MText, spacing, radii, iconSizes, useTheme } from "@musti/ui-native";
 import { IconButton } from "@musti/ui-native";
+import { useTranslation } from "@musti/core";
 
 import { useToast } from "@/components/ui/ToastProvider";
 import { TargetForm } from "@/components/Books/forms/TargetForm";
@@ -36,6 +37,7 @@ export function EditTargetModal({
   onOpenChapters,
 }: Props) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const { showToast } = useToast();
 
   const chipColors = useChipColors();
@@ -90,10 +92,9 @@ export function EditTargetModal({
         >
           <View style={[styles.sheet, { backgroundColor: colors.surface }]}>
             <View style={styles.header}>
-              <MText variant="heading3">Edit Target</MText>
+              <MText variant="heading3">{t("bookshelf.target.editTitle")}</MText>
               <IconButton
                 name="close"
-                size={iconSizes.lg}
                 color={colors.textPrimary}
                 onPress={onClose}
               />
@@ -109,12 +110,15 @@ export function EditTargetModal({
                   chipColors,
                   items: target?.items ?? [],
                   canAddItem: c.canAddItem,
-                  addItemLabel: "Add item",
+                  addItemLabel: t("bookshelf.target.addItem"),
                   onAddItem: c.addSelectedItem,
                   onDeleteItem: (itemId) => {
                     if (!targetId) return;
                     deleteItem(targetId, itemId);
-                    showToast({ message: "Item removed.", duration: 1800 });
+                    showToast({
+                      message: t("bookshelf.target.itemRemoved"),
+                      duration: 1800,
+                    });
                   },
                   onOpenChapters,
                 })}
@@ -136,7 +140,9 @@ export function EditTargetModal({
                 },
               ]}
             >
-              <MText style={{ fontWeight: "900" }}>Save & Close</MText>
+              <MText style={{ fontWeight: "900" }}>
+                {t("bookshelf.target.saveAndClose")}
+              </MText>
             </Pressable>
           </View>
 

@@ -1,9 +1,6 @@
 import React from "react";
 import { Alert } from "react-native";
-import { IconButton } from "@musti/ui-native";
-import { bookshelfTheme } from "@musti/ui-native";
-
-const { colors, iconSizes } = bookshelfTheme;
+import { IconButton, iconSizes, useTheme } from "@musti/ui-native";
 
 export function InfoIcon({
   title,
@@ -12,10 +9,11 @@ export function InfoIcon({
   title: string;
   message: string;
 }) {
+  const { colors } = useTheme();
+
   return (
     <IconButton
       name="information-circle-outline"
-      size={iconSizes.sm}
       color={colors.textSecondary}
       onPress={() =>
         Alert.alert(title, message, [{ text: "OK" }], { cancelable: true })

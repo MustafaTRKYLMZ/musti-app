@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { View, StyleSheet } from "react-native";
 import dayjs from "dayjs";
+import { useTranslation, formatTranslation } from "@musti/core";
 import { MText, bookshelfTheme } from "@musti/ui-native";
 
 import { useReadingGamificationStore } from "@/store/bookshelf/readingGamification/useReadingGamificationStore";
@@ -15,6 +16,7 @@ type Props = {
 };
 
 export function StreakDetailsSheet({ visible, onClose }: Props) {
+  const { t } = useTranslation();
   const streak = useReadingGamificationStore((s) => s.streak);
   const xp = useReadingGamificationStore((s) => s.xp);
   const daily = useReadingGamificationStore((s) => s.daily);
@@ -24,6 +26,11 @@ export function StreakDetailsSheet({ visible, onClose }: Props) {
   const todayKey = dayjs().format("YYYY-MM-DD");
   const today = daily?.[todayKey] ?? { pages: 0, minutes: 0, sessions: 0 };
   const goal = Math.max(1, Number(settings.qualifyPagesPerDay ?? 10));
+
+  const dayLabel =
+    streak.current === 1
+      ? t("bookshelf.streak.day")
+      : t("bookshelf.streak.days");
 
   const last7 = useMemo(() => {
     const out: Array<{ day: string; pages: number }> = [];
@@ -37,77 +44,99 @@ export function StreakDetailsSheet({ visible, onClose }: Props) {
   return (
     <BottomSheetModal
       visible={visible}
-      title="Streak & Level"
+      title={t("bookshelf.streak.detailsTitle")}
       onClose={onClose}
       variant="bookshelf"
     >
       <View style={styles.section}>
-        <MText style={styles.h2}>Today</MText>
+        <MText style={styles.h2}>{t("bookshelf.stats.today")}</MText>
         <View style={styles.row}>
           <View style={styles.kpi}>
-            <MText style={styles.kpiLabel}>Pages</MText>
+            <MText style={styles.kpiLabel}>{t("bookshelf.streak.pages")}</MText>
             <MText style={styles.kpiValue}>
               {today.pages} / {goal}
             </MText>
           </View>
           <View style={styles.kpi}>
-            <MText style={styles.kpiLabel}>Minutes</MText>
+            <MText style={styles.kpiLabel}>
+              {t("bookshelf.streak.kpi.minutes")}
+            </MText>
             <MText style={styles.kpiValue}>{today.minutes}</MText>
           </View>
           <View style={styles.kpi}>
-            <MText style={styles.kpiLabel}>Sessions</MText>
+            <MText style={styles.kpiLabel}>
+              {t("bookshelf.streak.kpi.sessions")}
+            </MText>
             <MText style={styles.kpiValue}>{today.sessions}</MText>
           </View>
         </View>
       </View>
 
       <View style={styles.section}>
-        <MText style={styles.h2}>Streak</MText>
+        <MText style={styles.h2}>{t("bookshelf.streak.title")}</MText>
         <View style={styles.row}>
           <View style={styles.kpi}>
-            <MText style={styles.kpiLabel}>Current</MText>
-            <MText style={styles.kpiValue}>{streak.current} days</MText>
+            <MText style={styles.kpiLabel}>
+              {t("bookshelf.streak.kpi.current")}
+            </MText>
+            <MText style={styles.kpiValue}>
+              {streak.current} {dayLabel}
+            </MText>
           </View>
           <View style={styles.kpi}>
-            <MText style={styles.kpiLabel}>Best</MText>
-            <MText style={styles.kpiValue}>{streak.best} days</MText>
+            <MText style={styles.kpiLabel}>
+              {t("bookshelf.streak.kpi.best")}
+            </MText>
+            <MText style={styles.kpiValue}>
+              {streak.best} {dayLabel}
+            </MText>
           </View>
           <View style={styles.kpi}>
-            <MText style={styles.kpiLabel}>Freeze</MText>
+            <MText style={styles.kpiLabel}>
+              {t("bookshelf.streak.kpi.freeze")}
+            </MText>
             <MText style={styles.kpiValue}>{streak.freezeTokens ?? 0}</MText>
           </View>
         </View>
       </View>
 
       <View style={styles.section}>
-        <MText style={styles.h2}>Level</MText>
+        <MText style={styles.h2}>{t("bookshelf.streak.kpi.level")}</MText>
         <View style={styles.row}>
           <View style={styles.kpi}>
-            <MText style={styles.kpiLabel}>Level</MText>
+            <MText style={styles.kpiLabel}>
+              {t("bookshelf.streak.kpi.level")}
+            </MText>
             <MText style={styles.kpiValue}>{xp.level}</MText>
           </View>
           <View style={styles.kpi}>
-            <MText style={styles.kpiLabel}>XP</MText>
+            <MText style={styles.kpiLabel}>{t("bookshelf.streak.kpi.xp")}</MText>
             <MText style={styles.kpiValue}>
               {xp.xpIntoLevel} / {xp.xpForNextLevel}
             </MText>
           </View>
           <View style={styles.kpi}>
-            <MText style={styles.kpiLabel}>Total</MText>
+            <MText style={styles.kpiLabel}>
+              {t("bookshelf.streak.kpi.total")}
+            </MText>
             <MText style={styles.kpiValue}>{xp.totalXp}</MText>
           </View>
         </View>
       </View>
 
       <View style={styles.section}>
-        <MText style={styles.h2}>Last 7 days</MText>
+        <MText style={styles.h2}>{t("bookshelf.streak.last7Days")}</MText>
         <View style={styles.list}>
           {last7.map((d) => (
             <View key={d.day} style={styles.listRow}>
               <MText style={styles.day}>
                 {dayjs(d.day).format("ddd, MMM D")}
               </MText>
-              <MText style={styles.pages}>{d.pages} pages</MText>
+              <MText style={styles.pages}>
+                {formatTranslation(t("bookshelf.common.pagesCount"), {
+                  count: d.pages,
+                })}
+              </MText>
             </View>
           ))}
         </View>
@@ -118,28 +147,24 @@ export function StreakDetailsSheet({ visible, onClose }: Props) {
 
 const styles = StyleSheet.create({
   section: {
-    marginTop: spacing.md,
-    padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
     borderRadius: radii.lg,
     backgroundColor: colors.surface,
+    padding: spacing.md,
+    marginBottom: spacing.md,
   },
-  h2: { fontWeight: "800", marginBottom: spacing.sm },
-
-  row: { flexDirection: "row", gap: spacing.md },
-  kpi: { flex: 1, minWidth: 0 },
+  h2: { fontWeight: "900", marginBottom: spacing.sm },
+  row: { flexDirection: "row", gap: spacing.sm, flexWrap: "wrap" },
+  kpi: { flexGrow: 1, flexBasis: "30%" },
   kpiLabel: { opacity: 0.7, fontSize: 12 },
-  kpiValue: { fontWeight: "800", marginTop: 3 },
-
-  list: { marginTop: spacing.xs, gap: spacing.xs },
+  kpiValue: { fontWeight: "900", marginTop: 4 },
+  list: { gap: spacing.xs },
   listRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     paddingVertical: spacing.xs,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.borderSubtle,
   },
   day: { opacity: 0.85 },
-  pages: { fontWeight: "700" },
+  pages: { fontWeight: "900" },
 });

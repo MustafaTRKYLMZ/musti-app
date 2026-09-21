@@ -1,29 +1,27 @@
 import React, { FC, useMemo } from "react";
 import { View, StyleSheet } from "react-native";
-import { bookshelfTheme, MText, radii, spacing } from "@musti/ui-native";
+import { bookshelfTheme, MText, radii } from "@musti/ui-native";
 
 const { colors } = bookshelfTheme;
 
+/** Fixed in-book nameplate — title + optional progress, no layout shift. */
+export const BOOK_NAMEPLATE_HEIGHT = 34;
+
+/** Horizontal inset from book edges (smaller = wider nameplate). */
+export const BOOK_NAMEPLATE_INSET_X = 12;
+
 type Props = {
   file: { uri: string; name: string };
-  todayLabel: string | null;
   totalPages?: number;
-  progress: number; // 0..1
+  progress: number;
   width: number;
-  compact?: boolean;
 };
-
-function compactToday(label: string) {
-  return label.replace(/^Today:\s*/i, "").trim();
-}
 
 export const BookCardFooter: FC<Props> = ({
   file,
-  todayLabel,
   totalPages,
   progress,
   width,
-  compact = false,
 }) => {
   const pct = useMemo(() => {
     const p = Number.isFinite(progress)
@@ -35,11 +33,12 @@ export const BookCardFooter: FC<Props> = ({
   const showProgress = !!totalPages && totalPages > 0;
 
   return (
-    <View style={[styles.footer, { width }]}>
-      {/* title */}
+    <View
+      style={[styles.footer, { width, height: BOOK_NAMEPLATE_HEIGHT }]}
+    >
       <MText
         variant="caption"
-        color="textPrimary"
+        color="textInverse"
         numberOfLines={1}
         ellipsizeMode="tail"
         style={styles.title}
@@ -47,33 +46,18 @@ export const BookCardFooter: FC<Props> = ({
         {file.name}
       </MText>
 
-      {/* progress */}
-      {showProgress && (
-        <View style={styles.progressWrap}>
-          <View
-            style={[
-              styles.progressTrack,
-              { backgroundColor: colors.borderSubtle },
-            ]}
-          >
-            <View
-              style={[
-                styles.progressFill,
-                { width: `${pct}%`, backgroundColor: colors.success },
-              ]}
-            />
-          </View>
-
-          <MText
-            variant="caption"
-            color="textSecondary"
-            numberOfLines={1}
-            style={styles.pct}
-          >
-            {pct}%
-          </MText>
-        </View>
-      )}
+      <View style={styles.progressSlot}>
+        {showProgress ? (
+          <>
+            <View style={styles.progressTrack}>
+              <View style={[styles.progressFill, { width: `${pct}%` }]} />
+            </View>
+            <MText variant="caption" style={styles.pct}>
+              {pct}%
+            </MText>
+          </>
+        ) : null}
+      </View>
     </View>
   );
 };
@@ -81,54 +65,48 @@ export const BookCardFooter: FC<Props> = ({
 const styles = StyleSheet.create({
   footer: {
     borderRadius: radii.sm,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    backgroundColor: colors.surfaceStrong,
+    paddingHorizontal: 6,
+    paddingTop: 4,
+    paddingBottom: 3,
+    backgroundColor: "rgba(35, 24, 16, 0.78)",
     overflow: "hidden",
-    gap: spacing.xs,
-    flexDirection: "column",
     justifyContent: "flex-start",
-    alignItems: "flex-start",
   },
 
   title: {
-    fontSize: 12,
+    fontSize: 11,
     lineHeight: 14,
+    fontWeight: "600",
     textAlign: "center",
   },
 
-  todayRow: {
+  progressSlot: {
+    minHeight: 12,
+    marginTop: 2,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
     gap: 4,
-  },
-
-  todayText: {
-    minWidth: 0,
-    flexShrink: 1,
-  },
-
-  progressWrap: {
-    marginTop: 6,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
   },
 
   progressTrack: {
     flex: 1,
-    height: 6,
-    borderRadius: 4,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: "rgba(255,255,255,0.22)",
     overflow: "hidden",
   },
 
   progressFill: {
     height: "100%",
+    backgroundColor: colors.success,
+    borderRadius: 2,
   },
 
   pct: {
-    width: 42,
+    width: 30,
     textAlign: "right",
+    fontSize: 10,
+    lineHeight: 12,
+    color: "rgba(253, 244, 227, 0.85)",
   },
 });

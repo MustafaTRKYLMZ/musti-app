@@ -43,7 +43,6 @@ export function PlanOptionsMenu({ onEdit, onDelete }: PlanOptionsMenuProps) {
       <View ref={anchorRef}>
         <IconButton
           name="ellipsis-vertical"
-          size={iconSizes.md}
           onPress={open}
         />
       </View>
@@ -80,7 +79,6 @@ export function PlanOptionsMenu({ onEdit, onDelete }: PlanOptionsMenuProps) {
               <BaseIcon
                 family="ion"
                 name="create-outline"
-                size={18}
                 color={colors.textPrimary}
               />
               <MText variant="body" color="textPrimary">
@@ -98,7 +96,6 @@ export function PlanOptionsMenu({ onEdit, onDelete }: PlanOptionsMenuProps) {
               <BaseIcon
                 family="ion"
                 name="trash-outline"
-                size={18}
                 color={colors.danger}
               />
               <MText variant="body" color="danger">
@@ -121,7 +118,7 @@ const menuStyles = StyleSheet.create({
     position: "absolute",
     width: 170,
     paddingVertical: spacing.xs,
-    borderRadius: radii.lg,
+    borderRadius: radii.md,
     borderWidth: 1,
     elevation: 8,
     shadowColor: "#000",

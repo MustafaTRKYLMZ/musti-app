@@ -5,6 +5,7 @@ import {
   PanResponder,
   Animated,
   LayoutChangeEvent,
+  Pressable,
 } from "react-native";
 import type { CalendarConfig, MEvent } from "@musti/planner/src/types";
 import { plannerTheme, spacing, typography, MText } from "@musti/ui-native";
@@ -12,6 +13,7 @@ import { MonthView } from "./MonthView";
 import { MonthDayEventsList } from "./MonthDayEventsList";
 import { clamp } from "@musti/planner";
 import { useCalendar } from "@/hooks/useCalendar";
+import { useTranslation } from "@musti/core";
 
 const { colors } = plannerTheme;
 
@@ -19,14 +21,19 @@ export type MonthContainerProps = {
   config: CalendarConfig;
   colWidth: number;
   locale?: string;
+  onRefresh?: () => void;
+  refreshing?: boolean;
 };
 
 export const MonthContainer: FC<MonthContainerProps> = ({
   config,
   colWidth,
   locale,
+  onRefresh,
+  refreshing,
 }) => {
-  const { date, setDate, openDay, events } = useCalendar();
+  const { t } = useTranslation();
+  const { date, openDayModal, closeDayModal, events } = useCalendar();
 
   const expandedAgendaH = useRef(0);
   const agendaValueRef = useRef(0);
@@ -36,20 +43,21 @@ export const MonthContainer: FC<MonthContainerProps> = ({
   const monthAreaH = useRef(0);
   const gridH = useRef(new Animated.Value(0)).current;
 
-  const [expanded, setExpanded] = useState(false);
+  // true = calendar full screen (agenda collapsed), titles on grid
+  const [gridExpanded, setGridExpanded] = useState(false);
 
-  const setExpandedFromAgenda = (agendaValue: number) => {
+  const setGridExpandedFromAgenda = (agendaValue: number) => {
     const next = agendaValue <= 1;
-    setExpanded((prev) => (prev === next ? prev : next));
+    setGridExpanded((prev) => (prev === next ? prev : next));
   };
 
-  const monthLabel = useMemo(() => {
-    const d = date;
-    const day = d.getDate();
-    const mon = d
-      .toLocaleDateString(locale ?? config.locale, { month: "short" })
-      .replace(".", "");
-    return `${day} ${mon}`;
+  const agendaDateLabel = useMemo(() => {
+    return date
+      .toLocaleDateString(locale ?? config.locale, {
+        month: "short",
+        day: "numeric",
+      })
+      .replace(/\.$/, "");
   }, [date, locale, config.locale]);
 
   const syncHeights = (containerH: number) => {
@@ -64,7 +72,7 @@ export const MonthContainer: FC<MonthContainerProps> = ({
     const monthGridExpanded = Math.max(0, containerH - maxAgenda - 1);
     gridH.setValue(monthGridExpanded);
 
-    setExpandedFromAgenda(maxAgenda);
+    setGridExpandedFromAgenda(maxAgenda);
   };
 
   const onMonthLayout = (e: LayoutChangeEvent) => {
@@ -91,10 +99,19 @@ export const MonthContainer: FC<MonthContainerProps> = ({
     }).start();
 
     agendaValueRef.current = targetAgenda;
-    setExpandedFromAgenda(targetAgenda);
+    setGridExpandedFromAgenda(targetAgenda);
   };
 
+  const openAgenda = () => animateTo(expandedAgendaH.current);
   const closeAgenda = () => animateTo(0);
+
+  const toggleAgenda = () => {
+    if (agendaValueRef.current <= 1) {
+      openAgenda();
+    } else {
+      closeAgenda();
+    }
+  };
 
   const panResponder = useMemo(
     () =>
@@ -119,7 +136,7 @@ export const MonthContainer: FC<MonthContainerProps> = ({
           const nextGrid = Math.max(0, monthAreaH.current - nextAgenda - 1);
           gridH.setValue(nextGrid);
 
-          setExpandedFromAgenda(nextAgenda);
+          setGridExpandedFromAgenda(nextAgenda);
         },
         onPanResponderRelease: (_, g) => {
           const threshold = expandedAgendaH.current * 0.5;
@@ -142,28 +159,46 @@ export const MonthContainer: FC<MonthContainerProps> = ({
           config={config}
           colWidth={colWidth}
           events={events}
-          expanded={expanded}
+          expanded={gridExpanded}
           gridHeightAnim={gridH}
           locale={locale}
           onPressDay={(d) => {
-            setDate(d);
-            openDay(d);
+            if (gridExpanded) {
+              openDayModal(d);
+            } else {
+              closeDayModal();
+            }
           }}
         />
       </Animated.View>
 
-      <View style={styles.bottomDivider} />
+      <Pressable
+        onPress={toggleAgenda}
+        style={styles.handleRow}
+        accessibilityRole="button"
+        accessibilityLabel={
+          gridExpanded
+            ? t("planner.agenda.showList")
+            : t("planner.agenda.expandCalendar")
+        }
+      >
+        <View style={styles.handle} />
+      </Pressable>
 
       <Animated.View style={[styles.agenda, { height: agendaH }]}>
         <View
           style={styles.agendaInner}
-          pointerEvents={expanded ? "none" : "auto"}
+          pointerEvents={gridExpanded ? "none" : "auto"}
         >
-          <MText style={styles.agendaTitle}>{monthLabel}</MText>
+          <View style={styles.agendaHeader}>
+            <MText style={styles.agendaDate}>{agendaDateLabel}</MText>
+          </View>
           <MonthDayEventsList
             date={date}
             events={events}
             onTop={() => closeAgenda()}
+            onRefresh={onRefresh}
+            refreshing={refreshing}
           />
         </View>
       </Animated.View>
@@ -174,20 +209,29 @@ export const MonthContainer: FC<MonthContainerProps> = ({
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: colors.background },
   gridWrap: { overflow: "hidden" },
-  bottomDivider: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.textPrimary,
+  handleRow: {
+    alignItems: "center",
+    paddingVertical: spacing.xs,
+    backgroundColor: colors.background,
+  },
+  handle: {
+    width: 36,
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: colors.borderSubtle,
   },
   agenda: { backgroundColor: colors.background },
   agendaInner: {
     flex: 1,
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.sm,
+    paddingTop: spacing.xs,
   },
-  agendaTitle: {
-    fontSize: typography.heading4.fontSize,
-    fontWeight: "600",
-    color: colors.textPrimary,
+  agendaHeader: {
     marginBottom: spacing.sm,
+  },
+  agendaDate: {
+    fontSize: typography.heading4.fontSize,
+    fontWeight: "700",
+    color: colors.textPrimary,
   },
 });

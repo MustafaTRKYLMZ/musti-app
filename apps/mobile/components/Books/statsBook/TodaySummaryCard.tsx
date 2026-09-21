@@ -3,15 +3,20 @@ import { View, StyleSheet } from "react-native";
 
 import { BaseIcon } from "@musti/ui-native";
 import { Card, MText, radii, spacing, useTheme } from "@musti/ui-native";
+import { useTranslation, formatTranslation, type TranslationKey } from "@musti/core";
 
-type ModePart = { mode: string; value: number; icon: string; label: string };
+type ModePart = {
+  mode: string;
+  value: number;
+  icon: string;
+  labelKey: TranslationKey;
+};
 
 type Props = {
   today: string;
   todayTotal: number;
   modeParts: ModePart[];
 
-  /** ✅ NEW */
   todayMinutes?: number;
 };
 
@@ -21,12 +26,31 @@ export function TodaySummaryCard({
   modeParts,
   todayMinutes,
 }: Props) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
 
   const minsSafe =
     typeof todayMinutes === "number" && Number.isFinite(todayMinutes)
       ? Math.max(0, Math.floor(todayMinutes))
       : 0;
+
+  const todayMeta =
+    minsSafe > 0
+      ? `${today} · ${formatTranslation(t("bookshelf.common.minCount"), {
+          count: minsSafe,
+        })}`
+      : today;
+
+  const todayTotalLabel =
+    minsSafe > 0
+      ? `${formatTranslation(t("bookshelf.common.pagesCount"), {
+          count: todayTotal,
+        })} · ${formatTranslation(t("bookshelf.common.minCount"), {
+          count: minsSafe,
+        })}`
+      : formatTranslation(t("bookshelf.common.pagesCount"), {
+          count: todayTotal,
+        });
 
   return (
     <Card
@@ -36,9 +60,9 @@ export function TodaySummaryCard({
       ]}
     >
       <View style={styles.summaryTitleRow}>
-        <BaseIcon name="today-outline" size={16} color={colors.textSecondary} />
+        <BaseIcon name="today-outline" color={colors.textSecondary} />
         <MText variant="bodyStrong" color="textPrimary">
-          Today
+          {t("bookshelf.stats.today")}
         </MText>
 
         <MText
@@ -46,8 +70,7 @@ export function TodaySummaryCard({
           color="textSecondary"
           style={{ marginLeft: "auto" }}
         >
-          {today}
-          {minsSafe > 0 ? ` · ${minsSafe} min` : ""}
+          {todayMeta}
         </MText>
       </View>
 
@@ -56,7 +79,7 @@ export function TodaySummaryCard({
         color="textPrimary"
         style={{ marginTop: spacing.xs, fontWeight: "900" }}
       >
-        {todayTotal} pages{minsSafe > 0 ? ` · ${minsSafe} min` : ""}
+        {todayTotalLabel}
       </MText>
 
       {modeParts.length > 0 ? (
@@ -74,11 +97,10 @@ export function TodaySummaryCard({
             >
               <BaseIcon
                 name={p.icon as any}
-                size={14}
                 color={colors.textSecondary}
               />
               <MText variant="caption" color="textSecondary">
-                {p.label}:
+                {t(p.labelKey)}:
               </MText>
               <MText
                 variant="caption"
@@ -96,7 +118,7 @@ export function TodaySummaryCard({
           color="textSecondary"
           style={{ marginTop: spacing.sm }}
         >
-          No pages tracked today yet.
+          {t("bookshelf.stats.noPagesToday")}
         </MText>
       )}
     </Card>

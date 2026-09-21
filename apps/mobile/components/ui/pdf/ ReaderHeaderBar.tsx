@@ -86,14 +86,12 @@ export const ReaderHeaderBar: FC<Props> = ({
         <View style={styles.headerActions}>
           <IconButton
             name="expand-outline"
-            size={iconSizes.lg}
             onPress={onEnterFullscreen}
             style={styles.iconButton}
             accessibilityLabel="Enter fullscreen"
           />
           <IconButton
             name="close-outline"
-            size={iconSizes.xl}
             onPress={onClose}
             style={styles.iconButton}
             accessibilityLabel="Close reader"

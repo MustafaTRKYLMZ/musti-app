@@ -18,7 +18,13 @@ import { pickActiveItem } from "@/utils/pickActiveItem";
 import { useToast } from "../ui/ToastProvider";
 import { TargetItemSummary } from "./TargetItemSummary";
 import { MenuRow } from "../ui/MenuRow";
-import type { ReadingTarget, TargetItem, TargetRepeatEnd } from "@musti/core";
+import {
+  useTranslation,
+  formatTranslation,
+  type ReadingTarget,
+  type TargetItem,
+  type TargetRepeatEnd,
+} from "@musti/core";
 import { RemainingTimeBadge } from "../ui/pdf/RemainingTimeBadge";
 
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
@@ -62,10 +68,14 @@ const FALLBACK_ITEM: TargetItem = {
   status: "pending",
 };
 
-function getCycleBadgeText(end?: TargetRepeatEnd): string | null {
-  if (!end) return "Cycle: ∞";
-  if (end.kind === "never") return "Cycle: ∞";
-  if (end.kind === "until") return "Cycle: ∞";
+function getCycleBadgeText(
+  end?: TargetRepeatEnd,
+  t?: (key: import("@musti/core").TranslationKey) => string
+): string | null {
+  const infinite = t?.("bookshelf.target.cycleInfinite") ?? "Cycle: ∞";
+  if (!end) return infinite;
+  if (end.kind === "never") return infinite;
+  if (end.kind === "until") return infinite;
 
   if (end.kind === "count") {
     const anyEnd = end as any;
@@ -82,7 +92,9 @@ function getCycleBadgeText(end?: TargetRepeatEnd): string | null {
 
     // cycle index: total-remaining + 1  (clamped)
     const idx = Math.max(1, Math.min(total, total - remaining + 1));
-    return `Cycle: ${idx}/${total}`;
+    const template =
+      t?.("bookshelf.target.cycleProgress") ?? "Cycle: {{current}}/{{total}}";
+    return formatTranslation(template, { current: idx, total });
   }
 
   return null;
@@ -105,6 +117,7 @@ export const TargetCard = ({
   nextResetText,
   onSkipCycle,
 }: Props) => {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const { showToast } = useToast();
 
@@ -145,11 +158,15 @@ export const TargetCard = ({
   const confirmDelete = () => {
     closeMenu();
     showToast({
-      title: "Delete target?",
+      title: t("bookshelf.target.deleteConfirm"),
       message: target.title,
       actions: [
-        { label: "Cancel", onPress: () => {} },
-        { label: "Delete", destructive: true, onPress: () => onDelete(target) },
+        { label: t("cancel"), onPress: () => {} },
+        {
+          label: t("delete"),
+          destructive: true,
+          onPress: () => onDelete(target),
+        },
       ],
       duration: 6000,
     });
@@ -163,11 +180,14 @@ export const TargetCard = ({
   const handleReStart = () => {
     closeMenu();
     showToast({
-      title: "Restart target?",
+      title: t("bookshelf.target.restartConfirm"),
       message: target.title,
       actions: [
-        { label: "Cancel", onPress: () => {} },
-        { label: "Restart", onPress: () => onRestart?.(target) },
+        { label: t("cancel"), onPress: () => {} },
+        {
+          label: t("bookshelf.common.restart"),
+          onPress: () => onRestart?.(target),
+        },
       ],
       duration: 6000,
     });
@@ -178,15 +198,21 @@ export const TargetCard = ({
     try {
       await onSkipCycle?.(target);
       try {
-        showToast({ message: "Moved to next cycle.", duration: 1800 } as any);
+        showToast({
+          message: t("bookshelf.target.movedNextCycle"),
+          duration: 1800,
+        } as any);
       } catch {
-        showToast("Moved to next cycle." as any);
+        showToast(t("bookshelf.target.movedNextCycle") as any);
       }
     } catch {
       try {
-        showToast({ message: "Failed to skip cycle.", duration: 3000 } as any);
+        showToast({
+          message: t("bookshelf.target.skipCycleFailed"),
+          duration: 3000,
+        } as any);
       } catch {
-        showToast("Failed to skip cycle." as any);
+        showToast(t("bookshelf.target.skipCycleFailed") as any);
       }
     }
   };
@@ -316,7 +342,7 @@ export const TargetCard = ({
         await onBeforeOpen?.(target.id, displayItem.id);
       }
     } catch {
-      showToast("Failed to open target item." as any);
+      showToast(t("bookshelf.target.openFailed") as any);
       return;
     }
 
@@ -331,7 +357,10 @@ export const TargetCard = ({
     ? Math.max(0, Math.floor(todayMinutes as number))
     : 0;
 
-  const todayLabel = `Today: ${todayPagesSafe} pages · ${todayMinutesSafe} min`;
+  const todayLabel = formatTranslation(t("bookshelf.common.todayPagesMin"), {
+    pages: todayPagesSafe,
+    minutes: todayMinutesSafe,
+  });
 
   const showRepeat = Boolean(repeatEnabled ?? target.repeat);
   const effectiveCycleCompleted = Boolean(
@@ -339,12 +368,18 @@ export const TargetCard = ({
   );
 
   const repeatLine1 =
-    showRepeat && effectiveCycleCompleted ? "Completed ✅" : null;
+    showRepeat && effectiveCycleCompleted
+      ? t("bookshelf.target.completed")
+      : null;
   const repeatLine2 =
-    showRepeat && nextResetText ? `Resets: ${nextResetText}` : null;
+    showRepeat && nextResetText
+      ? formatTranslation(t("bookshelf.target.resets"), {
+          when: nextResetText,
+        })
+      : null;
 
   const cycleBadge = showRepeat
-    ? getCycleBadgeText((target.repeat as any)?.end)
+    ? getCycleBadgeText((target.repeat as any)?.end, t)
     : null;
 
   const canSkip =
@@ -374,7 +409,6 @@ export const TargetCard = ({
             <View ref={menuAnchorRef} collapsable={false}>
               <IconButton
                 name="ellipsis-vertical"
-                size={iconSizes.lg}
                 color={colors.textPrimary}
                 onPress={openMenu}
               />
@@ -410,7 +444,7 @@ export const TargetCard = ({
               opacity: 0.85,
             }}
           >
-            No items yet
+            {t("bookshelf.target.noItems")}
           </MText>
 
           <View style={styles.todayRow}>
@@ -450,7 +484,7 @@ export const TargetCard = ({
               {canSkip ? (
                 <MenuRow
                   icon="play-forward-outline"
-                  label="Skip to next cycle"
+                  label={t("bookshelf.target.skipCycle")}
                   color={colors.textPrimary}
                   onPress={handleSkipCycle}
                 />
@@ -459,7 +493,7 @@ export const TargetCard = ({
               {!!onRestart && isDoneTarget && (
                 <MenuRow
                   icon="refresh-outline"
-                  label="Restart"
+                  label={t("bookshelf.common.restart")}
                   color={colors.textPrimary}
                   onPress={handleReStart}
                 />
@@ -468,7 +502,7 @@ export const TargetCard = ({
               {!!onEditTarget && !isDoneTarget && (
                 <MenuRow
                   icon="create-outline"
-                  label="Edit"
+                  label={t("edit")}
                   color={colors.textPrimary}
                   onPress={handleEdit}
                 />
@@ -476,7 +510,7 @@ export const TargetCard = ({
 
               <MenuRow
                 icon="trash-outline"
-                label="Delete"
+                label={t("delete")}
                 color={colors.danger}
                 onPress={confirmDelete}
               />
@@ -560,7 +594,6 @@ export const TargetCard = ({
           >
             <IconButton
               name="ellipsis-vertical"
-              size={iconSizes.lg}
               color={colors.textPrimary}
               onPress={openMenu}
             />
@@ -599,7 +632,9 @@ export const TargetCard = ({
                 { color: colors.textPrimary, opacity: 0.78 },
               ]}
             >
-              Remaining: {remainingPages}
+              {formatTranslation(t("bookshelf.target.remaining"), {
+                count: remainingPages,
+              })}
             </MText>
           </View>
 
@@ -663,7 +698,7 @@ export const TargetCard = ({
             {canSkip ? (
               <MenuRow
                 icon="play-forward-outline"
-                label="Skip to next cycle"
+                label={t("bookshelf.target.skipCycle")}
                 color={colors.textPrimary}
                 onPress={handleSkipCycle}
               />
@@ -672,7 +707,7 @@ export const TargetCard = ({
             {!!onRestart && isDoneTarget && (
               <MenuRow
                 icon="refresh-outline"
-                label="Restart"
+                label={t("bookshelf.common.restart")}
                 color={colors.textPrimary}
                 onPress={handleReStart}
               />
@@ -681,7 +716,7 @@ export const TargetCard = ({
             {!!onEditTarget && !isDoneTarget && (
               <MenuRow
                 icon="create-outline"
-                label="Edit"
+                label={t("edit")}
                 color={colors.textPrimary}
                 onPress={handleEdit}
               />
@@ -689,7 +724,7 @@ export const TargetCard = ({
 
             <MenuRow
               icon="trash-outline"
-              label="Delete"
+              label={t("delete")}
               color={colors.danger}
               onPress={confirmDelete}
             />
@@ -703,7 +738,7 @@ export const TargetCard = ({
 const styles = StyleSheet.create({
   card: {
     width: 320,
-    borderRadius: radii.lg,
+    borderRadius: radii.md,
     borderWidth: 1,
     padding: spacing.md,
   },
@@ -769,7 +804,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.sm,
-    borderRadius: radii.lg,
+    borderRadius: radii.md,
     borderWidth: 1,
     width: 200,
     elevation: 6,

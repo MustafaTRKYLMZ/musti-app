@@ -1,8 +1,11 @@
-import { iconSizes, radii, spacing, useTheme } from "@musti/ui-native";
+import { radii, spacing, useTheme } from "@musti/ui-native";
 import { View, TextInput, StyleSheet } from "react-native";
-import { IconButton } from "@musti/ui-native/src/components/AppIcon";
 import { FC } from "react";
 import { MText } from "@musti/ui-native";
+import { useTranslation } from "@musti/core";
+
+import { SectionAddButton } from "@/components/ui/SectionAddButton";
+import { bookshelfScreenStyles } from "@/components/Books/bookshelfScreenStyles";
 
 type AddSectionFormProps = {
   title: string;
@@ -11,14 +14,12 @@ type AddSectionFormProps = {
   startPage: string;
   setStartPage: (value: string) => void;
 
-  // ✅ new
   endPage: string;
   setEndPage: (value: string) => void;
 
   handleAdd: () => void;
 
   pageError?: string | null;
-  // ✅ new
   endPageError?: string | null;
 };
 
@@ -33,6 +34,7 @@ export const AddSectionForm: FC<AddSectionFormProps> = ({
   pageError,
   endPageError,
 }) => {
+  const { t } = useTranslation();
   const startNum = Number(startPage);
   const endNum = endPage.trim() ? Number(endPage) : null;
 
@@ -48,122 +50,93 @@ export const AddSectionForm: FC<AddSectionFormProps> = ({
     handleAdd();
   };
 
-  const theme = useTheme();
-  const { colors } = theme;
+  const { colors } = useTheme();
+
+  const fieldStyle = {
+    borderColor: colors.borderSubtle,
+    backgroundColor: colors.surfaceElevated ?? colors.surface,
+    color: colors.textPrimary,
+  };
 
   return (
-    <>
-      <View style={styles.formRow}>
+    <View style={bookshelfScreenStyles.sectionCard}>
+      <TextInput
+        placeholder={t("bookshelf.chapters.chapterTitle")}
+        value={title}
+        onChangeText={setTitle}
+        style={[styles.input, fieldStyle]}
+        placeholderTextColor={colors.textSecondary}
+      />
+
+      <View style={styles.pagesRow}>
         <TextInput
-          placeholder="Chapter title"
-          value={title}
-          onChangeText={setTitle}
+          placeholder={t("bookshelf.chapters.start")}
+          value={startPage}
+          onChangeText={setStartPage}
+          keyboardType="number-pad"
           style={[
+            styles.inputPage,
             styles.input,
-            { borderColor: colors.borderSubtle, color: colors.textPrimary },
+            fieldStyle,
+            pageError ? { borderColor: colors.danger } : null,
           ]}
           placeholderTextColor={colors.textSecondary}
+          returnKeyType="next"
         />
 
-        <View style={styles.pageAndButton}>
-          <TextInput
-            placeholder="Start"
-            value={startPage}
-            onChangeText={setStartPage}
-            keyboardType="number-pad"
-            style={[
-              styles.inputPage,
-              {
-                borderColor: pageError ? colors.danger : colors.borderSubtle,
-                color: colors.textPrimary,
-              },
-            ]}
-            placeholderTextColor={colors.textSecondary}
-            returnKeyType="next"
-          />
+        <TextInput
+          placeholder={t("bookshelf.chapters.end")}
+          value={endPage}
+          onChangeText={setEndPage}
+          keyboardType="number-pad"
+          style={[
+            styles.inputPage,
+            styles.input,
+            fieldStyle,
+            endPageError ? { borderColor: colors.danger } : null,
+          ]}
+          placeholderTextColor={colors.textSecondary}
+          returnKeyType="done"
+          onSubmitEditing={handleSubmit}
+        />
 
-          <TextInput
-            placeholder="End"
-            value={endPage}
-            onChangeText={setEndPage}
-            keyboardType="number-pad"
-            style={[
-              styles.inputPage,
-              {
-                borderColor: endPageError ? colors.danger : colors.borderSubtle,
-                color: colors.textPrimary,
-              },
-            ]}
-            placeholderTextColor={colors.textSecondary}
-            returnKeyType="done"
-            onSubmitEditing={handleSubmit}
-          />
-
-          <IconButton
-            name="add-outline"
-            size={iconSizes.md}
-            color={colors.textInverse}
-            style={[
-              styles.addButton,
-              {
-                opacity: isValid ? 1 : 0.4,
-                backgroundColor: isValid ? colors.primary : colors.background,
-              },
-            ]}
-            onPress={handleSubmit}
-            accessibilityLabel="Add chapter"
-          />
-        </View>
+        <SectionAddButton
+          onPress={handleSubmit}
+          disabled={!isValid}
+          accessibilityLabel={t("bookshelf.chapters.add")}
+        />
       </View>
 
       {pageError ? (
-        <MText variant="caption" color="danger" style={styles.errorText}>
+        <MText variant="caption" color="danger">
           {pageError}
         </MText>
       ) : null}
 
       {endPageError ? (
-        <MText variant="caption" color="danger" style={styles.errorText}>
+        <MText variant="caption" color="danger">
           {endPageError}
         </MText>
       ) : null}
-    </>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  formRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: spacing.xs,
-  },
   input: {
-    flex: 1,
     borderWidth: 1,
     borderRadius: radii.md,
     paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    marginRight: spacing.xs,
+    paddingVertical: spacing.sm,
   },
-  pageAndButton: {
+  pagesRow: {
     flexDirection: "row",
     alignItems: "center",
+    gap: spacing.sm,
   },
   inputPage: {
-    width: 70,
-    borderWidth: 1,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    marginRight: spacing.xs,
+    flex: 1,
+    minWidth: 72,
     textAlign: "center",
-  },
-  addButton: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.md,
-  },
-  errorText: {
-    marginBottom: spacing.sm,
   },
 });

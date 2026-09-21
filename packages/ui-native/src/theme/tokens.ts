@@ -1,11 +1,27 @@
 
+/** `lg` (24) is the app-wide default glyph for icons and tappable controls. */
 export const iconSizes = {
-    xs: 14,
-    sm: 16,
-    md: 20,
-    lg: 24,
-    xl: 28,
-  } as const;
+  xs: 14,
+  sm: 16,
+  md: 20,
+  lg: 24,
+  xl: 28,
+} as const;
+
+/** Apple HIG / WCAG min ~44pt; Material toolbar 48dp; FAB 56dp. */
+export const touchTargets = {
+  minimum: 44,
+  comfortable: 48,
+  fab: 56,
+  /** Toolbar / icon button box */
+  control: 44,
+  /** Glyph inside tappable icon controls */
+  controlIcon: 24,
+  /** @deprecated use control */
+  headerControl: 44,
+  /** @deprecated use controlIcon */
+  headerIcon: 24,
+} as const;
   
   export const spacing = {
     xs: 4,

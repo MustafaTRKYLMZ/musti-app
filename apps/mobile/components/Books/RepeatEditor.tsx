@@ -4,6 +4,7 @@ import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
 import dayjs from "dayjs";
+import { useTranslation, formatTranslation } from "@musti/core";
 import { MText, spacing, radii, useTheme } from "@musti/ui-native";
 import { AppChip } from "@/components/ui/AppChip";
 import type { TargetRepeat } from "@musti/core";
@@ -80,6 +81,7 @@ export const RepeatEditor = ({
   showUntilPicker,
   onSetShowUntilPicker,
 }: RepeatEditorProps) => {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const untilLabel = dayjs(untilDate).format("D MMM YYYY");
 
@@ -91,12 +93,12 @@ export const RepeatEditor = ({
   return (
     <>
       <MText style={sectionTitleStyle} color="textSecondary">
-        Repeat
+        {t("bookshelf.repeat.title")}
       </MText>
 
       <View style={styles.chipsRow}>
         <AppChip
-          label={repeatEnabled ? "On" : "Off"}
+          label={repeatEnabled ? t("common.on") : t("common.off")}
           icon="repeat-outline"
           active={repeatEnabled}
           onPress={onToggleEnabled}
@@ -109,12 +111,12 @@ export const RepeatEditor = ({
       {repeatEnabled ? (
         <>
           <MText style={sectionTitleStyle} color="textSecondary">
-            Frequency
+            {t("bookshelf.repeat.frequency")}
           </MText>
 
           <View style={styles.chipsRow}>
             <AppChip
-              label="Daily"
+              label={t("bookshelf.repeat.daily")}
               icon="calendar-outline"
               active={repeatFreq === "daily"}
               onPress={() => onChangeFreq("daily")}
@@ -123,7 +125,7 @@ export const RepeatEditor = ({
               pill={false}
             />
             <AppChip
-              label="Weekly"
+              label={t("bookshelf.repeat.weekly")}
               icon="calendar-outline"
               active={repeatFreq === "weekly"}
               onPress={() => onChangeFreq("weekly")}
@@ -132,7 +134,7 @@ export const RepeatEditor = ({
               pill={false}
             />
             <AppChip
-              label="Monthly"
+              label={t("bookshelf.repeat.monthly")}
               icon="calendar-outline"
               active={repeatFreq === "monthly"}
               onPress={() => onChangeFreq("monthly")}
@@ -143,7 +145,7 @@ export const RepeatEditor = ({
           </View>
 
           <MText style={sectionTitleStyle} color="textSecondary">
-            Interval
+            {t("bookshelf.repeat.interval")}
           </MText>
 
           <TextInput
@@ -165,7 +167,7 @@ export const RepeatEditor = ({
           {repeatFreq === "weekly" ? (
             <>
               <MText style={sectionTitleStyle} color="textSecondary">
-                Weekdays
+                {t("bookshelf.repeat.weekdays")}
               </MText>
 
               <View style={styles.weekdaysRow}>
@@ -201,7 +203,7 @@ export const RepeatEditor = ({
           ) : null}
 
           <MText style={sectionTitleStyle} color="textSecondary">
-            Reset time (HH:mm)
+            {t("bookshelf.repeat.resetTime")}
           </MText>
 
           <TextInput
@@ -221,17 +223,17 @@ export const RepeatEditor = ({
 
           {!isValidTimeOfDay(repeatTimeOfDay) ? (
             <MText style={{ opacity: 0.7, marginTop: spacing.xs }}>
-              Format: HH:mm (e.g. 08:30)
+              {t("bookshelf.repeat.resetTimeHint")}
             </MText>
           ) : null}
 
           <MText style={sectionTitleStyle} color="textSecondary">
-            End
+            {t("end")}
           </MText>
 
           <View style={styles.chipsRow}>
             <AppChip
-              label="Never"
+              label={t("bookshelf.repeat.never")}
               icon="infinite-outline"
               active={endKind === "never"}
               onPress={() => onChangeEndKind("never")}
@@ -240,7 +242,7 @@ export const RepeatEditor = ({
               pill={false}
             />
             <AppChip
-              label="Until"
+              label={t("bookshelf.repeat.until")}
               icon="calendar-outline"
               active={endKind === "until"}
               onPress={() => onChangeEndKind("until")}
@@ -249,7 +251,7 @@ export const RepeatEditor = ({
               pill={false}
             />
             <AppChip
-              label="Count"
+              label={t("bookshelf.repeat.count")}
               icon="repeat-outline"
               active={endKind === "count"}
               onPress={() => onChangeEndKind("count")}
@@ -272,7 +274,9 @@ export const RepeatEditor = ({
                 ]}
               >
                 <MText style={{ fontWeight: "900" }}>
-                  End date: {untilLabel}
+                  {formatTranslation(t("bookshelf.repeat.endDate"), {
+                    date: untilLabel,
+                  })}
                 </MText>
               </Pressable>
 
@@ -307,7 +311,7 @@ export const RepeatEditor = ({
                 ]}
               />
               <MText style={{ opacity: 0.7, marginTop: spacing.xs }}>
-                How many cycles (e.g. 10).
+                {t("bookshelf.repeat.cyclesHint")}
               </MText>
             </View>
           ) : null}

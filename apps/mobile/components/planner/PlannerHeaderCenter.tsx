@@ -1,23 +1,31 @@
-import { MText, sizes, spacing, useTheme } from "@musti/ui-native";
-import { View, StyleSheet, TouchableOpacity } from "react-native";
-import { HeaderPill } from "./HeaderPill";
+import { MText, spacing, useTheme } from "@musti/ui-native";
+import { View, StyleSheet } from "react-native";
 
 export const PlannerHeaderCenter = ({
-  label,
-  onPressToday,
+  date,
+  locale = "en",
 }: {
-  label: string;
-  onPressToday: () => void;
+  date: Date;
+  locale?: string;
 }) => {
   const { colors } = useTheme();
+
+  const monthLabel = date
+    .toLocaleDateString(locale, { month: "short" })
+    .replace(".", "");
+  const currentYear = new Date().getFullYear();
+  const showYear = date.getFullYear() !== currentYear;
+
   return (
     <View style={styles.hCenter}>
-      <HeaderPill label={"Today"} onPress={onPressToday} />
       <MText
-        variant="caption"
-        style={[styles.hSub, { color: colors.textSecondary }]}
+        variant="heading3"
+        numberOfLines={1}
+        ellipsizeMode="tail"
+        style={[styles.monthLabel, { color: colors.textPrimary }]}
       >
-        {label}
+        {monthLabel}
+        {showYear ? ` '${String(date.getFullYear()).slice(-2)}` : ""}
       </MText>
     </View>
   );
@@ -25,17 +33,13 @@ export const PlannerHeaderCenter = ({
 
 const styles = StyleSheet.create({
   hCenter: {
-    flex: 2,
+    width: "100%",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.sm,
   },
-
-  hSub: {
-    fontSize: sizes.lg,
-    lineHeight: sizes.lg + 2,
-    marginTop: 1,
-    opacity: 0.9,
+  monthLabel: {
+    textAlign: "center",
+    textTransform: "capitalize",
   },
 });

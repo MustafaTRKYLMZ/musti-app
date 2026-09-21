@@ -7,10 +7,11 @@ import { Card, MText, radii, spacing, useTheme } from "@musti/ui-native";
 import type { DayRow, ReadingEvent } from "@musti/core";
 import { toNonNegativeInt } from "@/utils/toNonNegativeInt";
 
+import { useTranslation, formatTranslation } from "@musti/core";
 import { formatModeParts } from "@/utils/formatModeParts";
 import { getSectionLabel, rangeCount } from "@/utils/statsBookUtils";
 
-import { modeIcon, modeLabel } from "@/config/statsBookConfig";
+import { modeIcon } from "@/config/statsBookConfig";
 
 export type TopSectionResult = null | {
   label: string;
@@ -58,6 +59,7 @@ export function DayRowCard({
   onPressTopSection,
   onClearFilter,
 }: Props) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
 
   const parts = useMemo(
@@ -156,7 +158,9 @@ export function DayRowCard({
               color="textPrimary"
               style={{ fontWeight: "900" }}
             >
-              {topSection.pages}p
+              {formatTranslation(t("bookshelf.stats.pagesShort"), {
+                count: topSection.pages,
+              })}
             </MText>
             {topSection.sectionsCount > 1 ? (
               <MText
@@ -164,7 +168,10 @@ export function DayRowCard({
                 color="textSecondary"
                 style={{ opacity: 0.75 }}
               >
-                · {topSection.sectionsCount} sections
+                ·{" "}
+                {formatTranslation(t("bookshelf.stats.sectionsCount"), {
+                  count: topSection.sectionsCount,
+                })}
               </MText>
             ) : null}
           </View>
@@ -195,18 +202,21 @@ export function DayRowCard({
                 numberOfLines={1}
                 style={{ flex: 1 }}
               >
-                Filtered: {selectedLabel}
+                {formatTranslation(t("bookshelf.stats.filtered"), {
+                  label: selectedLabel ?? "",
+                })}
               </MText>
               <MText
                 variant="caption"
                 color="textPrimary"
                 style={{ fontWeight: "900" }}
               >
-                {filteredEventsCount} events
+                {formatTranslation(t("bookshelf.stats.eventsCount"), {
+                  count: filteredEventsCount,
+                })}
               </MText>
               <BaseIcon
                 name="close-outline"
-                size={14}
                 color={colors.textSecondary}
               />
             </View>
@@ -232,11 +242,10 @@ export function DayRowCard({
           >
             <BaseIcon
               name="list-outline"
-              size={14}
               color={colors.textSecondary}
             />
             <MText variant="caption" color="textSecondary">
-              Details
+              {t("bookshelf.stats.details")}
             </MText>
             <MText
               variant="caption"
@@ -251,14 +260,16 @@ export function DayRowCard({
                 color="textSecondary"
                 style={{ opacity: 0.8 }}
               >
-                · filtered {filteredEventsCount}
+                ·{" "}
+                {formatTranslation(t("bookshelf.stats.filteredCount"), {
+                  count: filteredEventsCount,
+                })}
               </MText>
             ) : null}
           </View>
 
           <BaseIcon
             name={isOpen ? "chevron-up" : "chevron-down"}
-            size={18}
             color={colors.textSecondary}
           />
         </Pressable>
@@ -269,7 +280,10 @@ export function DayRowCard({
         <View style={styles.detailsList}>
           <View style={styles.detailsMetaRow}>
             <MText variant="caption" color="textSecondary">
-              Showing {shownEvents.length} / {filteredEventsCount}
+              {formatTranslation(t("bookshelf.stats.showing"), {
+                shown: shownEvents.length,
+                total: filteredEventsCount,
+              })}
             </MText>
 
             {filteredEventsCount > defaultLimit ? (
@@ -277,11 +291,12 @@ export function DayRowCard({
                 <View style={styles.showAllBtn}>
                   <BaseIcon
                     name={showAll ? "contract-outline" : "expand-outline"}
-                    size={14}
                     color={colors.textSecondary}
                   />
                   <MText variant="caption" color="textSecondary">
-                    {showAll ? "Show less" : "Show all"}
+                    {showAll
+                      ? t("bookshelf.stats.showLess")
+                      : t("bookshelf.stats.showAll")}
                   </MText>
                 </View>
               </Pressable>
@@ -328,7 +343,7 @@ export function DayRowCard({
                       color={colors.textSecondary}
                     />
                     <MText variant="caption" color="textSecondary">
-                      {modeLabel[e.mode]}
+                      {t(`bookshelf.mode.${e.mode}`)}
                     </MText>
                   </View>
 

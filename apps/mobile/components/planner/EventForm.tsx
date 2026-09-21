@@ -16,6 +16,14 @@ import {
 } from "@musti/ui-native";
 import { TimeField } from "./TimeField";
 import { DateField } from "./DateField";
+import { MSelectBottomSheet } from "@/components/ui/MSelectBottomSheet";
+import { useTranslation } from "@musti/core";
+
+type CalendarOption = {
+  id: string;
+  label: string;
+  subLabel?: string;
+};
 
 type EventFormProps = {
   control: Control<EventCreate>;
@@ -31,6 +39,11 @@ type EventFormProps = {
 
   color?: string;
   onOpenColors: () => void;
+
+  calendarOptions?: CalendarOption[];
+  targetCalendarId?: string;
+  onChangeCalendar?: (id: string) => void;
+  calendarLocked?: boolean;
 };
 
 export const EventForm = memo(function EventForm({
@@ -46,8 +59,13 @@ export const EventForm = memo(function EventForm({
 
   color,
   onOpenColors,
+  calendarOptions = [],
+  targetCalendarId,
+  onChangeCalendar,
+  calendarLocked = false,
 }: EventFormProps) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
 
   const surface =
     (colors as ThemeColors).surface ??
@@ -77,7 +95,7 @@ export const EventForm = memo(function EventForm({
     []
   );
 
-  const arrowSize = iconSizes.md ?? 16;
+  const arrowSize = iconSizes.lg;
   const arrowOffsetX = spacing.sm;
   const arrowTop = Math.max(0, startLabelH + startStackH / 2 - arrowSize / 2);
 
@@ -101,7 +119,7 @@ export const EventForm = memo(function EventForm({
               <TextInput
                 value={value}
                 onChangeText={onChange}
-                placeholder="Add title"
+                placeholder={t("planner.form.addTitle")}
                 placeholderTextColor={colors.textSecondary}
                 style={[inputBase, styles.rowInput, styles.titleInput]}
                 autoFocus
@@ -124,19 +142,34 @@ export const EventForm = memo(function EventForm({
 
             <IconButton
               name="color-palette-outline"
-              size={iconSizes.md}
               onPress={onOpenColors}
-              style={{ padding: 4 }}
             />
           </View>
         </View>
 
         {!!errors.title && (
           <MText variant="caption" style={{ color: colors.danger }}>
-            Title is required
+            {t("planner.form.titleRequired")}
           </MText>
         )}
       </View>
+
+      {calendarOptions.length > 0 ? (
+        <>
+          <Divider inset={spacing.lg} thickness={1} />
+          <View style={styles.field}>
+            <MSelectBottomSheet
+              label={t("planner.form.calendar")}
+              placeholder={t("planner.form.chooseCalendar")}
+              valueId={targetCalendarId ?? null}
+              items={calendarOptions}
+              disabled={calendarLocked}
+              onChange={(item) => onChangeCalendar?.(item.id)}
+              fieldStyle={{ backgroundColor: surface }}
+            />
+          </View>
+        </>
+      ) : null}
 
       <Divider inset={spacing.lg} thickness={1} />
 
@@ -148,20 +181,17 @@ export const EventForm = memo(function EventForm({
           <View style={styles.rowIcon}>
             <BaseIcon
               name="calendar-outline"
-              size={18}
               color={colors.textSecondary}
             />
           </View>
 
           <MText variant="bodyStrong" style={{ flex: 1 }}>
-            All day
+            {t("planner.form.allDay")}
           </MText>
 
           <IconButton
             name={allDay ? "checkmark-circle-outline" : "ellipse-outline"}
-            size={iconSizes.md}
             onPress={onToggleAllDay}
-            style={{ padding: 4 }}
           />
         </Pressable>
       </View>
@@ -174,7 +204,7 @@ export const EventForm = memo(function EventForm({
               color="textSecondary"
               onLayout={onStartLabelLayout}
             >
-              Start
+              {t("planner.form.start")}
             </MText>
 
             <View onLayout={onStartStackLayout} style={styles.stack}>
@@ -194,7 +224,7 @@ export const EventForm = memo(function EventForm({
 
           <View style={styles.col}>
             <MText variant="label" color="textSecondary">
-              End
+              {t("end")}
             </MText>
 
             <View style={styles.stack}>
@@ -244,7 +274,6 @@ export const EventForm = memo(function EventForm({
           <View style={styles.rowIcon}>
             <BaseIcon
               name="location-outline"
-              size={18}
               color={colors.textSecondary}
             />
           </View>
@@ -256,7 +285,7 @@ export const EventForm = memo(function EventForm({
               <TextInput
                 value={field.value ?? ""}
                 onChangeText={field.onChange}
-                placeholder="Add location"
+                placeholder={t("planner.form.addLocation")}
                 placeholderTextColor={colors.textSecondary}
                 style={[inputBase, styles.rowInput]}
               />
@@ -278,7 +307,6 @@ export const EventForm = memo(function EventForm({
           <View style={[styles.rowIcon, styles.rowIconTop]}>
             <BaseIcon
               name="document-text-outline"
-              size={18}
               color={colors.textSecondary}
             />
           </View>
@@ -290,7 +318,7 @@ export const EventForm = memo(function EventForm({
               <TextInput
                 value={field.value ?? ""}
                 onChangeText={field.onChange}
-                placeholder="Add notes"
+                placeholder={t("planner.form.addNotes")}
                 placeholderTextColor={colors.textSecondary}
                 multiline
                 style={[inputBase, styles.rowInput, styles.notes]}

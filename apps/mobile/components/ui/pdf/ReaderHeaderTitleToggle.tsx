@@ -35,7 +35,6 @@ export const ReaderHeaderTitleToggle: FC<ReaderHeaderTitleToggleProps> = ({
         <BaseIcon
           family="ion"
           name={open ? "chevron-up" : "chevron-down"}
-          size={18}
           color={colors.textSecondary}
         />
       </View>

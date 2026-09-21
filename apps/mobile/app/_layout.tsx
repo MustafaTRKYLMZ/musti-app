@@ -9,6 +9,7 @@ import { useColorScheme } from "@/hooks/use-color-scheme";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ToastProvider } from "@/components/ui/ToastProvider";
 import { SchedulersHost } from "@/components/SchedulersHost";
+import { GoogleCalendarConnectProvider } from "@/context/GoogleCalendarConnectProvider";
 
 import Constants from "expo-constants";
 import {
@@ -93,11 +94,13 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
         <ToastProvider>
-          <SchedulersHost />
-          <Stack screenOptions={{ headerShown: false }}>
+          <GoogleCalendarConnectProvider>
+            <SchedulersHost />
+            <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="launcher" />
-          </Stack>
+            </Stack>
+          </GoogleCalendarConnectProvider>
         </ToastProvider>
       </ThemeProvider>
     </GestureHandlerRootView>

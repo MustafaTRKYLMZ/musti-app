@@ -39,12 +39,17 @@ export function useCalendarSync(enabled: boolean) {
   useEffect(() => {
     if (!enabled || !hasHydrated || accounts.length === 0) return;
 
-    const maybeSync = () => {
-      if (Date.now() - lastRunRef.current < AUTO_SYNC_INTERVAL_MS) return;
+    const maybeSync = (force = false) => {
+      if (
+        !force &&
+        Date.now() - lastRunRef.current < AUTO_SYNC_INTERVAL_MS
+      ) {
+        return;
+      }
       void syncNow();
     };
 
-    maybeSync();
+    maybeSync(true);
 
     const sub = AppState.addEventListener("change", (state) => {
       if (state === "active") {

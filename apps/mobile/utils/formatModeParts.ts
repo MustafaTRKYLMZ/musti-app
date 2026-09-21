@@ -1,4 +1,4 @@
-import { ReadingMode } from "@musti/core";
+import { ReadingMode, type TranslationKey } from "@musti/core";
 import { toNonNegativeInt } from "./toNonNegativeInt";
 
 export const formatModeParts = (pagesByMode: Record<ReadingMode, number>) => {
@@ -6,25 +6,25 @@ export const formatModeParts = (pagesByMode: Record<ReadingMode, number>) => {
     mode: ReadingMode;
     value: number;
     icon: string;
-    label: string;
+    labelKey: TranslationKey;
   }> = [
     {
       mode: "target",
       value: toNonNegativeInt(pagesByMode?.target ?? 0),
       icon: "locate-outline",
-      label: "Target",
+      labelKey: "bookshelf.mode.target" as TranslationKey,
     },
     {
       mode: "plan",
       value: toNonNegativeInt(pagesByMode?.plan ?? 0),
       icon: "calendar-outline",
-      label: "Plan",
+      labelKey: "bookshelf.mode.plan" as TranslationKey,
     },
     {
       mode: "normal",
       value: toNonNegativeInt(pagesByMode?.normal ?? 0),
       icon: "book-outline",
-      label: "Normal",
+      labelKey: "bookshelf.mode.normal" as TranslationKey,
     },
   ];
 

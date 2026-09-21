@@ -41,14 +41,12 @@ export const Stepper: FC<StepperProps> = ({
       <View style={styles.stepper}>
         <IconButton
           name="remove-outline"
-          size={iconSizes.md}
           color={colors.textPrimary}
           onPress={() => onChange(Math.max(min, value - step))}
           accessibilityLabel={`Decrease ${label}`}
         />
         <IconButton
           name="add-outline"
-          size={iconSizes.md}
           color={colors.textPrimary}
           onPress={() => onChange(Math.min(max, value + step))}
           accessibilityLabel={`Increase ${label}`}

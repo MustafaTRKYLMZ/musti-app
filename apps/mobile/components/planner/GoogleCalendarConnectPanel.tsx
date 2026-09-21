@@ -1,12 +1,14 @@
 import React from "react";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import { useTranslation } from "@musti/core";
 import { BaseIcon, MText, spacing, radii, useTheme } from "@musti/ui-native";
-import { useGoogleCalendarConnect } from "@/hooks/useGoogleCalendarConnect";
+import { useGoogleCalendarConnectContext } from "@/context/GoogleCalendarConnectProvider";
 
 export function GoogleCalendarConnectPanel() {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const { connectGoogle, isConnecting, error, canPrompt } =
-    useGoogleCalendarConnect();
+    useGoogleCalendarConnectContext();
 
   return (
     <View style={styles.wrap}>
@@ -31,12 +33,12 @@ export function GoogleCalendarConnectPanel() {
           <ActivityIndicator color={colors.textInverse} />
         ) : (
           <>
-            <BaseIcon name="logo-google" size={18} color={colors.textInverse} />
+            <BaseIcon name="logo-google" color={colors.textInverse} />
             <MText
               variant="body"
               style={{ color: colors.textInverse, fontWeight: "700" }}
             >
-              Connect Google account
+              {t("planner.google.connect")}
             </MText>
           </>
         )}

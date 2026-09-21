@@ -4,11 +4,17 @@ import { useCalendarSourcesStore } from "@/store/calendar/useCalendarSourcesStor
 import { getValidGoogleAccessToken } from "./accessToken";
 import {
   fetchGoogleCalendarEvents,
+  fetchGoogleCalendarList,
   mapGoogleEventToMEvent,
 } from "./googleCalendarApi";
 
-const SYNC_PAST_DAYS = 90;
-const SYNC_FUTURE_DAYS = 180;
+function canSyncEvents(feed: CalendarFeed): boolean {
+  const role = feed.accessRole ?? "reader";
+  return role === "owner" || role === "writer" || role === "reader";
+}
+
+const SYNC_PAST_DAYS = 365;
+const SYNC_FUTURE_DAYS = 365;
 
 function syncWindow(): { timeMin: string; timeMax: string } {
   const now = new Date();
@@ -30,21 +36,13 @@ export type GoogleSyncResult = {
 
 export async function syncGoogleCalendarsForAccount(
   account: GoogleAccount,
-  feeds: CalendarFeed[]
+  _feeds: CalendarFeed[]
 ): Promise<GoogleSyncResult> {
-  const enabledGoogleFeeds = feeds.filter(
-    (f) => f.accountId === account.id && f.provider === "google" && f.enabled
-  );
-
   const result: GoogleSyncResult = {
     syncedFeeds: 0,
     importedEvents: 0,
     errors: [],
   };
-
-  if (enabledGoogleFeeds.length === 0) {
-    return result;
-  }
 
   const accessToken = await getValidGoogleAccessToken(account.id);
   if (!accessToken) {
@@ -54,6 +52,34 @@ export async function syncGoogleCalendarsForAccount(
     return result;
   }
 
+  const calendarList = await fetchGoogleCalendarList(accessToken);
+  useCalendarSourcesStore
+    .getState()
+    .mergeGoogleFeedsForAccount(account, calendarList);
+
+  const latestFeeds = useCalendarSourcesStore.getState().feeds;
+  const accountFeeds = latestFeeds.filter(
+    (f) => f.accountId === account.id && f.provider === "google"
+  );
+  const enabledGoogleFeeds = accountFeeds.filter(
+    (f) => (f.enabled || f.isPrimary) && canSyncEvents(f)
+  );
+
+  if (__DEV__) {
+    const primary = accountFeeds.find((f) => f.isPrimary);
+    console.log(
+      `[Google Calendar] ${account.email}: ${accountFeeds.length} calendars` +
+        (primary ? `, primary="${primary.name}"` : ", primary missing!")
+    );
+  }
+
+  if (enabledGoogleFeeds.length === 0) {
+    result.errors.push(`No readable calendars enabled for ${account.email}.`);
+    return result;
+  }
+
+  useCalendarEventsStore.getState().removeEventsForAccount(account.id);
+
   const { timeMin, timeMax } = syncWindow();
   const upsertExternalEvents =
     useCalendarEventsStore.getState().upsertExternalEvents;
@@ -61,12 +87,21 @@ export async function syncGoogleCalendarsForAccount(
 
   for (const feed of enabledGoogleFeeds) {
     try {
-      const raw = await fetchGoogleCalendarEvents(
+      let raw = await fetchGoogleCalendarEvents(
         accessToken,
         feed.externalCalendarId,
         timeMin,
         timeMax
       );
+
+      if (raw.length === 0 && feed.isPrimary) {
+        raw = await fetchGoogleCalendarEvents(
+          accessToken,
+          "primary",
+          timeMin,
+          timeMax
+        );
+      }
 
       const mapped = raw
         .map((item) => mapGoogleEventToMEvent(item, feed, account))
@@ -76,6 +111,12 @@ export async function syncGoogleCalendarsForAccount(
       markFeedSynced(feed.id);
       result.syncedFeeds += 1;
       result.importedEvents += mapped.length;
+      if (__DEV__) {
+        const tag = feed.isPrimary ? " [primary]" : "";
+        console.log(
+          `[Google Calendar] ${feed.name}${tag}: ${raw.length} raw → ${mapped.length} imported`
+        );
+      }
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Unknown sync error";

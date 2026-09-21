@@ -5,10 +5,10 @@ import dayjs from "dayjs";
 import { Card, MText, radii, spacing, useTheme } from "@musti/ui-native";
 import { BaseIcon } from "@musti/ui-native";
 
-import { DayRow, ReadingEvent } from "@musti/core";
+import { DayRow, ReadingEvent, useTranslation, formatTranslation } from "@musti/core";
 import { toNonNegativeInt } from "@/utils/toNonNegativeInt";
 import { formatModeParts } from "@/utils/formatModeParts";
-import { modeIcon, modeLabel } from "@/config/statsBookConfig";
+import { modeIcon } from "@/config/statsBookConfig";
 import {
   computeTopSection,
   getSectionLabel,
@@ -47,6 +47,7 @@ export function DayRowCardContainer({
   clearSectionFilter,
   openDate,
 }: Props) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
 
   const parts = useMemo(
@@ -159,7 +160,9 @@ export function DayRowCardContainer({
               color="textPrimary"
               style={{ fontWeight: "900" }}
             >
-              {topSection.pages}p
+              {formatTranslation(t("bookshelf.stats.pagesShort"), {
+                count: topSection.pages,
+              })}
             </MText>
             {topSection.sectionsCount > 1 ? (
               <MText
@@ -167,7 +170,10 @@ export function DayRowCardContainer({
                 color="textSecondary"
                 style={{ opacity: 0.75 }}
               >
-                · {topSection.sectionsCount} sections
+                ·{" "}
+                {formatTranslation(t("bookshelf.stats.sectionsCount"), {
+                  count: topSection.sectionsCount,
+                })}
               </MText>
             ) : null}
           </View>
@@ -197,18 +203,21 @@ export function DayRowCardContainer({
                 numberOfLines={1}
                 style={{ flex: 1 }}
               >
-                Filtered: {selectedLabel}
+                {formatTranslation(t("bookshelf.stats.filtered"), {
+                  label: selectedLabel ?? "",
+                })}
               </MText>
               <MText
                 variant="caption"
                 color="textPrimary"
                 style={{ fontWeight: "900" }}
               >
-                {dayEvents.length} events
+                {formatTranslation(t("bookshelf.stats.eventsCount"), {
+                  count: dayEvents.length,
+                })}
               </MText>
               <BaseIcon
                 name="close-outline"
-                size={14}
                 color={colors.textSecondary}
               />
             </View>
@@ -228,11 +237,10 @@ export function DayRowCardContainer({
           <View style={styles.detailsToggleLeft}>
             <BaseIcon
               name="list-outline"
-              size={14}
               color={colors.textSecondary}
             />
             <MText variant="caption" color="textSecondary">
-              Details
+              {t("bookshelf.stats.details")}
             </MText>
             <MText
               variant="caption"
@@ -247,14 +255,16 @@ export function DayRowCardContainer({
                 color="textSecondary"
                 style={{ opacity: 0.8 }}
               >
-                · filtered {dayEvents.length}
+                ·{" "}
+                {formatTranslation(t("bookshelf.stats.filteredCount"), {
+                  count: dayEvents.length,
+                })}
               </MText>
             ) : null}
           </View>
 
           <BaseIcon
             name={isOpen ? "chevron-up" : "chevron-down"}
-            size={18}
             color={colors.textSecondary}
           />
         </Pressable>
@@ -264,7 +274,10 @@ export function DayRowCardContainer({
         <View style={styles.detailsList}>
           <View style={styles.detailsMetaRow}>
             <MText variant="caption" color="textSecondary">
-              Showing {shownEvents.length} / {dayEvents.length}
+              {formatTranslation(t("bookshelf.stats.showing"), {
+                shown: shownEvents.length,
+                total: dayEvents.length,
+              })}
             </MText>
 
             {dayEvents.length > defaultEventsDisplayLimit ? (
@@ -272,11 +285,12 @@ export function DayRowCardContainer({
                 <View style={styles.showAllBtn}>
                   <BaseIcon
                     name={showAll ? "contract-outline" : "expand-outline"}
-                    size={14}
                     color={colors.textSecondary}
                   />
                   <MText variant="caption" color="textSecondary">
-                    {showAll ? "Show less" : "Show all"}
+                    {showAll
+                      ? t("bookshelf.stats.showLess")
+                      : t("bookshelf.stats.showAll")}
                   </MText>
                 </View>
               </Pressable>
@@ -284,7 +298,7 @@ export function DayRowCardContainer({
           </View>
 
           {shownEvents.map((e, idx) => {
-            const t = dayjs(e.at).format("HH:mm");
+            const timeLabel = dayjs(e.at).format("HH:mm");
             const from = toNonNegativeInt(e.pageFrom);
             const to = toNonNegativeInt(e.pageTo);
             const delta = rangeCount(from, to);
@@ -298,7 +312,7 @@ export function DayRowCardContainer({
                     color="textSecondary"
                     style={{ width: 44 }}
                   >
-                    {t}
+                    {timeLabel}
                   </MText>
 
                   <View style={styles.detailMode}>
@@ -308,7 +322,7 @@ export function DayRowCardContainer({
                       color={colors.textSecondary}
                     />
                     <MText variant="caption" color="textSecondary">
-                      {modeLabel[e.mode]}
+                      {t(`bookshelf.mode.${e.mode}`)}
                     </MText>
                   </View>
 

@@ -7,7 +7,7 @@ import React, {
   useEffect,
 } from "react";
 import { View, StyleSheet } from "react-native";
-import type { PdfRef } from "react-native-pdf";
+import type { PdfRef } from "@/components/ui/pdf/pdfTypes";
 import { captureRef } from "react-native-view-shot";
 import * as FileSystem from "expo-file-system/legacy";
 
@@ -23,9 +23,11 @@ import {
 import { PageStrip } from "@/components/ui/pdf/PageStrip";
 
 import type { BookSection, ReadingMode } from "@musti/core";
+import { formatTranslation, useTranslation } from "@musti/core";
 import type { CropKey } from "@/components/ui/pdf/types";
 
 import { ZOOM_PRESETS } from "@/constants/readerPresets";
+import { findNearestZoomPresetIndex } from "@/utils/findNearestZoomPresetIndex";
 import { useReadingPace } from "@/hooks/useReadingPace";
 import { useReadingTracking } from "@/hooks/useReadingTracking";
 import { formatDurationShort } from "@/utils/formatDuration";
@@ -99,6 +101,7 @@ export const PdfReader: FC<PdfReaderProps> = ({
   timeLeftRemainingPages = null,
 }) => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
 
   const prefs = useReaderPrefs({ source, bookUri: readingContext?.bookUri });
 
@@ -226,8 +229,12 @@ export const PdfReader: FC<PdfReaderProps> = ({
     return formatDurationShort(minutes * 60_000);
   }, [timeLeftRemainingPages, currentPage, totalPages, pace.ppm]);
 
-  const { setViewerSize, userScale, visualScale, cropTransform } =
-    useCropTransform(prefs.cropKey, prefs.zoomPresetIndex);
+  const { setViewerSize, userScale, cropTransform } = useCropTransform(
+    prefs.cropKey,
+    prefs.zoomPresetIndex
+  );
+
+  const [pinchScale, setPinchScale] = useState(1);
 
   // settings
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -253,12 +260,14 @@ export const PdfReader: FC<PdfReaderProps> = ({
 
   const cropLabel =
     prefs.cropKey === "none"
-      ? "Off"
+      ? t("bookshelf.reader.cropOff")
       : prefs.cropKey === "trim"
-      ? "Trim"
-      : "Tight";
+        ? t("bookshelf.reader.cropTrim")
+        : t("bookshelf.reader.cropTight");
 
-  const zoomPercent = Math.round(userScale * 100);
+  const effectiveUserScale = userScale * pinchScale;
+  const effectiveVisualScale = effectiveUserScale * cropTransform.cropScale;
+  const zoomPercent = Math.round(effectiveUserScale * 100);
 
   // ✅ tracking (pace sampling burada)
   const tracking = useReadingTracking(enableStatsTracking, readingContext, {
@@ -306,9 +315,29 @@ export const PdfReader: FC<PdfReaderProps> = ({
   });
 
   const handleDoubleTapZoom = useCallback(() => {
-    const next = prefs.zoomPresetIndex >= 5 ? 0 : prefs.zoomPresetIndex + 1;
-    applyZoomIndex(next);
+    if (prefs.zoomPresetIndex > 0) {
+      applyZoomIndex(0);
+      return;
+    }
+    applyZoomIndex(findNearestZoomPresetIndex(2));
   }, [prefs.zoomPresetIndex, applyZoomIndex]);
+
+  const handlePinchUpdate = useCallback(
+    (scale: number) => {
+      setPinchScale(scale);
+      showZoomHint();
+    },
+    [showZoomHint]
+  );
+
+  const handlePinchEnd = useCallback(
+    (scale: number) => {
+      const target = userScale * scale;
+      applyZoomIndex(findNearestZoomPresetIndex(target));
+      setPinchScale(1);
+    },
+    [userScale, applyZoomIndex]
+  );
 
   const toggleScrollMode = () => {
     tracking.flushSession();
@@ -365,8 +394,8 @@ export const PdfReader: FC<PdfReaderProps> = ({
         visible={introVisible}
         ready={pdfReady}
         totalPages={totalPages}
-        title={`Opening “${name}”`}
-        subtitle="Preparing pages…"
+        title={formatTranslation(t("bookshelf.reader.opening"), { name })}
+        subtitle={t("bookshelf.reader.preparingPages")}
         coverUri={null}
         onHidden={() => setIntroVisible(false)}
       />
@@ -394,12 +423,11 @@ export const PdfReader: FC<PdfReaderProps> = ({
         <View style={styles.fullscreenOverlay}>
           <IconButton
             name="contract-outline"
-            size={iconSizes.lg}
             color={colors.textInverse}
             backgroundColor={colors.surfaceStrong}
             padding={spacing.sm}
             onPress={() => setIsFullscreen(false)}
-            accessibilityLabel="Exit fullscreen"
+            accessibilityLabel={t("bookshelf.reader.exitFullscreen")}
           />
         </View>
       )}
@@ -413,13 +441,15 @@ export const PdfReader: FC<PdfReaderProps> = ({
         horizontal={pdfHorizontal}
         enablePaging={pdfEnablePaging}
         onLoadComplete={onLoadComplete}
-        onError={(e) => console.log("PDF error:", e)}
+        onError={(e: unknown) => console.log("PDF error:", e)}
         onPageChanged={handlePageChangedInternal}
-        onLayoutSize={(w, h) => setViewerSize({ w, h })}
-        translateX={cropTransform.tx * userScale}
-        translateY={cropTransform.ty * userScale}
-        scale={visualScale}
+        onLayoutSize={(w: number, h: number) => setViewerSize({ w, h })}
+        translateX={cropTransform.tx * effectiveUserScale}
+        translateY={cropTransform.ty * effectiveUserScale}
+        scale={effectiveVisualScale}
         onDoubleTap={handleDoubleTapZoom}
+        onPinchUpdate={handlePinchUpdate}
+        onPinchEnd={handlePinchEnd}
       />
 
       <ReaderBadges

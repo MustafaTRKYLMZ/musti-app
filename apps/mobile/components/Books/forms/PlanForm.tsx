@@ -11,6 +11,7 @@ import DraggableFlatList, {
 } from "react-native-draggable-flatlist";
 import { Controller } from "react-hook-form";
 
+import { useTranslation } from "@musti/core";
 import {
   MText,
   spacing,
@@ -68,6 +69,7 @@ type Props = {
 type RowData = LocalPdfFile & { _formIndex: number };
 
 export function PlanForm(props: Props) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
 
   const planBooks = useMemo<RowData[]>(() => {
@@ -110,7 +112,6 @@ export function PlanForm(props: Props) {
             <BaseIcon
               family="ion"
               name="reorder-three-outline"
-              size={18}
               color={colors.textSecondary}
             />
           </View>
@@ -120,7 +121,7 @@ export function PlanForm(props: Props) {
               {item.name}
             </MText>
             <MText variant="caption" color="textSecondary" numberOfLines={1}>
-              Long press to reorder
+              {t("bookshelf.plan.longPressReorder")}
             </MText>
           </View>
         </View>
@@ -152,12 +153,11 @@ export function PlanForm(props: Props) {
             color="textSecondary"
             style={{ marginLeft: spacing.xs }}
           >
-            /day
+            {t("bookshelf.plan.perDay")}
           </MText>
 
           <IconButton
             name="trash-outline"
-            size={iconSizes.md}
             onPress={() => props.removeAt(idx)}
             style={{ marginLeft: spacing.sm }}
           />
@@ -182,7 +182,7 @@ export function PlanForm(props: Props) {
         ]}
       >
         <MText variant="body" color="textSecondary">
-          Plan name
+          {t("bookshelf.plan.nameLabel")}
         </MText>
         <Controller
           control={props.control}
@@ -191,7 +191,7 @@ export function PlanForm(props: Props) {
             <TextInput
               value={value}
               onChangeText={onChange}
-              placeholder="Reading plan"
+              placeholder={t("bookshelf.plan.defaultName")}
               style={[
                 styles.textInput,
                 {
@@ -220,10 +220,10 @@ export function PlanForm(props: Props) {
       >
         <View style={styles.sectionHeaderRow}>
           <MText variant="bodyStrong" color="textPrimary">
-            Quick actions
+            {t("bookshelf.plan.quickActions")}
           </MText>
           <MText variant="caption" color="textSecondary">
-            Fast edits
+            {t("bookshelf.plan.fastEdits")}
           </MText>
         </View>
 
@@ -239,7 +239,7 @@ export function PlanForm(props: Props) {
             onPress={() => props.setAllTargets(5)}
           >
             <MText variant="body" color="textPrimary">
-              Set all 5
+              {t("bookshelf.plan.setAll5")}
             </MText>
           </TouchableOpacity>
 
@@ -254,7 +254,7 @@ export function PlanForm(props: Props) {
             onPress={() => props.setAllTargets(10)}
           >
             <MText variant="body" color="textPrimary">
-              Set all 10
+              {t("bookshelf.plan.setAll10")}
             </MText>
           </TouchableOpacity>
 
@@ -269,7 +269,7 @@ export function PlanForm(props: Props) {
             onPress={props.clearAllTargets}
           >
             <MText variant="body" color="textSecondary">
-              Clear targets
+              {t("bookshelf.plan.clearTargets")}
             </MText>
           </TouchableOpacity>
         </View>
@@ -286,7 +286,7 @@ export function PlanForm(props: Props) {
             onPress={props.addAllBooks}
           >
             <MText variant="body" color="textPrimary">
-              Add all books
+              {t("bookshelf.plan.addAllBooks")}
             </MText>
           </TouchableOpacity>
 
@@ -301,7 +301,7 @@ export function PlanForm(props: Props) {
             onPress={props.removeAllBooks}
           >
             <MText variant="body" color="danger">
-              Remove all
+              {t("bookshelf.plan.removeAll")}
             </MText>
           </TouchableOpacity>
         </View>
@@ -316,12 +316,12 @@ export function PlanForm(props: Props) {
       >
         <View style={styles.sectionHeaderRow}>
           <MText variant="bodyStrong" color="textPrimary">
-            Add book
+            {t("bookshelf.plan.addBook")}
           </MText>
 
           <TouchableOpacity onPress={props.toggleMultiSelectOpen}>
             <MText variant="body" color="textSecondary">
-              Multi select
+              {t("bookshelf.plan.multiSelect")}
             </MText>
           </TouchableOpacity>
         </View>
@@ -330,12 +330,12 @@ export function PlanForm(props: Props) {
           <View style={{ marginTop: spacing.sm }}>
             <View style={styles.multiHeader}>
               <MText variant="caption" color="textSecondary">
-                Tap to select multiple books
+                {t("bookshelf.plan.tapMultiSelect")}
               </MText>
 
               <TouchableOpacity onPress={props.closeMultiSelect}>
                 <MText variant="caption" color="textSecondary">
-                  Close
+                  {t("common.close")}
                 </MText>
               </TouchableOpacity>
             </View>
@@ -358,7 +358,6 @@ export function PlanForm(props: Props) {
                       <BaseIcon
                         family="ion"
                         name={checked ? "checkbox-outline" : "square-outline"}
-                        size={22}
                         color={checked ? colors.primary : colors.textSecondary}
                       />
                       <MText
@@ -383,7 +382,7 @@ export function PlanForm(props: Props) {
               onPress={props.addMultiSelected}
             >
               <MText variant="body" color="textInverse">
-                Add selected
+                {t("bookshelf.plan.addSelected")}
               </MText>
             </TouchableOpacity>
 
@@ -394,17 +393,17 @@ export function PlanForm(props: Props) {
         <View style={styles.selectRow}>
           <View style={{ flex: 1.4 }}>
             <MSelectBottomSheet
-              label="Book"
+              label={t("bookshelf.plan.bookLabel")}
               placeholder={
                 props.availableBooks.length
-                  ? "Select book"
-                  : "All books are already in the plan"
+                  ? t("bookshelf.plan.selectBook")
+                  : t("bookshelf.plan.allBooksInPlan")
               }
               valueId={props.selectedBookUri}
               items={props.bookItems}
               onChange={(it) => props.setSelectedBookUri(it.id)}
               searchable
-              searchPlaceholder="Search book…"
+              searchPlaceholder={t("bookshelf.plan.searchBook")}
               disabled={!props.availableBooks.length}
             />
           </View>
@@ -434,13 +433,12 @@ export function PlanForm(props: Props) {
                 color="textSecondary"
                 style={{ marginLeft: spacing.xs }}
               >
-                pages
+                {t("bookshelf.target.pagesLabel")}
               </MText>
             </View>
 
             <IconButton
               name="add-circle-outline"
-              size={iconSizes.lg}
               onPress={props.addSelected}
             />
           </View>
@@ -456,17 +454,17 @@ export function PlanForm(props: Props) {
       >
         <View style={styles.sectionHeaderRow}>
           <MText variant="bodyStrong" color="textPrimary">
-            Books in this plan
+            {t("bookshelf.plan.booksInPlan")}
           </MText>
           <MText variant="caption" color="textSecondary">
-            Drag to reorder
+            {t("bookshelf.plan.dragReorder")}
           </MText>
         </View>
 
         {planBooks.length === 0 ? (
           <View style={[styles.emptyBox, { borderColor: colors.borderSubtle }]}>
             <MText variant="body" color="textSecondary">
-              No books selected.
+              {t("bookshelf.plan.noBooksSelected")}
             </MText>
           </View>
         ) : (
@@ -506,7 +504,7 @@ export function PlanForm(props: Props) {
             ]}
           >
             <MText variant="body" color="danger">
-              Delete
+              {t("common.delete")}
             </MText>
           </TouchableOpacity>
         ) : (
@@ -524,7 +522,7 @@ export function PlanForm(props: Props) {
           ]}
         >
           <MText variant="body" color="textInverse">
-            Save
+            {t("common.save")}
           </MText>
         </TouchableOpacity>
       </View>

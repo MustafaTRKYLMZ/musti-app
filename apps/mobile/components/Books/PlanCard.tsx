@@ -11,6 +11,7 @@ import {
   Dimensions,
   PanResponder,
 } from "react-native";
+import { useTranslation, formatTranslation } from "@musti/core";
 import {
   MText,
   spacing,
@@ -55,8 +56,8 @@ type PlanCardProps = {
 
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 
-function prettyNameFromUri(uri?: string) {
-  if (!uri) return "Unknown book";
+function prettyNameFromUri(uri?: string, unknownBook = "Unknown book") {
+  if (!uri) return unknownBook;
   try {
     const last = uri.split("/").pop() || uri;
     return decodeURIComponent(last).replace(/\.(pdf|epub)$/i, "");
@@ -75,6 +76,7 @@ export const PlanCard: FC<PlanCardProps> = ({
   cardStyle,
   planItems,
 }) => {
+  const { t } = useTranslation();
   const { colors } = useTheme();
 
   const [menuVisible, setMenuVisible] = useState(false);
@@ -165,21 +167,28 @@ export const PlanCard: FC<PlanCardProps> = ({
 
   const subtitle = isCompleted
     ? suggestedBookName
-      ? `Done. Continue with "${suggestedBookName}".`
-      : "Done for today."
+      ? formatTranslation(t("bookshelf.plan.doneContinue"), {
+          name: suggestedBookName,
+        })
+      : t("bookshelf.plan.doneToday")
     : currentBookName
-    ? `Now: ${currentBookName}`
-    : "Plan is in progress.";
+      ? formatTranslation(t("bookshelf.plan.nowReading"), {
+          name: currentBookName,
+        })
+      : t("bookshelf.plan.inProgress");
 
   // selected item info (TargetCard-like)
   const itemLine = displayItem
-    ? `Item ${safePreviewIndex + 1}/${planLen} · ${
-        displayItem.pagesPerDay
-      } pages/day`
+    ? formatTranslation(t("bookshelf.plan.itemProgress"), {
+        current: safePreviewIndex + 1,
+        total: planLen,
+        pages: displayItem.pagesPerDay,
+      })
     : null;
 
   const itemBookName =
-    displayItem?.bookName || prettyNameFromUri(displayItem?.bookUri);
+    displayItem?.bookName ||
+    prettyNameFromUri(displayItem?.bookUri, t("bookshelf.common.unknownBook"));
 
   // badge based on selected item
   const paceKeyForItem = displayItem?.bookUri ?? null;
@@ -253,7 +262,6 @@ export const PlanCard: FC<PlanCardProps> = ({
             >
               <BaseIcon
                 name={isCompleted ? "checkmark-done-outline" : "time-outline"}
-                size={iconSizes.lg}
                 color={colors.success}
               />
             </View>
@@ -272,7 +280,6 @@ export const PlanCard: FC<PlanCardProps> = ({
                 <View ref={menuAnchorRef} collapsable={false}>
                   <IconButton
                     name="ellipsis-vertical"
-                    size={iconSizes.md}
                     onPress={openMenu}
                   />
                 </View>
@@ -323,9 +330,11 @@ export const PlanCard: FC<PlanCardProps> = ({
                   numberOfLines={1}
                   style={styles.metaText}
                 >
-                  {`${totalCompleted ?? 0}/${
-                    totalPagesInPlan ?? 0
-                  } pages · ${minsSafe} min`}
+                  {formatTranslation(t("bookshelf.plan.progressDetail"), {
+                    done: totalCompleted ?? 0,
+                    total: totalPagesInPlan ?? 0,
+                    minutes: minsSafe,
+                  })}
                 </MText>
 
                 <RemainingTimeBadge
@@ -385,7 +394,7 @@ export const PlanCard: FC<PlanCardProps> = ({
               }}
             >
               <MText variant="body" color="textPrimary">
-                Open plan
+                {t("bookshelf.plan.open")}
               </MText>
             </TouchableOpacity>
 
@@ -398,7 +407,7 @@ export const PlanCard: FC<PlanCardProps> = ({
                 }}
               >
                 <MText variant="body" color="textPrimary">
-                  Edit plan
+                  {t("bookshelf.plan.edit")}
                 </MText>
               </TouchableOpacity>
             )}
@@ -408,7 +417,7 @@ export const PlanCard: FC<PlanCardProps> = ({
               onPress={handleDeletePlan}
             >
               <MText variant="body" color="danger">
-                Delete plan
+                {t("bookshelf.plan.delete")}
               </MText>
             </TouchableOpacity>
           </View>
@@ -426,7 +435,7 @@ const styles = StyleSheet.create({
   },
   card: {
     padding: spacing.md,
-    borderRadius: radii.lg,
+    borderRadius: radii.md,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -479,7 +488,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.sm,
-    borderRadius: radii.lg,
+    borderRadius: radii.md,
     borderWidth: 1,
     width: 160,
     elevation: 6,

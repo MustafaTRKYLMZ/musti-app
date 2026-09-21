@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { View, StyleSheet, Animated } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import dayjs from "dayjs";
-import type { PdfRef } from "react-native-pdf";
+import type { PdfRef } from "@/components/ui/pdf/pdfTypes";
 import { MText, spacing, radii, iconSizes, useTheme } from "@musti/ui-native";
 
 import { useReadingPlanStore } from "@/store/bookshelf/useReadingPlanStore";
@@ -13,10 +13,12 @@ import { scheduleMotivationNudgeIfNeeded } from "@/utils/motivation";
 
 import type { ReaderShellProps } from "@/components/Books/ReaderShell";
 import { usePdfSource } from "./usePdfSource";
+import { formatTranslation, useTranslation } from "@musti/core";
 
 export function usePlanReaderController(): ReaderShellProps {
   const router = useRouter();
   const { colors } = useTheme();
+  const { t } = useTranslation();
 
   const params = useLocalSearchParams<{
     planId?: string;
@@ -115,9 +117,9 @@ export function usePlanReaderController(): ReaderShellProps {
 
   const { guard, source } = usePdfSource({
     uri,
-    invalidText: "Invalid PDF path",
-    preparingText: "Preparing PDF…",
-    failedText: "Failed to load PDF.",
+    invalidText: t("bookshelf.reader.invalidPdf"),
+    preparingText: t("bookshelf.reader.preparing"),
+    failedText: t("bookshelf.reader.loadFailed"),
   });
 
   const onLoadComplete = (pages: number) => {
@@ -273,27 +275,29 @@ export function usePlanReaderController(): ReaderShellProps {
         <BaseIcon
           family="ion"
           name="checkmark-circle"
-          size={iconSizes.lg}
           color={colors.success}
         />
         <View style={styles.bannerText}>
           <MText variant="body" color="textPrimary" numberOfLines={1}>
-            {"Today's target is done 🎉"}
+            {t("bookshelf.reader.planDoneToday")}
           </MText>
           {targetForToday > 0 && (
             <MText variant="body" color="textSecondary" numberOfLines={1}>
-              {name}: {clampedToday} / {targetForToday} pages
+              {formatTranslation(t("bookshelf.reader.planProgress"), {
+                name,
+                current: clampedToday,
+                target: targetForToday,
+              })}
             </MText>
           )}
         </View>
         <IconButton
           family="ion"
           name="arrow-forward"
-          size={22}
           color={colors.textInverse}
           onPress={goToNextBookInPlan}
           style={[styles.bannerButton, bannerButtonStyle]}
-          accessibilityLabel="Next book"
+          accessibilityLabel={t("bookshelf.reader.nextBook")}
         />
       </Animated.View>
     </View>

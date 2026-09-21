@@ -4,6 +4,8 @@ import {
   View,
   StyleSheet,
   TouchableOpacity,
+  Pressable,
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -42,6 +44,7 @@ type AppModalActions = {
 
   saveDisabled?: boolean;
   deleteDisabled?: boolean;
+  saveLoading?: boolean;
 };
 
 export type AppModalVariant = "center" | "sheet" | "full";
@@ -69,6 +72,9 @@ export type AppModalProps = {
   centerMaxHeightPct?: number;
 
   showClose?: boolean;
+
+  /** When false, children render in a flex container (for nested scroll views). */
+  scrollable?: boolean;
 };
 
 export function AppModal({
@@ -92,6 +98,7 @@ export function AppModal({
   centerMaxHeightPct = 92,
 
   showClose = true,
+  scrollable = true,
 }: AppModalProps) {
   const insets = useSafeAreaInsets();
 
@@ -159,6 +166,7 @@ export function AppModal({
 
   const saveDisabled = actions?.saveDisabled ?? false;
   const deleteDisabled = actions?.deleteDisabled ?? false;
+  const saveLoading = actions?.saveLoading ?? false;
 
   const bottomBarH = showActions ? 64 : 0;
   const bottomPad = bottomBarH + Math.max(insets.bottom, spacing.md);
@@ -182,11 +190,19 @@ export function AppModal({
       transparent={!isFull}
       animationType={isCenter ? "fade" : "slide"}
       onRequestClose={onClose}
+      statusBarTranslucent={!isFull}
     >
       <KeyboardAvoidingView
         style={[
           styles.root,
-          isFull ? { backgroundColor: palette.surface } : null,
+          isFull
+            ? {
+                backgroundColor: palette.surface,
+                marginTop: 0,
+                marginBottom: 0,
+                justifyContent: "flex-start",
+              }
+            : null,
         ]}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
@@ -236,7 +252,14 @@ export function AppModal({
               cardStyle,
             ]}
           >
-            <View style={styles.headerRow}>
+            <View
+              style={[
+                styles.headerRow,
+                isFull && {
+                  paddingTop: insets.top + spacing.sm,
+                },
+              ]}
+            >
               <View style={styles.titleWrapper}>
                 {!!title && (
                   <MText variant="heading3" numberOfLines={1}>
@@ -260,18 +283,31 @@ export function AppModal({
               </View>
             </View>
 
-            <ScrollView
-              style={{ flex: 1 }}
-              keyboardShouldPersistTaps="handled"
-              contentContainerStyle={[
-                styles.contentContainer,
-                { paddingBottom: bottomPad },
-                contentContainerStyle,
-              ]}
-            >
-              {children}
-              {footer && <View style={styles.footer}>{footer}</View>}
-            </ScrollView>
+            {scrollable ? (
+              <ScrollView
+                style={{ flex: 1 }}
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={[
+                  styles.contentContainer,
+                  { paddingBottom: bottomPad },
+                  contentContainerStyle,
+                ]}
+              >
+                {children}
+                {footer && <View style={styles.footer}>{footer}</View>}
+              </ScrollView>
+            ) : (
+              <View
+                style={[
+                  styles.contentContainer,
+                  { flex: 1, paddingBottom: bottomPad },
+                  contentContainerStyle,
+                ]}
+              >
+                {children}
+                {footer && <View style={styles.footer}>{footer}</View>}
+              </View>
+            )}
 
             {showActions && (
               <View
@@ -285,22 +321,31 @@ export function AppModal({
               >
                 <View style={styles.actionsRow}>
                   {showCancel && (
-                    <View style={styles.actionBtn}>
+                    <Pressable
+                      onPress={onCancel}
+                      style={styles.actionBtn}
+                      accessibilityRole="button"
+                      accessibilityLabel={cancelLabel}
+                    >
                       <IconButton
                         name={cancelIcon}
                         size={iconSizes.lg}
                         onPress={onCancel}
                       />
                       <MText variant="caption">{cancelLabel}</MText>
-                    </View>
+                    </Pressable>
                   )}
 
                   {showDelete && (
-                    <View
+                    <Pressable
+                      onPress={deleteDisabled ? undefined : onDelete}
+                      disabled={deleteDisabled}
                       style={[
                         styles.actionBtn,
                         { opacity: deleteDisabled ? 0.35 : 1 },
                       ]}
+                      accessibilityRole="button"
+                      accessibilityLabel={deleteLabel}
                     >
                       <IconButton
                         name={deleteIcon}
@@ -314,29 +359,39 @@ export function AppModal({
                       >
                         {deleteLabel}
                       </MText>
-                    </View>
+                    </Pressable>
                   )}
 
                   {showSave && (
-                    <View
+                    <Pressable
+                      onPress={
+                        saveDisabled || saveLoading ? undefined : onSave
+                      }
+                      disabled={saveDisabled || saveLoading}
                       style={[
                         styles.actionBtn,
-                        { opacity: saveDisabled ? 0.35 : 1 },
+                        { opacity: saveDisabled && !saveLoading ? 0.35 : 1 },
                       ]}
+                      accessibilityRole="button"
+                      accessibilityLabel={saveLabel}
                     >
-                      <IconButton
-                        name={saveIcon}
-                        size={iconSizes.lg}
-                        onPress={saveDisabled ? undefined : onSave}
-                        color={palette.primary}
-                      />
+                      {saveLoading ? (
+                        <ActivityIndicator size={iconSizes.lg} color={palette.primary} />
+                      ) : (
+                        <IconButton
+                          name={saveIcon}
+                          size={iconSizes.lg}
+                          onPress={saveDisabled ? undefined : onSave}
+                          color={palette.primary}
+                        />
+                      )}
                       <MText
                         variant="caption"
                         style={{ color: palette.primary }}
                       >
                         {saveLabel}
                       </MText>
-                    </View>
+                    </Pressable>
                   )}
                 </View>
               </View>

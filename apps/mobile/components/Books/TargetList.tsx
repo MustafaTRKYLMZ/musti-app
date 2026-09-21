@@ -1,15 +1,17 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
-import { View, StyleSheet, Pressable, FlatList } from "react-native";
+import { View, StyleSheet, FlatList, Pressable } from "react-native";
 import { useRouter } from "expo-router";
 import dayjs from "dayjs";
+import { useTranslation, formatTranslation } from "@musti/core";
 import {
   MText,
   bookshelfTheme,
   spacing,
   radii,
-  iconSizes,
 } from "@musti/ui-native";
-import { IconButton } from "@musti/ui-native";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { BaseIcon } from "@musti/ui-native";
+import { SectionAddButton } from "@/components/ui/SectionAddButton";
 
 import { useReadingTargetsStore } from "@/store/bookshelf/useReadingTargetsStore";
 import { useReadingStatsStore } from "@/store/bookshelf/useReadingStatsStore";
@@ -40,16 +42,31 @@ const sumMinutesFromEvents = (events: ReadingEvent[]) => {
   return Math.max(0, Math.round(totalMs / 60000));
 };
 
-function formatResetLabel(ts?: number) {
-  if (!ts) return null;
+function formatResetLabel(
+  ts?: number,
+  translate?: (key: import("@musti/core").TranslationKey) => string
+) {
+  if (!ts || !translate) return null;
   const d = dayjs(ts);
   const today = dayjs().startOf("day");
   const diffDays = d.startOf("day").diff(today, "day");
 
   const timeStr = d.format("HH:mm");
-  if (diffDays === 0) return `Today ${timeStr}`;
-  if (diffDays === 1) return `Tomorrow ${timeStr}`;
-  if (diffDays === -1) return `Yesterday ${timeStr}`;
+  if (diffDays === 0) {
+    return formatTranslation(translate("bookshelf.target.resetToday"), {
+      time: timeStr,
+    });
+  }
+  if (diffDays === 1) {
+    return formatTranslation(translate("bookshelf.target.resetTomorrow"), {
+      time: timeStr,
+    });
+  }
+  if (diffDays === -1) {
+    return formatTranslation(translate("bookshelf.target.resetYesterday"), {
+      time: timeStr,
+    });
+  }
 
   return d.format("D MMM HH:mm");
 }
@@ -58,6 +75,7 @@ export const TargetList = ({
   onOpenCreate,
   onOpenChapters,
 }: TargetListProps) => {
+  const { t } = useTranslation();
   const router = useRouter();
   const [editTargetId, setEditTargetId] = useState<string | null>(null);
 
@@ -134,6 +152,10 @@ export const TargetList = ({
     [events, today]
   );
 
+  const openDoneTargets = useCallback(() => {
+    router.push("/(tabs)/bookshelf/target/done");
+  }, [router]);
+
   const renderTarget = ({ item }: { item: ReadingTarget }) => {
     const todayPages = getTodayTargetPagesForTarget(item);
     const todayMinutes = getTodayTargetMinutesForTarget(item);
@@ -141,7 +163,7 @@ export const TargetList = ({
     const isRepeat = Boolean((item as any).repeat);
     const cycleCompleted = Boolean((item as any).cycleCompletedAt);
     const nextResetText = isRepeat
-      ? formatResetLabel((item as any).nextResetAt)
+      ? formatResetLabel((item as any).nextResetAt, t)
       : null;
 
     return (
@@ -174,31 +196,63 @@ export const TargetList = ({
   return (
     <View style={styles.section}>
       <View style={styles.headerRow}>
-        <MText variant="heading3">Targets</MText>
+        <MText variant="heading3" color="textPrimary">
+          {t("bookshelf.tabs.targets")}
+        </MText>
 
         <View style={styles.headerRight}>
-          <IconButton
-            name="add-circle-outline"
-            size={iconSizes.lg}
-            color={colors.textPrimary}
+          {doneAll.length > 0 ? (
+            <Pressable
+              onPress={openDoneTargets}
+              style={({ pressed }) => [
+                styles.headerDone,
+                pressed && styles.headerDonePressed,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={formatTranslation(
+                t("bookshelf.doneWithCount"),
+                { count: doneAll.length }
+              )}
+            >
+              <BaseIcon
+                name="checkmark-circle"
+                color={colors.success}
+              />
+              <MText variant="caption" style={styles.headerDoneText} numberOfLines={1}>
+                {formatTranslation(t("bookshelf.doneWithCount"), {
+                  count: doneAll.length,
+                })}
+              </MText>
+            </Pressable>
+          ) : null}
+
+          <SectionAddButton
+            accessibilityLabel={t("empty.targets.action")}
             onPress={onOpenCreate}
           />
         </View>
       </View>
 
       {active.length === 0 ? (
-        <View style={styles.emptyRow}>
-          <View style={[styles.empty, { flex: 1 }]}>
-            <MText style={{ opacity: 0.8 }}>No active targets.</MText>
-            <Pressable onPress={onOpenCreate} style={styles.emptyBtn}>
-              <MText style={{ fontWeight: "800" }}>Create one</MText>
-            </Pressable>
+        <View style={styles.emptyColumn}>
+          <View style={styles.empty}>
+            <EmptyState
+              compact
+              icon="flag-outline"
+              title={t("empty.targets.title")}
+              actionLabel={t("empty.targets.action")}
+              onAction={onOpenCreate}
+            />
           </View>
 
-          <DoneTargetsShortcut
-            count={doneAll.length}
-            onPress={() => router.push("/(tabs)/bookshelf/target/done")}
-          />
+          {doneAll.length > 0 ? (
+            <DoneTargetsShortcut
+              variant="bar"
+              count={doneAll.length}
+              onPress={openDoneTargets}
+              style={styles.doneBar}
+            />
+          ) : null}
         </View>
       ) : (
         <FlatList
@@ -216,7 +270,7 @@ export const TargetList = ({
             doneAll.length > 0 ? (
               <DoneTargetsShortcut
                 count={doneAll.length}
-                onPress={() => router.push("/(tabs)/bookshelf/target/done")}
+                onPress={openDoneTargets}
               />
             ) : null
           }
@@ -234,7 +288,7 @@ export const TargetList = ({
 };
 
 const styles = StyleSheet.create({
-  section: { marginBottom: spacing.xl },
+  section: { marginBottom: spacing.md },
   headerRow: {
     paddingHorizontal: spacing.lg,
     flexDirection: "row",
@@ -246,10 +300,31 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
+    flexShrink: 1,
+    justifyContent: "flex-end",
+  },
+  headerDone: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    maxWidth: 148,
+    minHeight: 44,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.full,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    backgroundColor: colors.surfaceElevated,
+  },
+  headerDonePressed: {
+    opacity: 0.9,
+  },
+  headerDoneText: {
+    flexShrink: 1,
+    fontWeight: "600",
   },
   empty: {
-    marginHorizontal: spacing.lg,
-    borderRadius: radii.lg,
+    borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
     backgroundColor: colors.surface,
@@ -265,5 +340,11 @@ const styles = StyleSheet.create({
     borderColor: colors.borderSubtle,
     backgroundColor: colors.surfaceElevated,
   },
-  emptyRow: { flexDirection: "row", gap: spacing.sm },
+  emptyColumn: {
+    paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
+  },
+  doneBar: {
+    marginTop: spacing.xs,
+  },
 });

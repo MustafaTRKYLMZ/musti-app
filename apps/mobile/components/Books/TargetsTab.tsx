@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { View, StyleSheet, Pressable } from "react-native";
+import { useTranslation } from "@musti/core";
 import { MText, bookshelfTheme, iconSizes } from "@musti/ui-native";
 import { IconButton } from "@musti/ui-native";
 import { useReadingTargetsStore } from "@/store/bookshelf/useReadingTargetsStore";
@@ -11,6 +12,7 @@ type Props = {
 };
 
 export function TargetsTab({ onOpen }: Props) {
+  const { t } = useTranslation();
   const hydrate = useReadingTargetsStore((s) => s.hydrate);
   const hydrated = useReadingTargetsStore((s) => s.hydrated);
 
@@ -22,12 +24,11 @@ export function TargetsTab({ onOpen }: Props) {
     <Pressable onPress={onOpen} style={styles.card}>
       <View style={styles.row}>
         <View style={{ flex: 1 }}>
-          <MText variant="heading3">Targets</MText>
+          <MText variant="heading3">{t("bookshelf.tabs.targets")}</MText>
         </View>
 
         <IconButton
           name="chevron-forward"
-          size={iconSizes.lg}
           color={colors.textPrimary}
           onPress={onOpen}
         />
@@ -40,7 +41,7 @@ const styles = StyleSheet.create({
   card: {
     marginHorizontal: spacing.lg,
     marginBottom: spacing.lg,
-    borderRadius: radii.lg,
+    borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
     backgroundColor: colors.surface,

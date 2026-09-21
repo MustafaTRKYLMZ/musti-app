@@ -20,6 +20,11 @@ export const useCalendar=()=> {
       openDay: s.openDay,
       closeDaySheet: s.closeDaySheet,
 
+      dayModalOpen: s.dayModalOpen,
+      dayModalDate: s.dayModalDate,
+      openDayModal: s.openDayModal,
+      closeDayModal: s.closeDayModal,
+
       openCreate: s.openCreate,
       closeCreate: s.closeCreate,
 
@@ -56,7 +61,7 @@ export const useCalendar=()=> {
 
   const events = useMemo(() => {
     const enabledFeedIds = new Set(
-      feeds.filter((f) => f.enabled).map((f) => f.id)
+      feeds.filter((f) => f.enabled || f.isPrimary).map((f) => f.id)
     );
     return filterEventsByEnabledCalendars(ev.allEvents, enabledFeedIds);
   }, [ev.allEvents, feeds]);

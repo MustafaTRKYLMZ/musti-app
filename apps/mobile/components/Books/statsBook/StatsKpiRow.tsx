@@ -3,6 +3,7 @@ import { View, StyleSheet } from "react-native";
 
 import { BaseIcon } from "@musti/ui-native";
 import { Card, MText, radii, spacing, useTheme } from "@musti/ui-native";
+import { useTranslation } from "@musti/core";
 
 type Props = {
   weekTotal: number;
@@ -10,6 +11,7 @@ type Props = {
 };
 
 export function StatsKpiRow({ weekTotal, monthTotal }: Props) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
 
   return (
@@ -26,11 +28,10 @@ export function StatsKpiRow({ weekTotal, monthTotal }: Props) {
         <View style={styles.kpiTop}>
           <BaseIcon
             name="time-outline"
-            size={16}
             color={colors.textSecondary}
           />
           <MText variant="bodyStrong" color="textPrimary">
-            Last 7 days
+            {t("bookshelf.stats.last7Days")}
           </MText>
         </View>
         <MText
@@ -41,7 +42,7 @@ export function StatsKpiRow({ weekTotal, monthTotal }: Props) {
           {weekTotal}
         </MText>
         <MText variant="caption" color="textSecondary">
-          pages
+          {t("bookshelf.stats.pages")}
         </MText>
       </Card>
 
@@ -57,11 +58,10 @@ export function StatsKpiRow({ weekTotal, monthTotal }: Props) {
         <View style={styles.kpiTop}>
           <BaseIcon
             name="calendar-outline"
-            size={16}
             color={colors.textSecondary}
           />
           <MText variant="bodyStrong" color="textPrimary">
-            Last 30 days
+            {t("bookshelf.stats.last30Days")}
           </MText>
         </View>
         <MText
@@ -72,7 +72,7 @@ export function StatsKpiRow({ weekTotal, monthTotal }: Props) {
           {monthTotal}
         </MText>
         <MText variant="caption" color="textSecondary">
-          pages
+          {t("bookshelf.stats.pages")}
         </MText>
       </Card>
     </View>

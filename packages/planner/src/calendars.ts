@@ -13,6 +13,19 @@ export function createLocalCalendarFeed(): CalendarFeed {
   };
 }
 
+export function isWritableCalendarFeed(feed: CalendarFeed): boolean {
+  if (feed.provider === "local") return true;
+  const role = feed.accessRole;
+  if (role === "owner" || role === "writer") return true;
+  // Legacy feeds without role: only primary is assumed writable.
+  if (!role && feed.isPrimary) return true;
+  return false;
+}
+
+export function getWritableCalendarFeeds(feeds: CalendarFeed[]): CalendarFeed[] {
+  return feeds.filter(isWritableCalendarFeed);
+}
+
 export function filterEventsByEnabledCalendars<
   T extends { calendarId?: string; source?: string; externalId?: string },
 >(events: T[], enabledFeedIds: Set<string>): T[] {

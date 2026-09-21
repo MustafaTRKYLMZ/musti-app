@@ -15,6 +15,7 @@ import type { PlanItemConfig } from "@musti/core";
 
 import { usePlanFormController } from "@/components/Books/controllers/usePlanFormController";
 import { PlanForm } from "@/components/Books/forms/PlanForm";
+import { useTranslation } from "@musti/core";
 
 type Plan = {
   id: string;
@@ -49,6 +50,7 @@ export function EditPlanModal({
   onDeleted,
 }: Props) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
 
   const c = usePlanFormController({
     mode: "edit",
@@ -93,7 +95,7 @@ export function EditPlanModal({
           <View style={styles.modalHeader}>
             <View style={{ flex: 1 }}>
               <MText variant="heading1" color="textPrimary" numberOfLines={1}>
-                Edit plan
+                {t("bookshelf.plan.editTitle")}
               </MText>
               <MText variant="caption" color="textSecondary" numberOfLines={1}>
                 {plan?.name ?? ""}
@@ -102,7 +104,6 @@ export function EditPlanModal({
 
             <IconButton
               name="close-outline"
-              size={iconSizes.lg}
               onPress={onClose}
               style={styles.closeButton}
             />

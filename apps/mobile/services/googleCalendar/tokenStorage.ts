@@ -4,6 +4,8 @@ export type StoredGoogleTokens = {
   accessToken: string;
   refreshToken?: string;
   expiresAt?: number;
+  /** OAuth client_id that issued the refresh token (iOS/Android on mobile). */
+  tokenClientId?: string;
 };
 
 const keyFor = (accountId: string) => `google_cal_tokens_${accountId}`;

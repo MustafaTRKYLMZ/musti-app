@@ -12,6 +12,7 @@ import {
   useWindowDimensions,
   NativeSyntheticEvent,
   NativeScrollEvent,
+  RefreshControl,
 } from "react-native";
 
 import type {
@@ -46,6 +47,8 @@ export function WeekView(props: {
   weekView: WeekViewConfig;
   locale?: string;
   onEventChange?: (next: MEvent) => void;
+  onRefresh?: () => void;
+  refreshing?: boolean;
 }) {
   const { width: SCREEN_WIDTH } = useWindowDimensions();
   const weekStartsOn = props.config.weekStartsOn ?? 1;
@@ -168,6 +171,15 @@ export function WeekView(props: {
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
         onLayout={(e) => setViewportH(e.nativeEvent.layout.height)}
+        contentContainerStyle={{ paddingBottom: spacing["3xl"] + 72 }}
+        refreshControl={
+          props.onRefresh ? (
+            <RefreshControl
+              refreshing={Boolean(props.refreshing)}
+              onRefresh={props.onRefresh}
+            />
+          ) : undefined
+        }
       >
         <View
           style={{

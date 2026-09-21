@@ -39,7 +39,6 @@ export function LocalizedDatePicker({ value, label, onChange }: Props) {
         <View style={styles.iconWrapper}>
           <BaseIcon
             name="calendar-outline"
-            size={18}
             color={colors.textMuted}
           />
         </View>

@@ -10,6 +10,7 @@ import { RenameScenarioModal } from "@/components/ui/modals/RenameScenarioModal"
 import { DailyBalanceSection } from "@/components/transactions";
 import { CashflowTotals } from "@/components/ui/CashflowTotals";
 import { SimulationList } from "../simulation/SimulationList";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { getOccurrencesUntilDate } from "@/utils/getOccurrencesUntilDate";
 import { SimulationScenario, useTranslation } from "@musti/core";
 import {
@@ -137,7 +138,6 @@ export function SimulationScreen() {
         >
           <BaseIcon
             name="chevron-back"
-            size={22}
             color={colors.textSecondary}
           />
         </TouchableOpacity>
@@ -177,7 +177,6 @@ export function SimulationScreen() {
           >
             <BaseIcon
               name="flask-outline"
-              size={14}
               color={colors.textMuted}
               style={{ marginRight: 6 }}
             />
@@ -191,7 +190,6 @@ export function SimulationScreen() {
             </MText>
             <BaseIcon
               name="ellipsis-vertical"
-              size={16}
               color={colors.textMuted}
               style={{ marginLeft: 4 }}
             />
@@ -240,9 +238,11 @@ export function SimulationScreen() {
             </>
           ) : (
             <View style={styles.emptySimTextWrapper}>
-              <MText variant="body" color="textMuted">
-                {t("no_sumalation_data")}
-              </MText>
+              <EmptyState
+                compact
+                icon="flask-outline"
+                title={t("no_sumalation_data")}
+              />
             </View>
           )}
         </View>
@@ -281,7 +281,6 @@ export function SimulationScreen() {
 
               <IconButton
                 name="close"
-                size={18}
                 color={colors.textSecondary}
                 onPress={() => setShowScenarioSidebar(false)}
                 style={styles.sidebarCloseButton}
@@ -296,7 +295,6 @@ export function SimulationScreen() {
               >
                 <BaseIcon
                   name="add-circle-outline"
-                  size={18}
                   color={colors.success}
                   style={{ marginRight: 8 }}
                 />
@@ -324,7 +322,6 @@ export function SimulationScreen() {
                     <View style={styles.sidebarScenarioLeft}>
                       <BaseIcon
                         name="flask-outline"
-                        size={16}
                         color={isActive ? colors.background : colors.textMuted}
                         style={{ marginRight: 8 }}
                       />
@@ -345,7 +342,6 @@ export function SimulationScreen() {
 
                     <IconButton
                       name="trash-outline"
-                      size={16}
                       color={colors.textMuted}
                       onPress={() => deleteScenario(s.id)}
                       hitSlop={6}
@@ -372,7 +368,6 @@ export function SimulationScreen() {
         <View style={{ flexDirection: "row", alignItems: "center" }}>
           <BaseIcon
             name="sparkles-outline"
-            size={16}
             color={colors.textMuted}
             style={{ marginRight: 6 }}
           />

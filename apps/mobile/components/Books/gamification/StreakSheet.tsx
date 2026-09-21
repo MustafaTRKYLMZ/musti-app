@@ -1,10 +1,11 @@
 import React, { useMemo, useState } from "react";
 import { View, StyleSheet, Pressable, ScrollView } from "react-native";
 import dayjs from "dayjs";
+import { useTranslation } from "@musti/core";
 import { MText, bookshelfTheme, iconSizes } from "@musti/ui-native";
 
 import { CircularProgress } from "@/components/ui/CircularProgress";
-import { IconButton } from "@musti/ui-native";
+import { HeaderIconButton } from "@/components/ui/HeaderIconButton";
 
 import { useReadingGamificationStore } from "@/store/bookshelf/readingGamification/useReadingGamificationStore";
 import { useGamificationSettingsStore } from "@/store/bookshelf/readingGamification/useGamificationSettingsStore";
@@ -19,6 +20,7 @@ type Props = { visible: boolean; onClose: () => void };
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 
 export function StreakSheet({ visible, onClose }: Props) {
+  const { t } = useTranslation();
   const [mode, setMode] = useState<Mode>("details");
 
   const streak = useReadingGamificationStore((s) => s.streak);
@@ -45,21 +47,30 @@ export function StreakSheet({ visible, onClose }: Props) {
     return out;
   }, [daily]);
 
-  const title = mode === "settings" ? "Gamification settings" : "Streak";
+  const title =
+    mode === "settings"
+      ? t("bookshelf.streak.gamificationSettings")
+      : t("bookshelf.streak.title");
 
   const handleClose = () => {
     setMode("details");
     onClose();
   };
 
+  const dayLabel =
+    streak.current === 1
+      ? t("bookshelf.streak.day")
+      : t("bookshelf.streak.days");
+
+  const remaining = Math.max(0, goalPages - today.pages);
+
   const leftAction =
     mode === "settings" ? (
-      <IconButton
-        name="arrow-back"
-        size={iconSizes.lg}
-        color={colors.textPrimary}
+      <HeaderIconButton
+        icon="arrow-back"
+        variant="plain"
         onPress={() => setMode("details")}
-        style={styles.backBtn}
+        accessibilityLabel={t("bookshelf.streak.title")}
       />
     ) : null;
 
@@ -78,66 +89,77 @@ export function StreakSheet({ visible, onClose }: Props) {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
-          {/* Summary row */}
           <View style={styles.summaryRow}>
             <CircularProgress
-              size={60}
+              size={72}
               stroke={7}
               value={goalProgress}
               labelTop={`${today.pages}/${goalPages}`}
-              labelBottom="today"
-              progressColor={colors.primary}
+              labelBottom={t("bookshelf.streak.pages")}
+              progressColor={
+                today.pages >= goalPages ? colors.success : colors.primary
+              }
             />
 
             <View style={styles.summaryMid}>
               <MText style={styles.h1}>
-                🔥 {streak.current} day{streak.current === 1 ? "" : "s"}
+                🔥 {streak.current} {dayLabel}
               </MText>
               <MText style={styles.sub} numberOfLines={2}>
                 {today.pages >= goalPages
-                  ? "Today secured ✅"
-                  : `Read ${Math.max(
-                      0,
-                      goalPages - today.pages
-                    )} more pages to secure today`}
+                  ? t("bookshelf.streak.todaySecuredShort")
+                  : t("bookshelf.streak.remainingGoal").replace(
+                      "{{count}}",
+                      String(remaining)
+                    )}
               </MText>
             </View>
 
             <CircularProgress
-              size={52}
-              stroke={6}
+              size={72}
+              stroke={7}
               value={xpProgress}
-              labelTop={`L${xp.level}`}
-              labelBottom="xp"
+              labelTop={String(xp.level)}
+              labelBottom={t("bookshelf.streak.level")}
               progressColor={colors.primary}
             />
           </View>
 
-          {/* KPIs */}
           <View style={styles.kpiGrid}>
             <View style={styles.kpi}>
-              <MText style={styles.kpiLabel}>Best</MText>
-              <MText style={styles.kpiValue}>{streak.best} days</MText>
+              <MText style={styles.kpiLabel}>{t("bookshelf.streak.kpi.best")}</MText>
+              <MText style={styles.kpiValue}>
+                {streak.best} {t("bookshelf.streak.kpi.days")}
+              </MText>
             </View>
             <View style={styles.kpi}>
-              <MText style={styles.kpiLabel}>Minutes</MText>
+              <MText style={styles.kpiLabel}>
+                {t("bookshelf.streak.kpi.minutes")}
+              </MText>
               <MText style={styles.kpiValue}>{today.minutes}</MText>
             </View>
             <View style={styles.kpi}>
-              <MText style={styles.kpiLabel}>Sessions</MText>
+              <MText style={styles.kpiLabel}>
+                {t("bookshelf.streak.kpi.sessions")}
+              </MText>
               <MText style={styles.kpiValue}>{today.sessions}</MText>
             </View>
             <View style={styles.kpi}>
-              <MText style={styles.kpiLabel}>Freeze</MText>
+              <MText style={styles.kpiLabel}>
+                {t("bookshelf.streak.kpi.freeze")}
+              </MText>
               <MText style={styles.kpiValue}>{streak.freezeTokens ?? 0}</MText>
             </View>
           </View>
 
-          {/* Last 7 days */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <MText style={styles.sectionTitle}>Last 7 days</MText>
-              <MText style={styles.sectionHint}>pages</MText>
+              <MText style={styles.sectionTitle}>
+                {t("bookshelf.streak.last7Days")}
+              </MText>
+              <MText style={styles.sectionHint}>
+                {t("bookshelf.streak.pages")}
+              </MText>
             </View>
 
             <View style={styles.list}>
@@ -154,11 +176,12 @@ export function StreakSheet({ visible, onClose }: Props) {
             </View>
           </View>
 
-          {/* Settings CTA */}
           <Pressable style={styles.cta} onPress={() => setMode("settings")}>
-            <MText style={styles.ctaTitle}>Gamification settings</MText>
+            <MText style={styles.ctaTitle}>
+              {t("bookshelf.streak.gamificationSettings")}
+            </MText>
             <MText style={styles.ctaSub} numberOfLines={1}>
-              Tune streak goal, XP per page, multipliers, bonuses
+              {t("bookshelf.streak.settingsCtaSub")}
             </MText>
           </Pressable>
         </ScrollView>
@@ -170,16 +193,6 @@ export function StreakSheet({ visible, onClose }: Props) {
 const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: spacing["6xl"] ?? spacing.xl,
-  },
-
-  backBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: radii.full,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    alignItems: "center",
-    justifyContent: "center",
   },
 
   summaryRow: {

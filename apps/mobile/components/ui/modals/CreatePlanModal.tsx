@@ -15,6 +15,7 @@ import { useReadingPlanStore } from "@/store/bookshelf/useReadingPlanStore";
 
 import { usePlanFormController } from "@/components/Books/controllers/usePlanFormController";
 import { PlanForm } from "@/components/Books/forms/PlanForm";
+import { useTranslation } from "@musti/core";
 
 type Props = {
   visible: boolean;
@@ -24,6 +25,7 @@ type Props = {
 
 export function CreatePlanModal({ visible, onClose, books }: Props) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const createPlan = useReadingPlanStore((s) => s.createPlan);
 
   const c = usePlanFormController({
@@ -64,12 +66,11 @@ export function CreatePlanModal({ visible, onClose, books }: Props) {
         >
           <View style={styles.modalHeader}>
             <MText variant="heading1" color="textPrimary">
-              Create plan
+              {t("bookshelf.plan.createTitle")}
             </MText>
 
             <IconButton
               name="close-outline"
-              size={iconSizes.lg}
               onPress={onClose}
               style={styles.closeButton}
             />

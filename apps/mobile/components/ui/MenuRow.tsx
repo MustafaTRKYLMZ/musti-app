@@ -1,4 +1,4 @@
-import { iconSizes, MText, spacing } from "@musti/ui-native";
+import { iconSizes, MText, spacing, touchTargets } from "@musti/ui-native";
 import { TouchableOpacity, StyleSheet } from "react-native";
 import { BaseIcon } from "@musti/ui-native/src/components/AppIcon";
 
@@ -14,13 +14,14 @@ export const MenuRow = ({
   onPress: () => void;
 }) => (
   <TouchableOpacity style={styles.menuItem} onPress={onPress}>
-    <BaseIcon name={icon} size={iconSizes.md} color={color} />
+    <BaseIcon name={icon} size={iconSizes.lg} color={color} />
     <MText style={{ fontWeight: "800", color }}>{label}</MText>
   </TouchableOpacity>
 );
 
 const styles = StyleSheet.create({
   menuItem: {
+    minHeight: touchTargets.minimum,
     paddingVertical: spacing.sm,
     flexDirection: "row",
     alignItems: "center",

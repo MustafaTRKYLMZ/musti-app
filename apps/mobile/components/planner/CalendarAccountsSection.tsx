@@ -1,6 +1,11 @@
-import React, { useMemo } from "react";
-import { View, StyleSheet, Pressable, Alert, ActivityIndicator } from "react-native";
-import { router } from "expo-router";
+import React, { useMemo, useCallback } from "react";
+import {
+  View,
+  StyleSheet,
+  Pressable,
+  Alert,
+  ActivityIndicator,
+} from "react-native";
 import {
   MText,
   spacing,
@@ -9,49 +14,72 @@ import {
   BaseIcon,
   IconButton,
 } from "@musti/ui-native";
-import { ToggleRow } from "@/components/ui/ToggleRow";
+import { MSelectBottomSheet } from "@/components/ui/MSelectBottomSheet";
+import { InfoIcon } from "@/components/ui/InfoIcon";
 import { GoogleCalendarConnectPanel } from "@/components/planner/GoogleCalendarConnectPanel";
+import { useTranslation } from "@musti/core";
 import { useCalendarSync } from "@/hooks/useCalendarSync";
+import { useToast } from "@/components/ui/ToastProvider";
 import { useCalendarSourcesStore } from "@/store/calendar/useCalendarSourcesStore";
 import {
   googleCalendarSetupMessage,
   isGoogleCalendarConfigured,
 } from "@/constants/googleCalendarConfig";
-import { LOCAL_CALENDAR_ID } from "@musti/planner";
+import { getWritableCalendarFeeds } from "@musti/planner";
+
+function SectionHeader({
+  title,
+  info,
+}: {
+  title: string;
+  info?: { title: string; message: string };
+}) {
+  return (
+    <View style={styles.sectionHeader}>
+      <MText variant="bodyStrong">{title}</MText>
+      {info ? <InfoIcon title={info.title} message={info.message} /> : null}
+    </View>
+  );
+}
 
 export function CalendarAccountsSection() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
+  const { showToast } = useToast();
   const accounts = useCalendarSourcesStore((s) => s.accounts);
   const feeds = useCalendarSourcesStore((s) => s.feeds);
   const lastGlobalSyncAt = useCalendarSourcesStore((s) => s.lastGlobalSyncAt);
-  const toggleFeed = useCalendarSourcesStore((s) => s.toggleFeed);
+  const defaultWriteCalendarId = useCalendarSourcesStore(
+    (s) => s.defaultWriteCalendarId
+  );
+  const setDefaultWriteCalendarId = useCalendarSourcesStore(
+    (s) => s.setDefaultWriteCalendarId
+  );
   const removeGoogleAccount = useCalendarSourcesStore((s) => s.removeGoogleAccount);
 
   const isConfigured = isGoogleCalendarConfigured();
   const setupMessage = googleCalendarSetupMessage();
   const { syncNow, isSyncing, lastError } = useCalendarSync(false);
 
-  const googleFeedsByAccount = useMemo(() => {
-    const map = new Map<string, typeof feeds>();
-    for (const feed of feeds) {
-      if (feed.provider !== "google") continue;
-      const list = map.get(feed.accountId) ?? [];
-      list.push(feed);
-      map.set(feed.accountId, list);
-    }
-    return map;
-  }, [feeds]);
-
-  const localFeed = feeds.find((f) => f.id === LOCAL_CALENDAR_ID);
+  const writableCalendarOptions = useMemo(() => {
+    return getWritableCalendarFeeds(feeds).map((feed) => ({
+      id: feed.id,
+      label: feed.name,
+      subLabel:
+        feed.provider === "google"
+          ? accounts.find((a) => a.id === feed.accountId)?.email
+          : t("planner.feed.localPlanner"),
+    }));
+  }, [feeds, accounts, t]);
 
   const handleDisconnect = (accountId: string, email: string) => {
     Alert.alert(
-      "Disconnect Google account?",
-      `${email} calendars will be removed from Planner.`,
+      t("planner.google.disconnectTitle"),
+      `${email} ${t("planner.google.disconnectBody")}`,
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("cancel"), style: "cancel" },
         {
-          text: "Disconnect",
+          text: t("planner.google.disconnect"),
           style: "destructive",
           onPress: () => removeGoogleAccount(accountId),
         },
@@ -59,129 +87,133 @@ export function CalendarAccountsSection() {
     );
   };
 
-  const handleSync = async () => {
+  const handleSync = useCallback(async () => {
     try {
       const result = await syncNow();
       if (result.errors.length === 0) {
-        Alert.alert(
-          "Sync complete",
-          `Updated ${result.importedEvents} events from ${result.syncedFeeds} calendar(s).`
-        );
+        showToast({
+          title: t("planner.syncComplete"),
+          message: `${result.importedEvents} ${t("planner.eventsImported")} ${result.syncedFeeds} ${t("planner.calendars")}.`,
+          variant: "success",
+          duration: 4000,
+        });
       } else {
-        Alert.alert("Sync finished with warnings", result.errors.join("\n"));
+        showToast({
+          title: t("planner.syncWarnings"),
+          message: result.errors.join("\n"),
+          variant: "warning",
+          duration: 6000,
+        });
       }
     } catch {
-      Alert.alert("Sync failed", lastError ?? "Could not sync Google calendars.");
+      showToast({
+        title: t("planner.syncFailed"),
+        message: lastError ?? t("planner.google.syncFailed"),
+        variant: "danger",
+        duration: 5000,
+      });
     }
-  };
+  }, [syncNow, lastError, showToast, t]);
+
+  const lastSyncLabel = lastGlobalSyncAt
+    ? new Date(lastGlobalSyncAt).toLocaleString()
+    : t("planner.google.never");
 
   return (
     <View style={styles.wrap}>
-      <MText variant="heading3" style={{ marginBottom: spacing.sm }}>
-        Calendars
-      </MText>
+      <View style={[styles.card, { borderColor: colors.borderSubtle }]}>
+        <SectionHeader
+          title={t("planner.google.title")}
+          info={{
+            title: t("planner.google.title"),
+            message: t("planner.google.connectInfo"),
+          }}
+        />
 
-      {localFeed ? (
-        <View style={[styles.card, { borderColor: colors.borderSubtle }]}>
-          <View style={styles.row}>
-            <View
-              style={[styles.dot, { backgroundColor: localFeed.color ?? colors.success }]}
-            />
-            <View style={{ flex: 1 }}>
-              <MText variant="body">{localFeed.name}</MText>
+        {accounts.length === 0 ? (
+          !isConfigured ? (
+            <View style={[styles.notice, { backgroundColor: colors.surfaceElevated }]}>
               <MText variant="caption" color="textSecondary">
-                Local events created in Musti Planner
+                {setupMessage || t("planner.google.setupOAuth")}
               </MText>
             </View>
-            <MText variant="caption" color="textSecondary">
-              Always on
-            </MText>
-          </View>
-        </View>
-      ) : null}
-
-      {accounts.length === 0 ? (
-        <MText variant="body" color="textSecondary" style={styles.helper}>
-          Connect your Google account to show your personal calendars alongside
-          local Planner events.
-        </MText>
-      ) : null}
-
-      {accounts.map((account) => (
-        <View
-          key={account.id}
-          style={[styles.card, { borderColor: colors.borderSubtle }]}
-        >
-          <View style={styles.accountHeader}>
-            <View style={{ flex: 1 }}>
-              <MText variant="body">{account.displayName ?? account.email}</MText>
-              <MText variant="caption" color="textSecondary">
-                {account.email}
-              </MText>
-            </View>
-            <IconButton
-              name="trash-outline"
-              size={18}
-              color={colors.danger ?? colors.primary}
-              onPress={() => handleDisconnect(account.id, account.email)}
-            />
-          </View>
-
-          {(googleFeedsByAccount.get(account.id) ?? []).map((feed) => (
-            <ToggleRow
-              key={feed.id}
-              label={feed.name}
-              description={
-                feed.isPrimary ? "Primary Google calendar" : undefined
-              }
-              value={feed.enabled}
-              onToggle={() => toggleFeed(feed.id)}
-              onLabel="Shown"
-              offLabel="Hidden"
-            />
-          ))}
-        </View>
-      ))}
-
-      {!isConfigured ? (
-        <View style={[styles.notice, { backgroundColor: colors.surfaceElevated }]}>
-          <MText variant="caption" color="textSecondary">
-            {setupMessage ||
-              "Configure Google OAuth client IDs to enable Calendar sync."}
-          </MText>
-        </View>
-      ) : (
-        <GoogleCalendarConnectPanel />
-      )}
-
-      {accounts.length > 0 ? (
-        <Pressable
-          style={[styles.secondaryBtn, { borderColor: colors.borderSubtle }]}
-          disabled={isSyncing}
-          onPress={() => void handleSync()}
-        >
-          {isSyncing ? (
-            <ActivityIndicator color={colors.textPrimary} />
           ) : (
-            <>
-              <BaseIcon name="refresh-outline" size={18} color={colors.textPrimary} />
-              <MText variant="body">Sync now</MText>
-            </>
-          )}
-        </Pressable>
+            <GoogleCalendarConnectPanel />
+          )
+        ) : (
+          <>
+            {accounts.map((account) => (
+              <View key={account.id} style={styles.accountRow}>
+                <View style={[styles.avatar, { backgroundColor: colors.success }]}>
+                  <BaseIcon name="logo-google" color={colors.textInverse} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <MText variant="body">{account.displayName ?? account.email}</MText>
+                  <MText variant="caption" color="textSecondary">
+                    {account.email}
+                  </MText>
+                </View>
+                <IconButton
+                  name="trash-outline"
+                  color={colors.danger ?? colors.primary}
+                  onPress={() => handleDisconnect(account.id, account.email)}
+                />
+              </View>
+            ))}
+
+            <View style={styles.syncRow}>
+              <Pressable
+                style={[
+                  styles.syncBtn,
+                  { backgroundColor: colors.success, opacity: isSyncing ? 0.7 : 1 },
+                ]}
+                disabled={isSyncing}
+                onPress={() => void handleSync()}
+              >
+                {isSyncing ? (
+                  <ActivityIndicator color={colors.textInverse} />
+                ) : (
+                  <>
+                    <BaseIcon name="refresh-outline" color={colors.textInverse} />
+                    <MText variant="body" style={{ color: colors.textInverse, fontWeight: "700" }}>
+                      {t("now_sync")}
+                    </MText>
+                  </>
+                )}
+              </Pressable>
+            </View>
+
+            <MText variant="caption" color="textSecondary">
+              {t("planner.google.lastSync")}: {lastSyncLabel}
+            </MText>
+          </>
+        )}
+      </View>
+
+      {writableCalendarOptions.length > 0 ? (
+        <View style={[styles.card, { borderColor: colors.borderSubtle }]}>
+          <SectionHeader
+            title={t("planner.google.defaultCalendar")}
+            info={{
+              title: t("planner.google.defaultCalendar"),
+              message: t("planner.google.defaultCalendarInfo"),
+            }}
+          />
+          <MSelectBottomSheet
+            placeholder={t("planner.google.chooseCalendar")}
+            valueId={defaultWriteCalendarId}
+            items={writableCalendarOptions}
+            searchable={writableCalendarOptions.length > 6}
+            onChange={(item) => setDefaultWriteCalendarId(item.id)}
+          />
+        </View>
       ) : null}
 
-      {lastGlobalSyncAt ? (
-        <MText variant="caption" color="textSecondary" style={styles.helper}>
-          Last sync: {new Date(lastGlobalSyncAt).toLocaleString()}
-        </MText>
+      {accounts.length > 0 && isConfigured ? (
+        <View style={[styles.card, { borderColor: colors.borderSubtle }]}>
+          <GoogleCalendarConnectPanel />
+        </View>
       ) : null}
-
-      <Pressable onPress={() => router.back()} style={styles.backLink}>
-        <MText variant="body" color="textSecondary">
-          Back to Planner
-        </MText>
-      </Pressable>
     </View>
   );
 }
@@ -196,48 +228,36 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     gap: spacing.sm,
   },
-  row: {
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+  },
+  accountRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
   },
-  dot: {
-    width: 10,
-    height: 10,
+  avatar: {
+    width: 36,
+    height: 36,
     borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  accountHeader: {
+  syncRow: {
+    marginTop: spacing.xs,
+  },
+  syncBtn: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: spacing.sm,
-    marginBottom: spacing.xs,
-  },
-  helper: {
-    marginTop: spacing.xs,
+    paddingVertical: spacing.md,
+    borderRadius: radii.lg,
   },
   notice: {
     padding: spacing.md,
     borderRadius: radii.md,
-  },
-  primaryBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.sm,
-    paddingVertical: spacing.md,
-    borderRadius: radii.lg,
-  },
-  secondaryBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.sm,
-    paddingVertical: spacing.md,
-    borderRadius: radii.lg,
-    borderWidth: 1,
-  },
-  backLink: {
-    alignSelf: "center",
-    paddingVertical: spacing.sm,
   },
 });

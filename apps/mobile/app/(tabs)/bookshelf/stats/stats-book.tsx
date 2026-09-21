@@ -1,19 +1,17 @@
 import React, { useMemo } from "react";
-import { ScrollView, StyleSheet, View, FlatList } from "react-native";
+import { StyleSheet, View, FlatList } from "react-native";
 import dayjs from "dayjs";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
-import { AppScreen } from "@/components/AppScreen";
 import {
   spacing,
-  iconSizes,
-  useTheme,
   MText,
   Card,
   radii,
   BaseIcon,
-  IconButton,
+  useTheme,
 } from "@musti/ui-native";
+import { BookshelfSubScreen } from "@/components/Books/BookshelfSubScreen";
 
 import { useReadingStatsStore } from "@/store/bookshelf/useReadingStatsStore";
 import { useReadingEventsStore } from "@/store/bookshelf/useReadingEventsStore";
@@ -23,7 +21,7 @@ import { addDays } from "@/utils/calendar/addISODateDays";
 import { TodaySummaryCard } from "@/components/Books/statsBook/TodaySummaryCard";
 import { PeriodCard } from "@/components/Books/statsBook/PeriodCard";
 
-import { ReadingMode } from "@musti/core";
+import { ReadingMode, useTranslation, formatTranslation } from "@musti/core";
 import { formatModeParts } from "@/utils/formatModeParts";
 import { guessNameFromUri } from "@/utils/guessNameFromUri";
 import { useLocalBooks } from "@/hooks/useLocalBooks";
@@ -61,6 +59,7 @@ const sumMinutesForBookOnDate = (
 };
 
 export default function StatsBookScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { colors } = useTheme();
   const params = useLocalSearchParams();
@@ -212,22 +211,24 @@ export default function StatsBookScreen() {
         <View style={styles.kv}>
           <BaseIcon
             name="book-outline"
-            size={14}
             color={colors.textSecondary}
           />
           <MText variant="caption" color="textSecondary">
-            {item.pages} p
+            {formatTranslation(t("bookshelf.stats.pagesShort"), {
+              count: item.pages,
+            })}
           </MText>
         </View>
 
         <View style={styles.kv}>
           <BaseIcon
             name="time-outline"
-            size={14}
             color={colors.textSecondary}
           />
           <MText variant="caption" color="textSecondary">
-            {item.minutes} min
+            {formatTranslation(t("bookshelf.common.minCount"), {
+              count: item.minutes,
+            })}
           </MText>
         </View>
       </View>
@@ -235,22 +236,8 @@ export default function StatsBookScreen() {
   );
 
   return (
-    <AppScreen
-      title={bookName}
-      headerLeft={
-        <IconButton
-          name="chevron-back"
-          size={iconSizes.lg}
-          color={colors.textPrimary}
-          onPress={() => router.back()}
-        />
-      }
-    >
-      <ScrollView
-        style={[styles.container, { backgroundColor: colors.background }]}
-        contentContainerStyle={{ paddingBottom: spacing["3xl"] }}
-        showsVerticalScrollIndicator={false}
-      >
+    <BookshelfSubScreen title={bookName}>
+      <View style={styles.statsContent}>
         <TodaySummaryCard
           today={today}
           todayTotal={todayPages}
@@ -271,46 +258,56 @@ export default function StatsBookScreen() {
           <View style={styles.highlightItem}>
             <BaseIcon
               name="flame-outline"
-              size={16}
               color={colors.textSecondary}
             />
             <MText variant="body" color="textSecondary">
-              Streak
+              {t("bookshelf.streak.title")}
             </MText>
             <MText
               variant="bodyStrong"
               color="textPrimary"
               style={{ marginLeft: "auto" }}
             >
-              {streak} day{streak === 1 ? "" : "s"}
+              {streak}{" "}
+              {streak === 1
+                ? t("bookshelf.streak.day")
+                : t("bookshelf.streak.days")}
             </MText>
           </View>
 
           <View style={styles.highlightItem}>
             <BaseIcon
               name="trophy-outline"
-              size={16}
               color={colors.textSecondary}
             />
             <MText variant="body" color="textSecondary">
-              Best day
+              {t("bookshelf.stats.bestDay")}
             </MText>
             <MText
               variant="bodyStrong"
               color="textPrimary"
               style={{ marginLeft: "auto" }}
             >
-              {bestDay ? `${bestDay.pages} pages · ${bestDay.date}` : "—"}
+              {bestDay
+                ? formatTranslation(t("bookshelf.stats.bestDayDetail"), {
+                    pages: bestDay.pages,
+                    date: bestDay.date,
+                  })
+                : "—"}
             </MText>
           </View>
         </Card>
 
         <PeriodCard
           icon="time-outline"
-          title="Last 7 days"
+          title={t("bookshelf.stats.last7Days")}
           total={weekTotalPages}
-          subtitle={`Pages in ${weekFrom} → ${today} · ${weekTotalMinutes} min`}
-          topTitle="Daily breakdown"
+          subtitle={formatTranslation(t("bookshelf.stats.pagesInRange"), {
+            from: weekFrom,
+            to: today,
+            minutes: weekTotalMinutes,
+          })}
+          topTitle={t("bookshelf.stats.dailyBreakdown")}
           topCount={weekRows.length}
         >
           <FlatList
@@ -324,10 +321,14 @@ export default function StatsBookScreen() {
 
         <PeriodCard
           icon="calendar-outline"
-          title="Last 30 days"
+          title={t("bookshelf.stats.last30Days")}
           total={monthTotalPages}
-          subtitle={`Pages in ${monthFrom} → ${today} · ${monthTotalMinutes} min`}
-          topTitle="Top days"
+          subtitle={formatTranslation(t("bookshelf.stats.pagesInRange"), {
+            from: monthFrom,
+            to: today,
+            minutes: monthTotalMinutes,
+          })}
+          topTitle={t("bookshelf.stats.topDays")}
           topCount={Math.min(10, monthRows.length)}
         >
           {monthRows.length === 0 ? (
@@ -336,7 +337,7 @@ export default function StatsBookScreen() {
               color="textSecondary"
               style={{ marginTop: spacing.sm }}
             >
-              No reading found in the last 30 days.
+              {t("bookshelf.stats.noReading30")}
             </MText>
           ) : (
             <FlatList
@@ -349,22 +350,19 @@ export default function StatsBookScreen() {
           )}
         </PeriodCard>
 
-        <View style={{ height: spacing.lg }} />
-      </ScrollView>
-    </AppScreen>
+      </View>
+    </BookshelfSubScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
+  statsContent: {
+    gap: spacing.md,
   },
 
   highlights: {
     borderWidth: 1,
-    borderRadius: radii.lg,
+    borderRadius: radii.md,
     padding: spacing.md,
     marginBottom: spacing.md,
     gap: spacing.sm,
@@ -377,7 +375,7 @@ const styles = StyleSheet.create({
 
   dayRow: {
     borderWidth: 1,
-    borderRadius: radii.lg,
+    borderRadius: radii.md,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     flexDirection: "row",

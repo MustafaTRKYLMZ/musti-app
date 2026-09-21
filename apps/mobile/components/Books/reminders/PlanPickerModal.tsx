@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { MText, spacing, radii, useTheme, iconSizes } from "@musti/ui-native";
 import { BaseIcon, IconButton } from "@musti/ui-native";
+import { useTranslation } from "@musti/core";
 import { useReadingPlanStore } from "@/store/bookshelf/useReadingPlanStore";
 
 type PlanRow = {
@@ -29,9 +30,11 @@ export function PlanPickerModal({
   onClose,
   onPick,
   selectedId,
-  title = "Choose plan",
+  title,
 }: Props) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
+  const resolvedTitle = title ?? t("bookshelf.reminders.choosePlan");
   const [q, setQ] = useState("");
 
   const plans = useReadingPlanStore((s) => s.plans);
@@ -40,10 +43,10 @@ export function PlanPickerModal({
     return (plans ?? [])
       .map((p: any) => ({
         id: String(p.id),
-        title: String(p.title ?? p.name ?? "Plan"),
+        title: String(p.title ?? p.name ?? t("bookshelf.mode.plan")),
       }))
       .filter((p) => p.id && p.title);
-  }, [plans]);
+  }, [plans, t]);
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
@@ -82,13 +85,11 @@ export function PlanPickerModal({
         {selected ? (
           <BaseIcon
             name={"checkmark-circle" as any}
-            size={iconSizes.md}
             color={colors.success}
           />
         ) : (
           <BaseIcon
             name={"chevron-forward" as any}
-            size={iconSizes.md}
             color={colors.textSecondary}
           />
         )}
@@ -108,11 +109,10 @@ export function PlanPickerModal({
       <View style={[styles.sheet, { backgroundColor: colors.surface }]}>
         <View style={styles.header}>
           <MText variant="heading3" color="textPrimary">
-            {title}
+            {resolvedTitle}
           </MText>
           <IconButton
             name="close-outline"
-            size={22}
             color={colors.textPrimary}
             onPress={onClose}
           />
@@ -129,13 +129,12 @@ export function PlanPickerModal({
         >
           <BaseIcon
             name={"search-outline" as any}
-            size={iconSizes.md}
             color={colors.textSecondary}
           />
           <TextInput
             value={q}
             onChangeText={setQ}
-            placeholder="Search plan…"
+            placeholder={t("bookshelf.reminders.searchPlan")}
             placeholderTextColor={colors.textSecondary}
             style={{ flex: 1, color: colors.textPrimary }}
             autoCorrect={false}
@@ -145,7 +144,6 @@ export function PlanPickerModal({
             <Pressable onPress={() => setQ("")} hitSlop={8}>
               <BaseIcon
                 name={"close-circle" as any}
-                size={iconSizes.md}
                 color={colors.textSecondary}
               />
             </Pressable>
@@ -161,7 +159,7 @@ export function PlanPickerModal({
           contentContainerStyle={{ paddingBottom: spacing.lg }}
           ListEmptyComponent={
             <View style={{ padding: spacing.lg, opacity: 0.8 }}>
-              <MText color="textSecondary">No plans found.</MText>
+              <MText color="textSecondary">{t("bookshelf.reminders.noPlans")}</MText>
             </View>
           }
         />

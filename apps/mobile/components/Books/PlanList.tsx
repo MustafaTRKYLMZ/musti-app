@@ -1,7 +1,9 @@
 import React, { FC, useEffect, useMemo } from "react";
 import { View, FlatList, StyleSheet } from "react-native";
 import dayjs from "dayjs";
-import { bookshelfTheme, MText, radii, spacing } from "@musti/ui-native";
+import { useTranslation } from "@musti/core";
+import { bookshelfTheme, radii, spacing } from "@musti/ui-native";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { ShelfHeader } from "./ShelfHeader";
 import { PlanCard, PlanInfo } from "@/components/Books/PlanCard";
 import { useReadingEventsStore } from "@/store/bookshelf/useReadingEventsStore";
@@ -100,6 +102,7 @@ export const PlanList: FC<PlanListProps> = ({
   handleDeletePlan,
   openEditPlan,
 }) => {
+  const { t } = useTranslation();
   const events = useReadingEventsStore((s) => s.events);
 
   // ✅ books store’dan uri->name map
@@ -167,15 +170,22 @@ export const PlanList: FC<PlanListProps> = ({
 
   return (
     <View style={styles.shelfSection}>
-      <ShelfHeader title="Plans" handleOpen={() => setPlanModalVisible(true)} />
+      <ShelfHeader
+        title={t("bookshelf.tabs.plans")}
+        handleOpen={() => setPlanModalVisible(true)}
+        addA11yLabel={t("empty.plans.action")}
+      />
       <View style={styles.shelfInner}>
         <View style={styles.shelfRail} />
 
         {sortedPlans.length === 0 ? (
           <View style={styles.emptyPlanShelf}>
-            <MText variant="body" color="textSecondary">
-              No plans yet. Create one to track your reading.
-            </MText>
+            <EmptyState
+              compact
+              icon="calendar-outline"
+              title={t("empty.plans.title")}
+              subtitle={t("empty.plans.subtitle")}
+            />
           </View>
         ) : (
           <FlatList
@@ -270,7 +280,7 @@ export const PlanList: FC<PlanListProps> = ({
 };
 
 const styles = StyleSheet.create({
-  shelfSection: { marginBottom: spacing.xl },
+  shelfSection: { marginBottom: spacing.md },
   shelfInner: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
@@ -295,7 +305,7 @@ const styles = StyleSheet.create({
     marginRight: spacing.sm,
   },
   emptyPlanShelf: {
-    borderRadius: radii.lg,
+    borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
     backgroundColor: colors.surface,
