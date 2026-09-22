@@ -1,5 +1,12 @@
 import React from "react";
-import { View, TouchableOpacity, StyleSheet } from "react-native";
+import {
+  View,
+  TouchableOpacity,
+  StyleSheet,
+  Modal,
+  Pressable,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MText, colors, spacing, radii } from "@musti/ui-native";
 
 export type Scope = "this" | "thisAndFuture" | "all";
@@ -29,17 +36,27 @@ export function ScopeSheet({
   onSelect,
   onCancel,
 }: ScopeSheetProps) {
+  const insets = useSafeAreaInsets();
+
   if (!visible) return null;
 
   return (
-    <View style={localStyles.overlay}>
-      <TouchableOpacity
-        style={localStyles.backdrop}
-        activeOpacity={1}
-        onPress={onCancel}
-      />
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onCancel}
+      statusBarTranslucent
+    >
+      <View style={localStyles.overlay}>
+        <Pressable style={localStyles.backdrop} onPress={onCancel} />
 
-      <View style={localStyles.sheet}>
+        <View
+          style={[
+            localStyles.sheet,
+            { paddingBottom: Math.max(insets.bottom, spacing["2xl"]) },
+          ]}
+        >
         <View style={localStyles.handle} />
 
         <MText variant="heading3" color="textPrimary" style={localStyles.title}>
@@ -84,21 +101,16 @@ export function ScopeSheet({
             {cancelLabel}
           </MText>
         </TouchableOpacity>
+        </View>
       </View>
-    </View>
+    </Modal>
   );
 }
 
 const localStyles = StyleSheet.create({
   overlay: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
+    flex: 1,
     justifyContent: "flex-end",
-    zIndex: 80,
-    elevation: 80,
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
@@ -110,7 +122,6 @@ const localStyles = StyleSheet.create({
     borderTopRightRadius: radii.lg,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
-    paddingBottom: spacing["2xl"],
     borderTopWidth: 1,
     borderColor: colors.borderSubtle,
 

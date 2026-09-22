@@ -7,7 +7,8 @@ export function useTranslation() {
   const setLanguage = useI18nStore((s) => s.setLanguage);
 
   const t = useCallback(
-    (key: TranslationKey) => translate(language, key),
+    (key: TranslationKey, params?: Record<string, string | number>) =>
+      translate(language, key, params),
     [language]
   );
 

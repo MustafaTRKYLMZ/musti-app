@@ -1,16 +1,24 @@
 import React, { useMemo, useState } from "react";
+import { View, StyleSheet } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Scope, useTranslation, type LocalTransaction } from "@musti/core";
 import { useTransactionsStore } from "@/store/budget/transactions/useTransactionsStore";
 import { ScopeSheet } from "@/components/transactions/ScopeSheet";
+import { DeleteTransactionSheet } from "@/components/transactions/DeleteTransactionSheet";
 import TransactionForm from "@/components/transactions/TransactionForm";
-import { AppModal } from "@musti/ui-native";
+import {
+  CreateTransactionTabs,
+  type CreateTransactionTab,
+} from "@/components/transactions/CreateTransactionTabs";
+import { ReceiptScanFlow } from "@/components/receipt/ReceiptScanFlow";
+import { AppModal, spacing } from "@musti/ui-native";
 
 export function TransactionModalScreen() {
   const router = useRouter();
-  const { mode = "create", id } = useLocalSearchParams<{
+  const { mode = "create", id, tab } = useLocalSearchParams<{
     mode?: string;
     id?: string;
+    tab?: string;
   }>();
   const { t } = useTranslation();
 
@@ -19,12 +27,22 @@ export function TransactionModalScreen() {
   const updateTransactionScoped = useTransactionsStore(
     (s) => s.updateTransactionScoped
   );
+  const deleteTransactionScoped = useTransactionsStore(
+    (s) => s.deleteTransactionScoped
+  );
 
   const [scopeSheetOpen, setScopeSheetOpen] = useState(false);
+  const [deleteSheetOpen, setDeleteSheetOpen] = useState(false);
   const [draftUpdate, setDraftUpdate] = useState<LocalTransaction | null>(null);
   const [draftOptions, setDraftOptions] = useState<
     { fixedEndMonth?: string | null } | undefined
   >(undefined);
+  const [activeTab, setActiveTab] = useState<CreateTransactionTab>(
+    tab === "manual" ? "manual" : "scan"
+  );
+  const [scanStep, setScanStep] = useState<"camera" | "processing" | "review">(
+    "camera"
+  );
 
   const existing = useMemo(
     () =>
@@ -33,6 +51,8 @@ export function TransactionModalScreen() {
         : undefined,
     [mode, id, transactions]
   );
+
+  const isCreate = !existing;
 
   const planEndMonth: string | null = useMemo(() => {
     if (!existing || !existing.isFixed || !existing.planId) return null;
@@ -93,16 +113,66 @@ export function TransactionModalScreen() {
     router.back();
   };
 
+  const showScanTab = isCreate && activeTab === "scan";
+
   return (
     <>
-      <AppModal visible={true} title={title} onClose={handleClose}>
-        <TransactionForm
-          mode={existing ? "edit" : "create"}
-          initialTransaction={existing}
-          initialFixedEndMonth={planEndMonth}
-          onSubmit={handleSubmit}
-        />
+      <AppModal
+        visible
+        variant={isCreate ? "full" : "sheet"}
+        title={title}
+        onClose={handleClose}
+        scrollable
+        contentContainerStyle={showScanTab ? styles.scanModalContent : undefined}
+      >
+        {isCreate && scanStep === "review" ? (
+          <CreateTransactionTabs
+            value={activeTab}
+            onChange={(next) => {
+              setActiveTab(next);
+              if (next === "scan") {
+                setScanStep("camera");
+              }
+            }}
+          />
+        ) : null}
+
+        {showScanTab ? (
+          <View
+            style={[
+              styles.scanPane,
+              scanStep === "camera" ? styles.scanPaneCamera : styles.scanPaneReview,
+            ]}
+          >
+            <ReceiptScanFlow
+              key="receipt-scan-flow"
+              embedded
+              onDone={handleClose}
+              onSwitchToManual={() => setActiveTab("manual")}
+              onStepChange={setScanStep}
+            />
+          </View>
+        ) : (
+          <TransactionForm
+            mode={existing ? "edit" : "create"}
+            initialTransaction={existing}
+            initialFixedEndMonth={planEndMonth}
+            onSubmit={handleSubmit}
+            onDelete={existing ? () => setDeleteSheetOpen(true) : undefined}
+          />
+        )}
       </AppModal>
+
+      <DeleteTransactionSheet
+        target={deleteSheetOpen && existing ? existing : null}
+        onConfirm={(scope) => {
+          if (!existing) return;
+          void deleteTransactionScoped(existing.id as any, scope);
+          setDeleteSheetOpen(false);
+          handleClose();
+        }}
+        onClose={() => setDeleteSheetOpen(false)}
+      />
 
       <ScopeSheet
         visible={scopeSheetOpen && !!existing && !!draftUpdate}
@@ -126,3 +196,21 @@ export function TransactionModalScreen() {
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  scanModalContent: {
+    flexGrow: 1,
+  },
+  scanPane: {
+    flex: 1,
+  },
+  scanPaneCamera: {
+    marginHorizontal: -spacing.lg,
+    marginTop: -spacing.sm,
+    marginBottom: -spacing.md,
+    minHeight: 520,
+  },
+  scanPaneReview: {
+    minHeight: 0,
+  },
+});

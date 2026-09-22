@@ -12,7 +12,11 @@
   "scripts": {
     "dev:web": "npm run dev --workspace web",
     "build:web": "npm run build --workspace web",
-    "dev:mobile": "npm run start --workspace mobile",
+    "dev:mobile": "npm run start:dev --workspace mobile",
+    "dev:mobile:android": "npm run android:dev --workspace mobile",
+    "android:wifi": "npm run android:wifi --workspace mobile",
+    "android:dev:apk": "npm run android:dev:apk --workspace mobile",
+    "android:clean": "npm run android:clean --workspace mobile",
     "lint:web": "npm run lint --workspace web",
     "lint:mobile": "eslint apps/mobile",
     "build:core": "pnpm --filter @musti/core build",

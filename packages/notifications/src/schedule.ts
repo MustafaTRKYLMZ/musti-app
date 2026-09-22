@@ -98,6 +98,27 @@ export async function cancelScheduledByOwner(owner: Owner) {
   await cancelNotificationIds(ids);
 }
 
+export async function presentImmediateNotification(input: {
+  owner: Owner;
+  title: string;
+  body: string;
+  payload?: NotificationPayload;
+}) {
+  return Notifications.scheduleNotificationAsync({
+    content: {
+      title: input.title,
+      body: input.body,
+      sound: "default",
+      ...(Platform.OS === "android" ? { channelId: ANDROID_CHANNEL_ID } : null),
+      data: {
+        owner: input.owner,
+        payload: input.payload ?? { v: 1, kind: "generic" },
+      },
+    },
+    trigger: null,
+  });
+}
+
 export async function scheduleDailyReminder(input: {
   owner: Owner;
   hour: number;

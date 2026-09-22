@@ -204,7 +204,8 @@ export function AppModal({
               }
             : null,
         ]}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}
       >
         {!isFull && (
           <>
@@ -287,6 +288,7 @@ export function AppModal({
               <ScrollView
                 style={{ flex: 1 }}
                 keyboardShouldPersistTaps="handled"
+                automaticallyAdjustKeyboardInsets
                 contentContainerStyle={[
                   styles.contentContainer,
                   { paddingBottom: bottomPad },

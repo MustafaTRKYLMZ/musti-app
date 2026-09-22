@@ -4,12 +4,11 @@ import { router } from "expo-router";
 import dayjs from "dayjs";
 import {
   getLocalizedDateParts,
-  Scope,
   useTranslation,
   type LocalTransaction,
 } from "@musti/core";
 
-import { FAB, MText, colors, spacing, radii } from "@musti/ui-native";
+import { MText, colors, spacing, radii } from "@musti/ui-native";
 import { AppScreen } from "@/components/AppScreen";
 import { syncTransactions } from "@/services/syncTransactions";
 import { useTransactionsStore } from "@/store/budget/transactions/useTransactionsStore";
@@ -18,9 +17,9 @@ import {
   DailyBalanceSection,
   MonthNavigator,
   MonthlyBalanceBar,
-  DeleteTransactionSheet,
 } from "../transactions";
 import TransactionList from "../transactions/TransactionList";
+import { BudgetFabGroup } from "../transactions/BudgetFabGroup";
 import { BudgetHeader } from "../ui/BudgetHeader";
 import { SidebarMenu } from "../ui/SidebarMenu";
 import { ViewTab, ViewTabs } from "../ui/ViewTabs";
@@ -30,16 +29,12 @@ const getCurrentMonth = () => dayjs().format("YYYY-MM");
 export function TransactionsHomeScreen() {
   const allTransactions = useTransactionsStore((s) => s.transactions);
   const loadFromStorage = useTransactionsStore((s) => s.loadFromStorage);
-  const deleteScoped = useTransactionsStore((s) => s.deleteTransactionScoped);
   const getBalanceOnDate = useTransactionsStore((s) => s.getBalanceOnDate);
   const loadInitialBalance = useSettingsStore((s) => s.loadInitialBalance);
 
   const [month, setMonth] = useState(getCurrentMonth);
   const [viewTab, setViewTab] = useState<ViewTab>("all");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<LocalTransaction | null>(
-    null
-  );
   const [scrollToDateKey, setScrollToDateKey] = useState<string | undefined>();
   const [scrollToDateTrigger, setScrollToDateTrigger] = useState(0);
 
@@ -89,18 +84,6 @@ export function TransactionsHomeScreen() {
       params: { id: String(t.id), mode: "edit" },
     });
   };
-
-  const handleDelete = (t: LocalTransaction) => {
-    setDeleteTarget(t);
-  };
-
-  const confirmDelete = (scope: Scope) => {
-    if (!deleteTarget) return;
-    void deleteScoped(deleteTarget.id as any, scope);
-    setDeleteTarget(null);
-  };
-
-  const closeDeleteSheet = () => setDeleteTarget(null);
 
   // monthly calculations (use filtered list which excludes deleted)
   const income = filtered.reduce(
@@ -254,7 +237,6 @@ export function TransactionsHomeScreen() {
             <View style={styles.listWrapper}>
               <TransactionList
                 transactions={filtered}
-                onDelete={handleDelete}
                 onEdit={handleEdit}
                 onPressRefresh={handleRefresh}
                 scrollToDateKey={scrollToDateKey}
@@ -270,20 +252,8 @@ export function TransactionsHomeScreen() {
           </Animated.View>
         </View>
         {/* FAB  */}
-        <FAB
-          onPress={() =>
-            router.push({
-              pathname: "/(modals)/transaction",
-              params: { mode: "create" },
-            })
-          }
-        />
+        <BudgetFabGroup />
         <SidebarMenu open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <DeleteTransactionSheet
-          target={deleteTarget}
-          onConfirm={confirmDelete}
-          onClose={closeDeleteSheet}
-        />
       </View>
     </AppScreen>
   );

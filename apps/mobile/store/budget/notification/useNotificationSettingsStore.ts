@@ -8,6 +8,8 @@ type BudgetNotificationSettings = {
   enabled: boolean;
   hour: number;
   minute: number;
+  priceAlertsEnabled: boolean;
+  priceAlertThresholdPct: number;
 
   /**
    * ✅ Where should the notification navigate on tap?
@@ -32,6 +34,8 @@ type BudgetNotificationSettings = {
 
   setEnabled: (v: boolean) => void;
   setTime: (hour: number, minute: number) => void;
+  setPriceAlertsEnabled: (v: boolean) => void;
+  setPriceAlertThresholdPct: (v: number) => void;
 
   /**
    * ✅ Convenience setters
@@ -58,6 +62,8 @@ export const useBudgetNotificationSettingsStore =
         enabled: false,
         hour: 9,
         minute: 0,
+        priceAlertsEnabled: true,
+        priceAlertThresholdPct: 5,
 
         // ✅ default: generic (safe)
         linkKind: "generic",
@@ -77,6 +83,11 @@ export const useBudgetNotificationSettingsStore =
         setEnabled: (enabled) => set({ enabled }),
 
         setTime: (hour, minute) => set({ hour, minute }),
+
+        setPriceAlertsEnabled: (priceAlertsEnabled) => set({ priceAlertsEnabled }),
+
+        setPriceAlertThresholdPct: (priceAlertThresholdPct) =>
+          set({ priceAlertThresholdPct: Math.max(1, Math.min(50, priceAlertThresholdPct)) }),
 
         setLinkGeneric: () =>
           set({
@@ -159,8 +170,8 @@ export const useBudgetNotificationSettingsStore =
          * ✅ Optional but recommended: versioning + migrate for safety
          * Old stored shape: { enabled, hour, minute }
          */
-        version: 1,
-        migrate: (persisted: any) => {
+        version: 2,
+        migrate: (persisted: any, version) => {
           if (!persisted || typeof persisted !== "object") {
             return persisted;
           }
@@ -172,6 +183,14 @@ export const useBudgetNotificationSettingsStore =
               typeof persisted.hour === "number" ? persisted.hour : 9,
             minute:
               typeof persisted.minute === "number" ? persisted.minute : 0,
+            priceAlertsEnabled:
+              version >= 2
+                ? !!persisted.priceAlertsEnabled
+                : true,
+            priceAlertThresholdPct:
+              version >= 2 && typeof persisted.priceAlertThresholdPct === "number"
+                ? persisted.priceAlertThresholdPct
+                : 5,
 
             linkKind:
               typeof persisted.linkKind === "string"

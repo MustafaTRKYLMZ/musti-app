@@ -1,11 +1,12 @@
 import React from "react";
 import { View, StyleSheet, Pressable } from "react-native";
-import { LocalizedDateText } from "@musti/core";
 import { MText, colors, spacing, radii } from "@musti/ui-native";
 import { BaseIcon, IconButton } from "@musti/ui-native";
 
 export interface CashflowRowProps {
   title: string;
+  subtitle?: string;
+  leadingIcon?: string;
   type: "Income" | "Expense";
   amount: number;
   date?: string;
@@ -15,18 +16,22 @@ export interface CashflowRowProps {
   onPress?: () => void;
   onDelete?: () => void;
   multiplier?: number;
+  /** Hide per-row amount when section header already shows day total. */
+  showAmount?: boolean;
 }
 
 export const CashflowRow: React.FC<CashflowRowProps> = ({
   title,
+  subtitle,
+  leadingIcon,
   type,
   amount,
-  date,
   category,
   isFixed,
   onPress,
   onDelete,
   multiplier,
+  showAmount = true,
 }) => {
   const isIncome = type === "Income";
   const isExpense = type === "Expense";
@@ -43,70 +48,87 @@ export const CashflowRow: React.FC<CashflowRowProps> = ({
       style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
     >
       {/* LEFT */}
-      <View style={styles.leftCol}>
-        <MText variant="bodyStrong" color="textPrimary" numberOfLines={1}>
-          {title}
-        </MText>
-
-        <View style={styles.metaRow}>
-          {date && (
-            <LocalizedDateText date={date} shortMonth style={styles.dateText} />
-          )}
-
-          {statusIconName && (
+      <View style={styles.leftBlock}>
+        {leadingIcon ? (
+          <View style={styles.leadingIconWrap}>
             <BaseIcon
-              name={statusIconName}
-              size={13}
-              color={statusIconColor}
-              style={{ marginRight: 4 }}
+              name={leadingIcon}
+              size={18}
+              color={colors.primaryLight}
             />
-          )}
+          </View>
+        ) : null}
 
-          {category && (
-            <MText variant="caption" color="textMuted" numberOfLines={1}>
-              {category}
-            </MText>
-          )}
+        <View style={styles.leftCol}>
+          <MText variant="bodyStrong" color="textPrimary" numberOfLines={1}>
+            {title}
+          </MText>
+
+          <View style={styles.metaRow}>
+            {statusIconName && (
+              <BaseIcon
+                name={statusIconName}
+                size={13}
+                color={statusIconColor}
+                style={{ marginRight: 4 }}
+              />
+            )}
+
+            {subtitle ? (
+              <MText variant="caption" color="textMuted" numberOfLines={1}>
+                {subtitle}
+              </MText>
+            ) : null}
+
+            {!subtitle && category ? (
+              <MText variant="caption" color="textMuted" numberOfLines={1}>
+                {category}
+              </MText>
+            ) : null}
+          </View>
         </View>
       </View>
 
       {/* RIGHT */}
-      <View style={styles.rightCol}>
-        <View style={styles.amountRow}>
-          {/* Arrow icon → BaseIcon */}
-          <BaseIcon
-            name={arrowIconName}
-            color={amountColor}
-            style={{ marginRight: 4, marginTop: 1 }}
-          />
+      {showAmount || onDelete ? (
+        <View style={styles.rightCol}>
+          {showAmount ? (
+            <View style={styles.amountRow}>
+              <BaseIcon
+                name={arrowIconName}
+                color={amountColor}
+                style={{ marginRight: 4, marginTop: 1 }}
+              />
 
-          <MText
-            variant="bodyStrong"
-            color={isIncome ? "success" : "danger"}
-            style={styles.amount}
-          >
-            {isExpense && "-"}
-            {Math.abs(amount).toFixed(2)} €
-          </MText>
-
-          {multiplier && multiplier > 1 && (
-            <View style={styles.multiplierPill}>
-              <MText variant="caption" color="textMuted">
-                ×{multiplier}
+              <MText
+                variant="bodyStrong"
+                color={isIncome ? "success" : "danger"}
+                style={styles.amount}
+              >
+                {isExpense && "-"}
+                {Math.abs(amount).toFixed(2)} €
               </MText>
-            </View>
-          )}
-        </View>
 
-        {onDelete && (
-          <IconButton
-            onPress={onDelete}
-            name="trash-outline"
-            color={colors.danger}
-            style={styles.iconButton}
-          />
-        )}
-      </View>
+              {multiplier && multiplier > 1 && (
+                <View style={styles.multiplierPill}>
+                  <MText variant="caption" color="textMuted">
+                    ×{multiplier}
+                  </MText>
+                </View>
+              )}
+            </View>
+          ) : null}
+
+          {onDelete ? (
+            <IconButton
+              onPress={onDelete}
+              name="trash-outline"
+              color={colors.danger}
+              style={styles.iconButton}
+            />
+          ) : null}
+        </View>
+      ) : null}
     </Pressable>
   );
 };
@@ -121,18 +143,30 @@ const styles = StyleSheet.create({
   rowPressed: {
     opacity: 0.8,
   },
+  leftBlock: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    minWidth: 0,
+  },
+  leadingIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: radii.md,
+    backgroundColor: "rgba(47,111,237,0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   leftCol: {
     flex: 1,
+    minWidth: 0,
   },
   metaRow: {
     flexDirection: "row",
     alignItems: "center",
     marginTop: spacing.xs,
     gap: 6,
-  },
-  dateText: {
-    color: colors.textMuted,
-    fontSize: 12,
   },
   rightCol: {
     flexDirection: "column",

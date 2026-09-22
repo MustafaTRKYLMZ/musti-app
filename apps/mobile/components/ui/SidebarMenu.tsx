@@ -103,7 +103,7 @@ export function SidebarMenu({ open, onClose }: Props) {
 
         <TouchableOpacity
           style={styles.sidebarItem}
-          onPress={() => go("/coming-soon")}
+          onPress={() => go("/(tabs)/budget/markets")}
         >
           <BaseIcon
             name="storefront-outline"
@@ -117,7 +117,7 @@ export function SidebarMenu({ open, onClose }: Props) {
 
         <TouchableOpacity
           style={styles.sidebarItem}
-          onPress={() => go("/coming-soon")}
+          onPress={() => go("/(tabs)/budget/products")}
         >
           <BaseIcon
             name="cube-outline"
@@ -131,7 +131,7 @@ export function SidebarMenu({ open, onClose }: Props) {
 
         <TouchableOpacity
           style={styles.sidebarItem}
-          onPress={() => go("/coming-soon")}
+          onPress={() => go("/(tabs)/budget/shopping-list")}
         >
           <BaseIcon
             name="list-outline"
@@ -168,7 +168,7 @@ export function SidebarMenu({ open, onClose }: Props) {
 
         <TouchableOpacity
           style={styles.sidebarItem}
-          onPress={() => go("/coming-soon")}
+          onPress={() => go("/(tabs)/budget/price-history")}
         >
           <BaseIcon
             name="pricetags-outline"

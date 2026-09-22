@@ -29,6 +29,7 @@ import {
 
 import { BackupSection } from "@/components/Books/BackupSection";
 import { LanguageSettingsSection } from "@/components/settings/LanguageSettingsSection";
+import { BudgetNotificationsSection } from "@/components/settings/BudgetNotificationsSection";
 import { useToast } from "@/components/ui/ToastProvider";
 
 export default function SettingsScreen() {
@@ -125,6 +126,9 @@ export default function SettingsScreen() {
 
       <ScrollView contentContainerStyle={styles.content}>
         <LanguageSettingsSection />
+
+        <MText style={styles.sectionTitle}>{t("settings.notifications")}</MText>
+        <BudgetNotificationsSection />
 
         {/* Opening balance */}
         <View>

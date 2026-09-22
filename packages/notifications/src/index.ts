@@ -10,6 +10,7 @@ export {
   cancelNotificationIds,
   cancelScheduledByOwner,
   scheduleDailyReminder,
+  presentImmediateNotification,
   type CustomReminder,
 } from "./schedule";
 export { ensureNotificationPermission } from "./permissions";

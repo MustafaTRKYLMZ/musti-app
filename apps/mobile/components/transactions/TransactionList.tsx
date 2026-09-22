@@ -13,7 +13,12 @@ import {
   ViewToken,
 } from "react-native";
 import dayjs from "dayjs";
-import { LocalizedDateText, useTranslation, type LocalTransaction } from "@musti/core";
+import {
+  LocalizedDateText,
+  getTransactionCardDisplay,
+  useTranslation,
+  type LocalTransaction,
+} from "@musti/core";
 import { MText, colors, spacing, radii } from "@musti/ui-native";
 import { EmptyState } from "@/components/ui/EmptyState";
 
@@ -25,7 +30,6 @@ import { BaseIcon } from "@musti/ui-native";
 
 interface TransactionListProps {
   transactions: LocalTransaction[];
-  onDelete: (tx: LocalTransaction) => void;
   onEdit: (tx: LocalTransaction) => void;
   onPressRefresh?: () => void | Promise<void>;
   scrollToDateKey?: string;
@@ -49,7 +53,6 @@ function getTxDate(tx: LocalTransaction): dayjs.Dayjs | null {
 
 export default function TransactionList({
   transactions,
-  onDelete,
   onEdit,
   onPressRefresh,
   scrollToDateKey,
@@ -264,17 +267,19 @@ export default function TransactionList({
         const id = String(item.id);
         const isVisible = !!visibleItemIds[id];
 
+        const card = getTransactionCardDisplay(item, t);
+
         const content = (
           <View style={[styles.cardRow, isFuture && styles.cardRowFuture]}>
             <CashflowRow
-              title={item.item}
+              title={card.title}
+              subtitle={card.subtitle}
+              leadingIcon={card.leadingIcon}
               type={item.type}
               amount={item.amount}
-              date={item.date}
-              category={item.category}
+              category={card.metaLabel}
               isFixed={item.isFixed}
               onPress={() => onEdit(item)}
-              onDelete={() => onDelete(item)}
             />
           </View>
         );
