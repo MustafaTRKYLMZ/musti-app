@@ -6,6 +6,9 @@ import type {
   ReceiptLineDraft,
 } from "../types/receipt";
 import { preprocessReceiptText } from "./preprocessReceiptText";
+import { extractPositionalBlockProducts } from "./extractPositionalBlockProducts";
+import { resolveReceiptStoreProfile } from "./receiptStoreProfiles";
+import type { ParseReceiptOptions } from "./receiptType";
 import {
   extractFuelLineItem,
   inferReceiptCategory,
@@ -795,6 +798,31 @@ function parseProductLine(line: string): ReceiptLineDraft | null {
   if (/^\d{8,}\s/.test(line)) return null;
   if (/^(btw|vat|kdv|tax|vergi|mwst)\s*\d/i.test(line.trim())) return null;
 
+  const inlineQtyPrice = line.match(
+    /^(.+?)\s+(\d+(?:[.,]\d+)?)\s*[x×]\s*(\d+[.,]\d{2})\s*=\s*(?:EUR\s*)?(\d+[.,]\d{2})/i
+  );
+  if (inlineQtyPrice) {
+    const name = inlineQtyPrice[1].replace(/\s+/g, " ").trim();
+    const quantity = Number(inlineQtyPrice[2].replace(",", "."));
+    const unitPrice = parseMoney(inlineQtyPrice[3]);
+    const totalAmount = parseMoney(inlineQtyPrice[4]);
+    if (
+      isValidProductName(name) &&
+      Number.isFinite(quantity) &&
+      quantity > 0 &&
+      unitPrice != null &&
+      totalAmount != null &&
+      totalAmount > 0
+    ) {
+      return {
+        name: preserveProductName(name),
+        quantity,
+        totalAmount,
+        unitPrice,
+      };
+    }
+  }
+
   const tableLine = parseDutchTableProductLine(line);
   if (tableLine) return tableLine;
 
@@ -916,7 +944,14 @@ function parseProductLine(line: string): ReceiptLineDraft | null {
   return null;
 }
 
-function extractLineItems(lines: string[]): ReceiptLineDraft[] {
+function extractLineItems(
+  lines: string[],
+  context?: { storeName?: string; rawText?: string }
+): ReceiptLineDraft[] {
+  const profile = resolveReceiptStoreProfile(
+    context?.storeName ?? "",
+    context?.rawText ?? lines.join("\n")
+  );
   const headerIdx = lines.findIndex((line) => isReceiptColumnHeader(line));
   const footerIdx = findFooterStart(lines);
   const startIdx =
@@ -976,7 +1011,12 @@ function extractLineItems(lines: string[]): ReceiptLineDraft[] {
   }
 
   const scattered = extractScatteredGroceryProducts(lines);
-  if (looksLikeScrambledAhReceipt(lines, scattered)) {
+  if (
+    profile?.preferScattered &&
+    scattered.filter((line) => (line.totalAmount ?? 0) > 0).length >= 2
+  ) {
+    result = scattered;
+  } else if (looksLikeScrambledAhReceipt(lines, scattered)) {
     result = scattered;
   } else if (result.length === 0) {
     result = scattered;
@@ -988,6 +1028,23 @@ function extractLineItems(lines: string[]): ReceiptLineDraft[] {
       .map((line) => extractMoneyFromLine(line))
       .find((amount) => amount != null && amount > 0);
     result = extractNameOnlyProducts(lines, footerIdx, subtotalAmount ?? null);
+  }
+
+  const positional = extractPositionalBlockProducts(lines, footerIdx);
+  const positionalPriced = positional.filter((line) => (line.totalAmount ?? 0) > 0);
+  const resultPriced = result.filter((line) => (line.totalAmount ?? 0) > 0);
+
+  if (
+    profile?.preferPositionalBlock &&
+    positionalPriced.length >= Math.max(2, resultPriced.length)
+  ) {
+    result = positional;
+  } else if (
+    positionalPriced.length > resultPriced.length ||
+    (positional.length >= 4 &&
+      positionalPriced.length >= resultPriced.length + 2)
+  ) {
+    result = positional;
   }
 
   return result.slice(0, MAX_RECEIPT_LINE_ITEMS);
@@ -1219,8 +1276,13 @@ function detectCurrency(text: string): string {
   return "EUR";
 }
 
-export function parseReceiptText(rawText: string): ParseReceiptResult {
-  const normalized = preprocessReceiptText(rawText).trim();
+export function parseReceiptText(
+  rawText: string,
+  options?: ParseReceiptOptions
+): ParseReceiptResult {
+  const normalized = preprocessReceiptText(rawText, {
+    userCorrections: options?.userOcrCorrections,
+  }).trim();
   const lines = normalized
     .split("\n")
     .map((l) => l.trim())
@@ -1231,8 +1293,15 @@ export function parseReceiptText(rawText: string): ParseReceiptResult {
   const total = extractTotal(lines);
   const currency = detectCurrency(normalized);
 
-  let receiptLines = extractLineItems(lines);
-  if (isFuelReceipt(normalized, store.value)) {
+  let receiptLines = extractLineItems(lines, {
+    storeName: store.value,
+    rawText: normalized,
+  });
+  const forceFuel =
+    options?.receiptType === "fuel" ||
+    isFuelReceipt(normalized, store.value);
+
+  if (forceFuel) {
     const fuelLine = extractFuelLineItem(
       normalized,
       total.value,
@@ -1253,11 +1322,19 @@ export function parseReceiptText(rawText: string): ParseReceiptResult {
     receiptLines,
     store.value
   );
-  const suggestedCategory = inferReceiptCategory(
+  let suggestedCategory = inferReceiptCategory(
     normalized,
     store.value,
     description
   );
+
+  if (options?.receiptType === "fuel") {
+    suggestedCategory = "transport";
+  } else if (options?.receiptType === "restaurant") {
+    suggestedCategory = "food";
+  } else if (options?.receiptType === "market") {
+    suggestedCategory = "groceries";
+  }
 
   const draft: ReceiptDraft = {
     rawText: normalized,

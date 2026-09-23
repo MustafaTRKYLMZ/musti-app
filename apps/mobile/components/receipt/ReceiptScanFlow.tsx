@@ -1,13 +1,18 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   StyleSheet,
   ActivityIndicator,
   Pressable,
   Image,
+  Alert,
+  ScrollView,
 } from "react-native";
 import {
-  mergeReceiptTexts,
+  assessReceiptOcrQuality,
+  extractDeclaredItemCount,
+  MAX_RECEIPT_PHOTOS,
+  mergeManyReceiptTexts,
   normalizeProductName,
   parseReceiptText,
   receiptToTransactionDraft,
@@ -16,14 +21,25 @@ import {
   type ParseReceiptResult,
   type ProductSuggestion,
   type ReceiptDraft,
+  type ReceiptOcrQuality,
+  type ReceiptScanType,
 } from "@musti/core";
 import { MText, colors, spacing, radii } from "@musti/ui-native";
 import { ReceiptCameraView } from "@/components/receipt/ReceiptCameraView";
 import { ReceiptReviewForm } from "@/components/receipt/ReceiptReviewForm";
+import { ReceiptTypeSelector } from "@/components/receipt/ReceiptTypeSelector";
 import {
   recognizeReceiptImage,
   ReceiptOcrUnavailableError,
 } from "@/services/receipt/recognizeReceiptImage";
+import type { ReceiptCapture } from "@/services/receipt/receiptCapture";
+import { pickReceiptFromGallery, isGalleryImportAvailable } from "@/services/receipt/pickReceiptFromGallery";
+import {
+  collectLineCorrections,
+  loadUserOcrCorrections,
+  recordUserOcrCorrections,
+} from "@/services/receipt/userOcrCorrectionStore";
+import { appendReceiptArchiveEntry } from "@/services/receipt/receiptArchiveStore";
 import { useStoresStore } from "@/store/budget/stores/useStoresStore";
 import { useProductsStore } from "@/store/budget/products/useProductsStore";
 import { useTransactionsStore } from "@/store/budget/transactions/useTransactionsStore";
@@ -31,12 +47,7 @@ import { useShoppingListStore } from "@/store/budget/shopping-list/useShoppingLi
 import { useBudgetNotificationSettingsStore } from "@/store/budget/notification/useNotificationSettingsStore";
 import { notifyPriceChanges } from "@/services/receipt/notifyPriceChanges";
 
-type Step =
-  | "camera"
-  | "append_prompt"
-  | "camera_second"
-  | "processing"
-  | "review";
+type Step = "type_select" | "camera" | "append_prompt" | "processing" | "review";
 
 type Props = {
   embedded?: boolean;
@@ -45,7 +56,69 @@ type Props = {
   onStepChange?: (step: "camera" | "processing" | "review") => void;
 };
 
-const CAMERA_STEPS: Step[] = ["camera", "append_prompt", "camera_second"];
+const CAMERA_STEPS: Step[] = ["camera", "append_prompt"];
+
+function countPricedLines(result: ParseReceiptResult): number {
+  return result.draft.lines.filter((line) => (line.totalAmount ?? 0) > 0)
+    .length;
+}
+
+function getPartHintKey(photoIndex: number, totalPhotos: number): string {
+  if (photoIndex === 0) return "receipt.multi.hintFirst";
+  if (photoIndex >= totalPhotos - 1) return "receipt.multi.hintLast";
+  return "receipt.multi.hintMiddle";
+}
+
+function buildOcrWarning(
+  t: ReturnType<typeof useTranslation>["t"],
+  text: string,
+  quality: ReceiptOcrQuality,
+  photoCount: number
+): string | null {
+  if (!text.trim()) {
+    return t("receipt.error.noText");
+  }
+
+  if (quality.suggestRetake) {
+    return t("receipt.error.poorQuality");
+  }
+
+  if (quality.suggestMorePhotos && photoCount >= 2) {
+    return t("receipt.error.suggestMorePhotos");
+  }
+
+  if (quality.suggestSecondPhoto && photoCount === 1) {
+    return t("receipt.error.suggestSecondPhoto");
+  }
+
+  if (
+    quality.declaredItemCount != null &&
+    quality.pricedLineCount < Math.floor(quality.declaredItemCount * 0.8)
+  ) {
+    return t("receipt.review.declaredCountMismatch", {
+      declared: quality.declaredItemCount,
+      parsed: quality.pricedLineCount,
+    });
+  }
+
+  if (quality.level === "fair") {
+    return t("receipt.error.fairQuality");
+  }
+
+  return null;
+}
+
+function shouldSteerToMorePhotos(quality: ReceiptOcrQuality | null): boolean {
+  if (!quality) return false;
+  return (
+    quality.suggestRetake ||
+    quality.suggestMorePhotos ||
+    quality.suggestSecondPhoto ||
+    quality.suggestThirdPhoto ||
+    (quality.declaredItemCount != null &&
+      quality.pricedLineCount < Math.floor(quality.declaredItemCount * 0.65))
+  );
+}
 
 export function ReceiptScanFlow({
   embedded = false,
@@ -70,68 +143,134 @@ export function ReceiptScanFlow({
     (s) => s.priceAlertThresholdPct
   );
 
-  const [step, setStepState] = useState<Step>("camera");
+  const [step, setStepState] = useState<Step>("type_select");
+  const [receiptType, setReceiptType] = useState<ReceiptScanType>("market");
+  const [userOcrCorrections, setUserOcrCorrections] = useState<
+    Array<{ from: string; to: string }>
+  >([]);
 
   const setStep = (next: Step) => {
     setStepState(next);
     if (next === "review") {
       onStepChange?.("review");
-    } else if (CAMERA_STEPS.includes(next)) {
+    } else if (CAMERA_STEPS.includes(next) || next === "type_select") {
       onStepChange?.("camera");
     } else if (next === "processing") {
       onStepChange?.("processing");
     }
   };
 
-  const [imageUris, setImageUris] = useState<string[]>([]);
+  const [captures, setCaptures] = useState<ReceiptCapture[]>([]);
   const [parseResult, setParseResult] = useState<ParseReceiptResult | null>(
     null
   );
+  const [ocrQuality, setOcrQuality] = useState<ReceiptOcrQuality | null>(null);
   const [ocrWarning, setOcrWarning] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [processingPart, setProcessingPart] = useState(0);
+  const [previewQuality, setPreviewQuality] = useState<ReceiptOcrQuality | null>(
+    null
+  );
+  const [previewParsedCount, setPreviewParsedCount] = useState(0);
+  const [previewDeclaredCount, setPreviewDeclaredCount] = useState<number | null>(
+    null
+  );
+  const [previewQualityLoading, setPreviewQualityLoading] = useState(false);
 
-  const processImages = async (uris: string[]) => {
-    setImageUris(uris);
+  useEffect(() => {
+    void loadUserOcrCorrections().then(setUserOcrCorrections);
+  }, []);
+
+  const runPreviewQuality = async (
+    items: ReceiptCapture[],
+    cancelled: () => boolean
+  ) => {
+    setPreviewQualityLoading(true);
+    setPreviewQuality(null);
+    try {
+      let text = "";
+      if (items.length === 1) {
+        text = await recognizeReceiptImage(items[0].uri, items[0].meta);
+      } else {
+        const texts: string[] = [];
+        for (const item of items) {
+          texts.push(await recognizeReceiptImage(item.uri, item.meta));
+        }
+        text = mergeManyReceiptTexts(texts);
+      }
+      if (cancelled()) return;
+      const parsed = parseReceiptText(text, {
+        receiptType,
+        userOcrCorrections,
+      });
+      setPreviewParsedCount(countPricedLines(parsed));
+      setPreviewDeclaredCount(extractDeclaredItemCount(text));
+      setPreviewQuality(
+        assessReceiptOcrQuality(text, parsed, { photoCount: items.length })
+      );
+    } catch {
+      if (!cancelled()) {
+        setPreviewQuality(null);
+        setPreviewParsedCount(0);
+        setPreviewDeclaredCount(null);
+      }
+    } finally {
+      if (!cancelled()) setPreviewQualityLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (step !== "append_prompt") {
+      setPreviewQuality(null);
+      setPreviewQualityLoading(false);
+      return;
+    }
+
+    if (captures.length === 0) return;
+
+    let cancelled = false;
+    void runPreviewQuality(captures, () => cancelled);
+    return () => {
+      cancelled = true;
+    };
+  }, [step, captures, receiptType, userOcrCorrections]);
+
+  const processCaptures = async (items: ReceiptCapture[]) => {
+    setCaptures(items);
     setOcrWarning(null);
+    setOcrQuality(null);
     setStep("processing");
     setProcessingPart(0);
 
     try {
-      let text = "";
-      if (uris.length === 1) {
-        setProcessingPart(1);
-        text = await recognizeReceiptImage(uris[0]);
-      } else {
-        setProcessingPart(1);
-        const partA = await recognizeReceiptImage(uris[0]);
-        setProcessingPart(2);
-        const partB = await recognizeReceiptImage(uris[1]);
-        text = mergeReceiptTexts(partA, partB);
+      const texts: string[] = [];
+      for (let i = 0; i < items.length; i += 1) {
+        setProcessingPart(i + 1);
+        texts.push(await recognizeReceiptImage(items[i].uri, items[i].meta));
       }
+      const text = mergeManyReceiptTexts(texts);
 
-      const result = parseReceiptText(text);
+      const result = parseReceiptText(text, {
+        receiptType,
+        userOcrCorrections,
+      });
+      const quality = assessReceiptOcrQuality(text, result, {
+        photoCount: items.length,
+      });
 
       if (__DEV__) {
         console.log("[ReceiptScan] OCR chars:", text.length);
-        console.log("[ReceiptScan] OCR preview:", text.slice(0, 600));
+        console.log("[ReceiptScan] photos:", items.length);
+        console.log("[ReceiptScan] quality:", quality);
         console.log("[ReceiptScan] parsed:", {
           store: result.draft.storeName,
           total: result.draft.total,
-          category: result.draft.suggestedCategory,
           lineCount: result.draft.lines.length,
-          lines: result.draft.lines
-            .slice(0, 8)
-            .map((l) => `${l.name}=${l.totalAmount}`),
         });
       }
 
-      if (!text.trim()) {
-        setOcrWarning(t("receipt.error.noText"));
-      } else if (uris.length > 1) {
-        setOcrWarning(null);
-      }
-
+      setOcrQuality(quality);
+      setOcrWarning(buildOcrWarning(t, text, quality, items.length));
       setParseResult(result);
       setStep("review");
     } catch (e) {
@@ -141,38 +280,93 @@ export function ReceiptScanFlow({
           : t("receipt.error.generic");
 
       setOcrWarning(message);
-      setParseResult(parseReceiptText(""));
+      setOcrQuality(null);
+      setParseResult(parseReceiptText("", { receiptType }));
       setStep("review");
     } finally {
       setProcessingPart(0);
     }
   };
 
-  const handleFirstCapture = (uri: string) => {
-    setImageUris([uri]);
+  const confirmContinueWithFewerPhotos = (
+    photoCount: number,
+    onContinue: () => void,
+    onAddMore: () => void
+  ) => {
+    Alert.alert(
+      t("receipt.multi.continueOneConfirmTitle"),
+      photoCount === 1
+        ? t("receipt.multi.continueOneConfirmBody")
+        : t("receipt.multi.continueManyConfirmBody", { count: photoCount }),
+      [
+        {
+          text: t("receipt.multi.addNextSection"),
+          onPress: onAddMore,
+        },
+        {
+          text: t("receipt.multi.continueOneAnyway"),
+          style: "destructive",
+          onPress: onContinue,
+        },
+        { text: t("common.cancel"), style: "cancel" },
+      ]
+    );
+  };
+
+  const handleCapture = (capture: ReceiptCapture) => {
+    setCaptures((current) => [...current, capture]);
     setStep("append_prompt");
   };
 
-  const handleSecondCapture = (uri: string) => {
-    void processImages([imageUris[0], uri]);
+  const handleContinueWithCurrentPhotos = () => {
+    if (captures.length === 0) return;
+    const proceed = () => void processCaptures(captures);
+    if (shouldSteerToMorePhotos(previewQuality) && captures.length < MAX_RECEIPT_PHOTOS) {
+      confirmContinueWithFewerPhotos(captures.length, proceed, () =>
+        setStep("camera")
+      );
+      return;
+    }
+    proceed();
   };
 
-  const handleContinueSingle = () => {
-    if (imageUris[0]) {
-      void processImages([imageUris[0]]);
-    }
+  const handleAddNextPhoto = () => {
+    if (captures.length >= MAX_RECEIPT_PHOTOS) return;
+    setStep("camera");
+  };
+
+  const handleGalleryImport = async () => {
+    const capture = await pickReceiptFromGallery();
+    if (!capture) return;
+    handleCapture(capture);
   };
 
   const handleRetake = () => {
     setParseResult(null);
-    setImageUris([]);
+    setCaptures([]);
     setOcrWarning(null);
+    setOcrQuality(null);
+    setPreviewQuality(null);
     setProcessingPart(0);
-    setStep("camera");
+    setStep("type_select");
   };
 
   const handleRetakeFirst = () => {
-    setImageUris([]);
+    setCaptures([]);
+    setPreviewQuality(null);
+    setStep("camera");
+  };
+
+  const handleAddPhotoFromReview = () => {
+    setParseResult(null);
+    setOcrQuality(null);
+    setOcrWarning(null);
+    setStep("camera");
+  };
+
+  const handleTypeSelect = (type: ReceiptScanType) => {
+    setReceiptType(type);
+    setCaptures([]);
     setStep("camera");
   };
 
@@ -204,6 +398,23 @@ export function ReceiptScanFlow({
   ) => {
     setSaving(true);
     try {
+      const lineEdits = await collectLineCorrections(
+        parseResult?.draft.lines ?? [],
+        draft.lines
+      );
+      if (lineEdits.length > 0) {
+        await recordUserOcrCorrections(lineEdits);
+        setUserOcrCorrections(await loadUserOcrCorrections());
+      }
+
+      await appendReceiptArchiveEntry({
+        storeName: draft.storeName,
+        total: draft.total,
+        currency: draft.currency,
+        imageUris: captures.map((capture) => capture.uri),
+        rawTextPreview: draft.rawText.slice(0, 500),
+      });
+
       const { store } = resolveOrCreate(draft.storeName);
 
       const existingSamples = useProductsStore.getState().priceSamples;
@@ -252,15 +463,130 @@ export function ReceiptScanFlow({
     }
   };
 
+  const renderAppendPrompt = () => {
+    const steerToMore =
+      shouldSteerToMorePhotos(previewQuality) &&
+      captures.length < MAX_RECEIPT_PHOTOS;
+    const declaredMismatch =
+      previewDeclaredCount != null &&
+      previewParsedCount < Math.floor(previewDeclaredCount * 0.65);
+    const canAddMore = captures.length < MAX_RECEIPT_PHOTOS;
+
+    return (
+      <View style={styles.appendPrompt}>
+        <MText variant="bodyStrong">
+          {t("receipt.multi.promptCaptured", { count: captures.length })}
+        </MText>
+        <MText variant="caption" color="textSecondary" style={styles.appendSubtitle}>
+          {canAddMore
+            ? t("receipt.multi.promptSubtitle")
+            : t("receipt.multi.promptMaxPhotos")}
+        </MText>
+
+        {previewQualityLoading ? (
+          <View style={styles.previewQualityRow}>
+            <ActivityIndicator size="small" color={colors.primary} />
+            <MText variant="caption" color="textSecondary">
+              {t("receipt.multi.checkingQuality")}
+            </MText>
+          </View>
+        ) : steerToMore ? (
+          <View style={styles.previewQualityBanner}>
+            <MText variant="caption" style={styles.previewQualityText}>
+              {declaredMismatch
+                ? t("receipt.multi.declaredCountMismatch", {
+                    declared: previewDeclaredCount ?? 0,
+                    parsed: previewParsedCount,
+                  })
+                : t("receipt.multi.suggestMore")}
+            </MText>
+          </View>
+        ) : null}
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.appendPreviewRow}
+        >
+          {captures.map((capture, index) => (
+            <Image
+              key={`${capture.uri}_${index}`}
+              source={{ uri: capture.uri }}
+              style={styles.appendPreview}
+              resizeMode="cover"
+            />
+          ))}
+        </ScrollView>
+
+        {canAddMore ? (
+          <Pressable
+            style={[styles.primaryBtn, steerToMore && styles.primaryBtnEmphasis]}
+            onPress={handleAddNextPhoto}
+          >
+            <MText variant="bodyStrong" style={styles.primaryBtnText}>
+              {t("receipt.multi.addNextSection")}
+            </MText>
+          </Pressable>
+        ) : null}
+
+        {steerToMore ? (
+          <Pressable style={styles.continueLink} onPress={handleContinueWithCurrentPhotos}>
+            <MText variant="caption" color="textSecondary">
+              {t("receipt.multi.continueWithCount", { count: captures.length })}
+            </MText>
+          </Pressable>
+        ) : (
+          <Pressable style={styles.secondaryBtn} onPress={handleContinueWithCurrentPhotos}>
+            <MText variant="bodyStrong">
+              {t("receipt.multi.continueWithCount", { count: captures.length })}
+            </MText>
+          </Pressable>
+        )}
+
+        <Pressable onPress={handleRetakeFirst}>
+          <MText variant="caption" color="primary">
+            {t("receipt.multi.retakeFirst")}
+          </MText>
+        </Pressable>
+      </View>
+    );
+  };
+
+  if (step === "type_select") {
+    return (
+      <View style={[styles.typeWrap, embedded && styles.cameraWrapEmbedded]}>
+        <ReceiptTypeSelector onSelect={handleTypeSelect} />
+        {embedded && onSwitchToManual ? (
+          <Pressable style={styles.manualLink} onPress={onSwitchToManual}>
+            <MText variant="caption" style={styles.manualLinkText}>
+              {t("budget.create.tab.manual")}
+            </MText>
+          </Pressable>
+        ) : null}
+      </View>
+    );
+  }
+
   if (step === "camera") {
+    const photoIndex = captures.length;
     return (
       <View style={[styles.cameraWrap, embedded && styles.cameraWrapEmbedded]}>
         <ReceiptCameraView
           embedded={embedded}
-          onCapture={handleFirstCapture}
+          onCapture={handleCapture}
+          onGalleryImport={
+            isGalleryImportAvailable()
+              ? () => void handleGalleryImport()
+              : undefined
+          }
+          onBack={photoIndex > 0 ? () => setStep("append_prompt") : undefined}
           busy={false}
-          partLabel={t("receipt.multi.partFirst")}
-          hintText={t("receipt.multi.hintFirst")}
+          enableStabilityCapture={photoIndex === 0}
+          partLabel={t("receipt.multi.partLabel", {
+            current: photoIndex + 1,
+            max: MAX_RECEIPT_PHOTOS,
+          })}
+          hintText={t(getPartHintKey(photoIndex, MAX_RECEIPT_PHOTOS))}
         />
         {embedded && onSwitchToManual ? (
           <Pressable style={styles.manualLink} onPress={onSwitchToManual}>
@@ -273,91 +599,66 @@ export function ReceiptScanFlow({
     );
   }
 
-  if (step === "append_prompt" && imageUris[0]) {
-    return (
-      <View style={styles.appendPrompt}>
-        <MText variant="bodyStrong">{t("receipt.multi.promptTitle")}</MText>
-        <MText variant="caption" color="textSecondary" style={styles.appendSubtitle}>
-          {t("receipt.multi.promptSubtitle")}
-        </MText>
-
-        <Image
-          source={{ uri: imageUris[0] }}
-          style={styles.appendPreview}
-          resizeMode="cover"
-        />
-
-        <Pressable
-          style={styles.primaryBtn}
-          onPress={() => setStep("camera_second")}
-        >
-          <MText variant="bodyStrong" style={styles.primaryBtnText}>
-            {t("receipt.multi.addSecond")}
-          </MText>
-        </Pressable>
-
-        <Pressable style={styles.secondaryBtn} onPress={handleContinueSingle}>
-          <MText variant="bodyStrong">{t("receipt.multi.continueOne")}</MText>
-        </Pressable>
-
-        <Pressable onPress={handleRetakeFirst}>
-          <MText variant="caption" color="primary">
-            {t("receipt.multi.retakeFirst")}
-          </MText>
-        </Pressable>
-      </View>
-    );
-  }
-
-  if (step === "camera_second") {
-    return (
-      <View style={[styles.cameraWrap, embedded && styles.cameraWrapEmbedded]}>
-        <ReceiptCameraView
-          embedded={embedded}
-          onCapture={handleSecondCapture}
-          onBack={() => setStep("append_prompt")}
-          busy={false}
-          partLabel={t("receipt.multi.partSecond")}
-          hintText={t("receipt.multi.hintSecond")}
-        />
-      </View>
-    );
+  if (step === "append_prompt" && captures.length > 0) {
+    return renderAppendPrompt();
   }
 
   if (step === "processing") {
+    const processingLabel =
+      processingPart > 0
+        ? t("receipt.multi.processingPart", {
+            current: processingPart,
+            total: captures.length,
+          })
+        : t("receipt.processing");
+
     return (
       <View style={styles.processing}>
         <ActivityIndicator size="large" color={colors.primary} />
         <MText variant="body" style={styles.processingText}>
-          {processingPart > 1
-            ? t("receipt.multi.processingSecond")
-            : processingPart === 1 && imageUris.length > 1
-              ? t("receipt.multi.processingFirst")
-              : t("receipt.processing")}
+          {processingLabel}
         </MText>
       </View>
     );
   }
 
-  if (!parseResult || imageUris.length === 0) {
+  if (!parseResult || captures.length === 0) {
     return null;
   }
 
+  const canAddPhoto =
+    captures.length < MAX_RECEIPT_PHOTOS &&
+    (ocrQuality?.suggestMorePhotos ||
+      ocrQuality?.suggestSecondPhoto ||
+      ocrQuality?.suggestThirdPhoto ||
+      (ocrQuality?.declaredItemCount != null &&
+        ocrQuality.pricedLineCount <
+          Math.floor(ocrQuality.declaredItemCount * 0.8)));
+
   return (
     <ReceiptReviewForm
-      imageUris={imageUris}
+      imageUris={captures.map((capture) => capture.uri)}
       parseResult={parseResult}
       ocrWarning={ocrWarning}
+      ocrQuality={ocrQuality}
       transactions={transactions}
       suggestions={suggestions}
       saving={saving}
       onRetake={handleRetake}
+      onAddPhoto={canAddPhoto ? handleAddPhotoFromReview : undefined}
       onConfirm={handleConfirm}
     />
   );
 }
 
 const styles = StyleSheet.create({
+  typeWrap: {
+    flex: 1,
+    minHeight: 420,
+    backgroundColor: colors.background,
+    borderRadius: 12,
+    overflow: "hidden",
+  },
   cameraWrap: {
     flex: 1,
     minHeight: 420,
@@ -378,8 +679,28 @@ const styles = StyleSheet.create({
   appendSubtitle: {
     textAlign: "center",
   },
+  previewQualityRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+  },
+  previewQualityBanner: {
+    padding: spacing.sm,
+    borderRadius: radii.md,
+    backgroundColor: colors.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.borderSubtle,
+  },
+  previewQualityText: {
+    textAlign: "center",
+    color: colors.textSecondary,
+  },
+  appendPreviewRow: {
+    gap: spacing.sm,
+  },
   appendPreview: {
-    width: "100%",
+    width: 140,
     height: 180,
     borderRadius: radii.md,
     backgroundColor: colors.surface,
@@ -402,6 +723,10 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     backgroundColor: colors.primary,
   },
+  primaryBtnEmphasis: {
+    borderWidth: 2,
+    borderColor: "#FFF",
+  },
   primaryBtnText: {
     color: "#FFF",
   },
@@ -412,6 +737,10 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.borderSubtle,
+  },
+  continueLink: {
+    alignItems: "center",
+    paddingVertical: spacing.sm,
   },
   manualLink: {
     position: "absolute",

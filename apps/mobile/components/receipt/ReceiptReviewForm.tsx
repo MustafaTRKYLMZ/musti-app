@@ -6,6 +6,7 @@ import {
   Image,
   Pressable,
   ScrollView,
+  Alert,
 } from "react-native";
 import type {
   LocalTransaction,
@@ -13,6 +14,7 @@ import type {
   ProductSuggestion,
   ReceiptDraft,
   ReceiptLineDraft,
+  ReceiptOcrQuality,
 } from "@musti/core";
 import {
   findDuplicateReceipt,
@@ -32,10 +34,12 @@ type Props = {
   imageUris: string[];
   parseResult: ParseReceiptResult;
   ocrWarning?: string | null;
+  ocrQuality?: ReceiptOcrQuality | null;
   transactions?: LocalTransaction[];
   suggestions?: ProductSuggestion[];
   saving?: boolean;
   onRetake: () => void;
+  onAddPhoto?: () => void;
   onConfirm: (
     draft: ReceiptDraft,
     category: string,
@@ -108,10 +112,12 @@ export function ReceiptReviewForm({
   imageUris,
   parseResult,
   ocrWarning,
+  ocrQuality,
   transactions = [],
   suggestions = [],
   saving,
   onRetake,
+  onAddPhoto,
   onConfirm,
 }: Props) {
   const { t } = useTranslation();
@@ -152,8 +158,12 @@ export function ReceiptReviewForm({
   const [lines, setLines] = useState<ReceiptLineDraft[]>(
     parseResult.draft.lines.map((line) => ({ ...line }))
   );
-  const [saveTotalOnly, setSaveTotalOnly] = useState(false);
+  const [saveTotalOnly, setSaveTotalOnly] = useState(() =>
+    Boolean(ocrQuality?.suggestSaveTotalOnly)
+  );
   const [error, setError] = useState<string | null>(null);
+  const [selectedLineIndexes, setSelectedLineIndexes] = useState<number[]>([]);
+  const [selectionMode, setSelectionMode] = useState(false);
 
   useEffect(() => {
     void loadStores();
@@ -171,9 +181,11 @@ export function ReceiptReviewForm({
       localizeCategoryKey(parseResult.draft.suggestedCategory ?? "grocies")
     );
     setLines(parseResult.draft.lines.map((line) => ({ ...line })));
-    setSaveTotalOnly(false);
+    setSaveTotalOnly(Boolean(ocrQuality?.suggestSaveTotalOnly));
     setError(null);
-  }, [parseResult, stores]);
+    setSelectedLineIndexes([]);
+    setSelectionMode(false);
+  }, [parseResult, stores, ocrQuality]);
 
   const handleSelectStore = (store: Store | null) => {
     setSelectedStoreId(store?.id ?? null);
@@ -199,6 +211,11 @@ export function ReceiptReviewForm({
     parseResult.draft.storeId,
   ]);
 
+  const declaredMismatch =
+    ocrQuality?.declaredItemCount != null &&
+    ocrQuality.pricedLineCount <
+      Math.floor(ocrQuality.declaredItemCount * 0.8);
+
   const toggleSuggestion = (productId: string) => {
     setSelectedSuggestionIds((prev) =>
       prev.includes(productId)
@@ -219,6 +236,44 @@ export function ReceiptReviewForm({
   const removeLine = (index: number) => {
     setLines((prev) => prev.filter((_, i) => i !== index));
     setLineAmountEdits({});
+    setSelectedLineIndexes((prev) =>
+      prev.filter((i) => i !== index).map((i) => (i > index ? i - 1 : i))
+    );
+  };
+
+  const toggleLineSelection = (index: number) => {
+    setSelectedLineIndexes((prev) =>
+      prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
+    );
+  };
+
+  const removeSelectedLines = () => {
+    if (selectedLineIndexes.length === 0) return;
+    const toRemove = new Set(selectedLineIndexes);
+    setLines((prev) => prev.filter((_, index) => !toRemove.has(index)));
+    setLineAmountEdits({});
+    setSelectedLineIndexes([]);
+    setSelectionMode(false);
+  };
+
+  const clearAllLines = () => {
+    Alert.alert(
+      t("receipt.review.clearAllTitle"),
+      t("receipt.review.clearAllBody"),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("receipt.review.clearAllConfirm"),
+          style: "destructive",
+          onPress: () => {
+            setLines([]);
+            setLineAmountEdits({});
+            setSelectedLineIndexes([]);
+            setSelectionMode(false);
+          },
+        },
+      ]
+    );
   };
 
   const addLine = () => {
@@ -339,6 +394,39 @@ export function ReceiptReviewForm({
         </MText>
       </View>
 
+      {parsedLineCount > 0 ? (
+        <View style={styles.linesBulkActions}>
+          <Pressable
+            onPress={() => {
+              setSelectionMode((current) => !current);
+              setSelectedLineIndexes([]);
+            }}
+          >
+            <MText variant="caption" color="primary">
+              {selectionMode
+                ? t("receipt.review.cancelSelection")
+                : t("receipt.review.selectLines")}
+            </MText>
+          </Pressable>
+          {selectionMode && selectedLineIndexes.length > 0 ? (
+            <Pressable onPress={removeSelectedLines}>
+              <MText variant="caption" color="primary">
+                {t("receipt.review.deleteSelected", {
+                  count: selectedLineIndexes.length,
+                })}
+              </MText>
+            </Pressable>
+          ) : null}
+          {!selectionMode && parsedLineCount > 1 ? (
+            <Pressable onPress={clearAllLines}>
+              <MText variant="caption" color="textSecondary">
+                {t("receipt.review.clearAllLines")}
+              </MText>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
+
       {parsedLineCount >= GROCERY_DESCRIPTION_LINE_THRESHOLD ? (
         <MText variant="caption" color="textSecondary">
           {t("receipt.review.linesEditHint")}
@@ -387,6 +475,24 @@ export function ReceiptReviewForm({
           >
             {lines.map((line, index) => (
               <View key={`line_${index}`} style={styles.editableLineRow}>
+                {selectionMode ? (
+                  <Pressable
+                    style={[
+                      styles.lineSelectBtn,
+                      selectedLineIndexes.includes(index) &&
+                        styles.lineSelectBtnActive,
+                    ]}
+                    onPress={() => toggleLineSelection(index)}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{
+                      checked: selectedLineIndexes.includes(index),
+                    }}
+                  >
+                    <MText variant="caption" style={styles.lineSelectMark}>
+                      {selectedLineIndexes.includes(index) ? "✓" : ""}
+                    </MText>
+                  </Pressable>
+                ) : null}
                 <TextInput
                   style={[styles.input, styles.lineNameInput]}
                   value={line.name}
@@ -482,6 +588,17 @@ export function ReceiptReviewForm({
         <View style={styles.ocrWarningBanner}>
           <MText variant="caption" style={styles.ocrWarningText}>
             {ocrWarning}
+          </MText>
+        </View>
+      ) : null}
+
+      {declaredMismatch ? (
+        <View style={styles.declaredBanner}>
+          <MText variant="caption" style={styles.declaredBannerText}>
+            {t("receipt.review.declaredCountMismatch", {
+              declared: ocrQuality?.declaredItemCount ?? 0,
+              parsed: ocrQuality?.pricedLineCount ?? 0,
+            })}
           </MText>
         </View>
       ) : null}
@@ -688,6 +805,18 @@ export function ReceiptReviewForm({
         </MText>
       ) : null}
 
+      {onAddPhoto ? (
+        <Pressable
+          style={styles.addPhotoBtn}
+          onPress={onAddPhoto}
+          disabled={saving}
+        >
+          <MText variant="bodyStrong" style={styles.addPhotoBtnText}>
+            {t("receipt.review.addPhoto")}
+          </MText>
+        </Pressable>
+      ) : null}
+
       <View style={styles.actions}>
         <Pressable style={styles.secondaryBtn} onPress={onRetake} disabled={saving}>
           <MText variant="bodyStrong">{t("receipt.review.retake")}</MText>
@@ -727,6 +856,18 @@ const styles = StyleSheet.create({
   },
   ocrWarningText: {
     color: colors.textPrimary,
+    textAlign: "center",
+  },
+  declaredBanner: {
+    backgroundColor: "rgba(234,179,8,0.12)",
+    borderRadius: radii.md,
+    padding: spacing.sm,
+    marginBottom: spacing.sm,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(234,179,8,0.35)",
+  },
+  declaredBannerText: {
+    color: colors.textSecondary,
     textAlign: "center",
   },
   preview: {
@@ -888,6 +1029,30 @@ const styles = StyleSheet.create({
   linesSectionHeader: {
     gap: spacing.xs,
   },
+  linesBulkActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.md,
+    alignItems: "center",
+  },
+  lineSelectBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: radii.sm,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.borderSubtle,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: spacing.xs,
+  },
+  lineSelectBtnActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  lineSelectMark: {
+    color: "#FFF",
+    fontWeight: "700",
+  },
   linesMismatchBanner: {
     backgroundColor: "rgba(234,179,8,0.15)",
     borderRadius: radii.md,
@@ -993,6 +1158,18 @@ const styles = StyleSheet.create({
   },
   error: {
     color: colors.danger,
+  },
+  addPhotoBtn: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: spacing.md,
+    borderRadius: radii.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.primary,
+    backgroundColor: colors.surface,
+  },
+  addPhotoBtnText: {
+    color: colors.primary,
   },
   actions: {
     flexDirection: "row",

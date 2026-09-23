@@ -2,12 +2,11 @@ import React, { useMemo } from "react";
 import { View, StyleSheet } from "react-native";
 import { useTranslation } from "@musti/core";
 import { MText, spacing, radii } from "@musti/ui-native";
+import { computeReceiptFrameBounds } from "@/services/receipt/receiptFrame";
 
-const RECEIPT_HEIGHT_RATIO = 2;
-const SIDE_MARGIN_RATIO = 0.02;
-const HINT_BAND_HEIGHT = 36;
 const CORNER_SIZE = 32;
 const CORNER_THICKNESS = 3;
+const HINT_BAND_HEIGHT = 36;
 
 type Props = {
   layoutWidth: number;
@@ -16,6 +15,7 @@ type Props = {
   bottomReserved?: number;
   hintText?: string;
   partLabel?: string;
+  aligned?: boolean;
 };
 
 export function ReceiptDocumentFrame({
@@ -25,32 +25,25 @@ export function ReceiptDocumentFrame({
   bottomReserved = 120,
   hintText,
   partLabel,
+  aligned = false,
 }: Props) {
   const { t } = useTranslation();
-  const hint = hintText ?? t("receipt.camera.hintPortrait");
+  const hint =
+    hintText ??
+    (aligned
+      ? t("receipt.camera.detected")
+      : t("receipt.camera.detecting"));
 
-  const frame = useMemo(() => {
-    if (layoutWidth <= 0 || layoutHeight <= 0) {
-      return { left: 0, top: 0, width: 0, height: 0 };
-    }
-
-    const sideMargin = layoutWidth * SIDE_MARGIN_RATIO;
-    const frameWidth = layoutWidth - sideMargin * 2;
-
-    const reservedVertical = topInset + HINT_BAND_HEIGHT + bottomReserved;
-    const maxHeight = Math.max(140, layoutHeight - reservedVertical);
-
-    const idealHeight = frameWidth * RECEIPT_HEIGHT_RATIO;
-    const frameHeight = Math.min(idealHeight, maxHeight);
-
-    const left = sideMargin;
-    const frameTop =
-      topInset +
-      HINT_BAND_HEIGHT +
-      Math.max(0, (maxHeight - frameHeight) / 2);
-
-    return { left, top: frameTop, width: frameWidth, height: frameHeight };
-  }, [layoutWidth, layoutHeight, topInset, bottomReserved]);
+  const frame = useMemo(
+    () =>
+      computeReceiptFrameBounds({
+        layoutWidth,
+        layoutHeight,
+        topInset,
+        bottomReserved,
+      }),
+    [layoutWidth, layoutHeight, topInset, bottomReserved]
+  );
 
   const { left, top, width: frameWidth, height: frameHeight } = frame;
 
@@ -78,6 +71,7 @@ export function ReceiptDocumentFrame({
         <View
           style={[
             styles.frameHole,
+            aligned && styles.frameHoleAligned,
             { width: frameWidth, height: frameHeight },
           ]}
         />
@@ -91,10 +85,10 @@ export function ReceiptDocumentFrame({
           { left, top, width: frameWidth, height: frameHeight },
         ]}
       >
-        <View style={[styles.corner, styles.cornerTL]} />
-        <View style={[styles.corner, styles.cornerTR]} />
-        <View style={[styles.corner, styles.cornerBL]} />
-        <View style={[styles.corner, styles.cornerBR]} />
+        <View style={[styles.corner, styles.cornerTL, aligned && styles.cornerAligned]} />
+        <View style={[styles.corner, styles.cornerTR, aligned && styles.cornerAligned]} />
+        <View style={[styles.corner, styles.cornerBL, aligned && styles.cornerAligned]} />
+        <View style={[styles.corner, styles.cornerBR, aligned && styles.cornerAligned]} />
       </View>
     </View>
   );
@@ -123,6 +117,9 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.4)",
     borderRadius: radii.md,
   },
+  frameHoleAligned: {
+    borderColor: "rgba(120,255,170,0.85)",
+  },
   corners: {
     position: "absolute",
   },
@@ -131,6 +128,9 @@ const styles = StyleSheet.create({
     width: CORNER_SIZE,
     height: CORNER_SIZE,
     borderColor: "#FFF",
+  },
+  cornerAligned: {
+    borderColor: "#8AF5B8",
   },
   cornerTL: {
     top: -1,

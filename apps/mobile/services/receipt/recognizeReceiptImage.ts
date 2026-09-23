@@ -1,4 +1,11 @@
-import { mergeReceiptTexts } from "@musti/core";
+import {
+  mergeManyReceiptTexts,
+  pickBestOcrText,
+  reconstructReceiptTextFromBlocks,
+  type ReceiptTextBlock,
+} from "@musti/core";
+import type { ReceiptCaptureMeta } from "./receiptCapture";
+import { buildReceiptImageVariants } from "./preprocessReceiptImage";
 
 export class ReceiptOcrUnavailableError extends Error {
   constructor(message = "Receipt OCR is not available on this device.") {
@@ -7,13 +14,18 @@ export class ReceiptOcrUnavailableError extends Error {
   }
 }
 
+type TextRecognitionResult = {
+  text?: string;
+  blocks?: ReceiptTextBlock[];
+};
+
 type TextRecognitionModule = {
-  recognize: (uri: string) => Promise<{ text?: string }>;
+  recognize: (uri: string, script?: string) => Promise<TextRecognitionResult>;
+  TextRecognitionScript?: { LATIN: string };
 };
 
 function loadTextRecognition(): TextRecognitionModule {
   try {
-    // Native module — requires dev client rebuild after install.
     const mod = require("@react-native-ml-kit/text-recognition");
     return mod.default ?? mod;
   } catch {
@@ -35,20 +47,48 @@ function cleanupOcrText(raw: string): string {
     .trim();
 }
 
-export async function recognizeReceiptImage(uri: string): Promise<string> {
-  const TextRecognition = loadTextRecognition();
-  const result = await TextRecognition.recognize(uri);
-  return cleanupOcrText(result.text ?? "");
+async function recognizeVariant(
+  TextRecognition: TextRecognitionModule,
+  uri: string
+): Promise<string> {
+  const script = TextRecognition.TextRecognitionScript?.LATIN;
+  const result = await TextRecognition.recognize(uri, script);
+  const plain = cleanupOcrText(result.text ?? "");
+  const blockText =
+    result.blocks && result.blocks.length > 0
+      ? cleanupOcrText(reconstructReceiptTextFromBlocks(result.blocks))
+      : "";
+
+  const candidates = [plain, blockText].filter(Boolean);
+  return pickBestOcrText(candidates);
 }
 
-export async function recognizeReceiptImages(uris: string[]): Promise<string> {
+export async function recognizeReceiptImage(
+  uri: string,
+  meta?: ReceiptCaptureMeta | null
+): Promise<string> {
+  const TextRecognition = loadTextRecognition();
+  const variants = await buildReceiptImageVariants(uri, meta);
+
+  const texts: string[] = [];
+  for (const variant of variants) {
+    texts.push(await recognizeVariant(TextRecognition, variant.uri));
+  }
+
+  return pickBestOcrText(texts);
+}
+
+export async function recognizeReceiptImages(
+  uris: string[],
+  metas?: Array<ReceiptCaptureMeta | null | undefined>
+): Promise<string> {
   if (uris.length === 0) return "";
 
   const texts: string[] = [];
-  for (const uri of uris) {
-    texts.push(await recognizeReceiptImage(uri));
+  for (let i = 0; i < uris.length; i += 1) {
+    texts.push(await recognizeReceiptImage(uris[i], metas?.[i]));
   }
 
   if (texts.length === 1) return texts[0];
-  return mergeReceiptTexts(texts[0], texts[1]);
+  return mergeManyReceiptTexts(texts);
 }

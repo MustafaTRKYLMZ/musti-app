@@ -42,6 +42,18 @@ module.exports = {
         ? "com.musti.app.dev"
         : appJson.expo.ios.bundleIdentifier,
     },
-    plugins: [...(appJson.expo.plugins ?? []), "expo-dev-client"],
+    plugins: [
+      ...(appJson.expo.plugins ?? []),
+      "expo-dev-client",
+      "react-native-document-scanner-plugin",
+      "expo-sensors",
+      [
+        "expo-image-picker",
+        {
+          photosPermission:
+            "Allow access to your photos to import receipt images.",
+        },
+      ],
+    ],
   },
 };

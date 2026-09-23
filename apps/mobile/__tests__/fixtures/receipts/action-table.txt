@@ -1,0 +1,6 @@
+ACTION
+Datum 21-09-2025
+Aantal Omschrijving Prijs Bedrag
+1 Batterijen AA 1.99 1.99
+1 Tape 0.89 0.89
+TOTAAL 2.88

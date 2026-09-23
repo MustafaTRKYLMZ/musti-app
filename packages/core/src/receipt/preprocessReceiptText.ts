@@ -1,6 +1,19 @@
+import {
+  applyOcrCharacterSubstitutions,
+  type OcrUserCorrection,
+} from "./ocrCharacterSubstitutions";
+
 /** Normalize OCR noise before parsing heuristics run. */
-export function preprocessReceiptText(rawText: string): string {
-  const lines = rawText
+export function preprocessReceiptText(
+  rawText: string,
+  options?: { userCorrections?: OcrUserCorrection[] }
+): string {
+  const normalizedInput = applyOcrCharacterSubstitutions(
+    rawText,
+    options?.userCorrections ?? []
+  );
+
+  const lines = normalizedInput
     .replace(/\r\n/g, "\n")
     .replace(/[|]/g, "I")
     .replace(/€(\d)/g, "€ $1")
