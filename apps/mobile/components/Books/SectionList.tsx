@@ -1,9 +1,9 @@
-import { BookSection } from "@/store/bookshelf/useBookSectionsStore";
-import { spacing } from "@budget/ui-native";
+import { spacing } from "@musti/ui-native";
 import React, { FC } from "react";
 import { FlatList, StyleSheet } from "react-native";
 import { Divider } from "../ui/Divider";
 import { Section } from "./Section";
+import { BookSection } from "@musti/core";
 
 type SectionListProps = {
   sections: BookSection[];
@@ -30,6 +30,7 @@ export const SectionList: FC<SectionListProps> = ({
     <FlatList
       data={sections}
       keyExtractor={(item) => item.id}
+      style={styles.list}
       contentContainerStyle={styles.listContent}
       ItemSeparatorComponent={Divider}
       renderItem={({ item }) => (
@@ -48,7 +49,10 @@ export const SectionList: FC<SectionListProps> = ({
 };
 
 const styles = StyleSheet.create({
+  list: {
+    flex: 1,
+  },
   listContent: {
-    paddingBottom: spacing["2xl"],
+    paddingBottom: spacing.lg,
   },
 });

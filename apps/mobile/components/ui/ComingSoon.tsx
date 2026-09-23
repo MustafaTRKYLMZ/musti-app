@@ -1,20 +1,22 @@
-// apps/mobile/components/ui/ComingSoon.tsx
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
-import { colors } from "@budget/ui-native";
-import { BaseIcon } from "./AppIcon";
-import { iconSizes } from "@budget/ui-native";
+import { View, StyleSheet } from "react-native";
+import { useTranslation } from "@musti/core";
+import { MText, spacing, useTheme } from "@musti/ui-native";
+import { BaseIcon } from "@musti/ui-native/src/components/AppIcon";
 
 export function ComingSoon() {
+  const { colors } = useTheme();
+  const { t } = useTranslation();
+
   return (
     <View style={styles.container}>
-      <BaseIcon
-        name="sparkles-outline"
-        size={50}
-        color={colors.surface}
-      />
-      <Text style={styles.title}>Coming soon</Text>
-      <Text style={styles.subtitle}>Something cool is on the way.</Text>
+      <BaseIcon name="sparkles-outline" size={50} color={colors.textSecondary} />
+      <MText variant="heading3" style={[styles.title, { color: colors.textPrimary }]}>
+        {t("comingSoon.title")}
+      </MText>
+      <MText variant="body" color="textSecondary" style={styles.subtitle}>
+        {t("comingSoon.subtitle")}
+      </MText>
     </View>
   );
 }
@@ -24,18 +26,13 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing.lg,
   },
   title: {
-    color: "#f9fafb",
-    fontSize: 22,
-    fontWeight: "700",
-    marginTop: 16,
+    marginTop: spacing.md,
   },
   subtitle: {
-    color: "#9ca3af",
-    fontSize: 15,
-    marginTop: 6,
+    marginTop: spacing.sm,
     textAlign: "center",
   },
 });

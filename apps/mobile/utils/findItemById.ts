@@ -1,4 +1,4 @@
-import { ReadingTarget } from "@/store/bookshelf/useReadingTargetsStore";
+import { ReadingTarget } from "@musti/core";
 
 export const findItemById = (t: ReadingTarget | null, itemId: string | null) => {
     if (!t || !itemId) return null;

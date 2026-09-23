@@ -1,4 +1,4 @@
-import { ReadingTarget, TargetItem } from "@/store/bookshelf/useReadingTargetsStore";
+import { ReadingTarget, TargetItem } from "@musti/core";
 
 export const pickActiveItem = (t: ReadingTarget | null): TargetItem | null => {
     if (!t?.items?.length) return null;

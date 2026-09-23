@@ -1,32 +1,21 @@
-// components/ui/BudgetHeader.tsx
 import React from "react";
 import { View, StyleSheet } from "react-native";
-import LanguageSelector from "../LanguageSelector";
-import { colors, spacing, radii } from "@budget/ui-native";
-import { IconButton } from "./AppIcon";
+import { spacing } from "@musti/ui-native";
+import { HeaderIconButton } from "./HeaderIconButton";
 
 interface Props {
   onOpenSimulation: () => void;
-  onLanguageChange?: (msg: string) => void;
 }
 
-export function BudgetHeader({
-  onOpenSimulation,
-  onLanguageChange,
-}: Props) {
-
+export function BudgetHeader({ onOpenSimulation }: Props) {
   return (
     <View style={styles.headerRow}>
-      {/* RIGHT: simulation + language */}
       <View style={styles.rightContainer}>
-        <IconButton
-          family="ion"
-          name="flask-outline"
-          padding={spacing.xs}
-          style={styles.iconRight}
+        <HeaderIconButton
+          icon="flask-outline"
+          accessibilityLabel="Open simulation"
           onPress={onOpenSimulation}
         />
-        <LanguageSelector onLanguageChange={onLanguageChange} />
       </View>
     </View>
   );
@@ -44,9 +33,6 @@ const styles = StyleSheet.create({
   rightContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.xs,
-  },
-  iconRight: {
-    borderRadius: radii.full,
+    gap: spacing.sm,
   },
 });

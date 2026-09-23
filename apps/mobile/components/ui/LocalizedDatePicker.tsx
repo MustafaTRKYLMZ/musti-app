@@ -8,9 +8,9 @@ import {
 } from "react-native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import dayjs from "dayjs";
-import { getLocalizedDateParts, useTranslation } from "@budget/core";
-import { MText, colors, spacing, radii } from "@budget/ui-native";
-import { BaseIcon } from "@/components/ui/AppIcon";
+import { getLocalizedDateParts, useTranslation } from "@musti/core";
+import { MText, colors, spacing, radii } from "@musti/ui-native";
+import { BaseIcon } from "@musti/ui-native";
 
 interface Props {
   value: string; // "YYYY-MM-DD"
@@ -39,7 +39,6 @@ export function LocalizedDatePicker({ value, label, onChange }: Props) {
         <View style={styles.iconWrapper}>
           <BaseIcon
             name="calendar-outline"
-            size={18}
             color={colors.textMuted}
           />
         </View>

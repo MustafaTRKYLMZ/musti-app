@@ -1,0 +1,118 @@
+import React, { FC, useMemo } from "react";
+import { View, StyleSheet } from "react-native";
+import Pdf from "react-native-pdf";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { runOnJS } from "react-native-reanimated";
+
+import type { PdfRef } from "./pdfTypes";
+
+type Props = {
+  pdfRef?: React.RefObject<PdfRef | null>;
+  captureRef?: React.RefObject<View | null>;
+  source: { uri: string } | number;
+  initialPage: number;
+
+  backgroundColor: string;
+
+  horizontal: boolean;
+  enablePaging: boolean;
+
+  onLoadComplete: (n: number, filePath?: string) => void;
+  onError?: (e: unknown) => void;
+  onPageChanged: (page: number, numberOfPages: number) => void;
+
+  onLayoutSize: (w: number, h: number) => void;
+
+  translateX: number;
+  translateY: number;
+  scale: number;
+
+  onDoubleTap: () => void;
+  onPinchUpdate?: (scale: number) => void;
+  onPinchEnd?: (scale: number) => void;
+};
+
+export const PdfViewport: FC<Props> = ({
+  pdfRef,
+  captureRef,
+  source,
+  initialPage,
+  backgroundColor,
+  horizontal,
+  enablePaging,
+  onLoadComplete,
+  onError,
+  onPageChanged,
+  onLayoutSize,
+  translateX,
+  translateY,
+  scale,
+  onDoubleTap,
+  onPinchUpdate,
+  onPinchEnd,
+}) => {
+  const gesture = useMemo(() => {
+    const doubleTapGesture = Gesture.Tap()
+      .numberOfTaps(2)
+      .maxDelay(250)
+      .onEnd(() => {
+        runOnJS(onDoubleTap)();
+      });
+
+    const pinchGesture = Gesture.Pinch()
+      .onUpdate((event) => {
+        if (onPinchUpdate) runOnJS(onPinchUpdate)(event.scale);
+      })
+      .onEnd((event) => {
+        if (onPinchEnd) runOnJS(onPinchEnd)(event.scale);
+      });
+
+    return Gesture.Simultaneous(doubleTapGesture, pinchGesture);
+  }, [onDoubleTap, onPinchUpdate, onPinchEnd]);
+
+  return (
+    <View
+      style={[styles.viewer, { backgroundColor }]}
+      onLayout={(e) => {
+        const { width, height } = e.nativeEvent.layout;
+        onLayoutSize(width, height);
+      }}
+    >
+      <GestureDetector gesture={gesture}>
+        <View style={styles.cropClip}>
+          <View ref={captureRef} style={styles.captureWrap} collapsable={false}>
+            <Pdf
+              ref={pdfRef}
+              source={source}
+              style={[
+                styles.pdf,
+                {
+                  backgroundColor,
+                  transform: [{ translateX }, { translateY }, { scale }],
+                },
+              ]}
+              horizontal={horizontal}
+              enablePaging={enablePaging}
+              page={initialPage}
+              scale={1}
+              minScale={1}
+              maxScale={1}
+              enableDoubleTapZoom={false}
+              fitPolicy={2}
+              onLoadComplete={onLoadComplete}
+              onError={onError}
+              onPageChanged={onPageChanged}
+            />
+          </View>
+        </View>
+      </GestureDetector>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  viewer: { flex: 1 },
+  cropClip: { flex: 1, overflow: "hidden" },
+  captureWrap: { flex: 1 },
+  pdf: { flex: 1, width: "100%", height: "100%" },
+});

@@ -1,10 +1,13 @@
 import { useEffect } from "react";
+import Constants from "expo-constants";
 import {
   cancelScheduledByOwner,
   ensureNotificationPermission,
   scheduleDailyReminder,
-} from "@budget/notifications";
+} from "@musti/notifications";
 import { useBookshelfNotificationSettingsStore } from "./useNotificationSettingsStore";
+
+const notificationsEnabled = Constants.appOwnership !== "expo";
 
 export function useBookshelfNotificationScheduler() {
   const enabled = useBookshelfNotificationSettingsStore((s) => s.enabled);
@@ -12,6 +15,8 @@ export function useBookshelfNotificationScheduler() {
   const minute = useBookshelfNotificationSettingsStore((s) => s.minute);
 
   useEffect(() => {
+    if (!notificationsEnabled) return;
+
     let disposed = false;
 
     const run = async () => {

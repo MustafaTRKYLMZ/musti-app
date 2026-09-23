@@ -5,7 +5,7 @@ import {
     deleteTransactionApi as coreDeleteTransaction,
     type ApiConfig,
     type Transaction,
-  } from "@budget/core";
+  } from "@musti/core";
   
   const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
   

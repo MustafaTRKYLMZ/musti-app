@@ -3,11 +3,11 @@
 import {
     createTransactionWithSeries,
     type TransactionDraft,
-  } from "@budget/core";
+  } from "@musti/core";
   import type {
     TransactionsStoreSet,
     TransactionsStoreGet,
-  } from "../types";
+  } from "../../types";
   
   export async function createTransactionAction(
     set: TransactionsStoreSet,

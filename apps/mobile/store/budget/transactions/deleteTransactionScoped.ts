@@ -3,11 +3,11 @@
 import {
     deleteTransactionSeries,
     type Scope,
-  } from "@budget/core";
+  } from "@musti/core";
   import type {
     TransactionsStoreSet,
     TransactionsStoreGet,
-  } from "../types";
+  } from "../../types";
   
   export async function deleteTransactionScopedAction(
     set: TransactionsStoreSet,

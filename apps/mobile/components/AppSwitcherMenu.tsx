@@ -1,4 +1,3 @@
-// components/AppSwitcherMenu.tsx
 import React from "react";
 import { Modal, View, StyleSheet, Pressable } from "react-native";
 import {
@@ -8,9 +7,10 @@ import {
   useTheme,
   budgetTheme,
   bookshelfTheme,
-} from "@budget/ui-native";
+  plannerTheme,
+} from "@musti/ui-native";
 import { router } from "expo-router";
-import { IconTile } from "@/components/ui/AppIcon";
+import { IconTile } from "@musti/ui-native";
 
 type Props = {
   visible: boolean;
@@ -30,6 +30,10 @@ export function AppSwitcherMenu({ visible, onClose }: Props) {
     onClose();
     router.push("/(tabs)/bookshelf");
   };
+  const goPlanner = () => {
+    onClose();
+    router.push("/(tabs)/planner");
+  };
 
   return (
     <Modal
@@ -37,10 +41,9 @@ export function AppSwitcherMenu({ visible, onClose }: Props) {
       transparent
       animationType="fade"
       onRequestClose={onClose}
+      onStartShouldSetResponder={() => true}
     >
-      {/* ✅ Tek overlay: dışa basınca kapanır */}
       <Pressable style={styles.overlay} onPress={onClose}>
-        {/* ✅ Menü: basılınca overlay'e düşmesin (kapanmasın) */}
         <Pressable
           onPress={() => {}}
           style={styles.menuContainer}
@@ -55,16 +58,26 @@ export function AppSwitcherMenu({ visible, onClose }: Props) {
               name="wallet-outline"
               label="Budget"
               color={budgetTheme.colors.success}
-              labelColor={colors.textInverse}
+              labelColor={colors.textPrimary}
               onPress={goBudget}
+              style={{ backgroundColor: colors.surfaceStrong }}
             />
 
             <IconTile
               name="book-outline"
               label="Bookshelf"
               color={bookshelfTheme.colors.success}
-              labelColor={colors.textInverse}
+              labelColor={colors.textPrimary}
               onPress={goBookshelf}
+              style={{ backgroundColor: colors.surfaceStrong }}
+            />
+            <IconTile
+              name="calendar-outline"
+              label="Planner"
+              color={plannerTheme.colors.success}
+              labelColor={colors.textPrimary}
+              onPress={goPlanner}
+              style={{ backgroundColor: colors.surfaceStrong }}
             />
           </View>
         </Pressable>
@@ -89,10 +102,8 @@ const makeStyles = (colors: typeof budgetTheme.colors) =>
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.md,
 
-      // ✅ Android: mutlaka üstte olsun
       elevation: 20,
 
-      // ✅ iOS
       shadowColor: "#000",
       shadowOpacity: 0.18,
       shadowRadius: 10,
@@ -102,5 +113,6 @@ const makeStyles = (colors: typeof budgetTheme.colors) =>
     grid: {
       flexDirection: "row",
       justifyContent: "space-between",
+      backgroundColor: colors.surfaceStrong,
     },
   });

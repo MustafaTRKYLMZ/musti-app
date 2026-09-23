@@ -1,0 +1,6 @@
+KRUIDVAT
+Datum 21-09-2025
+Aantal Omschrijving Prijs Bedrag
+1 Shampoo 3.49 3.49
+1 Tandpasta 2.29 2.29
+TOTAAL 5.78

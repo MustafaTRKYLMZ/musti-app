@@ -13,18 +13,23 @@ import {
   ViewToken,
 } from "react-native";
 import dayjs from "dayjs";
-import { LocalizedDateText, type LocalTransaction } from "@budget/core";
-import { MText, colors, spacing, radii } from "@budget/ui-native";
+import {
+  LocalizedDateText,
+  getTransactionCardDisplay,
+  useTranslation,
+  type LocalTransaction,
+} from "@musti/core";
+import { MText, colors, spacing, radii } from "@musti/ui-native";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 import { useTransactionsStore } from "../../store/budget/transactions/useTransactionsStore";
 import { CashflowRow } from "@/components/ui/CashflowRow";
 import { findSectionIndexForDate } from "@/utils/findSectionIndexForDate";
 import { AnimatedFutureRow } from "../ui/AnimatedFutureRow";
-import { BaseIcon } from "@/components/ui/AppIcon";
+import { BaseIcon } from "@musti/ui-native";
 
 interface TransactionListProps {
   transactions: LocalTransaction[];
-  onDelete: (tx: LocalTransaction) => void;
   onEdit: (tx: LocalTransaction) => void;
   onPressRefresh?: () => void | Promise<void>;
   scrollToDateKey?: string;
@@ -48,12 +53,12 @@ function getTxDate(tx: LocalTransaction): dayjs.Dayjs | null {
 
 export default function TransactionList({
   transactions,
-  onDelete,
   onEdit,
   onPressRefresh,
   scrollToDateKey,
   scrollToDateTrigger,
 }: TransactionListProps) {
+  const { t } = useTranslation();
   const [refreshing, setRefreshing] = useState(false);
   const listRef = useRef<SectionList<LocalTransaction, TxSection> | null>(null);
   const initialScrollDoneRef = useRef(false);
@@ -209,40 +214,13 @@ export default function TransactionList({
   if (!transactions.length) {
     return (
       <View style={styles.emptyState}>
-        <BaseIcon
-          name="wallet-outline"
-          size={40}
-          color={colors.textSecondary}
+        <EmptyState
+          icon="wallet-outline"
+          title={t("empty.transactions.title")}
+          subtitle={t("empty.transactions.subtitle")}
+          actionLabel={onPressRefresh ? t("empty.transactions.refresh") : undefined}
+          onAction={onPressRefresh ? () => void handleRefresh() : undefined}
         />
-
-        <MText variant="bodyStrong" color="textPrimary">
-          No transactions yet
-        </MText>
-
-        <MText
-          variant="body"
-          color="textSecondary"
-          style={styles.emptySubtitle}
-        >
-          Add a new one with the + button or refresh.
-        </MText>
-
-        {onPressRefresh && (
-          <TouchableOpacity
-            style={styles.emptyRefreshButton}
-            onPress={() => void handleRefresh()}
-          >
-            <BaseIcon
-              name="refresh-outline"
-              size={16}
-              color={colors.textMuted}
-              style={{ marginRight: spacing.xs }}
-            />
-            <MText variant="bodyStrong" color="primary">
-              Refresh
-            </MText>
-          </TouchableOpacity>
-        )}
       </View>
     );
   }
@@ -289,17 +267,19 @@ export default function TransactionList({
         const id = String(item.id);
         const isVisible = !!visibleItemIds[id];
 
+        const card = getTransactionCardDisplay(item, t);
+
         const content = (
           <View style={[styles.cardRow, isFuture && styles.cardRowFuture]}>
             <CashflowRow
-              title={item.item}
+              title={card.title}
+              subtitle={card.subtitle}
+              leadingIcon={card.leadingIcon}
               type={item.type}
               amount={item.amount}
-              date={item.date}
-              category={item.category}
+              category={card.metaLabel}
               isFixed={item.isFixed}
               onPress={() => onEdit(item)}
-              onDelete={() => onDelete(item)}
             />
           </View>
         );

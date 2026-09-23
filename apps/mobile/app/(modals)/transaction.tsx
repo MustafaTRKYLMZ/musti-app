@@ -8,10 +8,9 @@ export default function TransactionRoute() {
     <>
       <Stack.Screen
         options={{
-          presentation: "transparentModal",
-          animation: "fade",
+          presentation: "fullScreenModal",
+          animation: "slide_from_bottom",
           headerShown: false,
-          contentStyle: { backgroundColor: "transparent" },
         }}
       />
       <TransactionModalScreen />

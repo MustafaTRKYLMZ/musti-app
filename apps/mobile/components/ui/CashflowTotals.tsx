@@ -1,7 +1,7 @@
 // apps/mobile/components/ui/CashflowTotals.tsx
 import React from "react";
 import { View, StyleSheet } from "react-native";
-import { MText, colors, spacing, radii } from "@budget/ui-native";
+import { MText, colors, spacing, radii } from "@musti/ui-native";
 
 interface CashflowTotalsProps {
   income: number;

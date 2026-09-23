@@ -10,8 +10,9 @@ import { RenameScenarioModal } from "@/components/ui/modals/RenameScenarioModal"
 import { DailyBalanceSection } from "@/components/transactions";
 import { CashflowTotals } from "@/components/ui/CashflowTotals";
 import { SimulationList } from "../simulation/SimulationList";
-import { getOccurrencesUntilDate } from "@/helper/getOccurrencesUntilDate";
-import { SimulationScenario, useTranslation } from "@budget/core";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { getOccurrencesUntilDate } from "@/utils/getOccurrencesUntilDate";
+import { SimulationScenario, useTranslation } from "@musti/core";
 import {
   MText,
   colors,
@@ -19,10 +20,10 @@ import {
   radii,
   FAB,
   shadows,
-  iconSizes,
-} from "@budget/ui-native";
+  BaseIcon,
+  IconButton,
+} from "@musti/ui-native";
 import { useSimulationStore } from "@/store/budget/simulation/useSimulationStore";
-import { BaseIcon, IconButton } from "@/components/ui/AppIcon";
 
 export function SimulationScreen() {
   const {
@@ -137,7 +138,6 @@ export function SimulationScreen() {
         >
           <BaseIcon
             name="chevron-back"
-            size={22}
             color={colors.textSecondary}
           />
         </TouchableOpacity>
@@ -177,7 +177,6 @@ export function SimulationScreen() {
           >
             <BaseIcon
               name="flask-outline"
-              size={14}
               color={colors.textMuted}
               style={{ marginRight: 6 }}
             />
@@ -191,7 +190,6 @@ export function SimulationScreen() {
             </MText>
             <BaseIcon
               name="ellipsis-vertical"
-              size={16}
               color={colors.textMuted}
               style={{ marginLeft: 4 }}
             />
@@ -240,9 +238,11 @@ export function SimulationScreen() {
             </>
           ) : (
             <View style={styles.emptySimTextWrapper}>
-              <MText variant="body" color="textMuted">
-                {t("no_sumalation_data")}
-              </MText>
+              <EmptyState
+                compact
+                icon="flask-outline"
+                title={t("no_sumalation_data")}
+              />
             </View>
           )}
         </View>
@@ -251,10 +251,7 @@ export function SimulationScreen() {
       {/* FAB */}
       <FAB
         onPress={() => setShowAddModal(true)}
-        icon={
-          <BaseIcon name="add" size={iconSizes.xl} color={colors.textInverse} />
-        }
-        offsetBottom={spacing["4xl"] * 2}
+        style={{ marginBottom: spacing["4xl"] * 2 }}
       />
 
       {/* ADD ITEM MODAL */}
@@ -284,7 +281,6 @@ export function SimulationScreen() {
 
               <IconButton
                 name="close"
-                size={18}
                 color={colors.textSecondary}
                 onPress={() => setShowScenarioSidebar(false)}
                 style={styles.sidebarCloseButton}
@@ -299,7 +295,6 @@ export function SimulationScreen() {
               >
                 <BaseIcon
                   name="add-circle-outline"
-                  size={18}
                   color={colors.success}
                   style={{ marginRight: 8 }}
                 />
@@ -327,7 +322,6 @@ export function SimulationScreen() {
                     <View style={styles.sidebarScenarioLeft}>
                       <BaseIcon
                         name="flask-outline"
-                        size={16}
                         color={isActive ? colors.background : colors.textMuted}
                         style={{ marginRight: 8 }}
                       />
@@ -348,7 +342,6 @@ export function SimulationScreen() {
 
                     <IconButton
                       name="trash-outline"
-                      size={16}
                       color={colors.textMuted}
                       onPress={() => deleteScenario(s.id)}
                       hitSlop={6}
@@ -375,7 +368,6 @@ export function SimulationScreen() {
         <View style={{ flexDirection: "row", alignItems: "center" }}>
           <BaseIcon
             name="sparkles-outline"
-            size={16}
             color={colors.textMuted}
             style={{ marginRight: 6 }}
           />

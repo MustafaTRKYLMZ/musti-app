@@ -1,20 +1,26 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { View, StyleSheet, Pressable, FlatList } from "react-native";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
+import { View, StyleSheet, FlatList, Pressable } from "react-native";
 import { useRouter } from "expo-router";
+import dayjs from "dayjs";
+import { useTranslation, formatTranslation } from "@musti/core";
 import {
   MText,
   bookshelfTheme,
   spacing,
   radii,
-  iconSizes,
-} from "@budget/ui-native";
-import { IconButton } from "@/components/ui/AppIcon";
-import {
-  useReadingTargetsStore,
-  type ReadingTarget,
-} from "@/store/bookshelf/useReadingTargetsStore";
+} from "@musti/ui-native";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { BaseIcon } from "@musti/ui-native";
+import { SectionAddButton } from "@/components/ui/SectionAddButton";
+
+import { useReadingTargetsStore } from "@/store/bookshelf/useReadingTargetsStore";
+import { useReadingStatsStore } from "@/store/bookshelf/useReadingStatsStore";
+import { useReadingEventsStore } from "@/store/bookshelf/useReadingEventsStore";
+
 import { TargetCard } from "./TargetCard";
 import { EditTargetModal } from "@/components/ui/modals/EditTargetModal";
+import { DoneTargetsShortcut } from "./DoneTargetsShortcut";
+import type { ReadingTarget, ReadingEvent, ReadingMode } from "@musti/core";
 
 const { colors } = bookshelfTheme;
 
@@ -23,10 +29,53 @@ type TargetListProps = {
   onOpenChapters: (bookUri: string, bookName: string) => void;
 };
 
+const makeTargetKey = (targetId: string, date: string) =>
+  `${targetId}::${date}`;
+
+const sumMinutesFromEvents = (events: ReadingEvent[]) => {
+  const totalMs = (events ?? []).reduce((acc, e) => {
+    const ms = (e as any)?.durationMs;
+    if (typeof ms === "number" && Number.isFinite(ms) && ms > 0)
+      return acc + ms;
+    return acc;
+  }, 0);
+  return Math.max(0, Math.round(totalMs / 60000));
+};
+
+function formatResetLabel(
+  ts?: number,
+  translate?: (key: import("@musti/core").TranslationKey) => string
+) {
+  if (!ts || !translate) return null;
+  const d = dayjs(ts);
+  const today = dayjs().startOf("day");
+  const diffDays = d.startOf("day").diff(today, "day");
+
+  const timeStr = d.format("HH:mm");
+  if (diffDays === 0) {
+    return formatTranslation(translate("bookshelf.target.resetToday"), {
+      time: timeStr,
+    });
+  }
+  if (diffDays === 1) {
+    return formatTranslation(translate("bookshelf.target.resetTomorrow"), {
+      time: timeStr,
+    });
+  }
+  if (diffDays === -1) {
+    return formatTranslation(translate("bookshelf.target.resetYesterday"), {
+      time: timeStr,
+    });
+  }
+
+  return d.format("D MMM HH:mm");
+}
+
 export const TargetList = ({
   onOpenCreate,
   onOpenChapters,
 }: TargetListProps) => {
+  const { t } = useTranslation();
   const router = useRouter();
   const [editTargetId, setEditTargetId] = useState<string | null>(null);
 
@@ -37,10 +86,28 @@ export const TargetList = ({
   const deleteTarget = useReadingTargetsStore((s) => s.deleteTarget);
   const markItemDone = useReadingTargetsStore((s) => s.markItemDone);
   const setActiveItem = useReadingTargetsStore((s) => s.setActiveItem);
+  const skipTargetCycle = useReadingTargetsStore((s) => s.skipTargetCycle);
 
+  // pages stats
+  const byTargetDate = useReadingStatsStore((s) => s.byTargetDate);
+
+  // minutes events
+  const events = useReadingEventsStore((s) => s.events);
+
+  // hydrate once
   useEffect(() => {
     if (!hydrated) hydrate();
   }, [hydrated, hydrate]);
+
+  // ✅ keep "today" fresh (optional, but nice)
+  const [today, setToday] = useState(() => dayjs().format("YYYY-MM-DD"));
+  useEffect(() => {
+    const id = setInterval(() => {
+      const next = dayjs().format("YYYY-MM-DD");
+      setToday((prev) => (prev === next ? prev : next));
+    }, 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   const active = useMemo(() => {
     return targets
@@ -48,28 +115,75 @@ export const TargetList = ({
       .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
   }, [targets]);
 
-  const doneAll = useMemo(
-    () =>
-      targets
-        .filter((t) => t.status === "done")
-        .sort(
-          (a, b) =>
-            (b.doneAt ?? b.createdAt ?? 0) - (a.doneAt ?? a.createdAt ?? 0)
-        ),
-    [targets]
+  const doneAll = useMemo(() => {
+    return targets
+      .filter((t) => t.status === "done")
+      .sort(
+        (a, b) =>
+          (b.doneAt ?? b.createdAt ?? 0) - (a.doneAt ?? a.createdAt ?? 0)
+      );
+  }, [targets]);
+
+  const getTodayTargetPagesForTarget = useCallback(
+    (target: ReadingTarget) => {
+      if (!target?.id) return 0;
+      const key = makeTargetKey(target.id, today);
+      const stat = byTargetDate?.[key];
+      const n = stat?.pagesByMode?.target ?? 0;
+      return Math.max(0, Math.floor(Number(n) || 0));
+    },
+    [byTargetDate, today]
   );
 
+  const getTodayTargetMinutesForTarget = useCallback(
+    (target: ReadingTarget) => {
+      if (!target?.id) return 0;
+
+      const relevant = (events ?? []).filter((e) => {
+        if (!e) return false;
+        if (e.date !== today) return false;
+        if ((e.mode as ReadingMode) !== "target") return false;
+        if ((e.targetId ?? "") !== target.id) return false;
+        return true;
+      });
+
+      return sumMinutesFromEvents(relevant);
+    },
+    [events, today]
+  );
+
+  const openDoneTargets = useCallback(() => {
+    router.push("/(tabs)/bookshelf/target/done");
+  }, [router]);
+
   const renderTarget = ({ item }: { item: ReadingTarget }) => {
+    const todayPages = getTodayTargetPagesForTarget(item);
+    const todayMinutes = getTodayTargetMinutesForTarget(item);
+
+    const isRepeat = Boolean((item as any).repeat);
+    const cycleCompleted = Boolean((item as any).cycleCompletedAt);
+    const nextResetText = isRepeat
+      ? formatResetLabel((item as any).nextResetAt, t)
+      : null;
+
     return (
       <TargetCard
         target={item}
+        todayPages={todayPages}
+        todayMinutes={todayMinutes}
+        repeatEnabled={isRepeat}
+        cycleCompleted={cycleCompleted}
+        nextResetText={nextResetText}
+        onSkipCycle={async (t) => {
+          await skipTargetCycle(t.id);
+        }}
         onBeforeOpen={async (targetId, itemId) => {
           await setActiveItem(targetId, itemId);
         }}
-        onOpen={(t) => {
+        onOpen={(t, openPage) => {
           router.push({
             pathname: "/(tabs)/bookshelf/target/target-viewer",
-            params: { targetId: t.id },
+            params: { targetId: t.id, jumpPage: String(openPage) },
           });
         }}
         onDelete={(t) => deleteTarget(t.id)}
@@ -82,26 +196,63 @@ export const TargetList = ({
   return (
     <View style={styles.section}>
       <View style={styles.headerRow}>
-        <MText variant="heading3">Targets</MText>
+        <MText variant="heading3" color="textPrimary">
+          {t("bookshelf.tabs.targets")}
+        </MText>
 
         <View style={styles.headerRight}>
-          <IconButton
-            name="add-circle-outline"
-            size={iconSizes.lg}
-            color={colors.textPrimary}
+          {doneAll.length > 0 ? (
+            <Pressable
+              onPress={openDoneTargets}
+              style={({ pressed }) => [
+                styles.headerDone,
+                pressed && styles.headerDonePressed,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={formatTranslation(
+                t("bookshelf.doneWithCount"),
+                { count: doneAll.length }
+              )}
+            >
+              <BaseIcon
+                name="checkmark-circle"
+                color={colors.success}
+              />
+              <MText variant="caption" style={styles.headerDoneText} numberOfLines={1}>
+                {formatTranslation(t("bookshelf.doneWithCount"), {
+                  count: doneAll.length,
+                })}
+              </MText>
+            </Pressable>
+          ) : null}
+
+          <SectionAddButton
+            accessibilityLabel={t("empty.targets.action")}
             onPress={onOpenCreate}
           />
         </View>
       </View>
 
       {active.length === 0 ? (
-        <View style={styles.emptyRow}>
-          <View style={[styles.empty, { flex: 1 }]}>
-            <MText style={{ opacity: 0.8 }}>No active targets.</MText>
-            <Pressable onPress={onOpenCreate} style={styles.emptyBtn}>
-              <MText style={{ fontWeight: "800" }}>Create one</MText>
-            </Pressable>
+        <View style={styles.emptyColumn}>
+          <View style={styles.empty}>
+            <EmptyState
+              compact
+              icon="flag-outline"
+              title={t("empty.targets.title")}
+              actionLabel={t("empty.targets.action")}
+              onAction={onOpenCreate}
+            />
           </View>
+
+          {doneAll.length > 0 ? (
+            <DoneTargetsShortcut
+              variant="bar"
+              count={doneAll.length}
+              onPress={openDoneTargets}
+              style={styles.doneBar}
+            />
+          ) : null}
         </View>
       ) : (
         <FlatList
@@ -117,41 +268,15 @@ export const TargetList = ({
           renderItem={renderTarget}
           ListFooterComponent={
             doneAll.length > 0 ? (
-              <Pressable
-                onPress={() => router.push("/(tabs)/bookshelf/target/done")}
-                style={[styles.doneMini, { marginLeft: spacing.sm }]}
-              >
-                <View style={styles.doneIconWrap}>
-                  <IconButton
-                    name="checkmark"
-                    size={iconSizes.md}
-                    color={colors.textPrimary}
-                    onPress={() => router.push("/(tabs)/bookshelf/target/done")}
-                  />
-                </View>
-
-                <View
-                  style={{ flex: 1, flexDirection: "row", gap: spacing.sm }}
-                >
-                  <MText style={{ fontWeight: "900" }}>Done</MText>
-                  <MText style={{ opacity: 0.7, marginTop: 2 }}>
-                    {doneAll.length}
-                  </MText>
-                </View>
-
-                <IconButton
-                  name="chevron-forward"
-                  size={iconSizes.md}
-                  color={colors.textPrimary}
-                  onPress={() => router.push("/(tabs)/bookshelf/target/done")}
-                />
-              </Pressable>
+              <DoneTargetsShortcut
+                count={doneAll.length}
+                onPress={openDoneTargets}
+              />
             ) : null
           }
         />
       )}
 
-      {/* ✅ Edit modal */}
       <EditTargetModal
         visible={!!editTargetId}
         targetId={editTargetId}
@@ -163,7 +288,7 @@ export const TargetList = ({
 };
 
 const styles = StyleSheet.create({
-  section: { marginBottom: spacing.xl },
+  section: { marginBottom: spacing.md },
   headerRow: {
     paddingHorizontal: spacing.lg,
     flexDirection: "row",
@@ -175,10 +300,31 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
+    flexShrink: 1,
+    justifyContent: "flex-end",
+  },
+  headerDone: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    maxWidth: 148,
+    minHeight: 44,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.full,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    backgroundColor: colors.surfaceElevated,
+  },
+  headerDonePressed: {
+    opacity: 0.9,
+  },
+  headerDoneText: {
+    flexShrink: 1,
+    fontWeight: "600",
   },
   empty: {
-    marginHorizontal: spacing.lg,
-    borderRadius: radii.lg,
+    borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
     backgroundColor: colors.surface,
@@ -194,28 +340,11 @@ const styles = StyleSheet.create({
     borderColor: colors.borderSubtle,
     backgroundColor: colors.surfaceElevated,
   },
-  emptyRow: { flexDirection: "row", gap: spacing.sm },
-
-  doneMini: {
-    minWidth: 150,
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    backgroundColor: colors.surfaceElevated,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    flexDirection: "row",
-    alignItems: "center",
+  emptyColumn: {
+    paddingHorizontal: spacing.lg,
     gap: spacing.sm,
   },
-  doneIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    backgroundColor: colors.surface,
-    alignItems: "center",
-    justifyContent: "center",
+  doneBar: {
+    marginTop: spacing.xs,
   },
 });

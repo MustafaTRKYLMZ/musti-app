@@ -1,5 +1,5 @@
 
-import type { SimulationScenario } from "@budget/core";
+import type { SimulationScenario } from "@musti/core";
 import type { SimulationStoreGet } from "./types";
 
 export function getActiveScenarioSelector(

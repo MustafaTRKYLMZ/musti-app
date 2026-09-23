@@ -1,5 +1,3 @@
-// apps/mobile/app/(tabs)/settings.tsx
-
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -7,7 +5,6 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -16,7 +13,7 @@ import dayjs from "dayjs";
 import { useSettingsStore } from "../../../store/budget/useSettingsStore";
 import { useTransactionsStore } from "../../../store/budget/transactions/useTransactionsStore";
 import { syncTransactions } from "../../../services/syncTransactions";
-import { useTranslation } from "@budget/core";
+import { useTranslation } from "@musti/core";
 import { LocalizedDatePicker } from "@/components/ui/LocalizedDatePicker";
 
 import {
@@ -25,14 +22,19 @@ import {
   typography,
   spacing,
   radii,
-  iconSizes,
-} from "@budget/ui-native";
+  IconButton,
+  BaseIcon,
+  touchTargets,
+} from "@musti/ui-native";
 
-import { BackupSection } from "@/components/BackupSection";
-import { IconButton, BaseIcon } from "@/components/ui/AppIcon";
+import { BackupSection } from "@/components/Books/BackupSection";
+import { LanguageSettingsSection } from "@/components/settings/LanguageSettingsSection";
+import { BudgetNotificationsSection } from "@/components/settings/BudgetNotificationsSection";
+import { useToast } from "@/components/ui/ToastProvider";
 
 export default function SettingsScreen() {
   const { t } = useTranslation();
+  const { showToast } = useToast();
   const handleClose = () => router.back();
 
   const { initialBalance, loadInitialBalance, saveInitialBalance, isLoading } =
@@ -58,7 +60,11 @@ export default function SettingsScreen() {
     const value = Number(amount);
 
     if (Number.isNaN(value)) {
-      Alert.alert("Error", "Amount must be a number");
+      showToast({
+        title: t("common.error"),
+        message: t("settings.amountInvalid"),
+        variant: "danger",
+      });
       return;
     }
 
@@ -68,11 +74,19 @@ export default function SettingsScreen() {
     });
 
     if (!success) {
-      Alert.alert("Error", "Failed to save initial balance");
+      showToast({
+        title: t("common.error"),
+        message: t("settings.saveFailed"),
+        variant: "danger",
+      });
       return;
     }
 
-    Alert.alert("Saved", "Initial balance updated");
+    showToast({
+      title: t("common.saved"),
+      message: t("settings.saved"),
+      variant: "success",
+    });
   };
 
   const handleSyncNow = async () => {
@@ -80,10 +94,18 @@ export default function SettingsScreen() {
       setIsSyncing(true);
       await syncTransactions();
       setIsSyncing(false);
-      Alert.alert("Sync", "Sync completed successfully");
+      showToast({
+        title: t("common.sync"),
+        message: t("settings.syncSuccess"),
+        variant: "success",
+      });
     } catch {
       setIsSyncing(false);
-      Alert.alert("Sync", "Sync failed. Please try again");
+      showToast({
+        title: t("common.sync"),
+        message: t("settings.syncFailed"),
+        variant: "danger",
+      });
     }
   };
 
@@ -103,6 +125,11 @@ export default function SettingsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
+        <LanguageSettingsSection />
+
+        <MText style={styles.sectionTitle}>{t("settings.notifications")}</MText>
+        <BudgetNotificationsSection />
+
         {/* Opening balance */}
         <View>
           <MText style={styles.sectionTitle}>{t("starting_balance")}</MText>
@@ -155,7 +182,6 @@ export default function SettingsScreen() {
           >
             <BaseIcon
               name={isSyncing ? "sync" : "cloud-upload-outline"}
-              size={iconSizes.sm}
               color={colors.textInverse}
               style={styles.syncIcon}
             />
@@ -278,6 +304,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radii.full,
+    minHeight: touchTargets.minimum,
   },
 
   syncIcon: {

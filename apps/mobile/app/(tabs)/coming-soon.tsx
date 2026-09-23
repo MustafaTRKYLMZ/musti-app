@@ -2,11 +2,11 @@ import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { iconSizes } from "@budget/ui-native";
+import { iconSizes } from "@musti/ui-native";
 
 // Ensure the correct path to the ComingSoon component
 import { ComingSoon } from "../../components/ui/ComingSoon";
-import { IconButton } from "@/components/ui/AppIcon";
+import { IconButton } from "@musti/ui-native";
 
 export default function ComingSoonScreen() {
   const handleBack = () => {
@@ -19,7 +19,6 @@ export default function ComingSoonScreen() {
       <View style={styles.headerRow}>
         <IconButton
           name="chevron-back"
-          size={iconSizes.md}
           color={"white"}
           onPress={handleBack}
         />

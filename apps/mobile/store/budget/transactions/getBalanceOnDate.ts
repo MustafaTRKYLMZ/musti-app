@@ -1,8 +1,8 @@
 // apps/mobile/store/transactions/getBalanceOnDate.ts
 
-import { BalanceOnDate, computeBalanceOnDate } from "@budget/core";
+import { BalanceOnDate, computeBalanceOnDate } from "@musti/core";
 import { useSettingsStore } from "../useSettingsStore";
-import { TransactionsStoreGet } from "../types";
+import { TransactionsStoreGet } from "../../types";
 
 
 export function getBalanceOnDateSelector(

@@ -1,18 +1,18 @@
-// apps/mobile/components/ui/Books/BookCard.tsx
-import React, { FC, useRef, useState, useEffect } from "react";
+import React, { FC, useRef, useState, useEffect, useMemo } from "react";
 import {
   TouchableOpacity,
   View,
   StyleSheet,
   Modal,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
   UIManager,
   findNodeHandle,
   Animated,
+  Dimensions,
+  Image,
 } from "react-native";
 import Svg, { Rect, Line } from "react-native-svg";
+
+import { useTranslation } from "@musti/core";
 import {
   MText,
   spacing,
@@ -20,19 +20,35 @@ import {
   iconSizes,
   useTheme,
   Card,
-} from "@budget/ui-native";
-import { IconButton } from "@/components/ui/AppIcon";
+  bookshelfTheme,
+} from "@musti/ui-native";
+import { IconButton, BaseIcon } from "@musti/ui-native";
 import type { LocalPdfFile } from "@/utils/getPdfsDirectory";
+import { usePdfCoverFromCache } from "@/hooks/usePdfCoverFromCache";
+import {
+  BookCardFooter,
+  BOOK_NAMEPLATE_HEIGHT,
+  BOOK_NAMEPLATE_INSET_X,
+} from "./BookCardFooter";
+import { BOOK_SHELF_LIFT } from "./shelfLayout";
 
+const { colors } = bookshelfTheme;
+
+/** Wide enough for long menu labels (e.g. TR "Yeniden adlandır"). */
+const BOOK_MENU_POPOVER_W = 228;
+const BOOK_MENU_EDGE = 8;
 type BookCardProps = {
   file: LocalPdfFile;
   onOpen: () => void;
   onDelete: () => void;
-  onRename?: (newName: string) => void;
+  onRequestRename?: () => void;
+
   lastPage?: number;
   totalPages?: number;
+
   todayPages?: number;
   todayTargetPages?: number;
+
   variant?: "row" | "grid";
 };
 
@@ -49,26 +65,31 @@ const SPINE_PALETTE = [
 
 function getSpineColorFromString(id: string): string {
   let hash = 0;
-  for (let i = 0; i < id.length; i++) {
+  for (let i = 0; i < id.length; i++)
     hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
-  }
-  const index = hash % SPINE_PALETTE.length;
-  return SPINE_PALETTE[index];
+  return SPINE_PALETTE[hash % SPINE_PALETTE.length];
 }
+
+const GRID_COLS = 3;
+const GRID_H_PADDING_TOTAL = spacing.lg * 2;
+const GRID_GAP = spacing.md;
+
+const ROW_W = 120;
+
+const CONTACT_SHADOW_Y = -4;
 
 export const BookCard: FC<BookCardProps> = ({
   file,
   onOpen,
   onDelete,
-  onRename,
+  onRequestRename,
   lastPage,
   totalPages,
   todayPages,
-  todayTargetPages,
   variant = "grid",
 }) => {
-  const theme = useTheme();
-  const { colors } = theme;
+  const { t } = useTranslation();
+  const { colors } = useTheme();
 
   const bookId = file.uri ?? file.name;
   const spineColor = getSpineColorFromString(bookId);
@@ -81,8 +102,7 @@ export const BookCard: FC<BookCardProps> = ({
   });
   const menuIconRef = useRef<View | null>(null);
 
-  const [renameVisible, setRenameVisible] = useState(false);
-  const [tempName, setTempName] = useState(file.name);
+  const [statsVisible, setStatsVisible] = useState(false);
 
   const progress =
     totalPages && totalPages > 0 && lastPage && lastPage > 0
@@ -91,6 +111,9 @@ export const BookCard: FC<BookCardProps> = ({
 
   const appearAnim = useRef(new Animated.Value(0)).current;
   const pressAnim = useRef(new Animated.Value(0)).current;
+
+  const cover = usePdfCoverFromCache(file.uri ?? null);
+  const showCover = cover.ready && !!cover.coverUri;
 
   useEffect(() => {
     Animated.timing(appearAnim, {
@@ -107,7 +130,6 @@ export const BookCard: FC<BookCardProps> = ({
       useNativeDriver: true,
     }).start();
   };
-
   const handlePressOut = () => {
     Animated.spring(pressAnim, {
       toValue: 0,
@@ -130,58 +152,66 @@ export const BookCard: FC<BookCardProps> = ({
           outputRange: [1, 0.97],
         }),
       },
-      {
-        rotateY: pressAnim.interpolate({
-          inputRange: [0, 1],
-          outputRange: ["0deg", "-5deg"],
-        }),
-      },
     ],
     opacity: appearAnim,
   };
+
+  const gridItemWidth = useMemo(() => {
+    const screenW = Dimensions.get("window").width;
+    const available =
+      screenW - GRID_H_PADDING_TOTAL - GRID_GAP * (GRID_COLS - 1);
+    return Math.max(110, Math.floor(available / GRID_COLS));
+  }, []);
+
+  const isRow = variant === "row";
+  const wrapperW = isRow ? ROW_W : gridItemWidth;
+
+  const safeTodayPages = Math.max(0, Number(todayPages ?? 0) || 0);
+
+  const lastPosLine = useMemo(() => {
+    const lp = Math.max(0, Number(lastPage ?? 0) || 0);
+    const tp = Math.max(0, Number(totalPages ?? 0) || 0);
+    if (tp > 0) return `${lp} / ${tp}`;
+    return lp > 0 ? String(lp) : "—";
+  }, [lastPage, totalPages]);
+
+  const clamp = (v: number, min: number, max: number) =>
+    Math.max(min, Math.min(max, v));
 
   const openMenu = () => {
     const handle = findNodeHandle(menuIconRef.current);
     if (!handle) return;
 
+    const screenW = Dimensions.get("window").width;
+
     UIManager.measure(handle, (_x, _y, width, height, pageX, pageY) => {
-      setMenuPos({
-        x: pageX + width - 140,
-        y: pageY + height + 8,
-      });
+      const desiredX = pageX + width - BOOK_MENU_POPOVER_W;
+      const x = clamp(
+        desiredX,
+        BOOK_MENU_EDGE,
+        screenW - BOOK_MENU_POPOVER_W - BOOK_MENU_EDGE
+      );
+      const y = Math.max(BOOK_MENU_EDGE, pageY + height + 8);
+      setMenuPos({ x, y });
       setMenuVisible(true);
     });
   };
 
   const closeMenu = () => setMenuVisible(false);
 
-  const openRename = () => {
-    setTempName(file.name);
-    setMenuVisible(false);
-    setRenameVisible(true);
-  };
-
-  const cancelRename = () => {
-    setRenameVisible(false);
-  };
-
-  const confirmRename = () => {
-    if (!onRename) {
-      setRenameVisible(false);
-      return;
-    }
-    const trimmed = tempName.trim();
-    if (!trimmed || trimmed === file.name) {
-      setRenameVisible(false);
-      return;
-    }
-    onRename(trimmed);
-    setRenameVisible(false);
-  };
-
   const handleDeleteFromMenu = () => {
     setMenuVisible(false);
     onDelete();
+  };
+
+  const openStatsFromMenu = () => {
+    setMenuVisible(false);
+    setStatsVisible(true);
+  };
+
+  const requestRenameFromMenu = () => {
+    setMenuVisible(false);
+    onRequestRename?.();
   };
 
   return (
@@ -190,128 +220,122 @@ export const BookCard: FC<BookCardProps> = ({
         onPress={onOpen}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
-        style={styles.cardWrapper}
+        style={[
+          isRow ? styles.cardWrapperRow : styles.cardWrapperGrid,
+          { marginBottom: BOOK_SHELF_LIFT },
+        ]}
         activeOpacity={0.85}
       >
         <Animated.View style={animatedCardStyle}>
-          <Card
-            style={[
-              styles.cardBase,
-              variant === "grid" ? styles.cardGrid : styles.cardRow,
-            ]}
-          >
-            {/* Decorative book structure */}
-            <View
+          <View style={[styles.cardOuter, { width: wrapperW }]}>
+            <Card
               style={[
-                styles.bookSpine,
+                styles.cardBase,
+                { width: wrapperW },
+                isRow ? styles.cardRow : styles.cardGrid,
+              ]}
+            >
+              <View style={styles.body}>
+                {showCover && (
+                  <View style={styles.coverClip} pointerEvents="none">
+                    <Image
+                      source={{ uri: cover.coverUri! }}
+                      style={styles.coverImg}
+                      resizeMode="cover"
+                    />
+                  </View>
+                )}
+
+                <View
+                  style={[
+                    styles.bookSpine,
+                    {
+                      backgroundColor: spineColor,
+                      borderRightColor: spineEdgeColor,
+                    },
+                  ]}
+                />
+                <View style={styles.bookSpineHighlight} />
+                <View
+                  style={[
+                    styles.bookPageEdgeTop,
+                    { backgroundColor: colors.backgroundSecondary },
+                  ]}
+                />
+                <View style={styles.bookPageEdgeRight} pointerEvents="none">
+                  <Svg width="100%" height="100%">
+                    <Rect
+                      x={0}
+                      y={0}
+                      width="100%"
+                      height="100%"
+                      fill={colors.surface}
+                      opacity={0.94}
+                    />
+                    {Array.from({ length: 6 }).map((_, idx) => {
+                      const x = 4 + idx * 4;
+                      return (
+                        <Line
+                          key={idx}
+                          x1={x}
+                          y1={2}
+                          x2={x}
+                          y2={"98%"}
+                          stroke={colors.borderSubtle}
+                          strokeWidth={0.6}
+                          opacity={0.55 - idx * 0.06}
+                        />
+                      );
+                    })}
+                  </Svg>
+                </View>
+
+                <View
+                  style={styles.menuIconWrapper}
+                  ref={menuIconRef}
+                  collapsable={false}
+                >
+                  <View style={styles.menuChip}>
+                    <IconButton
+                      name="ellipsis-vertical"
+                      color={colors.textPrimary}
+                      onPress={openMenu}
+                      hitSlop={8}
+                    />
+                  </View>
+                </View>
+
+                <View
+                  pointerEvents="none"
+                  style={[
+                    styles.nameplateWrap,
+                    {
+                      left: BOOK_NAMEPLATE_INSET_X,
+                      right: BOOK_NAMEPLATE_INSET_X,
+                    },
+                  ]}
+                >
+                  <BookCardFooter
+                    file={file}
+                    totalPages={totalPages}
+                    progress={progress}
+                    width={wrapperW - BOOK_NAMEPLATE_INSET_X * 2}
+                  />
+                </View>
+              </View>
+            </Card>
+
+            <View
+              pointerEvents="none"
+              style={[
+                styles.contactShadow,
                 {
-                  backgroundColor: spineColor,
-                  borderRightColor: spineEdgeColor,
+                  width: wrapperW,
+                  bottom: CONTACT_SHADOW_Y,
                 },
               ]}
             />
-            <View
-              style={[
-                styles.bookSpineHighlight,
-                { backgroundColor: "rgba(255,255,255,0.16)" },
-              ]}
-            />
-            <View
-              style={[
-                styles.bookPageEdgeTop,
-                { backgroundColor: colors.backgroundSecondary },
-              ]}
-            />
-            <View style={styles.bookPageEdgeRight} pointerEvents="none">
-              <Svg width="100%" height="100%">
-                <Rect
-                  x={0}
-                  y={0}
-                  width="100%"
-                  height="100%"
-                  fill={colors.surface}
-                  opacity={0.94}
-                />
-                {Array.from({ length: 6 }).map((_, idx) => {
-                  const x = 4 + idx * 4;
-                  return (
-                    <Line
-                      key={idx}
-                      x1={x}
-                      y1={2}
-                      x2={x}
-                      y2={"98%"}
-                      stroke={colors.borderSubtle}
-                      strokeWidth={0.6}
-                      opacity={0.55 - idx * 0.06}
-                    />
-                  );
-                })}
-              </Svg>
-            </View>
-
-            {/* Menu icon (same position in both variants) */}
-            <View style={styles.menuIconWrapper} ref={menuIconRef}>
-              <IconButton
-                name="ellipsis-vertical"
-                size={iconSizes.md}
-                color={colors.textPrimary}
-                onPress={openMenu}
-                hitSlop={8}
-              />
-            </View>
-
-            {/* Centered title */}
-            <View style={styles.titleWrapper}>
-              <MText
-                variant="body"
-                color="textPrimary"
-                style={styles.title}
-                numberOfLines={2}
-              >
-                {file.name}
-              </MText>
-            </View>
-
-            {/* Progress */}
-            {totalPages && totalPages > 0 ? (
-              <>
-                <View
-                  style={[
-                    styles.progressContainer,
-                    { backgroundColor: colors.borderSubtle },
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.progressBar,
-                      {
-                        width: `${progress * 100}%`,
-                        backgroundColor: colors.success,
-                      },
-                    ]}
-                  />
-                </View>
-                <MText
-                  variant="body"
-                  color="textSecondary"
-                  style={styles.progressLabel}
-                  numberOfLines={1}
-                >
-                  {Math.round(progress * 100)}% · {lastPage ?? 0} / {totalPages}
-                </MText>
-              </>
-            ) : (
-              <MText
-                variant="body"
-                color="textSecondary"
-                style={styles.cardHint}
-                numberOfLines={1}
-              >
-                Tap to open
-              </MText>
-            )}
-          </Card>
+          </View>
         </Animated.View>
       </TouchableOpacity>
 
@@ -333,138 +357,199 @@ export const BookCard: FC<BookCardProps> = ({
               {
                 top: menuPos.y,
                 left: menuPos.x,
+                width: BOOK_MENU_POPOVER_W,
                 backgroundColor: colors.surface,
                 borderColor: colors.borderSubtle,
               },
             ]}
           >
-            {onRename && (
-              <TouchableOpacity style={styles.menuItem} onPress={openRename}>
-                <MText variant="body" color="textPrimary">
-                  Rename
+            <TouchableOpacity
+              style={styles.menuItemRow}
+              onPress={openStatsFromMenu}
+            >
+              <BaseIcon
+                family="ion"
+                name="stats-chart-outline"
+                color={colors.textPrimary}
+              />
+              <MText
+                variant="body"
+                color="textPrimary"
+                style={styles.menuItemLabel}
+              >
+                {t("bookshelf.book.stats")}
+              </MText>
+            </TouchableOpacity>
+
+            {!!onRequestRename && (
+              <TouchableOpacity
+                style={styles.menuItemRow}
+                onPress={requestRenameFromMenu}
+              >
+                <BaseIcon
+                  family="ion"
+                  name="create-outline"
+                  color={colors.textPrimary}
+                />
+                <MText
+                  variant="body"
+                  color="textPrimary"
+                  style={styles.menuItemLabel}
+                >
+                  {t("bookshelf.book.rename")}
                 </MText>
               </TouchableOpacity>
             )}
 
             <TouchableOpacity
-              style={styles.menuItem}
+              style={styles.menuItemRow}
               onPress={handleDeleteFromMenu}
             >
-              <MText variant="body" color="danger">
-                Delete
+              <BaseIcon
+                family="ion"
+                name="trash-outline"
+                color={colors.danger}
+              />
+              <MText variant="body" color="danger" style={styles.menuItemLabel}>
+                {t("delete")}
               </MText>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
       </Modal>
 
-      {/* Rename modal */}
+      {/* stats modal */}
       <Modal
-        visible={renameVisible}
+        visible={statsVisible}
         transparent
         animationType="fade"
-        onRequestClose={cancelRename}
+        onRequestClose={() => setStatsVisible(false)}
       >
-        <KeyboardAvoidingView
+        <TouchableOpacity
           style={[
-            styles.renameOverlay,
+            styles.statsOverlay,
             { backgroundColor: colors.backdropStrong },
           ]}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          activeOpacity={1}
+          onPress={() => setStatsVisible(false)}
         >
-          <View
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={() => {}}
             style={[
-              styles.renameBox,
+              styles.statsBox,
               {
                 backgroundColor: colors.surface,
                 borderColor: colors.borderSubtle,
               },
             ]}
           >
-            <MText
-              variant="body"
-              color="textPrimary"
-              style={styles.renameTitle}
-            >
-              Rename book
-            </MText>
-
-            <TextInput
-              value={tempName}
-              onChangeText={setTempName}
-              style={[
-                styles.renameInput,
-                {
-                  borderColor: colors.borderSubtle,
-                  color: colors.textPrimary,
-                },
-              ]}
-              placeholder="Book name"
-              placeholderTextColor={colors.textSecondary}
-            />
-
-            <View style={styles.renameActions}>
-              <TouchableOpacity
-                onPress={cancelRename}
-                style={[
-                  styles.renameButton,
-                  styles.renameCancel,
-                  { borderColor: colors.borderSubtle },
-                ]}
+            <View style={styles.statsHeaderRow}>
+              <MText
+                variant="bodyStrong"
+                color="textPrimary"
+                numberOfLines={1}
+                style={{ flex: 1 }}
               >
-                <MText variant="body" color="textSecondary">
-                  Cancel
-                </MText>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={confirmRename}
-                style={[
-                  styles.renameButton,
-                  styles.renameConfirm,
-                  { backgroundColor: colors.primary },
-                ]}
-              >
-                <MText variant="body" color="textInverse">
-                  Save
-                </MText>
-              </TouchableOpacity>
+                {file.name}
+              </MText>
+              <IconButton
+                name="close-outline"
+                color={colors.textPrimary}
+                onPress={() => setStatsVisible(false)}
+              />
             </View>
-          </View>
-        </KeyboardAvoidingView>
+
+            <View style={{ height: spacing.sm }} />
+
+            <View style={styles.statsRow}>
+              <MText variant="body" color="textSecondary">
+                {t("today")}
+              </MText>
+              <MText variant="body" color="textPrimary">
+                {safeTodayPages}
+              </MText>
+            </View>
+
+            <View style={styles.statsRow}>
+              <MText variant="body" color="textSecondary">
+                {t("bookshelf.book.lastPosition")}
+              </MText>
+              <MText variant="body" color="textPrimary">
+                {lastPosLine}
+              </MText>
+            </View>
+
+            <View style={styles.statsRow}>
+              <MText variant="body" color="textSecondary">
+                {t("bookshelf.book.totalProgress")}
+              </MText>
+              <MText variant="body" color="textPrimary">
+                {totalPages && totalPages > 0
+                  ? `${Math.round(progress * 100)}%`
+                  : "—"}
+              </MText>
+            </View>
+
+            <View style={{ height: spacing.md }} />
+            <MText
+              variant="caption"
+              color="textSecondary"
+              style={{ opacity: 0.9 }}
+            >
+              {t("bookshelf.book.moreStatsHint")}
+            </MText>
+          </TouchableOpacity>
+        </TouchableOpacity>
       </Modal>
     </>
   );
 };
 
 const styles = StyleSheet.create({
-  cardWrapper: {
-    marginRight: spacing.md,
+  cardWrapperRow: { marginRight: spacing.md },
+  cardWrapperGrid: {
+    marginRight: 0,
+    marginBottom: 0,
   },
 
-  // shared base
+  cardOuter: {
+    position: "relative",
+  },
+
+  nameplateWrap: {
+    position: "absolute",
+    bottom: spacing.sm,
+    zIndex: 8,
+  },
+
   cardBase: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    justifyContent: "space-between",
+    paddingHorizontal: 0,
+    paddingVertical: 0,
     overflow: "hidden",
+    flexDirection: "column",
   },
 
-  // Last read (horizontal)
-  cardRow: {
-    width: 120,
-    height: undefined,
-    aspectRatio: 0.8,
+  cardRow: { aspectRatio: 0.8 },
+  cardGrid: { aspectRatio: 0.8 },
+
+  body: {
+    position: "relative",
+    flex: 1,
   },
 
-  // Books grid
-  cardGrid: {
-    width: "100%",
-    height: undefined,
-    aspectRatio: 0.8,
+  coverClip: {
+    position: "absolute",
+    top: spacing.sm + 4,
+    left: 22,
+    right: spacing.lg,
+    bottom: spacing.sm + BOOK_NAMEPLATE_HEIGHT - 4,
+    borderRadius: radii.sm,
+    overflow: "hidden",
+    zIndex: 1,
   },
+  coverImg: { width: "100%", height: "100%" },
 
-  // decoration
   bookSpine: {
     position: "absolute",
     left: 0,
@@ -474,6 +559,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: radii.lg,
     borderBottomLeftRadius: radii.lg,
     borderRightWidth: StyleSheet.hairlineWidth,
+    zIndex: 3,
   },
   bookSpineHighlight: {
     position: "absolute",
@@ -483,6 +569,8 @@ const styles = StyleSheet.create({
     width: 4,
     borderTopLeftRadius: radii.lg,
     borderBottomLeftRadius: radii.lg,
+    backgroundColor: "rgba(255,255,255,0.16)",
+    zIndex: 3,
   },
   bookPageEdgeTop: {
     position: "absolute",
@@ -492,109 +580,85 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 4,
     opacity: 0.4,
+    zIndex: 4,
   },
   bookPageEdgeRight: {
     position: "absolute",
     top: spacing.sm + 4,
     bottom: spacing.sm,
     right: 0,
-    width: 26,
+    width: spacing.sm,
+    zIndex: 5,
   },
 
-  // menu icon (common)
   menuIconWrapper: {
     position: "absolute",
     top: spacing.xs,
-    right: spacing.xs,
-    zIndex: 2,
+    right: 0,
+    zIndex: 10,
   },
-
-  // centered title (common)
-  titleWrapper: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: spacing.sm,
-  },
-  title: {
-    textAlign: "center",
-    fontSize: 14,
-  },
-
-  cardHint: {
-    marginTop: spacing.xs,
-  },
-
-  progressContainer: {
-    height: 6,
-    width: "100%",
-    borderRadius: 4,
+  menuChip: {
+    borderRadius: spacing.md,
     overflow: "hidden",
-    marginTop: spacing.sm,
-  },
-  progressBar: {
-    height: "100%",
-  },
-  progressLabel: {
-    marginTop: spacing.xs,
-    fontSize: spacing.lg - 4,
-    paddingHorizontal: spacing.xs,
+    padding: 1,
+    backgroundColor: colors.surface,
   },
 
-  menuOverlay: {
-    flex: 1,
-    backgroundColor: "transparent",
+  contactShadow: {
+    position: "absolute",
+    left: 14,
+    right: 14,
+    height: 10,
+    borderRadius: 999,
+    backgroundColor: "rgba(0,0,0,0.18)",
+    opacity: 0.28,
+    zIndex: 1,
   },
+
+  menuOverlay: { flex: 1, backgroundColor: "transparent" },
   popover: {
     position: "absolute",
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.sm,
     borderRadius: radii.lg,
     borderWidth: 1,
-    width: 140,
     elevation: 6,
     shadowColor: "#000",
     shadowOpacity: 0.15,
     shadowRadius: 8,
   },
-  menuItem: {
+  menuItemRow: {
     paddingVertical: spacing.sm,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  menuItemLabel: {
+    flex: 1,
+    flexShrink: 1,
   },
 
-  renameOverlay: {
+  statsOverlay: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    paddingHorizontal: spacing.lg,
   },
-  renameBox: {
-    width: "85%",
+  statsBox: {
+    width: "100%",
     borderRadius: radii.lg,
     padding: spacing.lg,
     borderWidth: 1,
   },
-  renameTitle: {
-    marginBottom: spacing.sm,
-  },
-  renameInput: {
-    borderWidth: 1,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    marginTop: spacing.xs,
-  },
-  renameActions: {
+  statsHeaderRow: {
     flexDirection: "row",
-    justifyContent: "flex-end",
-    marginTop: spacing.md,
+    alignItems: "center",
     gap: spacing.sm,
   },
-  renameButton: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.lg,
+  statsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: spacing.xs,
   },
-  renameCancel: {
-    borderWidth: 1,
-  },
-  renameConfirm: {},
 });

@@ -6,8 +6,9 @@ import {
   PanResponder,
   Dimensions,
 } from "react-native";
-import { IconButton } from "@/components/ui/AppIcon";
-import { spacing, useTheme, radii, iconSizes } from "@budget/ui-native";
+import { IconButton } from "@musti/ui-native";
+import { spacing, useTheme, radii, iconSizes } from "@musti/ui-native";
+import { useTranslation } from "@musti/core";
 
 export type StripMode = "vertical" | "horizontal";
 export type StripPos = { x: number; y: number };
@@ -50,6 +51,7 @@ export const FloatingPageStrip = ({
   children,
 }: FloatingPageStripProps) => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const [boxSize, setBoxSize] = useState({ width: 0, height: 0 });
 
   const pos = useRef(
@@ -143,9 +145,8 @@ export const FloatingPageStrip = ({
       >
         <IconButton
           name="eye-outline"
-          size={iconSizes.lg}
           onPress={onToggleHidden}
-          accessibilityLabel="Show pagination"
+          accessibilityLabel={t("bookshelf.pagination.show")}
         />
       </View>
     );
@@ -172,29 +173,28 @@ export const FloatingPageStrip = ({
         <View style={styles.toolbar}>
           <IconButton
             name={minimized ? "chevron-up" : "chevron-down"}
-            size={iconSizes.md}
             onPress={onToggleMinimized}
             accessibilityLabel={
-              minimized ? "Expand pagination" : "Collapse pagination"
+              minimized
+                ? t("bookshelf.pagination.expand")
+                : t("bookshelf.pagination.collapse")
             }
           />
 
           <IconButton
             name="swap-horizontal"
-            size={iconSizes.md}
             onPress={() => {
               const next = mode === "vertical" ? "horizontal" : "vertical";
               onToggleMode();
               snapToDefaultForMode(next);
             }}
-            accessibilityLabel="Switch pagination mode"
+            accessibilityLabel={t("bookshelf.pagination.switchMode")}
           />
 
           <IconButton
             name="eye-off-outline"
-            size={iconSizes.md}
             onPress={onToggleHidden}
-            accessibilityLabel="Hide pagination"
+            accessibilityLabel={t("bookshelf.pagination.hide")}
           />
         </View>
 

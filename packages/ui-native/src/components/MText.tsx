@@ -10,9 +10,9 @@ export type TextVariant =
   | "heading4"
   | "body"
   | "bodyStrong"
-  | "caption";
+  | "caption"
+  | "label"; // ✅ NEW
 
-// type comes from default colors, but all themes share the same keys
 type ColorKey = keyof typeof defaultColors;
 
 interface MTextProps extends TextProps {
@@ -31,11 +31,12 @@ export const MText: React.FC<MTextProps> = ({
   const theme = useTheme?.();
   const palette = theme?.colors ?? defaultColors;
 
+  // ✅ typography.label yoksa caption fallback
+  const textStyle =
+    (typography as any)?.[variant] ?? (typography as any)?.caption;
+
   return (
-    <Text
-      {...rest}
-      style={[typography[variant], { color: palette[color] }, style]}
-    >
+    <Text {...rest} style={[textStyle, { color: palette[color] }, style]}>
       {children}
     </Text>
   );

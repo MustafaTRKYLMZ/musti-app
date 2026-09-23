@@ -1,7 +1,7 @@
-import { useTranslation } from "@budget/core";
+import { useTranslation } from "@musti/core";
 import React from "react";
 import { View, TouchableOpacity, StyleSheet } from "react-native";
-import { MText, colors, spacing, radii } from "@budget/ui-native";
+import { MText, colors, spacing, radii } from "@musti/ui-native";
 
 export type ViewTab = "all" | "fixed" | "income" | "expense";
 

@@ -1,7 +1,7 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
-import { MText, colors, spacing, radii, iconSizes } from "@budget/ui-native";
-import { IconButton } from "@/components/ui/AppIcon";
+import { MText, colors, spacing, radii, iconSizes } from "@musti/ui-native";
+import { IconButton } from "@musti/ui-native";
 
 interface Props {
   monthName: string;
@@ -18,7 +18,6 @@ export function MonthNavigator({ monthName, year, onPrev, onNext }: Props) {
         style={styles.monthNavIcon}
         hitSlop={12}
         name="chevron-back"
-        size={iconSizes.xl}
         color={colors.textSecondary}
       />
 
@@ -40,7 +39,6 @@ export function MonthNavigator({ monthName, year, onPrev, onNext }: Props) {
         style={styles.monthNavIcon}
         hitSlop={12}
         name="chevron-forward"
-        size={iconSizes.xl}
         color={colors.textSecondary}
       />
     </View>

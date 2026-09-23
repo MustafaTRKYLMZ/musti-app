@@ -1,10 +1,10 @@
 import React from "react";
 import { StyleSheet, ScrollView } from "react-native";
 import { AppScreen } from "@/components/AppScreen";
-import { IconButton } from "@/components/ui/AppIcon";
-import { MText, colors, spacing } from "@budget/ui-native";
+import { IconButton } from "@musti/ui-native";
+import { MText, colors, spacing } from "@musti/ui-native";
 import { router } from "expo-router";
-import { useTranslation } from "@budget/core";
+import { useTranslation } from "@musti/core";
 
 export default function AboutScreen() {
   const { t } = useTranslation();
@@ -23,7 +23,6 @@ export default function AboutScreen() {
         <IconButton
           family="ion"
           name="close"
-          size={22}
           color={colors.textPrimary}
           onPress={handleClose}
         />

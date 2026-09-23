@@ -1,5 +1,6 @@
 import { PropsWithChildren, useState } from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
+import { touchTargets } from '@musti/ui-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -19,7 +20,7 @@ export function Collapsible({ children, title }: PropsWithChildren & { title: st
         activeOpacity={0.8}>
         <IconSymbol
           name="chevron.right"
-          size={18}
+          size={24}
           weight="medium"
           color={theme === 'light' ? Colors.light.icon : Colors.dark.icon}
           style={{ transform: [{ rotate: isOpen ? '90deg' : '0deg' }] }}
@@ -37,6 +38,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    minHeight: touchTargets.minimum,
   },
   content: {
     marginTop: 6,

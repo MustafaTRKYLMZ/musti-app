@@ -1,7 +1,6 @@
-// app/(tabs)/_layout.tsx
 import React from "react";
 import { Tabs } from "expo-router";
-import { useTranslation } from "@budget/core";
+import { useTranslation } from "@musti/core";
 
 export default function TabLayout() {
   const { t } = useTranslation();
@@ -28,6 +27,14 @@ export default function TabLayout() {
         name="bookshelf"
         options={{
           title: "bookshelf",
+        }}
+      />
+
+      {/* PLANNER */}
+      <Tabs.Screen
+        name="planner"
+        options={{
+          title: "planner",
         }}
       />
 

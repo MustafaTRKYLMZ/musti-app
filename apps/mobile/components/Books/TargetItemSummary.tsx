@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { View, StyleSheet, ViewStyle } from "react-native";
-import { MText, useTheme } from "@budget/ui-native";
-import type { TargetItem } from "@/store/bookshelf/useReadingTargetsStore";
+import { useTranslation, formatTranslation, TargetItem } from "@musti/core";
+import { MText, useTheme } from "@musti/ui-native";
 
 type TargetItemSummaryProps = {
   item: TargetItem;
@@ -14,13 +14,19 @@ export const TargetItemSummary = ({
   variant = "default",
   style,
 }: TargetItemSummaryProps) => {
+  const { t } = useTranslation();
   const { colors } = useTheme();
 
   const sub = useMemo(() => {
     const range = `${item.jumpPage}–${item.endPage}`;
-    if (item.type === "pages") return `Pages target • ${range}`;
-    return `${item.label} • ${range}`;
-  }, [item.type, item.label, item.jumpPage, item.endPage]);
+    if (item.type === "pages") {
+      return formatTranslation(t("bookshelf.target.pagesTarget"), { range });
+    }
+    return formatTranslation(t("bookshelf.target.itemLabel"), {
+      label: item.label,
+      range,
+    });
+  }, [item.type, item.label, item.jumpPage, item.endPage, t]);
 
   return (
     <View style={[styles.wrap, style]}>

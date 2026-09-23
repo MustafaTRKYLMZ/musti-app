@@ -1,7 +1,6 @@
-// packages/ui-native/src/theme/budget.ts
 
 import { Theme, ThemeColors } from "./types";
-import { spacing, radii, iconSizes, typography, shadows } from "./tokens";
+import { spacing, radii, iconSizes, typography, shadows, sizes } from "./tokens";
 
 const budgetColors: ThemeColors = {
   primary: "#002F6C",
@@ -29,6 +28,12 @@ const budgetColors: ThemeColors = {
   surfaceStrong: "#0C163A",
   backdropStrong: "rgba(15,23,42,0.75)",
   shadowStrong: "rgba(0,0,0,0.45)",
+  statusActive: "#22C55E",
+  statusDone: "#94A3B8",
+  statusPending: "#FACC15",
+  backdrop: "rgba(15,23,42,0.75)",
+  border: "rgba(255,255,255,0.12)",
+  shadow: "rgba(0,0,0,0.45)",
 };
 
 export const budgetTheme: Theme = {
@@ -38,4 +43,5 @@ export const budgetTheme: Theme = {
   iconSizes,
   typography,
   shadows,
+  sizes,
 };

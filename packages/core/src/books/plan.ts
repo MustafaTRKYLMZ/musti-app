@@ -1,37 +1,6 @@
-// packages/core/src/books/plan.ts
+import { AdvancePlanResult } from "../types/plan/advancePlanResult";
+import { ReadingPlan } from "../types/plan/readingPlan";
 
-export type ReadingPlanItem = {
-    id: string;
-    bookUri: string;
-    pages: number;    // pages to read for this item
-    order: number;    // sequence order
-  };
-  
-  export type ReadingPlan = {
-    id: string;
-    name: string;
-  
-    items: ReadingPlanItem[];
-  
-    currentIndex: number;       // index in items[]
-    currentPageInItem: number;  // how many pages already read in this item
-  
-    isCompleted: boolean;
-  
-    createdAt: string;
-    updatedAt: string;
-  };
-  
-  export type AdvancePlanResult = {
-    plan: ReadingPlan;
-    pagesConsumed: number;
-    pagesRemainingInput: number;
-  };
-  
-  /**
-   * Advance reading plan by a given number of pages.
-   * Pages are applied to the current item, then next, etc.
-   */
   export function advanceReadingPlan(
     plan: ReadingPlan,
     pagesRead: number
@@ -49,13 +18,13 @@ export type ReadingPlanItem = {
   
     let currentIndex = plan.currentIndex;
     let currentPageInItem = plan.currentPageInItem;
-    let isCompleted = plan.isCompleted;
+    let isCompleted: boolean = plan.isCompleted;
   
     const items = plan.items;
   
     while (pagesLeft > 0 && !isCompleted && currentIndex < items.length) {
       const item = items[currentIndex];
-      const remainingForItem = item.pages - currentPageInItem;
+      const remainingForItem = item.pagesPerDay - currentPageInItem;
   
       if (remainingForItem <= 0) {
         // this item already finished, move to next

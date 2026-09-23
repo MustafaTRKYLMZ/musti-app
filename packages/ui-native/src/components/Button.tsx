@@ -11,7 +11,7 @@ import {
   TextStyle,
 } from "react-native";
 
-import { spacing, radii, typography } from "../theme";
+import { spacing, radii, typography, touchTargets } from "../theme";
 import { useTheme } from "../theme/ThemeContext";
 
 interface ButtonProps {
@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 44,
+    minHeight: touchTargets.minimum,
   },
   text: {
     ...typography.bodyStrong,

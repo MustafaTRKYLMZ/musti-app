@@ -1,22 +1,22 @@
 import * as Notifications from "expo-notifications";
-import { ensureAndroidChannel } from "./channels";
 
-let didInit = false;
+let inited = false;
 
-export async function initNotificationsOnce() {
-  if (didInit) return;
-  didInit = true;
+export function initNotificationsOnce() {
+  if (inited) return;
+  inited = true;
 
   Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowAlert: true,
-      shouldPlaySound: true,
-      shouldSetBadge: false,
-      shouldShowBanner: true,
-      shouldShowList: true,
-    }),
-  });
-  
+    handleNotification: async () => {
+      return {
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
 
-  await ensureAndroidChannel();
+        // ✅ Newer expo types
+        shouldShowBanner: true,
+        shouldShowList: true,
+      } as any;
+    },
+  });
 }

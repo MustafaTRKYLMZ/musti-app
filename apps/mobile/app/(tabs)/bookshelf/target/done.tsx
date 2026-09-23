@@ -1,42 +1,21 @@
 import React, { useEffect, useMemo } from "react";
 import { View, StyleSheet, FlatList } from "react-native";
 import { useRouter } from "expo-router";
-import { MText, bookshelfTheme, iconSizes } from "@budget/ui-native";
+import { MText, bookshelfTheme } from "@musti/ui-native";
+import { useTranslation } from "@musti/core";
 
-import { AppScreen } from "@/components/AppScreen";
-import { IconButton } from "@/components/ui/AppIcon";
+import { BookshelfSubScreen } from "@/components/Books/BookshelfSubScreen";
+import { bookshelfScreenStyles } from "@/components/Books/bookshelfScreenStyles";
 import { TargetCard } from "@/components/Books/TargetCard";
 
-import {
-  useReadingTargetsStore,
-  type ReadingTarget,
-} from "@/store/bookshelf/useReadingTargetsStore";
-import { AppSwitcherButton } from "@/components/AppSwitcherButton";
+import { useReadingTargetsStore } from "@/store/bookshelf/useReadingTargetsStore";
 import { useToast } from "@/components/ui/ToastProvider";
+import { ReadingTarget } from "@musti/core";
 
-const { colors, spacing, radii } = bookshelfTheme;
-
-const bColors = bookshelfTheme.colors;
-const bSpacing = bookshelfTheme.spacing;
-const bRadii = bookshelfTheme.radii;
-
-const bookshelfHeaderStyles = StyleSheet.create({
-  safe: { paddingHorizontal: bSpacing.md, paddingVertical: bSpacing.sm },
-  header: {
-    borderBottomWidth: 0,
-    backgroundColor: bColors.surface,
-    borderRadius: bRadii.md,
-    borderWidth: 1,
-    borderColor: bColors.borderSubtle,
-    shadowColor: bColors.shadowStrong,
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-  },
-  title: { fontWeight: "600" },
-});
+const { spacing } = bookshelfTheme;
 
 export default function DoneTargetsScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
 
   const hydrate = useReadingTargetsStore((s) => s.hydrate);
@@ -61,21 +40,21 @@ export default function DoneTargetsScreen() {
       );
   }, [targets]);
 
-  const handleRestart = async (t: ReadingTarget) => {
-    for (const it of t.items) {
-      await restartItem(t.id, it.id);
+  const handleRestart = async (target: ReadingTarget) => {
+    for (const it of target.items) {
+      await restartItem(target.id, it.id);
     }
     showToast({
-      title: "Target restarted",
-      message: "Start reading now?",
+      title: t("bookshelf.doneScreen.restarted"),
+      message: t("bookshelf.doneScreen.startNow"),
       actions: [
-        { label: "Later", onPress: () => {} },
+        { label: t("bookshelf.doneScreen.later"), onPress: () => {} },
         {
-          label: "Read now",
+          label: t("bookshelf.doneScreen.readNow"),
           onPress: () => {
             router.push({
               pathname: "/(tabs)/bookshelf/target/target-viewer",
-              params: { targetId: t.id },
+              params: { targetId: target.id },
             });
           },
         },
@@ -87,63 +66,48 @@ export default function DoneTargetsScreen() {
   const markItemDone = useReadingTargetsStore((s) => s.markItemDone);
 
   return (
-    <AppScreen
-      title="Done Targets"
-      headerContainerStyle={bookshelfHeaderStyles.header}
-      headerLeft={
-        <IconButton
-          name="chevron-back"
-          size={iconSizes.lg}
-          color={colors.textPrimary}
-          onPress={() => router.back()}
-        />
-      }
-      headerRight={<AppSwitcherButton />}
+    <BookshelfSubScreen
+      title={t("bookshelf.doneScreen.title")}
+      scroll={false}
+      contentContainerStyle={styles.listWrap}
     >
-      <View style={styles.container}>
-        {done.length === 0 ? (
-          <View style={styles.empty}>
-            <MText style={{ opacity: 0.8 }}>No done targets yet.</MText>
-          </View>
-        ) : (
-          <FlatList
-            data={done}
-            keyExtractor={(x) => x.id}
-            contentContainerStyle={styles.list}
-            renderItem={({ item }) => (
-              <TargetCard
-                target={item}
-                disableOpen
-                onOpen={() => {}}
-                onDelete={(t) => deleteTarget(t.id)}
-                onAutoDoneItem={(targetId, itemId) =>
-                  markItemDone(targetId, itemId)
-                }
-                onRestart={(t) => handleRestart(t)}
-              />
-            )}
-          />
-        )}
-      </View>
-    </AppScreen>
+      {done.length === 0 ? (
+        <View style={bookshelfScreenStyles.listCard}>
+          <MText variant="body" color="textSecondary">
+            {t("bookshelf.doneScreen.empty")}
+          </MText>
+        </View>
+      ) : (
+        <FlatList
+          data={done}
+          keyExtractor={(x) => x.id}
+          contentContainerStyle={styles.list}
+          renderItem={({ item }) => (
+            <TargetCard
+              target={item}
+              disableOpen
+              onOpen={() => {}}
+              onDelete={(t) => deleteTarget(t.id)}
+              onAutoDoneItem={(targetId, itemId) =>
+                markItemDone(targetId, itemId)
+              }
+              onRestart={(t) => handleRestart(t)}
+            />
+          )}
+        />
+      )}
+    </BookshelfSubScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  list: {
-    padding: spacing.lg,
-    gap: spacing.sm,
+  listWrap: {
+    flex: 1,
+    paddingHorizontal: 0,
+    paddingTop: 0,
   },
-  empty: {
-    margin: spacing.lg,
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    backgroundColor: colors.surface,
-    padding: spacing.md,
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 120,
+  list: {
+    paddingBottom: spacing.xl,
+    gap: spacing.sm,
   },
 });

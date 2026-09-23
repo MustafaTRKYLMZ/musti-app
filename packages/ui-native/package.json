@@ -1,18 +1,17 @@
 {
-    "name": "@budget/ui-native",
+    "name": "@musti/ui-native",
     "version": "0.0.1",
     "main": "src/index.ts",
     "types": "src/index.ts",
     "private": true,
     "sideEffects": false,
     "peerDependencies": {
-      "react": "*",
-      "react-native": "*",
-      "react-native-safe-area-context": "*"
+        "react": "*",
+        "react-native": "*",
+        "react-native-safe-area-context": "*"
     },
-    "dependencies": {},
+   
     "devDependencies": {
-      "typescript": "^5.0.0"
+        "typescript": "^5.0.0"
     }
-  }
-  
+}

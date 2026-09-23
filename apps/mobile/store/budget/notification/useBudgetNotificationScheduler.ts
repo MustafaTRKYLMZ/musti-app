@@ -1,10 +1,13 @@
 import { useEffect } from "react";
+import Constants from "expo-constants";
 import {
   cancelScheduledByOwner,
   ensureNotificationPermission,
   scheduleDailyReminder,
-} from "@budget/notifications";
+} from "@musti/notifications";
 import { useBudgetNotificationSettingsStore } from "./useNotificationSettingsStore";
+
+const notificationsEnabled = Constants.appOwnership !== "expo";
 
 export function useBudgetNotificationScheduler() {
   const enabled = useBudgetNotificationSettingsStore((s) => s.enabled);
@@ -12,6 +15,8 @@ export function useBudgetNotificationScheduler() {
   const minute = useBudgetNotificationSettingsStore((s) => s.minute);
 
   useEffect(() => {
+    if (!notificationsEnabled) return;
+
     let disposed = false;
 
     const run = async () => {

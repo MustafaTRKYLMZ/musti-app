@@ -1,0 +1,7 @@
+JUMBO
+Amsterdam
+Date: 21-09-2025
+Aantal Omschrijving Prijs Bedrag
+1 Brood 2.50 2.50
+1 Melk 1.89 1.89
+TOTAAL 4.39
